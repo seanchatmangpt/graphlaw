@@ -455,6 +455,6 @@ e79633b8d0564816cee8a99f5c9acf9a0e6fc7257c7209acd684ecad53a89dd6  28966  RdfXml 
 2442baf3d07d660910a0e24dd96b1efe1ec22cb26d12cdfd415195da91b43a0c  32183  Turtle  ontologies/social/vcard.ttl
 2a8d20d20d5ac886df7de41336e4ce89fc35685229cb0dfa1cda9ae2aac8e033  938010  Turtle  packs/self-monitoring-pack/fixtures/session-real-broad-topic.ttl
 738613a5ae48fafba7ee2dd5d4ef288d81512e68bb9abec2d483d3b5227fda0e  937978  Turtle  packs/self-monitoring-pack/fixtures/session-real.ttl
-fa49aec9e1f789dc69587340262a8f26c25b6a308da636561c2a2dd707ceeba5  10494  Turtle  packs/self-monitoring-pack/hook.ttl
+3cb6df4852fbbb3ecf04b61de021fd6597718d6617e3a940f0f7bec75db612bf  10477  Turtle  packs/self-monitoring-pack/hook.ttl
 1c1abcf3c67f47f4d07e3dbbeb46906821e136fd7d155cbf6fbce2c30fc80e45  17477  Turtle  packs/self-monitoring-pack/ontology.ttl
 42421f4d400b0b88bb39beddef9f4eb9dce55a3fbe655ecd1ba0e9a6b785c498  5124  Sparql  queries/render_model_projection.rq

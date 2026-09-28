@@ -57,7 +57,7 @@ cargo run --features pack-tools --bin smon-broaden-topic -- --in-ttl in.ttl --ou
 ## Rust surface
 
 ```rust
-use praxis_graphlaw::{n3, rdf, sparql, shacl, shex, datalog, entailment};
+use graphlaw::{n3, rdf, sparql, shacl, shex, datalog, entailment};
 
 let dataset = rdf::parse_dataset(
     b"<https://example.org/s> <https://example.org/p> <https://example.org/o> .",

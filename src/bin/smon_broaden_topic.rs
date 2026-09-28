@@ -6,7 +6,7 @@
 use std::path::Path;
 use std::process::ExitCode;
 
-use praxis_graphlaw::smon::{Args, ToolError, broaden, read_turtle, write_turtle};
+use graphlaw::smon::{Args, ToolError, broaden, read_turtle, write_turtle};
 
 fn run() -> Result<(), ToolError> {
     let args = Args::from_env();

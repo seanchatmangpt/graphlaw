@@ -13,7 +13,7 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use praxis_graphlaw::dialect::{Dialect, check, sniff};
+use graphlaw::dialect::{Dialect, check, sniff};
 use sha2::{Digest, Sha256};
 
 const BASE: &str = "https://example.org/base/";
@@ -129,7 +129,7 @@ fn shacl_shape_files_load_in_purrdf() {
         if name.contains("shacl") || name.contains("shapes") {
             n += 1;
             let text = fs::read_to_string(&p).unwrap();
-            praxis_graphlaw::shacl::engine::parse_shapes(&text, Some(BASE))
+            graphlaw::shacl::engine::parse_shapes(&text, Some(BASE))
                 .unwrap_or_else(|e| panic!("{}: {e}", rel(&p)));
         }
     }
@@ -181,7 +181,7 @@ fn asset_manifest_pins_every_byte() {
 
 #[test]
 fn router_refuses_non_semantic_and_ambiguous_input() {
-    use praxis_graphlaw::dialect::RefusalKind::*;
+    use graphlaw::dialect::RefusalKind::*;
     assert_eq!(
         sniff(b"404: Not Found", None).unwrap_err().kind,
         NotSemanticContent

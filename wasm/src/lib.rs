@@ -1,5 +1,5 @@
 //! WebAssembly entry points. Deliberately tiny: all behaviour lives in the
-//! safe, native-testable `praxis_graphlaw::abi`. The only `unsafe` in the
+//! safe, native-testable `graphlaw::abi`. The only `unsafe` in the
 //! GraphLaw workspace is the pointer handling required to exchange buffers
 //! with the host through linear memory.
 //!
@@ -41,7 +41,7 @@ pub unsafe extern "C" fn gl_free(ptr: *mut u8, len: u32) {
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn gl_call(ptr: *mut u8, len: u32) -> u64 {
     let request = unsafe { Vec::from_raw_parts(ptr, len as usize, len.max(1) as usize) };
-    let response = praxis_graphlaw::abi::call(&request);
+    let response = graphlaw::abi::call(&request);
     drop(request);
     let out_len = response.len() as u64;
     let mut response = response.into_boxed_slice().into_vec();

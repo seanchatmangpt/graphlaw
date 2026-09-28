@@ -2,10 +2,10 @@
 //! Turtle (PurRDF) -> N3 derivation (Eyeron) -> SHACL admission (PurRDF)
 //! -> SPARQL discovery and CONSTRUCT (PurRDF), every step receipted.
 
-use praxis_graphlaw::dialect::{Dialect, RefusalKind};
-use praxis_graphlaw::law::{LawError, LawState, Step};
-use praxis_graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult};
-use praxis_graphlaw::sparql::NativeSparqlEngine;
+use graphlaw::dialect::{Dialect, RefusalKind};
+use graphlaw::law::{LawError, LawState, Step};
+use graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult};
+use graphlaw::sparql::NativeSparqlEngine;
 
 fn read(path: &str) -> String {
     std::fs::read_to_string(format!("{}/{path}", env!("CARGO_MANIFEST_DIR"))).unwrap()

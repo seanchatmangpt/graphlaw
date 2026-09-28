@@ -3,9 +3,9 @@
 //! outputs the Python scripts produced (committed fixtures) and end to end
 //! against `hook.ttl`.
 
-use praxis_graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult, TermValue};
-use praxis_graphlaw::smon::{broaden, build_dataset, read_turtle, to_turtle, turns_from_jsonl};
-use praxis_graphlaw::sparql::NativeSparqlEngine;
+use graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult, TermValue};
+use graphlaw::smon::{broaden, build_dataset, read_turtle, to_turtle, turns_from_jsonl};
+use graphlaw::sparql::NativeSparqlEngine;
 use std::path::PathBuf;
 
 fn pack(p: &str) -> PathBuf {
@@ -14,13 +14,13 @@ fn pack(p: &str) -> PathBuf {
         .join(p)
 }
 
-fn canonical(ds: &praxis_graphlaw::rdf::RdfDataset) -> String {
-    praxis_graphlaw::rdf::try_canonicalize(ds)
+fn canonical(ds: &graphlaw::rdf::RdfDataset) -> String {
+    graphlaw::rdf::try_canonicalize(ds)
         .expect("canonicalizes")
         .nquads
 }
 
-fn hook_rows(ds: &std::sync::Arc<praxis_graphlaw::rdf::RdfDataset>) -> usize {
+fn hook_rows(ds: &std::sync::Arc<graphlaw::rdf::RdfDataset>) -> usize {
     let hook = read_turtle(&pack("hook.ttl")).unwrap();
     let q = match NativeSparqlEngine::new()
         .query(
@@ -67,8 +67,8 @@ fn broaden_reproduces_the_committed_python_output() {
         "Rust broadening differs from the Python fixture"
     );
     // Round-trips through Turtle unchanged.
-    let again = praxis_graphlaw::rdf::parse_dataset(&to_turtle(&out).unwrap(), "text/turtle", None)
-        .unwrap();
+    let again =
+        graphlaw::rdf::parse_dataset(&to_turtle(&out).unwrap(), "text/turtle", None).unwrap();
     assert_eq!(canonical(&again), canonical(&out));
 }
 
@@ -130,7 +130,7 @@ fn transcript_capture_feeds_the_hook() {
 
 #[test]
 fn classification_priority_and_topic_fallback() {
-    use praxis_graphlaw::smon::{classify_turn, extract_topic};
+    use graphlaw::smon::{classify_turn, extract_topic};
     // A run wins over a survey shape in the same text.
     assert_eq!(
         classify_turn("test result: ok\n```mermaid").0,

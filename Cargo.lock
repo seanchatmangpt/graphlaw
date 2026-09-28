@@ -651,6 +651,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "graphlaw"
+version = "26.9.28"
+dependencies = [
+ "graphlaw-eyeron",
+ "purrdf",
+ "regex",
+ "serde_json",
+ "sha2",
+ "wasmi",
+ "wasmi_wasi",
+]
+
+[[package]]
 name = "graphlaw-eyeron"
 version = "0.7.7"
 dependencies = [
@@ -666,7 +679,7 @@ dependencies = [
 name = "graphlaw-wasm"
 version = "26.9.28"
 dependencies = [
- "praxis-graphlaw",
+ "graphlaw",
 ]
 
 [[package]]
@@ -1000,19 +1013,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
  "zerocopy",
-]
-
-[[package]]
-name = "praxis-graphlaw"
-version = "26.9.28"
-dependencies = [
- "graphlaw-eyeron",
- "purrdf",
- "regex",
- "serde_json",
- "sha2",
- "wasmi",
- "wasmi_wasi",
 ]
 
 [[package]]

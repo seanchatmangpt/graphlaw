@@ -1,11 +1,11 @@
 //! Knowledge hooks (`kh:`) executed over the self-monitoring pack. Every query
 //! is parsed and evaluated by PurRDF; GraphLaw only orchestrates.
 
-use praxis_graphlaw::dialect::{Dialect, RefusalKind};
-use praxis_graphlaw::hooks::HookPack;
-use praxis_graphlaw::law::{LawState, Step};
-use praxis_graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult};
-use praxis_graphlaw::sparql::NativeSparqlEngine;
+use graphlaw::dialect::{Dialect, RefusalKind};
+use graphlaw::hooks::HookPack;
+use graphlaw::law::{LawState, Step};
+use graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult};
+use graphlaw::sparql::NativeSparqlEngine;
 
 fn pack_file(p: &str) -> LawState {
     let bytes = std::fs::read(format!(
@@ -94,7 +94,7 @@ fn narrow_session_fires_fewer_than_broad() {
 fn hook_ttl(body: &str) -> LawState {
     let doc = format!(
         "@prefix kh: <{}> . @prefix ex: <https://e/> .\n{body}",
-        praxis_graphlaw::hooks::KH
+        graphlaw::hooks::KH
     );
     LawState::parse(doc.as_bytes(), Dialect::Turtle, None).unwrap()
 }

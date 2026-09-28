@@ -7,12 +7,12 @@
 
 use std::collections::BTreeSet;
 
-use praxis_graphlaw::datalog::{
+use graphlaw::datalog::{
     clause::{ClauseAtom, ClauseTerm, DlClause},
     seminaive::{compile, evaluate},
     store::RelationStore,
 };
-use praxis_graphlaw::entailment::Materialization;
+use graphlaw::entailment::Materialization;
 
 const NS: &str = "https://example.org/";
 
@@ -47,11 +47,11 @@ fn nt_edges(es: &BTreeSet<(usize, usize)>) -> String {
 }
 
 /// Pairs related by `ex:ancestor` in an RDF dataset, via PurRDF N-Triples output.
-fn ancestor_pairs(ds: &praxis_graphlaw::rdf::RdfDataset) -> BTreeSet<(String, String)> {
-    let bytes = praxis_graphlaw::rdf::serialize_dataset(
+fn ancestor_pairs(ds: &graphlaw::rdf::RdfDataset) -> BTreeSet<(String, String)> {
+    let bytes = graphlaw::rdf::serialize_dataset(
         ds,
         "application/n-triples",
-        praxis_graphlaw::rdf::SerializeGraph::Dataset,
+        graphlaw::rdf::SerializeGraph::Dataset,
     )
     .unwrap();
     String::from_utf8(bytes)
@@ -71,8 +71,8 @@ fn n3_closure(es: &BTreeSet<(usize, usize)>) -> BTreeSet<(String, String)> {
          {{ ?x <{NS}ancestor> ?y . ?y <{NS}parent> ?z }} => {{ ?x <{NS}ancestor> ?z }} .\n",
         nt_edges(es)
     );
-    let out = praxis_graphlaw::n3::reason(&doc).expect("eyeron closure");
-    let ds = praxis_graphlaw::rdf::parse_dataset(out.as_bytes(), "text/turtle", None).unwrap();
+    let out = graphlaw::n3::reason(&doc).expect("eyeron closure");
+    let ds = graphlaw::rdf::parse_dataset(out.as_bytes(), "text/turtle", None).unwrap();
     ancestor_pairs(&ds)
 }
 
@@ -82,11 +82,9 @@ fn owlrl_closure(es: &BTreeSet<(usize, usize)>) -> BTreeSet<(String, String)> {
          <{NS}ancestor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#TransitiveProperty> .\n",
         nt_edges(es)
     );
-    let ds =
-        praxis_graphlaw::rdf::parse_dataset(doc.as_bytes(), "application/n-triples", None).unwrap();
-    let (closure, _) =
-        praxis_graphlaw::entailment::materialize(ds.as_ref(), Materialization::OwlRl)
-            .expect("owl-rl closure");
+    let ds = graphlaw::rdf::parse_dataset(doc.as_bytes(), "application/n-triples", None).unwrap();
+    let (closure, _) = graphlaw::entailment::materialize(ds.as_ref(), Materialization::OwlRl)
+        .expect("owl-rl closure");
     ancestor_pairs(closure.as_ref())
 }
 

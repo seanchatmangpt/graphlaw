@@ -1,6 +1,6 @@
 //! `BACKEND_AUTHORITIES` may not drift from the pins in `Cargo.toml`.
 
-use praxis_graphlaw::BACKEND_AUTHORITIES;
+use graphlaw::BACKEND_AUTHORITIES;
 
 fn cargo_toml() -> String {
     std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml")).unwrap()

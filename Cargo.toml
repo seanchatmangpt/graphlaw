@@ -1,5 +1,5 @@
 [package]
-name = "praxis-graphlaw"
+name = "graphlaw"
 version = "26.9.28"
 edition = "2024"
 rust-version = "1.96"
@@ -27,7 +27,7 @@ panic = "abort"
 strip = true
 
 [lib]
-name = "praxis_graphlaw"
+name = "graphlaw"
 path = "src/lib.rs"
 
 [dependencies]
