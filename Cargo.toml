@@ -43,8 +43,8 @@ thiserror = "2"
 # Exact registry version (not a local path): CalVer releases are not semver-compatible
 # merely because they share major 26. A caret range silently upgraded standalone GraphLaw
 # to 26.8.x and broke the extracted build. Exact pins preserve the admitted source graph
-# while still resolving to the SAME crate instance as bcinr-pddl's compatible dependency;
-# copy of Pddl8GroundAtom/OCEL types even at an identical version string.
+# while still resolving to the SAME crate instance as bcinr-pddl's compatible dependency.
+# A path dependency here would create a second, incompatible copy of Pddl8GroundAtom/OCEL types.
 wasm4pm-compat = { version = "=26.6.29" }
 wasm4pm-cognition = { git = "https://github.com/seanchatmangpt/wasm4pm", rev = "9fc4f1ae3cc99cf65a5f014580db8e1ea3d08b55", package = "wasm4pm-cognition", optional = true }
 
@@ -91,10 +91,10 @@ rand = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 proptest = "1.5"
-# Required for chicago_tdd_tools::async_test! (expands to #[tokio::test]).
+# Required for chicago_tdd_tools::async_test! (expands to #[tokio::test]).\n# 26.8.9 is the first admitted test-harness release used by the extracted tree that\n# provides every requested feature below, including cli-proof.
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 # otel/weaver features left OFF: they drag network deps into the required build.
-chicago-tdd-tools = { version = "=26.7.1", features = [
+chicago-tdd-tools = { version = "=26.8.9", features = [
     "property-testing",
     "snapshot-testing",
     "parameterized-testing",
