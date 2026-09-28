@@ -1,0 +1,103 @@
+name: Release
+
+# Fully automatic. On every push to main, release whatever version Cargo.toml
+# declares if that version is not released yet:
+#   1. build and test the WASI module and the whole workspace,
+#   2. tag vX.Y.Z and create the GitHub release with graphlaw.wasm (+ checksum),
+#   3. publish graphlaw-eyeron then graphlaw to crates.io, each only if that
+#      exact version is not already on the registry.
+# A run with nothing to release exits in seconds. All steps are idempotent.
+# To release: merge a change that bumps the version. Nothing else is required.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: release if unreleased
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+          targets: wasm32-wasip1
+
+      - name: Decide what is unreleased
+        id: plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          meta=$(cargo metadata --no-deps --format-version 1)
+          ver() { echo "$meta" | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name']=='$1'))"; }
+          on_registry() { # crate version
+            local n=$1 v=$2 p
+            if [ ${#n} -le 3 ]; then p="${#n}/$n"; else p="${n:0:2}/${n:2:2}/$n"; fi
+            local idx; idx=$(curl -fsS "https://index.crates.io/$p" 2>/dev/null || true)
+            if grep -q "\"vers\":\"$v\"" <<<"$idx"; then echo yes; else echo no; fi
+          }
+          g=$(ver graphlaw); e=$(ver graphlaw-eyeron)
+          tags=$(git ls-remote --tags origin "refs/tags/v$g" || true)
+          tag=$([ -n "$tags" ] && echo yes || echo no)
+          ep=$(on_registry graphlaw-eyeron "$e")
+          gp=$(on_registry graphlaw "$g")
+          work=no
+          if [ "$tag" = no ] || [ "$ep" = no ] || [ "$gp" = no ]; then work=yes; fi
+          {
+            echo "graphlaw=$g"; echo "tag_exists=$tag"
+            echo "eyeron_published=$ep"; echo "graphlaw_published=$gp"; echo "work=$work"
+          } >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+      - name: Build and test (only when there is something to release)
+        if: steps.plan.outputs.work == 'yes'
+        run: |
+          set -euo pipefail
+          cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+          GRAPHLAW_WASM="$PWD/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm" cargo test --all-targets --all-features
+          cargo package -p graphlaw-eyeron -p graphlaw
+
+      - name: Tag and create the GitHub release
+        if: steps.plan.outputs.tag_exists == 'no'
+        run: |
+          set -euo pipefail
+          mkdir dist
+          cp target/wasm32-wasip1/wasm/graphlaw_wasm.wasm dist/graphlaw.wasm
+          (cd dist && sha256sum graphlaw.wasm > graphlaw.wasm.sha256)
+          gh release create "v${{ steps.plan.outputs.graphlaw }}" dist/graphlaw.wasm dist/graphlaw.wasm.sha256 \
+            --target "$(git rev-parse HEAD)" --generate-notes --title "graphlaw v${{ steps.plan.outputs.graphlaw }}"
+
+      - name: Publish graphlaw-eyeron
+        if: steps.plan.outputs.eyeron_published == 'no'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+            echo "::error title=crates.io credential missing::Add the CARGO_REGISTRY_TOKEN repository secret once; every later release is automatic."
+            exit 1
+          fi
+          cargo publish -p graphlaw-eyeron
+
+      - name: Publish graphlaw
+        if: steps.plan.outputs.graphlaw_published == 'no'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+            echo "::error title=crates.io credential missing::Add the CARGO_REGISTRY_TOKEN repository secret once; every later release is automatic."
+            exit 1
+          fi
+          cargo publish -p graphlaw

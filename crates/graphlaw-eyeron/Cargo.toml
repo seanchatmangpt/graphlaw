@@ -1,0 +1,31 @@
+[package]
+name = "graphlaw-eyeron"
+version = "0.7.7"
+edition = "2021"
+rust-version = "1.96"
+authors = ["Jos De Roo", "Sean Chatman"]
+license = "MIT"
+description = "Eyeron, a native Rust Notation3 reasoner, vendored for GraphLaw with a WASI clock fix"
+repository = "https://github.com/seanchatmangpt/graphlaw"
+homepage = "https://github.com/eyereasoner/eyeron"
+readme = "README.md"
+keywords = ["n3", "notation3", "reasoner", "rdf", "semantic-web"]
+categories = ["parser-implementations", "science"]
+include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE.md", "/UPSTREAM.md"]
+
+[lib]
+# Keeps `use eyeron::...` working for every consumer.
+name = "eyeron"
+path = "src/lib.rs"
+
+[dependencies]
+num-bigint = "0.5.1"
+num-traits = "0.2"
+regex = "1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq = "3"
+serde_json = "1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"

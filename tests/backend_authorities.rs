@@ -1,4 +1,4 @@
-use praxis_graphlaw::{BACKEND_AUTHORITIES, LEGACY_FALLBACK_ENABLED};
+use graphlaw::{BACKEND_AUTHORITIES, LEGACY_FALLBACK_ENABLED};
 
 const _: () = assert!(!LEGACY_FALLBACK_ENABLED);
 
@@ -10,7 +10,7 @@ fn authority_manifest_names_external_backends() {
 
 #[test]
 fn purrdf_parses_rdf_without_graphlaw_parser_code() {
-    let dataset = praxis_graphlaw::rdf::parse_dataset(
+    let dataset = graphlaw::rdf::parse_dataset(
         b"<https://example.org/s> <https://example.org/p> <https://example.org/o> .\n",
         "application/n-triples",
         None,
@@ -26,16 +26,14 @@ fn eyeron_executes_n3_without_graphlaw_reasoner_code() {
         :s :kind :Human .
         { ?x :kind :Human . } => { ?x :kind :Mortal . } .
     "#;
-    let output = praxis_graphlaw::n3::reason(program).expect("valid N3");
+    let output = graphlaw::n3::reason(program).expect("valid N3");
     assert!(output.contains("Mortal"), "{output}");
 }
 
 #[test]
 fn purrdf_executes_sparql_without_graphlaw_query_engine() {
-    use praxis_graphlaw::rdf::{
-        RdfDatasetBuilder, RdfLiteral, SparqlEngine, SparqlRequest, SparqlResult,
-    };
-    use praxis_graphlaw::sparql::NativeSparqlEngine;
+    use graphlaw::rdf::{RdfDatasetBuilder, RdfLiteral, SparqlEngine, SparqlRequest, SparqlResult};
+    use graphlaw::sparql::NativeSparqlEngine;
 
     let mut builder = RdfDatasetBuilder::new();
     let cat = builder.intern_iri("https://example.org/cat");
@@ -64,7 +62,7 @@ fn purrdf_executes_sparql_without_graphlaw_query_engine() {
 
 #[test]
 fn purrdf_executes_datalog_without_graphlaw_fixpoint_code() {
-    use praxis_graphlaw::datalog::{
+    use graphlaw::datalog::{
         clause::{ClauseAtom, ClauseTerm, DlClause},
         seminaive::{compile, evaluate},
         store::RelationStore,
@@ -114,25 +112,25 @@ ex:PersonShape a sh:NodeShape ;
     sh:targetClass ex:Person ;
     sh:property [ sh:path ex:age ; sh:datatype xsd:integer ] .
 "#;
-    let report = praxis_graphlaw::shacl::engine::validate_graphs(data, shapes, None)
-        .expect("SHACL evaluates");
+    let report =
+        graphlaw::shacl::engine::validate_graphs(data, shapes, None).expect("SHACL evaluates");
     assert!(!report.conforms);
     assert!(!report.results.is_empty());
 }
 
 #[test]
 fn purrdf_parses_shex_without_graphlaw_shexc_parser() {
-    let schema = praxis_graphlaw::shex::parse_shexc(
+    let schema = graphlaw::shex::parse_shexc(
         "PREFIX ex: <https://example.org/>\nex:Cat { ex:says . }",
         None,
     )
     .expect("valid ShExC");
-    praxis_graphlaw::shex::check_structure(&schema).expect("well-formed ShEx");
+    graphlaw::shex::check_structure(&schema).expect("well-formed ShEx");
 }
 
 #[test]
 fn purrdf_exposes_owl_rl_entailment_without_graphlaw_ruleset() {
-    use praxis_graphlaw::entailment::Regime;
+    use graphlaw::entailment::Regime;
     assert_eq!(
         Regime::from_iri("http://www.w3.org/ns/entailment/RDFS"),
         Some(Regime::Rdfs)

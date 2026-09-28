@@ -1,0 +1,6 @@
+{
+  "git": {
+    "sha1": "42d98a0e76a75dfa7232e525b6d362b054d663ea"
+  },
+  "path_in_vcs": "crates/sparql-eval"
+}

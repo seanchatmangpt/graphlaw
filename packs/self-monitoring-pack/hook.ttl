@@ -7,9 +7,9 @@
 # by crates/praxis-graphlaw/tests/soc2_hook_actuation.rs and, closer to this
 # pack's own domain, crates/multifractal-workflow/fixtures/bribery-case/
 # hook.ttl's obligation-derivation hook), run here via
-# `praxis_graphlaw::TripleStore::load_hook_pack` + `.materialize()` -- not a
+# `graphlaw::hooks::HookPack::load` + `.materialize()` -- not a
 # hand-simulated mechanism. Proven live by
-# crates/praxis-graphlaw/tests/self_monitoring_hook_actuation.rs.
+# tests/self_monitoring_pack.rs and tests/knowledge_hooks.rs.
 #
 # THE DATALOG/N3-SHAPE PATTERN THIS SPARQL-CONSTRUCT ENCODES (exactly the
 # rule form the task brief specifies):

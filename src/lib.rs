@@ -10,10 +10,40 @@
 //! GraphLaw intentionally contains no fallback parser, rule evaluator, triplestore,
 //! SHACL/ShEx validator, SPARQL evaluator, or OWL ruleset of its own. Missing
 //! capabilities are refused or added upstream instead of being reimplemented here.
+//!
+//! ```
+//! use graphlaw::dialect::Dialect;
+//! use graphlaw::law::{LawState, Step};
+//!
+//! // Parse with PurRDF, derive with PurRDF's RDFS entailment, get a receipt.
+//! let state = LawState::parse(
+//!     b"<https://e/Cat> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <https://e/Animal> .\n\
+//!       <https://e/tom> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://e/Cat> .\n",
+//!     Dialect::NTriples,
+//!     None,
+//! )?;
+//! let (child, receipt) = state.transition(&Step::EntailRdfs)?;
+//! assert_eq!(receipt.step, "derive:rdfs");
+//! assert!(child.quad_count() > state.quad_count());
+//! assert_ne!(child.id(), state.id());
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 #![forbid(unsafe_code)]
 
+#[cfg(all(target_os = "wasi", not(feature = "wasi-patched-deps")))]
+compile_error!(
+    "graphlaw from crates.io cannot run SPARQL on WASI: upstream reads the clock through \
+     JavaScript on every wasm32 target, which traps outside the browser. Use the prebuilt \
+     graphlaw.wasm attached to each GitHub release, or build inside the graphlaw repository \
+     workspace (`cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`), which \
+     applies the vendored fix."
+);
+
+#[cfg(feature = "abi")]
+pub mod abi;
 pub mod dialect;
+pub mod hooks;
 pub mod law;
 #[cfg(feature = "pack-tools")]
 pub mod smon;
@@ -121,9 +151,14 @@ pub const BACKEND_AUTHORITIES: &[BackendAuthority] = &[
         revision: "2.0.2",
     },
     BackendAuthority {
+        capability: "Knowledge hooks (kh: orchestration over SPARQL)",
+        authority: "purrdf::sparql",
+        revision: "2.0.2",
+    },
+    BackendAuthority {
         capability: "Notation3",
         authority: "eyeron",
-        revision: "d6568f657c19805b64223acf28d74234156bb837",
+        revision: "0.7.7 (eyereasoner/eyeron@d6568f657c19805b64223acf28d74234156bb837, vendored)",
     },
 ];
 

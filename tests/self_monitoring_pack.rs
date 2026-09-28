@@ -2,9 +2,9 @@
 //! `hook.ttl`. PurRDF reads the literal out of the RDF and PurRDF executes it
 //! against the captured session fixtures.
 
-use praxis_graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult, TermValue};
-use praxis_graphlaw::sparql::NativeSparqlEngine;
-use praxis_graphlaw::{dialect::Dialect, law::LawState};
+use graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult, TermValue};
+use graphlaw::sparql::NativeSparqlEngine;
+use graphlaw::{dialect::Dialect, law::LawState};
 
 fn load(path: &str) -> LawState {
     let bytes = std::fs::read(format!(

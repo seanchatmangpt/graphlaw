@@ -1,17 +1,33 @@
 [package]
-name = "praxis-graphlaw"
+name = "graphlaw"
 version = "26.9.28"
 edition = "2024"
 rust-version = "1.96"
 authors = ["Sean Chatman"]
 license = "MIT"
 description = "GraphLaw: library-backed RDF law-state composition over PurRDF and Eyeron"
+readme = "README.md"
+include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE", "/MIGRATION.md"]
 repository = "https://github.com/seanchatmangpt/graphlaw"
 keywords = ["rdf", "n3", "datalog", "shacl", "shex"]
 categories = ["data-structures", "parser-implementations"]
 
+[workspace]
+members = [".", "wasm", "crates/graphlaw-eyeron"]
+exclude = ["vendor/purrdf-sparql-eval"]
+
+# Size-optimised profile for the WebAssembly module (`--profile wasm`); kept
+# separate so native release builds and tests are unaffected.
+[profile.wasm]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
 [lib]
-name = "praxis_graphlaw"
+name = "graphlaw"
 path = "src/lib.rs"
 
 [dependencies]
@@ -19,12 +35,17 @@ purrdf = "=2.0.2"
 sha2 = "0.10"
 regex = { version = "1", optional = true }
 serde_json = { version = "1", optional = true }
-eyeron = { git = "https://github.com/eyereasoner/eyeron", rev = "d6568f657c19805b64223acf28d74234156bb837" }
+eyeron = { package = "graphlaw-eyeron", version = "0.7.7", path = "crates/graphlaw-eyeron" }
 
 [features]
 # Capture/rewrite tooling for packs/self-monitoring-pack (replaces the former
 # Python scripts). Off by default so the library stays dependency-light.
 pack-tools = ["dep:regex", "dep:serde_json"]
+# JSON request/response ABI (src/abi.rs) consumed by the wasm module in ./wasm.
+abi = ["dep:serde_json"]
+# Asserts that the build applied the vendored WASI clock patch (see
+# vendor/README.md). Only the repo workspace (crates.io ignores [patch]) sets it.
+wasi-patched-deps = []
 
 [[bin]]
 name = "smon-transcript-to-turtle"
@@ -38,3 +59,33 @@ required-features = ["pack-tools"]
 
 [package.metadata.docs.rs]
 all-features = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+wasmi = "1"
+wasmi_wasi = "1"
+serde_json = "1"
+
+# Carried patch (see vendor/README.md): gives WASI the std clock/RNG path instead
+# of the browser-only `js_sys` calls, which panic on any wasm32 target that is
+# not wasm32-unknown-unknown. Patches are ignored by `cargo publish`; the
+# repo-built WASI module is the artifact that carries it.
+[patch.crates-io]
+purrdf-sparql-eval = { path = "vendor/purrdf-sparql-eval" }
+
+# Line tables are enough for backtraces; full debuginfo made each of the many
+# integration-test binaries huge (tens of GB across the suite).
+[profile.dev]
+debug = "line-tables-only"
+
+# The wasm runtime used by tests/wasm_abi.rs is an interpreter; unoptimised it
+# is ~50x slower and makes the suite take minutes.
+[profile.dev.package.wasmi]
+opt-level = 3
+[profile.dev.package.wasmi_core]
+opt-level = 3
+[profile.dev.package.wasmi_ir]
+opt-level = 3
+[profile.dev.package.wasmi_collections]
+opt-level = 3
+[profile.dev.package.wasmi_wasi]
+opt-level = 3

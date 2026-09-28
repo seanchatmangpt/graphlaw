@@ -16,7 +16,7 @@ Executable standards semantics are delegated to two pinned authorities:
 | ShEx 2.1 | PurRDF 2.0.2 |
 | Datalog / stratification / semi-naive fixpoint / chase | PurRDF 2.0.2 |
 | RDF / RDFS / OWL-RL entailment | PurRDF 2.0.2 |
-| Notation3 parsing/reasoning/proofs | Eyeron @ d6568f657c19805b64223acf28d74234156bb837 |
+| Notation3 parsing/reasoning/proofs | Eyeron 0.7.7 (MIT, vendored as `crates/graphlaw-eyeron` from eyereasoner/eyeron@d6568f65; see its `UPSTREAM.md`) |
 
 GraphLaw itself owns the **composition boundary and semantic assets**: ontologies, packs, queries, and the decision about which upstream implementation has standing. It does not keep a fallback implementation.
 
@@ -28,6 +28,24 @@ GraphLaw's own code is the composition layer above the engines:
 - `law::LawState` is an immutable dataset identified by `sha256:` of its RDFC-1.0 canonical form. `transition(&Step)` runs an upstream-owned step (SHACL admission, N3 derivation, RDFS/OWL-RL entailment) and returns the child state with a `Receipt` naming the authority and revision. A refused step yields no state.
 - `tests/differential.rs` is a cross-engine oracle: N3 (Eyeron), Datalog and OWL-RL (PurRDF) must agree with each other and with an independent Warshall closure.
 - `ASSETS.sha256` pins every shipped asset by hash and sniffed dialect; `tests/corpus_conformance.rs` routes and parses all of them (`cargo test -- --ignored` adds the large vendored vocabularies).
+
+## WebAssembly module (for Elixir/Wasmex and other WASI hosts)
+
+```sh
+cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm   # -> target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
+```
+
+One self-contained WASI module (imports are `wasi_snapshot_preview1` only: clock, random, stdio; no JavaScript). Exports `gl_alloc`, `gl_free`, `gl_call` and memory; call `_initialize` once if the host does not. A request is UTF-8 JSON written into `gl_alloc`ed memory; `gl_call(ptr, len)` returns `(out_ptr << 32) | out_len` for a UTF-8 JSON response, which the host frees with `gl_free`. Ops: `capabilities`, `sniff`, `parse`, `convert`, `canonical`, `sparql`, `shacl`, `shex`, `n3`, `entail`, `datalog`, `hooks`, `law` (see `src/abi.rs`). All RDF dialects (Turtle, TriG, N-Triples, N-Quads, RDF/XML, JSON-LD, YAML-LD, TriX, HexTuples), N3, SPARQL, SHACL, ShEx (ShExC/ShExJ), RDF/RDFS/OWL-RL/D entailment, Datalog and knowledge hooks execute inside the module; `tests/wasm_abi.rs` drives all of them in a real wasm runtime. `wasm32-unknown-unknown` is not a supported module target: it needs a JavaScript host.
+
+`vendor/` carries two cfg-only upstream patches that give WASI the standard clock/RNG path; see `vendor/README.md`.
+
+### Releasing (automatic)
+
+There is nothing to run. When a change that bumps the version in `Cargo.toml` reaches `main`, `.github/workflows/release.yml` builds and tests, tags `vX.Y.Z`, creates the GitHub release with `graphlaw.wasm` (plus checksum), and publishes `graphlaw-eyeron` then `graphlaw` to crates.io (each only if that version is not already there; every step is idempotent). The only one-time setup is the `CARGO_REGISTRY_TOKEN` repository secret; without it the release and tag still happen and the publish step fails loudly until it is added. Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
+
+## Knowledge hooks
+
+`hooks::HookPack` loads `kh:Hook` / `kh:Action` resources from any RDF pack (see `packs/self-monitoring-pack/hook.ttl`) and runs them to a fixpoint over a `LawState` (`Step::Hooks`). Triggers and actions are SPARQL executed by PurRDF; each firing is recorded in the state so re-running a saturated state changes nothing.
 
 ## Pack tooling (Rust, feature `pack-tools`)
 
@@ -43,7 +61,7 @@ cargo run --features pack-tools --bin smon-broaden-topic -- --in-ttl in.ttl --ou
 ## Rust surface
 
 ```rust
-use praxis_graphlaw::{n3, rdf, sparql, shacl, shex, datalog, entailment};
+use graphlaw::{n3, rdf, sparql, shacl, shex, datalog, entailment};
 
 let dataset = rdf::parse_dataset(
     b"<https://example.org/s> <https://example.org/p> <https://example.org/o> .",

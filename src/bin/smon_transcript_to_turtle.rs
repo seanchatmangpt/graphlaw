@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::process::ExitCode;
 
-use praxis_graphlaw::smon::{Args, ToolError, build_dataset, turns_from_jsonl, write_turtle};
+use graphlaw::smon::{Args, ToolError, build_dataset, turns_from_jsonl, write_turtle};
 
 fn run() -> Result<(), ToolError> {
     let args = Args::from_env();

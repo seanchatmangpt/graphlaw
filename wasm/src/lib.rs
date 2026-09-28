@@ -1,0 +1,53 @@
+//! WebAssembly entry points. Deliberately tiny: all behaviour lives in the
+//! safe, native-testable `graphlaw::abi`. The only `unsafe` in the
+//! GraphLaw workspace is the pointer handling required to exchange buffers
+//! with the host through linear memory.
+//!
+//! Protocol (all integers are wasm `i32`/`i64`):
+//! 1. `gl_alloc(len) -> ptr` — host reserves `len` bytes and writes a UTF-8
+//!    JSON request there.
+//! 2. `gl_call(ptr, len) -> packed` — runs the request and consumes (frees)
+//!    the request buffer. `packed = (out_ptr << 32) | out_len`.
+//! 3. host reads `out_len` bytes at `out_ptr` (UTF-8 JSON), then
+//!    `gl_free(out_ptr, out_len)`.
+//!
+//! A response is always JSON: `{"ok":true,...}` or `{"ok":false,"error":{...}}`.
+#![allow(unsafe_code)]
+
+/// Reserve `len` bytes of linear memory for the host.
+#[unsafe(no_mangle)]
+pub extern "C" fn gl_alloc(len: u32) -> *mut u8 {
+    let mut buf = Vec::<u8>::with_capacity(len.max(1) as usize);
+    let ptr = buf.as_mut_ptr();
+    std::mem::forget(buf);
+    ptr
+}
+
+/// Release a buffer obtained from `gl_alloc` or returned by `gl_call`.
+///
+/// # Safety
+/// `ptr` and `len` must be exactly a pair previously handed out by this module.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn gl_free(ptr: *mut u8, len: u32) {
+    if !ptr.is_null() {
+        drop(unsafe { Vec::from_raw_parts(ptr, len as usize, len.max(1) as usize) });
+    }
+}
+
+/// Execute one JSON request; returns `(out_ptr << 32) | out_len`.
+///
+/// # Safety
+/// `ptr`/`len` must describe a buffer from `gl_alloc` filled by the host.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn gl_call(ptr: *mut u8, len: u32) -> u64 {
+    let request = unsafe { Vec::from_raw_parts(ptr, len as usize, len.max(1) as usize) };
+    let response = graphlaw::abi::call(&request);
+    drop(request);
+    let out_len = response.len() as u64;
+    let mut response = response.into_boxed_slice().into_vec();
+    // Capacity must equal length so gl_free can reconstruct the allocation.
+    response.shrink_to_fit();
+    let out_ptr = response.as_mut_ptr() as u64;
+    std::mem::forget(response);
+    (out_ptr << 32) | out_len
+}
