@@ -1,47 +1,103 @@
 name: Release
 
-# Push a tag like v26.9.28. Builds the WASI module, attaches it (with a
-# checksum) to a GitHub release, and publishes graphlaw-eyeron then graphlaw to
-# crates.io. Requires the repository secret CARGO_REGISTRY_TOKEN.
+# Fully automatic. After CI passes on main, this releases whatever version
+# Cargo.toml declares if that version has not been released yet:
+#   1. tags vX.Y.Z and creates the GitHub release with the CI-built, CI-tested
+#      graphlaw.wasm (+ checksum),
+#   2. publishes graphlaw-eyeron then graphlaw to crates.io, each only if that
+#      exact version is not already on the registry.
+# Every step is idempotent, so re-runs and no-op merges are safe. To release,
+# merge a change that bumps the version; nothing else is required.
 
 on:
-  push:
-    tags: ["v*"]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   release:
-    name: build, release, publish
+    name: release if unreleased
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.96.0
-          targets: wasm32-wasip1
-      - name: Tag must match the crate version
+
+      - name: Decide what is unreleased
+        id: plan
+        shell: bash
         run: |
-          version=$(cargo metadata --no-deps --format-version 1 | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name']=='graphlaw'))")
-          test "v${version}" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != graphlaw ${version}"; exit 1; }
-      - name: Test
-        run: |
-          cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
-          GRAPHLAW_WASM="$PWD/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm" cargo test --all-targets --all-features
-      - name: Stage release assets
-        run: |
-          mkdir dist
-          cp target/wasm32-wasip1/wasm/graphlaw_wasm.wasm dist/graphlaw.wasm
-          (cd dist && sha256sum graphlaw.wasm > graphlaw.wasm.sha256)
-      - name: GitHub release
-        uses: softprops/action-gh-release@v2
+          set -euo pipefail
+          meta=$(cargo metadata --no-deps --format-version 1)
+          ver() { echo "$meta" | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name']=='$1'))"; }
+          on_registry() { # crate version
+            local n=$1 v=$2 p
+            if [ ${#n} -le 3 ]; then p="${#n}/$n"; else p="${n:0:2}/${n:2:2}/$n"; fi
+            local idx; idx=$(curl -fsS "https://index.crates.io/$p" 2>/dev/null || true)
+            if grep -q "\"vers\":\"$v\"" <<<"$idx"; then echo yes; else echo no; fi
+          }
+          g=$(ver graphlaw); e=$(ver graphlaw-eyeron)
+          echo "graphlaw=$g" >> "$GITHUB_OUTPUT"
+          tags=$(git ls-remote --tags origin "refs/tags/v$g" || true)
+          echo "tag_exists=$([ -n "$tags" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+          echo "eyeron_published=$(on_registry graphlaw-eyeron "$e")" >> "$GITHUB_OUTPUT"
+          echo "graphlaw_published=$(on_registry graphlaw "$g")" >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+      - name: Fetch the module CI built and tested for this commit
+        if: steps.plan.outputs.tag_exists == 'no'
+        uses: actions/download-artifact@v4
         with:
-          files: |
-            dist/graphlaw.wasm
-            dist/graphlaw.wasm.sha256
-          generate_release_notes: true
-      - name: Publish to crates.io (graphlaw-eyeron, then graphlaw)
+          name: graphlaw-wasm
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+          path: dist
+
+      - name: Tag and create the GitHub release
+        if: steps.plan.outputs.tag_exists == 'no'
+        run: |
+          set -euo pipefail
+          test -s dist/graphlaw_wasm.wasm
+          mv dist/graphlaw_wasm.wasm dist/graphlaw.wasm
+          (cd dist && sha256sum graphlaw.wasm > graphlaw.wasm.sha256)
+          gh release create "v${{ steps.plan.outputs.graphlaw }}" dist/graphlaw.wasm dist/graphlaw.wasm.sha256 \
+            --target "$SHA" --generate-notes --title "graphlaw v${{ steps.plan.outputs.graphlaw }}"
+
+      - name: Publish graphlaw-eyeron
+        if: steps.plan.outputs.eyeron_published == 'no'
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: cargo publish -p graphlaw-eyeron -p graphlaw
+        run: |
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+            echo "::error title=crates.io credential missing::Add the CARGO_REGISTRY_TOKEN repository secret once; every later release is automatic."
+            exit 1
+          fi
+          cargo publish -p graphlaw-eyeron
+
+      - name: Publish graphlaw
+        if: steps.plan.outputs.graphlaw_published == 'no'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
+            echo "::error title=crates.io credential missing::Add the CARGO_REGISTRY_TOKEN repository secret once; every later release is automatic."
+            exit 1
+          fi
+          cargo publish -p graphlaw

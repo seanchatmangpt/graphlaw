@@ -39,9 +39,9 @@ One self-contained WASI module (imports are `wasi_snapshot_preview1` only: clock
 
 `vendor/` carries two cfg-only upstream patches that give WASI the standard clock/RNG path; see `vendor/README.md`.
 
-### Releasing
+### Releasing (automatic)
 
-Tag `v26.9.28` (must equal the crate version) after adding the `CARGO_REGISTRY_TOKEN` repository secret. `.github/workflows/release.yml` tests, attaches `graphlaw.wasm` and its checksum to the GitHub release, and publishes `graphlaw-eyeron` then `graphlaw`. Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
+There is nothing to run. When a change that bumps the version in `Cargo.toml` reaches `main` and CI passes, `.github/workflows/release.yml` tags `vX.Y.Z`, creates the GitHub release with the CI-built and CI-tested `graphlaw.wasm` (plus checksum), and publishes `graphlaw-eyeron` then `graphlaw` to crates.io (each only if that version is not already there; every step is idempotent). The only one-time setup is the `CARGO_REGISTRY_TOKEN` repository secret; without it the release and tag still happen and the publish step fails loudly until it is added. Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
 
 ## Knowledge hooks
 
