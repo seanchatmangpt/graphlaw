@@ -589,6 +589,7 @@ impl ChatmanEngine {
     ///
     /// # Complexity
     /// O(256) plus storage-open cost.
+    #[cfg(not(target_family = "wasm"))]
     pub fn open(
         path: impl AsRef<std::path::Path>,
         profile: EngineProfile,
