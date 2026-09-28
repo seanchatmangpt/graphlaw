@@ -45,7 +45,7 @@ thiserror = "2"
 # advanced beyond the stale lower bounds in this manifest. Standalone GraphLaw must pin
 # the actually-resolved CalVer releases rather than silently depend on Praxis topology.
 wasm4pm-compat = { version = "=26.8.7" }
-wasm4pm-cognition = { version = "=26.7.23", optional = true }
+wasm4pm-cognition = { git = "https://github.com/seanchatmangpt/wasm4pm", rev = "b7ebccb53b1249d45d2472f7754c997982b2f1b7", package = "wasm4pm-cognition", optional = true }
 
 [features]
 cognition = ["dep:wasm4pm-cognition"]
