@@ -131,7 +131,7 @@ pub const BACKEND_AUTHORITIES: &[BackendAuthority] = &[
     BackendAuthority {
         capability: "Notation3",
         authority: "eyeron",
-        revision: "d6568f657c19805b64223acf28d74234156bb837",
+        revision: "0.7.7 (eyereasoner/eyeron@d6568f657c19805b64223acf28d74234156bb837, vendored)",
     },
 ];
 

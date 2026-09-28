@@ -14,8 +14,7 @@ reads the clock.
 | Crate | Upstream | Files changed |
 | --- | --- | --- |
 | `purrdf-sparql-eval` | crates.io 2.0.2 | `src/clock.rs`, `src/governor/mod.rs`, `Cargo.toml` (cfg only) |
-| `eyeron` | `eyereasoner/eyeron@d6568f65` | `src/reasoner.rs` (cfg only) |
 
-Tests, examples, benches and extra binaries were dropped from the copies.
-Delete a directory (and its `[patch]` entry in the root `Cargo.toml`) as soon
-as upstream carries the same gate.
+Eyeron is vendored as a real workspace crate in `crates/graphlaw-eyeron` (see its `UPSTREAM.md`).
+
+Tests, examples and benches were dropped from the copy. Delete this directory (and its `[patch]` entry in the root `Cargo.toml`) as soon as upstream carries the same gate.

@@ -6,13 +6,15 @@ rust-version = "1.96"
 authors = ["Sean Chatman"]
 license = "MIT"
 description = "GraphLaw: library-backed RDF law-state composition over PurRDF and Eyeron"
+readme = "README.md"
+include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE", "/MIGRATION.md"]
 repository = "https://github.com/seanchatmangpt/graphlaw"
 keywords = ["rdf", "n3", "datalog", "shacl", "shex"]
 categories = ["data-structures", "parser-implementations"]
 
 [workspace]
-members = [".", "wasm"]
-exclude = ["vendor/purrdf-sparql-eval", "vendor/eyeron"]
+members = [".", "wasm", "crates/graphlaw-eyeron"]
+exclude = ["vendor/purrdf-sparql-eval"]
 
 # Size-optimised profile for the WebAssembly module (`--profile wasm`); kept
 # separate so native release builds and tests are unaffected.
@@ -33,7 +35,7 @@ purrdf = "=2.0.2"
 sha2 = "0.10"
 regex = { version = "1", optional = true }
 serde_json = { version = "1", optional = true }
-eyeron = { git = "https://github.com/eyereasoner/eyeron", rev = "d6568f657c19805b64223acf28d74234156bb837" }
+eyeron = { package = "graphlaw-eyeron", version = "0.7.7", path = "crates/graphlaw-eyeron" }
 
 [features]
 # Capture/rewrite tooling for packs/self-monitoring-pack (replaces the former
@@ -60,14 +62,17 @@ wasmi = "1"
 wasmi_wasi = "1"
 serde_json = "1"
 
-# Carried patches (see vendor/README.md): give WASI the std clock/RNG path
-# instead of the browser-only `js_sys`/`wasm-bindgen` calls, which panic on any
-# wasm32 target that is not wasm32-unknown-unknown.
+# Carried patch (see vendor/README.md): gives WASI the std clock/RNG path instead
+# of the browser-only `js_sys` calls, which panic on any wasm32 target that is
+# not wasm32-unknown-unknown. Patches are ignored by `cargo publish`; the
+# repo-built WASI module is the artifact that carries it.
 [patch.crates-io]
 purrdf-sparql-eval = { path = "vendor/purrdf-sparql-eval" }
 
-[patch."https://github.com/eyereasoner/eyeron"]
-eyeron = { path = "vendor/eyeron" }
+# Line tables are enough for backtraces; full debuginfo made each of the many
+# integration-test binaries huge (tens of GB across the suite).
+[profile.dev]
+debug = "line-tables-only"
 
 # The wasm runtime used by tests/wasm_abi.rs is an interpreter; unoptimised it
 # is ~50x slower and makes the suite take minutes.

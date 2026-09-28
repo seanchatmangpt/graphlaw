@@ -8,11 +8,17 @@ pub struct EyeronError {
 
 impl EyeronError {
     pub fn new(message: impl Into<String>) -> Self {
-        Self { message: message.into(), offset: None }
+        Self {
+            message: message.into(),
+            offset: None,
+        }
     }
 
     pub fn at(message: impl Into<String>, offset: usize) -> Self {
-        Self { message: message.into(), offset: Some(offset) }
+        Self {
+            message: message.into(),
+            offset: Some(offset),
+        }
     }
 
     pub fn with_source_location(&self, source: &str, label: &str) -> String {
@@ -22,7 +28,10 @@ impl EyeronError {
                 let (line, col) = line_col(source, offset);
                 let line_text = source.lines().nth(line.saturating_sub(1)).unwrap_or("");
                 let caret = format!("{}^", " ".repeat(col.saturating_sub(1)));
-                format!("{}:{}:{}: {}\n{}\n{}", label, line, col, self.message, line_text, caret)
+                format!(
+                    "{}:{}:{}: {}\n{}\n{}",
+                    label, line, col, self.message, line_text, caret
+                )
             }
         }
     }
@@ -32,7 +41,9 @@ fn line_col(source: &str, offset: usize) -> (usize, usize) {
     let mut line = 1usize;
     let mut col = 1usize;
     for (i, ch) in source.char_indices() {
-        if i >= offset { break; }
+        if i >= offset {
+            break;
+        }
         if ch == '\n' {
             line += 1;
             col = 1;
@@ -44,13 +55,17 @@ fn line_col(source: &str, offset: usize) -> (usize, usize) {
 }
 
 impl fmt::Display for EyeronError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { write!(f, "{}", self.message) }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
 }
 
 impl std::error::Error for EyeronError {}
 
 impl From<std::io::Error> for EyeronError {
-    fn from(value: std::io::Error) -> Self { Self::new(value.to_string()) }
+    fn from(value: std::io::Error) -> Self {
+        Self::new(value.to_string())
+    }
 }
 
 pub type Result<T> = std::result::Result<T, EyeronError>;

@@ -1,17 +1,21 @@
-use crate::reasoner::FiredFuse;
 use crate::ast::*;
+use crate::reasoner::FiredFuse;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub fn result_to_string(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String {
     let output_strings: Vec<String> = triples
         .iter()
         .filter_map(|t| match (&t.p, &t.o) {
-            (Term::Iri(p), Term::Literal(l)) if p.as_str() == LOG_OUTPUT_STRING => Some(l.value.to_string()),
+            (Term::Iri(p), Term::Literal(l)) if p.as_str() == LOG_OUTPUT_STRING => {
+                Some(l.value.to_string())
+            }
             _ => None,
         })
         .collect();
 
-    if !output_strings.is_empty() { return output_strings.join(""); }
+    if !output_strings.is_empty() {
+        return output_strings.join("");
+    }
     triples_to_n3(prefixes, triples)
 }
 
@@ -19,15 +23,18 @@ pub fn rdf_result_to_string(prefixes: &BTreeMap<String, String>, triples: &[Trip
     let output_strings: Vec<String> = triples
         .iter()
         .filter_map(|t| match (&t.p, &t.o) {
-            (Term::Iri(p), Term::Literal(l)) if p.as_str() == LOG_OUTPUT_STRING => Some(l.value.to_string()),
+            (Term::Iri(p), Term::Literal(l)) if p.as_str() == LOG_OUTPUT_STRING => {
+                Some(l.value.to_string())
+            }
             _ => None,
         })
         .collect();
 
-    if !output_strings.is_empty() { return output_strings.join(""); }
+    if !output_strings.is_empty() {
+        return output_strings.join("");
+    }
     triples_to_trig(prefixes, triples)
 }
-
 
 pub fn triple_to_n3(prefixes: &BTreeMap<String, String>, t: &Triple) -> String {
     if is_implication_triple(t) {
@@ -51,7 +58,9 @@ pub fn term_to_n3_predicate(term: &Term, prefixes: &BTreeMap<String, String>) ->
 }
 
 pub fn triples_to_n3(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String {
-    if triples.is_empty() { return String::new(); }
+    if triples.is_empty() {
+        return String::new();
+    }
     let used = used_prefixes(prefixes, triples);
     let mut out = String::new();
 
@@ -61,12 +70,16 @@ pub fn triples_to_n3(prefixes: &BTreeMap<String, String>, triples: &[Triple]) ->
         }
     }
     for p in &used {
-        if p.is_empty() { continue; }
+        if p.is_empty() {
+            continue;
+        }
         if let Some(base) = prefixes.get(p) {
             out.push_str(&format!("@prefix {}: <{}> .\n", p, base));
         }
     }
-    if !used.is_empty() { out.push('\n'); }
+    if !used.is_empty() {
+        out.push('\n');
+    }
 
     let mut prev_multiline = false;
     let mut first = true;
@@ -86,7 +99,9 @@ pub fn triples_to_n3(prefixes: &BTreeMap<String, String>, triples: &[Triple]) ->
         // lines; give it its own paragraph rather than crowding it
         // against a neighboring one-line triple or another such block.
         let this_multiline = rendered.trim_end().contains('\n');
-        if !first && (prev_multiline || this_multiline) { out.push('\n'); }
+        if !first && (prev_multiline || this_multiline) {
+            out.push('\n');
+        }
         out.push_str(&rendered);
         prev_multiline = this_multiline;
         first = false;
@@ -95,7 +110,9 @@ pub fn triples_to_n3(prefixes: &BTreeMap<String, String>, triples: &[Triple]) ->
 }
 
 pub fn triples_to_trig(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String {
-    if triples.is_empty() { return String::new(); }
+    if triples.is_empty() {
+        return String::new();
+    }
     let used = used_prefixes_for_trig(prefixes, triples);
     let mut out = String::new();
 
@@ -105,21 +122,22 @@ pub fn triples_to_trig(prefixes: &BTreeMap<String, String>, triples: &[Triple]) 
         }
     }
     for p in &used {
-        if p.is_empty() { continue; }
+        if p.is_empty() {
+            continue;
+        }
         if let Some(base) = prefixes.get(p) {
             out.push_str(&format!("@prefix {}: <{}> .\n", p, base));
         }
     }
-    if !used.is_empty() { out.push('\n'); }
+    if !used.is_empty() {
+        out.push('\n');
+    }
 
     let mut prev_multiline = false;
     let mut first = true;
     for t in triples {
         let (rendered, this_multiline) = if let Some((graph, graph_triples)) = named_graph_fact(t) {
-            let mut block = format!(
-                "{} {{\n",
-                term_to_n3(graph, prefixes, Position::Subject),
-            );
+            let mut block = format!("{} {{\n", term_to_n3(graph, prefixes, Position::Subject),);
             for inner in graph_triples {
                 block.push_str(&format!(
                     "    {} {} {} .\n",
@@ -143,7 +161,9 @@ pub fn triples_to_trig(prefixes: &BTreeMap<String, String>, triples: &[Triple]) 
         // A named-graph block or a quoted-formula-valued triple renders as
         // several lines; give it its own paragraph rather than crowding it
         // against a neighboring one-line triple or another such block.
-        if !first && (prev_multiline || this_multiline) { out.push('\n'); }
+        if !first && (prev_multiline || this_multiline) {
+            out.push('\n');
+        }
         out.push_str(&rendered);
         prev_multiline = this_multiline;
         first = false;
@@ -152,7 +172,11 @@ pub fn triples_to_trig(prefixes: &BTreeMap<String, String>, triples: &[Triple]) 
 }
 
 #[derive(Clone, Copy)]
-enum Position { Subject, Predicate, Object }
+enum Position {
+    Subject,
+    Predicate,
+    Object,
+}
 
 fn term_to_n3(term: &Term, prefixes: &BTreeMap<String, String>, pos: Position) -> String {
     match term {
@@ -175,9 +199,13 @@ fn term_to_n3(term: &Term, prefixes: &BTreeMap<String, String>, pos: Position) -
 
 fn is_implication_triple(t: &Triple) -> bool {
     match (&t.s, &t.p, &t.o) {
-        (Term::Formula(_), Term::Iri(p), Term::Formula(_)) => p == LOG_IMPLIES || p == LOG_IMPLIED_BY,
+        (Term::Formula(_), Term::Iri(p), Term::Formula(_)) => {
+            p == LOG_IMPLIES || p == LOG_IMPLIED_BY
+        }
         // An inference fuse concludes `false`, and reads back as one.
-        (Term::Formula(_), Term::Iri(p), o) => p == LOG_IMPLIES && crate::reasoner::is_boolean_false(o),
+        (Term::Formula(_), Term::Iri(p), o) => {
+            p == LOG_IMPLIES && crate::reasoner::is_boolean_false(o)
+        }
         _ => false,
     }
 }
@@ -192,7 +220,12 @@ fn implication_to_n3(t: &Triple, prefixes: &BTreeMap<String, String>) -> String 
                 Term::Iri(p) if p == LOG_IMPLIED_BY => "<=",
                 _ => "=>",
             };
-            format!("{} {} {} .\n", formula_to_n3(lhs, prefixes, 0), op, formula_to_n3(rhs, prefixes, 0))
+            format!(
+                "{} {} {} .\n",
+                formula_to_n3(lhs, prefixes, 0),
+                op,
+                formula_to_n3(rhs, prefixes, 0)
+            )
         }
         _ => format!(
             "{} {} {} .\n",
@@ -241,7 +274,9 @@ fn fuse_rule_to_n3(premise: &[Triple], prefixes: &BTreeMap<String, String>) -> S
 }
 
 fn formula_to_n3(triples: &[Triple], prefixes: &BTreeMap<String, String>, indent: usize) -> String {
-    if triples.is_empty() { return "true".to_string(); }
+    if triples.is_empty() {
+        return "true".to_string();
+    }
     let pad = " ".repeat(indent);
     let inner = " ".repeat(indent + 4);
     let mut out = String::new();
@@ -289,8 +324,16 @@ fn numeric_shorthand_round_trips(datatype: &str, value: &str) -> bool {
 fn literal_to_n3(lit: &Literal, prefixes: &BTreeMap<String, String>) -> String {
     match lit.datatype.as_deref() {
         Some(dt) if numeric_shorthand_round_trips(dt, &lit.value) => lit.value.clone().to_string(),
-        Some("http://www.w3.org/2001/XMLSchema#boolean") if lit.value == "true" || lit.value == "false" => lit.value.clone().to_string(),
-        Some(dt) => format!("\"{}\"^^{}", escape_string(&lit.value), compact_iri(dt, prefixes).unwrap_or_else(|| format!("<{}>", dt))),
+        Some("http://www.w3.org/2001/XMLSchema#boolean")
+            if lit.value == "true" || lit.value == "false" =>
+        {
+            lit.value.clone().to_string()
+        }
+        Some(dt) => format!(
+            "\"{}\"^^{}",
+            escape_string(&lit.value),
+            compact_iri(dt, prefixes).unwrap_or_else(|| format!("<{}>", dt))
+        ),
         None => match &lit.language {
             Some(lang) => format!("\"{}\"@{}", escape_string(&lit.value), lang),
             None => format!("\"{}\"", escape_string(&lit.value)),
@@ -313,11 +356,18 @@ fn compact_iri(iri: &str, prefixes: &BTreeMap<String, String>) -> Option<String>
     }
     best.map(|(prefix, base)| {
         let local = &iri[base.len()..];
-        if prefix.is_empty() { format!(":{}", local) } else { format!("{}:{}", prefix, local) }
+        if prefix.is_empty() {
+            format!(":{}", local)
+        } else {
+            format!("{}:{}", prefix, local)
+        }
     })
 }
 
-pub(crate) fn used_prefixes(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> BTreeSet<String> {
+pub(crate) fn used_prefixes(
+    prefixes: &BTreeMap<String, String>,
+    triples: &[Triple],
+) -> BTreeSet<String> {
     let mut used = BTreeSet::new();
     for t in triples {
         collect_used_prefixes(&t.s, Position::Subject, prefixes, &mut used);
@@ -329,7 +379,10 @@ pub(crate) fn used_prefixes(prefixes: &BTreeMap<String, String>, triples: &[Trip
     used
 }
 
-fn used_prefixes_for_trig(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> BTreeSet<String> {
+fn used_prefixes_for_trig(
+    prefixes: &BTreeMap<String, String>,
+    triples: &[Triple],
+) -> BTreeSet<String> {
     let mut used = BTreeSet::new();
     for t in triples {
         if let Some((graph, graph_triples)) = named_graph_fact(t) {
@@ -348,19 +401,32 @@ fn used_prefixes_for_trig(prefixes: &BTreeMap<String, String>, triples: &[Triple
     used
 }
 
-fn collect_used_prefixes(term: &Term, pos: Position, prefixes: &BTreeMap<String, String>, used: &mut BTreeSet<String>) {
+fn collect_used_prefixes(
+    term: &Term,
+    pos: Position,
+    prefixes: &BTreeMap<String, String>,
+    used: &mut BTreeSet<String>,
+) {
     match term {
         Term::Iri(iri) => {
-            if matches!(pos, Position::Predicate) && iri == RDF_TYPE { return; }
-            if let Some((p, _)) = prefix_for_iri(iri, prefixes) { used.insert(p.to_string()); }
+            if matches!(pos, Position::Predicate) && iri == RDF_TYPE {
+                return;
+            }
+            if let Some((p, _)) = prefix_for_iri(iri, prefixes) {
+                used.insert(p.to_string());
+            }
         }
         Term::Literal(lit) => {
             if let Some(dt) = &lit.datatype {
-                if let Some((p, _)) = prefix_for_iri(dt, prefixes) { used.insert(p.to_string()); }
+                if let Some((p, _)) = prefix_for_iri(dt, prefixes) {
+                    used.insert(p.to_string());
+                }
             }
         }
         Term::List(items) => {
-            for item in items { collect_used_prefixes(item, Position::Object, prefixes, used); }
+            for item in items {
+                collect_used_prefixes(item, Position::Object, prefixes, used);
+            }
         }
         Term::Formula(triples) => {
             for t in triples {
@@ -375,7 +441,10 @@ fn collect_used_prefixes(term: &Term, pos: Position, prefixes: &BTreeMap<String,
     }
 }
 
-fn prefix_for_iri<'a>(iri: &str, prefixes: &'a BTreeMap<String, String>) -> Option<(&'a str, &'a str)> {
+fn prefix_for_iri<'a>(
+    iri: &str,
+    prefixes: &'a BTreeMap<String, String>,
+) -> Option<(&'a str, &'a str)> {
     let mut best: Option<(&str, &str)> = None;
     for (prefix, base) in prefixes {
         if iri.starts_with(base) {
@@ -392,14 +461,21 @@ fn prefix_for_iri<'a>(iri: &str, prefixes: &'a BTreeMap<String, String>) -> Opti
 }
 
 fn valid_local(s: &str) -> bool {
-    s.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+    s.chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
         && !s.starts_with('.')
         && !s.ends_with('.')
 }
 
 fn sanitize_blank(s: &str) -> String {
     s.chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
@@ -422,18 +498,27 @@ pub fn document_debug(doc: &Document) -> String {
     let mut out = String::new();
     out.push_str("Document {\n");
     out.push_str("  prefixes:\n");
-    for (k, v) in &doc.prefixes { out.push_str(&format!("    {:?}: {:?}\n", k, v)); }
+    for (k, v) in &doc.prefixes {
+        out.push_str(&format!("    {:?}: {:?}\n", k, v));
+    }
     out.push_str(&format!("  base_iri: {:?}\n", doc.base_iri));
     out.push_str("  facts:\n");
-    for t in &doc.facts { out.push_str(&format!("    {:?}\n", t)); }
+    for t in &doc.facts {
+        out.push_str(&format!("    {:?}\n", t));
+    }
     out.push_str("  rules:\n");
-    for r in &doc.rules { out.push_str(&format!("    {:?}\n", r)); }
+    for r in &doc.rules {
+        out.push_str(&format!("    {:?}\n", r));
+    }
     out.push_str("}\n");
     out
 }
 
 pub fn rdf12_json(doc: &Document) -> String {
-    let mut writer = RdfJsonWriter { quads: Vec::new(), blank_counter: 0 };
+    let mut writer = RdfJsonWriter {
+        quads: Vec::new(),
+        blank_counter: 0,
+    };
     writer.document(doc);
     format!("[{}]\n", writer.quads.join(","))
 }
@@ -471,7 +556,10 @@ impl RdfJsonWriter {
             Term::Blank(id) => blank_node_json(id),
             Term::Literal(lit) => literal_json(lit),
             Term::List(items) => self.list_json(items, graph_json),
-            Term::Formula(triples) if triples.len() == 1 && !matches!(position, JsonPosition::Predicate | JsonPosition::Graph) => {
+            Term::Formula(triples)
+                if triples.len() == 1
+                    && !matches!(position, JsonPosition::Predicate | JsonPosition::Graph) =>
+            {
                 let triple = &triples[0];
                 let s = self.term_json(&triple.s, JsonPosition::Subject, graph_json);
                 let p = self.term_json(&triple.p, JsonPosition::Predicate, graph_json);
@@ -485,20 +573,40 @@ impl RdfJsonWriter {
 
     fn graph_term_json(&mut self, term: &Term) -> String {
         match term {
-            Term::Iri(_) | Term::Blank(_) => self.term_json(term, JsonPosition::Graph, &default_graph_json()),
+            Term::Iri(_) | Term::Blank(_) => {
+                self.term_json(term, JsonPosition::Graph, &default_graph_json())
+            }
             _ => blank_node_json(&self.fresh_blank_id("graph")),
         }
     }
 
     fn list_json(&mut self, items: &[Term], graph_json: &str) -> String {
-        if items.is_empty() { return named_node_json(RDF_NIL); }
-        let nodes: Vec<String> = (0..items.len()).map(|_| self.fresh_blank_id("rdfList")).collect();
+        if items.is_empty() {
+            return named_node_json(RDF_NIL);
+        }
+        let nodes: Vec<String> = (0..items.len())
+            .map(|_| self.fresh_blank_id("rdfList"))
+            .collect();
         for (idx, item) in items.iter().enumerate() {
             let subject = blank_node_json(&nodes[idx]);
             let value = self.term_json(item, JsonPosition::Object, graph_json);
-            let rest = if idx + 1 < nodes.len() { blank_node_json(&nodes[idx + 1]) } else { named_node_json(RDF_NIL) };
-            self.quads.push(quad_json(&subject, &named_node_json(RDF_FIRST), &value, graph_json));
-            self.quads.push(quad_json(&subject, &named_node_json(RDF_REST), &rest, graph_json));
+            let rest = if idx + 1 < nodes.len() {
+                blank_node_json(&nodes[idx + 1])
+            } else {
+                named_node_json(RDF_NIL)
+            };
+            self.quads.push(quad_json(
+                &subject,
+                &named_node_json(RDF_FIRST),
+                &value,
+                graph_json,
+            ));
+            self.quads.push(quad_json(
+                &subject,
+                &named_node_json(RDF_REST),
+                &rest,
+                graph_json,
+            ));
         }
         blank_node_json(&nodes[0])
     }
@@ -510,7 +618,12 @@ impl RdfJsonWriter {
 }
 
 #[derive(Clone, Copy)]
-enum JsonPosition { Subject, Predicate, Object, Graph }
+enum JsonPosition {
+    Subject,
+    Predicate,
+    Object,
+    Graph,
+}
 
 fn named_graph_fact(triple: &Triple) -> Option<(&Term, &[Triple])> {
     match (&triple.p, &triple.o) {
@@ -520,18 +633,35 @@ fn named_graph_fact(triple: &Triple) -> Option<(&Term, &[Triple])> {
 }
 
 fn named_node_json(value: &str) -> String {
-    format!("{{\"termType\":\"NamedNode\",\"value\":\"{}\"}}", escape_json(value))
+    format!(
+        "{{\"termType\":\"NamedNode\",\"value\":\"{}\"}}",
+        escape_json(value)
+    )
 }
 
 fn blank_node_json(value: &str) -> String {
-    format!("{{\"termType\":\"BlankNode\",\"value\":\"{}\"}}", escape_json(value))
+    format!(
+        "{{\"termType\":\"BlankNode\",\"value\":\"{}\"}}",
+        escape_json(value)
+    )
 }
 
 fn literal_json(lit: &Literal) -> String {
     let (language, datatype) = match lit.language.as_deref() {
-        Some(lang) if lang.contains("--") => (lang, "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString"),
-        Some(lang) => (lang, "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString"),
-        None => ("", lit.datatype.as_deref().unwrap_or("http://www.w3.org/2001/XMLSchema#string")),
+        Some(lang) if lang.contains("--") => (
+            lang,
+            "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString",
+        ),
+        Some(lang) => (
+            lang,
+            "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString",
+        ),
+        None => (
+            "",
+            lit.datatype
+                .as_deref()
+                .unwrap_or("http://www.w3.org/2001/XMLSchema#string"),
+        ),
     };
     format!(
         "{{\"termType\":\"Literal\",\"value\":\"{}\",\"language\":\"{}\",\"datatype\":{}}}",

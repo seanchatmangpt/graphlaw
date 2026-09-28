@@ -8,7 +8,6 @@
 //! re-performs the ones the document recorded — which is what keeps a
 //! checker small enough to be worth trusting (specification §2).
 
-
 use std::collections::BTreeMap;
 
 /// The one reason a step carries. `Kind` is what the generic checker needs;
@@ -91,7 +90,11 @@ impl Report {
         if self.obligations.is_empty() {
             format!("checked: {} steps", self.steps)
         } else {
-            format!("checked with obligations: {} steps, {} trusted", self.steps, self.obligations.len())
+            format!(
+                "checked with obligations: {} steps, {} trusted",
+                self.steps,
+                self.obligations.len()
+            )
         }
     }
 }
@@ -128,10 +131,16 @@ pub trait Document {
 /// Check `document` against the source program it was read with, applying
 /// the four conditions of specification §4.
 pub fn check(document: &dyn Document) -> Report {
-    let mut report = Report { steps: document.step_count(), ..Report::default() };
+    let mut report = Report {
+        steps: document.step_count(),
+        ..Report::default()
+    };
 
     for index in 0..document.step_count() {
-        *report.counts.entry(document.kind(index).label()).or_insert(0) += 1;
+        *report
+            .counts
+            .entry(document.kind(index).label())
+            .or_insert(0) += 1;
     }
 
     // (C1) every use resolves, and collect the step-to-step edges (C2)
@@ -160,8 +169,15 @@ pub fn check(document: &dyn Document) -> Report {
     for index in 0..document.step_count() {
         match document.check_step(index) {
             Ok(Checked::Verified) => report.verified += 1,
-            Ok(Checked::Trusted(kind)) => report.obligations.push(Obligation { kind, conclusion: document.describe(index) }),
-            Err(detail) => report.failures.push(Failure { condition: "C3", conclusion: document.describe(index), detail }),
+            Ok(Checked::Trusted(kind)) => report.obligations.push(Obligation {
+                kind,
+                conclusion: document.describe(index),
+            }),
+            Err(detail) => report.failures.push(Failure {
+                condition: "C3",
+                conclusion: document.describe(index),
+                detail,
+            }),
         }
     }
 
@@ -171,7 +187,8 @@ pub fn check(document: &dyn Document) -> Report {
             report.failures.push(Failure {
                 condition: "C4",
                 conclusion: claim,
-                detail: "claimed, but no step concludes it and the source does not give it".to_string(),
+                detail: "claimed, but no step concludes it and the source does not give it"
+                    .to_string(),
             });
         }
     }
@@ -214,7 +231,8 @@ fn check_well_founded(document: &dyn Document, edges: &[Vec<usize>], report: &mu
                     report.failures.push(Failure {
                         condition: "C2",
                         conclusion: document.describe(next),
-                        detail: "is used, directly or indirectly, by its own derivation".to_string(),
+                        detail: "is used, directly or indirectly, by its own derivation"
+                            .to_string(),
                     });
                     marks[next] = Some(Mark::Done);
                 }

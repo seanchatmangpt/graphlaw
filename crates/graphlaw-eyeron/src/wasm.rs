@@ -15,7 +15,12 @@ pub fn version() -> String {
 }
 
 #[wasm_bindgen(js_name = reasonWithOptions)]
-pub fn reason_with_options(input: &str, proof: bool, rdf: bool, rdf_format: &str) -> std::result::Result<String, JsValue> {
+pub fn reason_with_options(
+    input: &str,
+    proof: bool,
+    rdf: bool,
+    rdf_format: &str,
+) -> std::result::Result<String, JsValue> {
     run(input, "", proof, rdf, rdf_format).map_err(|err| JsValue::from_str(&err.to_string()))
 }
 
@@ -25,12 +30,24 @@ pub fn reason(input: &str) -> std::result::Result<String, JsValue> {
 }
 
 #[wasm_bindgen(js_name = reasonWithData)]
-pub fn reason_with_data(program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str) -> std::result::Result<String, JsValue> {
+pub fn reason_with_data(
+    program: &str,
+    data: &str,
+    proof: bool,
+    rdf: bool,
+    rdf_format: &str,
+) -> std::result::Result<String, JsValue> {
     run(program, data, proof, rdf, rdf_format).map_err(|err| JsValue::from_str(&err.to_string()))
 }
 
 #[wasm_bindgen(js_name = reasonWithDataReport)]
-pub fn reason_with_data_report(program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str) -> String {
+pub fn reason_with_data_report(
+    program: &str,
+    data: &str,
+    proof: bool,
+    rdf: bool,
+    rdf_format: &str,
+) -> String {
     match run_report(program, data, proof, rdf, rdf_format) {
         Ok(output) => format!("{{\"ok\":true,\"output\":{}}}", json_string(&output)),
         Err(err) => err.to_json(),
@@ -52,7 +69,10 @@ impl EyeronSession {
     pub fn new(program: &str, proof: bool) -> std::result::Result<EyeronSession, JsValue> {
         let doc = parse_source(program, proof, false, "n3", "session-program")
             .map_err(|err| JsValue::from_str(&err.with_source_location(program, "program")))?;
-        Ok(Self { prepared: PreparedReasoner::new(doc), proof })
+        Ok(Self {
+            prepared: PreparedReasoner::new(doc),
+            proof,
+        })
     }
 
     /// Reason over a single independent data batch.
@@ -118,7 +138,10 @@ impl EyeronSession {
         prefixes.extend(self.prepared.program().prefixes.clone());
         let result = self.prepared.reason(
             &data_doc,
-            &ReasonerOptions { proof: self.proof, ..ReasonerOptions::default() },
+            &ReasonerOptions {
+                proof: self.proof,
+                ..ReasonerOptions::default()
+            },
         );
         if !result.is_complete() {
             return Err(PlaygroundError::from_reasoner(&result));
@@ -138,7 +161,13 @@ fn run(program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str) -> R
     run_report(program, data, proof, rdf, rdf_format).map_err(|err| EyeronError::new(err.display))
 }
 
-fn run_report(program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str) -> std::result::Result<String, PlaygroundError> {
+fn run_report(
+    program: &str,
+    data: &str,
+    proof: bool,
+    rdf: bool,
+    rdf_format: &str,
+) -> std::result::Result<String, PlaygroundError> {
     let mut doc = crate::Document::new();
     if data.trim().is_empty() {
         let parsed = parse_source(program, proof, rdf, rdf_format, "playground")
@@ -153,7 +182,13 @@ fn run_report(program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &st
         doc.merge(program_doc);
     }
 
-    let result = reason_document(&doc, &ReasonerOptions { proof, ..ReasonerOptions::default() });
+    let result = reason_document(
+        &doc,
+        &ReasonerOptions {
+            proof,
+            ..ReasonerOptions::default()
+        },
+    );
     if !result.is_complete() {
         return Err(PlaygroundError::from_reasoner(&result));
     }
@@ -179,7 +214,10 @@ struct PlaygroundError {
 
 impl PlaygroundError {
     fn from_error(err: EyeronError, source: &str, editor: &'static str, label: &str) -> Self {
-        let (line, column) = err.offset.map(|offset| line_col(source, offset)).unwrap_or((0, 0));
+        let (line, column) = err
+            .offset
+            .map(|offset| line_col(source, offset))
+            .unwrap_or((0, 0));
         Self {
             code: "parse_error",
             display: err.with_source_location(source, label),
@@ -192,7 +230,9 @@ impl PlaygroundError {
     }
 
     fn from_reasoner(result: &ReasonerResult) -> Self {
-        let message = result.incomplete_summary().unwrap_or_else(|| "reasoning incomplete".to_string());
+        let message = result
+            .incomplete_summary()
+            .unwrap_or_else(|| "reasoning incomplete".to_string());
         let limits = result
             .limits_reached
             .iter()
@@ -203,7 +243,9 @@ impl PlaygroundError {
             .errors
             .iter()
             .map(|error| match error {
-                ReasonerError::UnsupportedBuiltin { builtin, detail, .. } => format!(
+                ReasonerError::UnsupportedBuiltin {
+                    builtin, detail, ..
+                } => format!(
                     "{{\"code\":\"unsupported_builtin\",\"builtin\":{},\"detail\":{}}}",
                     json_string(builtin),
                     json_string(detail),
@@ -218,13 +260,22 @@ impl PlaygroundError {
             editor: "program",
             line: None,
             column: None,
-            details: Some(format!("{{\"limitsReached\":[{}],\"errors\":[{}]}}", limits, errors)),
+            details: Some(format!(
+                "{{\"limitsReached\":[{}],\"errors\":[{}]}}",
+                limits, errors
+            )),
         }
     }
 
     fn to_json(&self) -> String {
-        let line = self.line.map(|value| value.to_string()).unwrap_or_else(|| "null".to_string());
-        let column = self.column.map(|value| value.to_string()).unwrap_or_else(|| "null".to_string());
+        let line = self
+            .line
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "null".to_string());
+        let column = self
+            .column
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "null".to_string());
         let details = self.details.as_deref().unwrap_or("null");
         format!(
             "{{\"ok\":false,\"error\":{{\"code\":{},\"message\":{},\"display\":{},\"editor\":{},\"line\":{},\"column\":{},\"details\":{}}}}}",
@@ -243,7 +294,9 @@ fn line_col(source: &str, offset: usize) -> (usize, usize) {
     let mut line = 1usize;
     let mut col = 1usize;
     for (i, ch) in source.char_indices() {
-        if i >= offset { break; }
+        if i >= offset {
+            break;
+        }
         if ch == '\n' {
             line += 1;
             col = 1;
@@ -272,7 +325,13 @@ fn json_string(value: &str) -> String {
     out
 }
 
-fn parse_source(input: &str, proof: bool, rdf: bool, rdf_format: &str, label: &str) -> Result<crate::Document> {
+fn parse_source(
+    input: &str,
+    proof: bool,
+    rdf: bool,
+    rdf_format: &str,
+    label: &str,
+) -> Result<crate::Document> {
     if is_rdf_message_log(input) {
         parse_rdf_message_log(input, None)
     } else if rdf {
@@ -292,7 +351,10 @@ fn rdf_format_from_playground(format: &str, input: &str) -> Result<RdfFormat> {
         "trig" => Ok(RdfFormat::Trig),
         "nt" | "n-triples" | "ntriples" => Ok(RdfFormat::NTriples),
         "nq" | "n-quads" | "nquads" => Ok(RdfFormat::NQuads),
-        other => Err(EyeronError::new(format!("unknown RDF format for playground: {}", other))),
+        other => Err(EyeronError::new(format!(
+            "unknown RDF format for playground: {}",
+            other
+        ))),
     }
 }
 
@@ -300,7 +362,9 @@ fn guess_rdf_format(input: &str) -> RdfFormat {
     let trimmed = input.trim_start();
     if trimmed.lines().all(|line| {
         let line = line.trim();
-        line.is_empty() || line.starts_with('#') || (line.starts_with('<') && line.ends_with(" .") && line.matches('<').count() >= 4)
+        line.is_empty()
+            || line.starts_with('#')
+            || (line.starts_with('<') && line.ends_with(" .") && line.matches('<').count() >= 4)
     }) {
         return RdfFormat::NTriples;
     }

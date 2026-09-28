@@ -16,7 +16,7 @@ Executable standards semantics are delegated to two pinned authorities:
 | ShEx 2.1 | PurRDF 2.0.2 |
 | Datalog / stratification / semi-naive fixpoint / chase | PurRDF 2.0.2 |
 | RDF / RDFS / OWL-RL entailment | PurRDF 2.0.2 |
-| Notation3 parsing/reasoning/proofs | Eyeron @ d6568f657c19805b64223acf28d74234156bb837 |
+| Notation3 parsing/reasoning/proofs | Eyeron 0.7.7 (MIT, vendored as `crates/graphlaw-eyeron` from eyereasoner/eyeron@d6568f65; see its `UPSTREAM.md`) |
 
 GraphLaw itself owns the **composition boundary and semantic assets**: ontologies, packs, queries, and the decision about which upstream implementation has standing. It does not keep a fallback implementation.
 

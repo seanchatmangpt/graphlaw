@@ -511,18 +511,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eyeron"
-version = "0.7.7"
-dependencies = [
- "num-bigint",
- "num-traits",
- "regex",
- "serde_json",
- "ureq",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -660,6 +648,18 @@ checksum = "f0d8a4362ccb29cb0b265253fb0a2728f592895ee6854fd9bc13f2ffda266ff1"
 dependencies = [
  "opaque-debug",
  "polyval",
+]
+
+[[package]]
+name = "graphlaw-eyeron"
+version = "0.7.7"
+dependencies = [
+ "num-bigint",
+ "num-traits",
+ "regex",
+ "serde_json",
+ "ureq",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -1006,7 +1006,7 @@ dependencies = [
 name = "praxis-graphlaw"
 version = "26.9.28"
 dependencies = [
- "eyeron",
+ "graphlaw-eyeron",
  "purrdf",
  "regex",
  "serde_json",

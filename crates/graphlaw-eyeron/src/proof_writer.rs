@@ -1,13 +1,17 @@
 use crate::ast::*;
 use crate::printing::{term_to_n3_object, triple_to_n3};
-use crate::reasoner::{explain_backward_indexed, index_of_facts, BackwardStep, DerivedFact, FactIndex, ReasonerResult};
+use crate::reasoner::{
+    explain_backward_indexed, index_of_facts, BackwardStep, DerivedFact, FactIndex, ReasonerResult,
+};
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::path::Path;
 
 const PE_NS: &str = "https://eyereasoner.github.io/pe#";
 
 pub fn proof_to_n3(prefixes: &BTreeMap<String, String>, result: &ReasonerResult) -> String {
-    if result.proofs.is_empty() { return String::new(); }
+    if result.proofs.is_empty() {
+        return String::new();
+    }
 
     let roots = unique_proofs(&result.proofs);
     let derived_by_fact = index_by_conclusion(&result.proofs);
@@ -23,20 +27,28 @@ pub fn proof_to_n3(prefixes: &BTreeMap<String, String>, result: &ReasonerResult)
     );
 
     let mut proof_prefixes = prefixes.clone();
-    proof_prefixes.entry("pe".to_string()).or_insert_with(|| PE_NS.to_string());
+    proof_prefixes
+        .entry("pe".to_string())
+        .or_insert_with(|| PE_NS.to_string());
     let used = used_prefixes_for_proof(&proof_prefixes, &roots, &entries);
 
     let mut parts = Vec::<String>::new();
     for prefix in &used {
-        let Some(base) = proof_prefixes.get(prefix) else { continue; };
-        if base.is_empty() { continue; }
+        let Some(base) = proof_prefixes.get(prefix) else {
+            continue;
+        };
+        if base.is_empty() {
+            continue;
+        }
         if prefix.is_empty() {
             parts.push(format!("@prefix : <{}> .", base));
         } else {
             parts.push(format!("@prefix {}: <{}> .", prefix, base));
         }
     }
-    if !parts.is_empty() { parts.push(String::new()); }
+    if !parts.is_empty() {
+        parts.push(String::new());
+    }
 
     // What was derived, then one step per conclusion. A step names what it
     // used by that premise's own triple, so the steps need no nesting and
@@ -86,9 +98,18 @@ pub(crate) fn index_by_conclusion(proofs: &[DerivedFact]) -> BTreeMap<&Triple, V
 #[derive(Debug, Clone)]
 pub(crate) enum ProofEntry<'a> {
     Rule(std::borrow::Cow<'a, DerivedFact>),
-    Fact { fact: Triple, source: Option<SourceRef> },
-    Builtin { fact: Triple, builtin: Term },
-    Unproven { fact: Triple, reason: String },
+    Fact {
+        fact: Triple,
+        source: Option<SourceRef>,
+    },
+    Builtin {
+        fact: Triple,
+        builtin: Term,
+    },
+    Unproven {
+        fact: Triple,
+        reason: String,
+    },
 }
 
 /// Every step needed to explain all of `roots`, each conclusion explained
@@ -138,9 +159,16 @@ struct ProofCollector<'a, 'b> {
 
 impl<'a> ProofCollector<'a, '_> {
     fn visit_derived_fact(&mut self, proof: &'a DerivedFact) {
-        let key = format!("rule:{}:{}", triple_key(&proof.fact), source_key(proof.rule.source.as_ref()));
-        if !self.seen.insert(key) { return; }
-        self.entries.push(ProofEntry::Rule(std::borrow::Cow::Borrowed(proof)));
+        let key = format!(
+            "rule:{}:{}",
+            triple_key(&proof.fact),
+            source_key(proof.rule.source.as_ref())
+        );
+        if !self.seen.insert(key) {
+            return;
+        }
+        self.entries
+            .push(ProofEntry::Rule(std::borrow::Cow::Borrowed(proof)));
 
         for premise in &proof.premises {
             self.visit_premise(premise, Some(proof));
@@ -150,23 +178,35 @@ impl<'a> ProofCollector<'a, '_> {
     fn remember_backward_step(&mut self, step: BackwardStep) {
         match step {
             BackwardStep::Rule(df) => {
-                let key = format!("rule:{}:{}", triple_key(&df.fact), source_key(df.rule.source.as_ref()));
+                let key = format!(
+                    "rule:{}:{}",
+                    triple_key(&df.fact),
+                    source_key(df.rule.source.as_ref())
+                );
                 if self.seen.insert(key) {
-                    self.entries.push(ProofEntry::Rule(std::borrow::Cow::Owned(df)));
+                    self.entries
+                        .push(ProofEntry::Rule(std::borrow::Cow::Owned(df)));
                 }
             }
             BackwardStep::Fact { fact } => {
                 let source = self.explicit_sources.get(&fact).cloned();
                 self.remember_entry(ProofEntry::Fact { fact, source });
             }
-            BackwardStep::Builtin { fact, builtin } => self.remember_entry(ProofEntry::Builtin { fact, builtin }),
-            BackwardStep::Unproven { fact, reason } => self.remember_entry(ProofEntry::Unproven { fact, reason }),
+            BackwardStep::Builtin { fact, builtin } => {
+                self.remember_entry(ProofEntry::Builtin { fact, builtin })
+            }
+            BackwardStep::Unproven { fact, reason } => {
+                self.remember_entry(ProofEntry::Unproven { fact, reason })
+            }
         }
     }
 
     fn visit_premise(&mut self, premise: &Triple, parent: Option<&DerivedFact>) {
         if let Some(candidates) = self.derived_by_fact.get(premise) {
-            if let Some(child) = candidates.iter().find(|candidate| match parent { Some(p) => candidate.fact != p.fact, None => true }) {
+            if let Some(child) = candidates.iter().find(|candidate| match parent {
+                Some(p) => candidate.fact != p.fact,
+                None => true,
+            }) {
                 self.visit_derived_fact(child);
                 return;
             }
@@ -184,14 +224,25 @@ impl<'a> ProofCollector<'a, '_> {
         // exact triple equality, avoids that misattribution.
         if self.explicit_facts.contains(premise) {
             let source = self.explicit_sources.get(premise).cloned();
-            self.remember_entry(ProofEntry::Fact { fact: premise.clone(), source });
+            self.remember_entry(ProofEntry::Fact {
+                fact: premise.clone(),
+                source,
+            });
             return;
         }
 
         // The explanation comes back as a flat set of steps rather than a
         // tree, so a premise used more than once is explained once.
         let mut steps = Vec::new();
-        if explain_backward_indexed(premise, self.base_facts, &self.base_index, self.explicit_facts, self.rules, 4096, &mut |step| steps.push(step)) {
+        if explain_backward_indexed(
+            premise,
+            self.base_facts,
+            &self.base_index,
+            self.explicit_facts,
+            self.rules,
+            4096,
+            &mut |step| steps.push(step),
+        ) {
             for step in steps {
                 self.remember_backward_step(step);
             }
@@ -207,7 +258,10 @@ impl<'a> ProofCollector<'a, '_> {
             let mut bindings = BTreeMap::new();
             if crate::reasoner::match_triple(candidate, premise, &mut bindings) {
                 let source = self.explicit_sources.get(candidate).cloned();
-                self.remember_entry(ProofEntry::Fact { fact: premise.clone(), source });
+                self.remember_entry(ProofEntry::Fact {
+                    fact: premise.clone(),
+                    source,
+                });
                 return;
             }
         }
@@ -218,7 +272,10 @@ impl<'a> ProofCollector<'a, '_> {
         for rule in self.rules.iter().filter(|rule| rule.source.is_some()) {
             let mut bindings = BTreeMap::new();
             if crate::reasoner::match_triple(&rule_statement(rule), premise, &mut bindings) {
-                self.remember_entry(ProofEntry::Fact { fact: premise.clone(), source: rule.source.clone() });
+                self.remember_entry(ProofEntry::Fact {
+                    fact: premise.clone(),
+                    source: rule.source.clone(),
+                });
                 return;
             }
         }
@@ -235,12 +292,20 @@ impl<'a> ProofCollector<'a, '_> {
 
     fn remember_entry(&mut self, entry: ProofEntry<'a>) {
         let key = match &entry {
-            ProofEntry::Rule(df) => format!("rule:{}:{}", triple_key(&df.fact), source_key(df.rule.source.as_ref())),
-            ProofEntry::Fact { fact, source } => format!("fact:{}:{}", triple_key(fact), source_key(source.as_ref())),
+            ProofEntry::Rule(df) => format!(
+                "rule:{}:{}",
+                triple_key(&df.fact),
+                source_key(df.rule.source.as_ref())
+            ),
+            ProofEntry::Fact { fact, source } => {
+                format!("fact:{}:{}", triple_key(fact), source_key(source.as_ref()))
+            }
             ProofEntry::Builtin { fact, .. } => format!("builtin:{}", triple_key(fact)),
             ProofEntry::Unproven { fact, .. } => format!("unproven:{}", triple_key(fact)),
         };
-        if self.seen.insert(key) { self.entries.push(entry); }
+        if self.seen.insert(key) {
+            self.entries.push(entry);
+        }
     }
 }
 
@@ -267,7 +332,9 @@ impl<'a> RuleNumbering<'a> {
         let mut by_source = BTreeMap::new();
         for (index, rule) in rules.iter().enumerate() {
             if let Some(source) = &rule.source {
-                by_source.entry((source.label.as_str(), source.line)).or_insert(index + 1);
+                by_source
+                    .entry((source.label.as_str(), source.line))
+                    .or_insert(index + 1);
             }
         }
         Self { rules, by_source }
@@ -281,7 +348,10 @@ impl<'a> RuleNumbering<'a> {
         }
         // A rule the engine generated has no source to look up, and there
         // are few of them, so structural search is affordable here.
-        self.rules.iter().position(|candidate| candidate == rule).map(|index| index + 1)
+        self.rules
+            .iter()
+            .position(|candidate| candidate == rule)
+            .map(|index| index + 1)
     }
 }
 
@@ -295,35 +365,66 @@ pub(crate) fn justification(kind: &str, object: String) -> (String, Vec<String>)
 /// The line-building helpers below indent a step by two spaces. An N3 step
 /// stands at the margin, so the indent comes back off here.
 fn outdent(block: &str) -> String {
-    block.lines().map(|line| line.strip_prefix("  ").unwrap_or(line)).collect::<Vec<_>>().join("\n")
+    block
+        .lines()
+        .map(|line| line.strip_prefix("  ").unwrap_or(line))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
-fn render_entry(entry: &ProofEntry, numbering: &RuleNumbering, prefixes: &BTreeMap<String, String>) -> String {
+fn render_entry(
+    entry: &ProofEntry,
+    numbering: &RuleNumbering,
+    prefixes: &BTreeMap<String, String>,
+) -> String {
     match entry {
         ProofEntry::Rule(proof) => render_rule_entry(proof, numbering, prefixes),
         ProofEntry::Fact { fact, source } => {
-            format!("  {}\n    pe:fact {}.", graph_for_triple(fact, prefixes), quoted_string(&fact_label(source.as_ref())))
+            format!(
+                "  {}\n    pe:fact {}.",
+                graph_for_triple(fact, prefixes),
+                quoted_string(&fact_label(source.as_ref()))
+            )
         }
         ProofEntry::Builtin { fact, builtin } => {
-            format!("  {}\n    pe:builtin {}.", graph_for_triple(fact, prefixes), term_to_n3_object(builtin, prefixes))
+            format!(
+                "  {}\n    pe:builtin {}.",
+                graph_for_triple(fact, prefixes),
+                term_to_n3_object(builtin, prefixes)
+            )
         }
         ProofEntry::Unproven { fact, reason } => {
-            format!("  {}\n    pe:unproven {}.", graph_for_triple(fact, prefixes), quoted_string(reason))
+            format!(
+                "  {}\n    pe:unproven {}.",
+                graph_for_triple(fact, prefixes),
+                quoted_string(reason)
+            )
         }
     }
 }
 
-fn render_rule_entry(proof: &DerivedFact, numbering: &RuleNumbering, prefixes: &BTreeMap<String, String>) -> String {
+fn render_rule_entry(
+    proof: &DerivedFact,
+    numbering: &RuleNumbering,
+    prefixes: &BTreeMap<String, String>,
+) -> String {
     let subject = graph_for_triple(&proof.fact, prefixes);
     let mut groups = Vec::<(String, Vec<String>)>::new();
-    groups.push(justification("rule", rule_reference(&proof.rule, numbering, prefixes)));
+    groups.push(justification(
+        "rule",
+        rule_reference(&proof.rule, numbering, prefixes),
+    ));
 
     let bindings = render_binding_items(proof, prefixes);
     if !bindings.is_empty() {
         groups.push(("pe:binding".to_string(), bindings));
     }
 
-    let uses = proof.premises.iter().map(|premise| graph_for_triple(premise, prefixes)).collect::<Vec<_>>();
+    let uses = proof
+        .premises
+        .iter()
+        .map(|premise| graph_for_triple(premise, prefixes))
+        .collect::<Vec<_>>();
     if !uses.is_empty() {
         groups.push(("pe:uses".to_string(), uses));
     }
@@ -349,15 +450,31 @@ fn render_binding_items(proof: &DerivedFact, prefixes: &BTreeMap<String, String>
         .iter()
         .filter(|(name, _)| rule_vars.contains(name.as_str()))
         .map(|(name, value)| {
-            let display = proof.rule.proof_var_source_names.get(name.as_str()).map(String::as_str).unwrap_or(name.as_str());
-            (display.to_string(), format!("[ pe:var {}; pe:value {} ]", quoted_string(display), term_to_n3_object(value, prefixes)))
+            let display = proof
+                .rule
+                .proof_var_source_names
+                .get(name.as_str())
+                .map(String::as_str)
+                .unwrap_or(name.as_str());
+            (
+                display.to_string(),
+                format!(
+                    "[ pe:var {}; pe:value {} ]",
+                    quoted_string(display),
+                    term_to_n3_object(value, prefixes)
+                ),
+            )
         })
         .collect::<Vec<_>>();
     items.sort();
     items.into_iter().map(|(_, item)| item).collect()
 }
 
-pub(crate) fn render_predicate_objects(predicate: &str, objects: &[String], is_last: bool) -> Vec<String> {
+pub(crate) fn render_predicate_objects(
+    predicate: &str,
+    objects: &[String],
+    is_last: bool,
+) -> Vec<String> {
     let end = if is_last { "." } else { ";" };
     if objects.len() == 1 && !objects[0].contains('\n') {
         return vec![format!("    {} {}{}", predicate, objects[0], end)];
@@ -372,7 +489,9 @@ pub(crate) fn render_predicate_objects(predicate: &str, objects: &[String], is_l
 
 pub(crate) fn with_last_line_suffix(text: &str, suffix: &str) -> String {
     let mut lines = text.lines().map(ToOwned::to_owned).collect::<Vec<_>>();
-    if let Some(last) = lines.last_mut() { last.push_str(suffix); }
+    if let Some(last) = lines.last_mut() {
+        last.push_str(suffix);
+    }
     lines.join("\n")
 }
 
@@ -397,7 +516,11 @@ fn graph_for_triple(triple: &Triple, prefixes: &BTreeMap<String, String>) -> Str
 /// that rule itself instead. The generated rule is also a derived
 /// statement, so the proof contains a step deriving it, and a checker can
 /// hold the citation to that (`docs/proof-checking.md` §5.1).
-pub(crate) fn rule_reference(rule: &Rule, numbering: &RuleNumbering, prefixes: &BTreeMap<String, String>) -> String {
+pub(crate) fn rule_reference(
+    rule: &Rule,
+    numbering: &RuleNumbering,
+    prefixes: &BTreeMap<String, String>,
+) -> String {
     if rule.source.is_some() {
         if let Some(number) = numbering.number(rule) {
             return number.to_string();
@@ -419,15 +542,25 @@ pub(crate) fn generated_rule_term(rule: &Rule) -> Term {
 /// rule.
 pub fn rule_statement(rule: &Rule) -> Triple {
     if rule.is_forward {
-        Triple::new(Term::Formula(rule.premise.clone()), Term::Iri(LOG_IMPLIES.to_string().into()), Term::Formula(rule.conclusion.clone()))
+        Triple::new(
+            Term::Formula(rule.premise.clone()),
+            Term::Iri(LOG_IMPLIES.to_string().into()),
+            Term::Formula(rule.conclusion.clone()),
+        )
     } else {
-        Triple::new(Term::Formula(rule.conclusion.clone()), Term::Iri(LOG_IMPLIED_BY.to_string().into()), Term::Formula(rule.premise.clone()))
+        Triple::new(
+            Term::Formula(rule.conclusion.clone()),
+            Term::Iri(LOG_IMPLIED_BY.to_string().into()),
+            Term::Formula(rule.premise.clone()),
+        )
     }
 }
 
 /// How a step cites a fact it was simply given: the document it came from.
 pub(crate) fn fact_label(source: Option<&SourceRef>) -> String {
-    source.map(|source| source_label_for_proof(&source.label)).unwrap_or_else(|| "<unknown>".to_string())
+    source
+        .map(|source| source_label_for_proof(&source.label))
+        .unwrap_or_else(|| "<unknown>".to_string())
 }
 
 pub(crate) fn source_label_for_proof(label: &str) -> String {
@@ -435,11 +568,20 @@ pub(crate) fn source_label_for_proof(label: &str) -> String {
         .file_name()
         .map(|name| name.to_string_lossy().to_string())
         .filter(|name| !name.is_empty())
-        .unwrap_or_else(|| label.replace('\\', "/").rsplit('/').next().unwrap_or(label).to_string())
+        .unwrap_or_else(|| {
+            label
+                .replace('\\', "/")
+                .rsplit('/')
+                .next()
+                .unwrap_or(label)
+                .to_string()
+        })
 }
 
 fn source_key(source: Option<&SourceRef>) -> String {
-    source.map(|s| format!("{}:{}", source_label_for_proof(&s.label), s.line)).unwrap_or_else(|| "<unknown>".to_string())
+    source
+        .map(|s| format!("{}:{}", source_label_for_proof(&s.label), s.line))
+        .unwrap_or_else(|| "<unknown>".to_string())
 }
 
 pub(crate) fn vars_in_rule(rule: &Rule) -> BTreeSet<String> {
@@ -458,19 +600,27 @@ fn collect_vars_triple(triple: &Triple, out: &mut BTreeSet<String>) {
 
 fn collect_vars_term(term: &Term, out: &mut BTreeSet<String>) {
     match term {
-        Term::Var(name) => { out.insert(name.clone().to_string()); }
+        Term::Var(name) => {
+            out.insert(name.clone().to_string());
+        }
         Term::List(items) => {
-            for item in items { collect_vars_term(item, out); }
+            for item in items {
+                collect_vars_term(item, out);
+            }
         }
         Term::Formula(triples) => {
-            for triple in triples { collect_vars_triple(triple, out); }
+            for triple in triples {
+                collect_vars_triple(triple, out);
+            }
         }
         _ => {}
     }
 }
 
 fn is_builtin_premise(triple: &Triple) -> bool {
-    let Term::Iri(iri) = &triple.p else { return false; };
+    let Term::Iri(iri) = &triple.p else {
+        return false;
+    };
     iri.starts_with(LOG_EQUAL_TO.trim_end_matches("equalTo"))
         || iri.starts_with("http://www.w3.org/2000/10/swap/math#")
         || iri.starts_with("http://www.w3.org/2000/10/swap/list#")
@@ -479,7 +629,11 @@ fn is_builtin_premise(triple: &Triple) -> bool {
         || iri.starts_with("http://www.w3.org/2000/10/swap/crypto#")
 }
 
-fn used_prefixes_for_proof(prefixes: &BTreeMap<String, String>, roots: &[&DerivedFact], entries: &[ProofEntry]) -> BTreeSet<String> {
+fn used_prefixes_for_proof(
+    prefixes: &BTreeMap<String, String>,
+    roots: &[&DerivedFact],
+    entries: &[ProofEntry],
+) -> BTreeSet<String> {
     let mut used = BTreeSet::new();
     used.insert("pe".to_string());
     for root in roots {
@@ -504,33 +658,50 @@ fn used_prefixes_for_proof(prefixes: &BTreeMap<String, String>, roots: &[&Derive
     used
 }
 
-pub(crate) fn collect_prefixes_triple(triple: &Triple, prefixes: &BTreeMap<String, String>, used: &mut BTreeSet<String>) {
+pub(crate) fn collect_prefixes_triple(
+    triple: &Triple,
+    prefixes: &BTreeMap<String, String>,
+    used: &mut BTreeSet<String>,
+) {
     collect_prefixes_term(&triple.s, prefixes, used);
     collect_prefixes_term(&triple.p, prefixes, used);
     collect_prefixes_term(&triple.o, prefixes, used);
 }
 
-pub(crate) fn collect_prefixes_term(term: &Term, prefixes: &BTreeMap<String, String>, used: &mut BTreeSet<String>) {
+pub(crate) fn collect_prefixes_term(
+    term: &Term,
+    prefixes: &BTreeMap<String, String>,
+    used: &mut BTreeSet<String>,
+) {
     match term {
         Term::Iri(iri) => {
-            if let Some(prefix) = best_prefix_for_iri(iri, prefixes) { used.insert(prefix); }
+            if let Some(prefix) = best_prefix_for_iri(iri, prefixes) {
+                used.insert(prefix);
+            }
         }
         Term::Literal(lit) => {
             if let Some(dt) = &lit.datatype {
-                if datatype_renders_without_prefix(dt, &lit.value) { return; }
-                if let Some(prefix) = best_prefix_for_iri(dt, prefixes) { used.insert(prefix); }
+                if datatype_renders_without_prefix(dt, &lit.value) {
+                    return;
+                }
+                if let Some(prefix) = best_prefix_for_iri(dt, prefixes) {
+                    used.insert(prefix);
+                }
             }
         }
         Term::List(items) => {
-            for item in items { collect_prefixes_term(item, prefixes, used); }
+            for item in items {
+                collect_prefixes_term(item, prefixes, used);
+            }
         }
         Term::Formula(triples) => {
-            for triple in triples { collect_prefixes_triple(triple, prefixes, used); }
+            for triple in triples {
+                collect_prefixes_triple(triple, prefixes, used);
+            }
         }
         _ => {}
     }
 }
-
 
 pub(crate) fn datatype_renders_without_prefix(datatype: &str, value: &str) -> bool {
     matches!(
@@ -538,20 +709,34 @@ pub(crate) fn datatype_renders_without_prefix(datatype: &str, value: &str) -> bo
         "http://www.w3.org/2001/XMLSchema#integer"
             | "http://www.w3.org/2001/XMLSchema#decimal"
             | "http://www.w3.org/2001/XMLSchema#double"
-    ) || (datatype == "http://www.w3.org/2001/XMLSchema#boolean" && matches!(value, "true" | "false"))
+    ) || (datatype == "http://www.w3.org/2001/XMLSchema#boolean"
+        && matches!(value, "true" | "false"))
 }
 
-pub(crate) fn best_prefix_for_iri(iri: &str, prefixes: &BTreeMap<String, String>) -> Option<String> {
+pub(crate) fn best_prefix_for_iri(
+    iri: &str,
+    prefixes: &BTreeMap<String, String>,
+) -> Option<String> {
     let mut best: Option<(&str, &str)> = None;
     for (prefix, base) in prefixes {
-        if base.is_empty() || !iri.starts_with(base) { continue; }
+        if base.is_empty() || !iri.starts_with(base) {
+            continue;
+        }
         let local = &iri[base.len()..];
-        if local.is_empty() || !local.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.')) { continue; }
+        if local.is_empty()
+            || !local
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+        {
+            continue;
+        }
         let replace_best = match best {
             Some((_, old_base)) => base.len() > old_base.len(),
             None => true,
         };
-        if replace_best { best = Some((prefix.as_str(), base.as_str())); }
+        if replace_best {
+            best = Some((prefix.as_str(), base.as_str()));
+        }
     }
     best.map(|(prefix, _)| prefix.to_string())
 }
@@ -561,7 +746,16 @@ fn triple_key(triple: &Triple) -> String {
 }
 
 pub(crate) fn indent(text: &str, prefix: &str) -> String {
-    text.lines().map(|line| if line.is_empty() { String::new() } else { format!("{}{}", prefix, line) }).collect::<Vec<_>>().join("\n")
+    text.lines()
+        .map(|line| {
+            if line.is_empty() {
+                String::new()
+            } else {
+                format!("{}{}", prefix, line)
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 pub(crate) fn quoted_string(value: &str) -> String {

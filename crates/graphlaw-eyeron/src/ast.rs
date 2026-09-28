@@ -38,7 +38,8 @@ pub const LOG_UUID: &str = "http://www.w3.org/2000/10/swap/log#uuid";
 pub const DT_DATATYPE: &str = "https://eyereasoner.github.io/eyeron/datatype#datatype";
 pub const DT_LEXICAL_FORM: &str = "https://eyereasoner.github.io/eyeron/datatype#lexicalForm";
 pub const EYELING_DT_DATATYPE: &str = "https://eyereasoner.github.io/eyeling/datatype#datatype";
-pub const EYELING_DT_LEXICAL_FORM: &str = "https://eyereasoner.github.io/eyeling/datatype#lexicalForm";
+pub const EYELING_DT_LEXICAL_FORM: &str =
+    "https://eyereasoner.github.io/eyeling/datatype#lexicalForm";
 pub const OWL_SAME_AS: &str = "http://www.w3.org/2002/07/owl#sameAs";
 pub const MATH_SUM: &str = "http://www.w3.org/2000/10/swap/math#sum";
 pub const MATH_GREATER_THAN: &str = "http://www.w3.org/2000/10/swap/math#greaterThan";
@@ -73,11 +74,14 @@ pub const STRING_NOT_LESS_THAN: &str = "http://www.w3.org/2000/10/swap/string#no
 pub const STRING_NOT_GREATER_THAN: &str = "http://www.w3.org/2000/10/swap/string#notGreaterThan";
 pub const STRING_CONCATENATION: &str = "http://www.w3.org/2000/10/swap/string#concatenation";
 pub const STRING_CONTAINS: &str = "http://www.w3.org/2000/10/swap/string#contains";
-pub const STRING_CONTAINS_IGNORING_CASE: &str = "http://www.w3.org/2000/10/swap/string#containsIgnoringCase";
+pub const STRING_CONTAINS_IGNORING_CASE: &str =
+    "http://www.w3.org/2000/10/swap/string#containsIgnoringCase";
 pub const STRING_ENDS_WITH: &str = "http://www.w3.org/2000/10/swap/string#endsWith";
 pub const STRING_STARTS_WITH: &str = "http://www.w3.org/2000/10/swap/string#startsWith";
-pub const STRING_EQUAL_IGNORING_CASE: &str = "http://www.w3.org/2000/10/swap/string#equalIgnoringCase";
-pub const STRING_NOT_EQUAL_IGNORING_CASE: &str = "http://www.w3.org/2000/10/swap/string#notEqualIgnoringCase";
+pub const STRING_EQUAL_IGNORING_CASE: &str =
+    "http://www.w3.org/2000/10/swap/string#equalIgnoringCase";
+pub const STRING_NOT_EQUAL_IGNORING_CASE: &str =
+    "http://www.w3.org/2000/10/swap/string#notEqualIgnoringCase";
 pub const STRING_FORMAT: &str = "http://www.w3.org/2000/10/swap/string#format";
 pub const STRING_MATCHES: &str = "http://www.w3.org/2000/10/swap/string#matches";
 pub const STRING_NOT_MATCHES: &str = "http://www.w3.org/2000/10/swap/string#notMatches";
@@ -125,68 +129,100 @@ pub const TIME_LOCAL_TIME: &str = "http://www.w3.org/2000/10/swap/time#localTime
 pub struct Name(Arc<str>);
 
 impl Name {
-    pub fn as_str(&self) -> &str { &self.0 }
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl Default for Name {
-    fn default() -> Self { Self(Arc::from("")) }
+    fn default() -> Self {
+        Self(Arc::from(""))
+    }
 }
 
 impl Deref for Name {
     type Target = str;
-    fn deref(&self) -> &str { &self.0 }
+    fn deref(&self) -> &str {
+        &self.0
+    }
 }
 
 impl AsRef<str> for Name {
-    fn as_ref(&self) -> &str { &self.0 }
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
 }
 
 impl std::borrow::Borrow<str> for Name {
-    fn borrow(&self) -> &str { &self.0 }
+    fn borrow(&self) -> &str {
+        &self.0
+    }
 }
 
 impl PartialEq<str> for Name {
-    fn eq(&self, other: &str) -> bool { &*self.0 == other }
+    fn eq(&self, other: &str) -> bool {
+        &*self.0 == other
+    }
 }
 
 impl PartialEq<Name> for str {
-    fn eq(&self, other: &Name) -> bool { self == &*other.0 }
+    fn eq(&self, other: &Name) -> bool {
+        self == &*other.0
+    }
 }
 
 impl PartialEq<&str> for Name {
-    fn eq(&self, other: &&str) -> bool { &*self.0 == *other }
+    fn eq(&self, other: &&str) -> bool {
+        &*self.0 == *other
+    }
 }
 
 impl PartialEq<Name> for String {
-    fn eq(&self, other: &Name) -> bool { self.as_str() == &*other.0 }
+    fn eq(&self, other: &Name) -> bool {
+        self.as_str() == &*other.0
+    }
 }
 
 impl PartialEq<String> for Name {
-    fn eq(&self, other: &String) -> bool { &*self.0 == other.as_str() }
+    fn eq(&self, other: &String) -> bool {
+        &*self.0 == other.as_str()
+    }
 }
 
 impl From<&str> for Name {
-    fn from(value: &str) -> Self { Self(Arc::from(value)) }
+    fn from(value: &str) -> Self {
+        Self(Arc::from(value))
+    }
 }
 
 impl From<String> for Name {
-    fn from(value: String) -> Self { Self(Arc::from(value)) }
+    fn from(value: String) -> Self {
+        Self(Arc::from(value))
+    }
 }
 
 impl From<&String> for Name {
-    fn from(value: &String) -> Self { Self(Arc::from(value.as_str())) }
+    fn from(value: &String) -> Self {
+        Self(Arc::from(value.as_str()))
+    }
 }
 
 impl From<Name> for String {
-    fn from(value: Name) -> Self { value.0.to_string() }
+    fn from(value: Name) -> Self {
+        value.0.to_string()
+    }
 }
 
 impl fmt::Display for Name {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { f.write_str(&self.0) }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.0)
+    }
 }
 
 impl fmt::Debug for Name {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { fmt::Debug::fmt(&*self.0, f) }
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&*self.0, f)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -198,7 +234,11 @@ pub struct Literal {
 
 impl Literal {
     pub fn plain(value: impl Into<Name>) -> Self {
-        Self { value: value.into(), datatype: None, language: None }
+        Self {
+            value: value.into(),
+            datatype: None,
+            language: None,
+        }
     }
 }
 
@@ -213,14 +253,28 @@ pub enum Term {
 }
 
 impl Term {
-    pub fn iri(value: impl Into<Name>) -> Self { Self::Iri(value.into()) }
-    pub fn var(value: impl Into<Name>) -> Self { Self::Var(value.into()) }
-    pub fn blank(value: impl Into<Name>) -> Self { Self::Blank(value.into()) }
-    pub fn literal(value: impl Into<Name>) -> Self { Self::Literal(Literal::plain(value)) }
-    pub fn list(items: Vec<Term>) -> Self { Self::List(items) }
-    pub fn formula(triples: Vec<Triple>) -> Self { Self::Formula(triples) }
+    pub fn iri(value: impl Into<Name>) -> Self {
+        Self::Iri(value.into())
+    }
+    pub fn var(value: impl Into<Name>) -> Self {
+        Self::Var(value.into())
+    }
+    pub fn blank(value: impl Into<Name>) -> Self {
+        Self::Blank(value.into())
+    }
+    pub fn literal(value: impl Into<Name>) -> Self {
+        Self::Literal(Literal::plain(value))
+    }
+    pub fn list(items: Vec<Term>) -> Self {
+        Self::List(items)
+    }
+    pub fn formula(triples: Vec<Triple>) -> Self {
+        Self::Formula(triples)
+    }
 
-    pub fn is_variable(&self) -> bool { matches!(self, Term::Var(_)) }
+    pub fn is_variable(&self) -> bool {
+        matches!(self, Term::Var(_))
+    }
     pub fn is_ground(&self) -> bool {
         match self {
             Term::Var(_) => false,
@@ -239,7 +293,9 @@ pub struct Triple {
 }
 
 impl Triple {
-    pub fn new(s: Term, p: Term, o: Term) -> Self { Self { s, p, o } }
+    pub fn new(s: Term, p: Term, o: Term) -> Self {
+        Self { s, p, o }
+    }
 
     pub fn is_ground(&self) -> bool {
         self.s.is_ground() && self.p.is_ground() && self.o.is_ground()
@@ -268,11 +324,22 @@ pub struct Rule {
 
 impl Rule {
     pub fn new(premise: Vec<Triple>, conclusion: Vec<Triple>, is_forward: bool) -> Self {
-        Self { premise, conclusion, is_forward, is_query: false, is_fuse: false, source: None, proof_var_source_names: BTreeMap::new() }
+        Self {
+            premise,
+            conclusion,
+            is_forward,
+            is_query: false,
+            is_fuse: false,
+            source: None,
+            proof_var_source_names: BTreeMap::new(),
+        }
     }
 
     pub fn fuse(premise: Vec<Triple>) -> Self {
-        Self { is_fuse: true, ..Self::new(premise, Vec::new(), true) }
+        Self {
+            is_fuse: true,
+            ..Self::new(premise, Vec::new(), true)
+        }
     }
 
     pub fn with_source(mut self, source: Option<SourceRef>) -> Self {
@@ -302,12 +369,22 @@ pub struct Document {
 
 impl Document {
     pub fn new() -> Self {
-        Self { prefixes: default_prefixes(), base_iri: None, facts: Vec::new(), fact_sources: BTreeMap::new(), rules: Vec::new() }
+        Self {
+            prefixes: default_prefixes(),
+            base_iri: None,
+            facts: Vec::new(),
+            fact_sources: BTreeMap::new(),
+            rules: Vec::new(),
+        }
     }
 
     pub fn merge(&mut self, other: Document) {
-        for (k, v) in other.prefixes { self.prefixes.insert(k, v); }
-        if self.base_iri.is_none() { self.base_iri = other.base_iri; }
+        for (k, v) in other.prefixes {
+            self.prefixes.insert(k, v);
+        }
+        if self.base_iri.is_none() {
+            self.base_iri = other.base_iri;
+        }
         self.facts.extend(other.facts);
         self.fact_sources.extend(other.fact_sources);
         self.rules.extend(other.rules);
@@ -315,24 +392,65 @@ impl Document {
 }
 
 impl Default for Document {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub fn default_prefixes() -> BTreeMap<String, String> {
     let mut m = BTreeMap::new();
-    m.insert("rdf".to_string(), "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string());
-    m.insert("rdfs".to_string(), "http://www.w3.org/2000/01/rdf-schema#".to_string());
-    m.insert("xsd".to_string(), "http://www.w3.org/2001/XMLSchema#".to_string());
-    m.insert("log".to_string(), "http://www.w3.org/2000/10/swap/log#".to_string());
-    m.insert("owl".to_string(), "http://www.w3.org/2002/07/owl#".to_string());
-    m.insert("math".to_string(), "http://www.w3.org/2000/10/swap/math#".to_string());
-    m.insert("string".to_string(), "http://www.w3.org/2000/10/swap/string#".to_string());
-    m.insert("list".to_string(), "http://www.w3.org/2000/10/swap/list#".to_string());
-    m.insert("time".to_string(), "http://www.w3.org/2000/10/swap/time#".to_string());
-    m.insert("crypto".to_string(), "http://www.w3.org/2000/10/swap/crypto#".to_string());
-    m.insert("eymsg".to_string(), "https://eyereasoner.github.io/eyeling/vocab/message#".to_string());
-    m.insert("dt".to_string(), "https://eyereasoner.github.io/eyeron/datatype#".to_string());
-    m.insert("genid".to_string(), "https://eyereasoner.github.io/.well-known/genid/".to_string());
+    m.insert(
+        "rdf".to_string(),
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#".to_string(),
+    );
+    m.insert(
+        "rdfs".to_string(),
+        "http://www.w3.org/2000/01/rdf-schema#".to_string(),
+    );
+    m.insert(
+        "xsd".to_string(),
+        "http://www.w3.org/2001/XMLSchema#".to_string(),
+    );
+    m.insert(
+        "log".to_string(),
+        "http://www.w3.org/2000/10/swap/log#".to_string(),
+    );
+    m.insert(
+        "owl".to_string(),
+        "http://www.w3.org/2002/07/owl#".to_string(),
+    );
+    m.insert(
+        "math".to_string(),
+        "http://www.w3.org/2000/10/swap/math#".to_string(),
+    );
+    m.insert(
+        "string".to_string(),
+        "http://www.w3.org/2000/10/swap/string#".to_string(),
+    );
+    m.insert(
+        "list".to_string(),
+        "http://www.w3.org/2000/10/swap/list#".to_string(),
+    );
+    m.insert(
+        "time".to_string(),
+        "http://www.w3.org/2000/10/swap/time#".to_string(),
+    );
+    m.insert(
+        "crypto".to_string(),
+        "http://www.w3.org/2000/10/swap/crypto#".to_string(),
+    );
+    m.insert(
+        "eymsg".to_string(),
+        "https://eyereasoner.github.io/eyeling/vocab/message#".to_string(),
+    );
+    m.insert(
+        "dt".to_string(),
+        "https://eyereasoner.github.io/eyeron/datatype#".to_string(),
+    );
+    m.insert(
+        "genid".to_string(),
+        "https://eyereasoner.github.io/.well-known/genid/".to_string(),
+    );
     m
 }
 
@@ -348,6 +466,9 @@ mod constant_tests {
 
     #[test]
     fn implied_by_uses_the_swap_log_iri() {
-        assert_eq!(LOG_IMPLIED_BY, "http://www.w3.org/2000/10/swap/log#impliedBy");
+        assert_eq!(
+            LOG_IMPLIED_BY,
+            "http://www.w3.org/2000/10/swap/log#impliedBy"
+        );
     }
 }

@@ -111,7 +111,12 @@ impl N3Proof {
     pub fn read_document(document: &crate::ast::Document, proof: &str) -> Result<Self> {
         // `reason` numbers the rules it was given, having dropped the query
         // rules; a checker must number them the same way (§5.1).
-        let rules: Vec<crate::ast::Rule> = document.rules.iter().filter(|rule| !rule.is_query).cloned().collect();
+        let rules: Vec<crate::ast::Rule> = document
+            .rules
+            .iter()
+            .filter(|rule| !rule.is_query)
+            .cloned()
+            .collect();
         // N3 treats a rule as data, so a rule written in the document is
         // itself a statement the document gives. That includes the query
         // rules left out of the numbering above: a `log:query` answer is
@@ -119,9 +124,18 @@ impl N3Proof {
         // rule rather than citing a number, so the rule it carries has to be
         // findable among what the document gives.
         let mut given: BTreeSet<Triple> = document.facts.iter().cloned().collect();
-        let rule_statements: Vec<Triple> = document.rules.iter().map(crate::proof_writer::rule_statement).collect();
+        let rule_statements: Vec<Triple> = document
+            .rules
+            .iter()
+            .map(crate::proof_writer::rule_statement)
+            .collect();
         given.extend(rule_statements.iter().cloned());
-        let general: Vec<Triple> = document.facts.iter().filter(|fact| !fact.is_ground()).cloned().collect();
+        let general: Vec<Triple> = document
+            .facts
+            .iter()
+            .filter(|fact| !fact.is_ground())
+            .cloned()
+            .collect();
 
         let parsed = crate::parser::parse_n3(proof, None)?;
         // A step is a formula subject carrying the `pe:` vocabulary; what
@@ -130,7 +144,9 @@ impl N3Proof {
         let claims: Vec<Triple> = parsed
             .facts
             .iter()
-            .filter(|triple| !matches!(triple.s, Term::Formula(_)) && !is_proof_vocabulary(&triple.p))
+            .filter(|triple| {
+                !matches!(triple.s, Term::Formula(_)) && !is_proof_vocabulary(&triple.p)
+            })
             .cloned()
             .collect();
 
@@ -138,7 +154,15 @@ impl N3Proof {
         for (position, step) in steps.iter().enumerate() {
             index.entry(step.conclusion.clone()).or_insert(position);
         }
-        Ok(Self { rules, given, rule_statements, general, steps, claims, index })
+        Ok(Self {
+            rules,
+            given,
+            rule_statements,
+            general,
+            steps,
+            claims,
+            index,
+        })
     }
 
     fn resolve(&self, statement: &Triple) -> Resolution {
@@ -182,14 +206,28 @@ impl N3Proof {
                 // The carried rule has to be justified too, or a step could
                 // invent any rule it liked.
                 if !self.derives_rule(statement) {
-                    return Err("carries a generated rule that nothing in the proof derives".to_string());
+                    return Err(
+                        "carries a generated rule that nothing in the proof derives".to_string()
+                    );
                 }
-                (premise.clone(), conclusion.clone(), BTreeMap::new(), "the generated rule it carries".to_string())
+                (
+                    premise.clone(),
+                    conclusion.clone(),
+                    BTreeMap::new(),
+                    "the generated rule it carries".to_string(),
+                )
             }
             None => {
                 let number = step.rule.ok_or_else(|| "cites no rule".to_string())?;
-                let rule = self.rules.get(number.wrapping_sub(1)).ok_or_else(|| format!("cites rule {}, which the source does not have", number))?;
-                (rule.premise.clone(), rule.conclusion.clone(), rule.proof_var_source_names.clone(), format!("rule {}", number))
+                let rule = self.rules.get(number.wrapping_sub(1)).ok_or_else(|| {
+                    format!("cites rule {}, which the source does not have", number)
+                })?;
+                (
+                    rule.premise.clone(),
+                    rule.conclusion.clone(),
+                    rule.proof_var_source_names.clone(),
+                    format!("rule {}", number),
+                )
             }
         };
 
@@ -201,7 +239,10 @@ impl N3Proof {
         }
         let mut bindings = Bindings::new();
         for (name, value) in &step.bindings {
-            let internal = source_names.get(name.as_str()).copied().unwrap_or(name.as_str());
+            let internal = source_names
+                .get(name.as_str())
+                .copied()
+                .unwrap_or(name.as_str());
             bindings.insert(internal.to_string().into(), value.clone());
         }
 
@@ -211,9 +252,17 @@ impl N3Proof {
         let unquoted = unquoted_conclusion(&conclusion, &bindings);
         let conclusion = unquoted.unwrap_or(conclusion);
 
-        let rule = RuleView { premise: &premise, conclusion: &conclusion };
+        let rule = RuleView {
+            premise: &premise,
+            conclusion: &conclusion,
+        };
         if rule.premise.len() != step.uses.len() {
-            return Err(format!("uses {} premise(s), but {} has {}", step.uses.len(), number, rule.premise.len()));
+            return Err(format!(
+                "uses {} premise(s), but {} has {}",
+                step.uses.len(),
+                number,
+                rule.premise.len()
+            ));
         }
         // One environment across every premise and the conclusion, so a
         // variable the bindings did not mention is still forced to take one
@@ -221,11 +270,24 @@ impl N3Proof {
         // step may not instantiate itself to meet the rule halfway.
         for (position, (premise, used)) in rule.premise.iter().zip(step.uses.iter()).enumerate() {
             if !match_triple(premise, used, &mut bindings) {
-                return Err(format!("premise {} is {}, but {} requires {}", position + 1, describe(used), number, describe(premise)));
+                return Err(format!(
+                    "premise {} is {}, but {} requires {}",
+                    position + 1,
+                    describe(used),
+                    number,
+                    describe(premise)
+                ));
             }
         }
-        if !rule.conclusion.iter().any(|candidate| match_triple(candidate, &step.conclusion, &mut bindings.clone())) {
-            return Err(format!("does not follow from {}: it concludes none of what this step claims", number));
+        if !rule
+            .conclusion
+            .iter()
+            .any(|candidate| match_triple(candidate, &step.conclusion, &mut bindings.clone()))
+        {
+            return Err(format!(
+                "does not follow from {}: it concludes none of what this step claims",
+                number
+            ));
         }
         Ok(Checked::Verified)
     }
@@ -236,7 +298,10 @@ impl N3Proof {
         self.rule_statements
             .iter()
             .chain(self.general.iter())
-            .any(|candidate| candidate.p == statement.p && match_triple(candidate, statement, &mut Bindings::new()))
+            .any(|candidate| {
+                candidate.p == statement.p
+                    && match_triple(candidate, statement, &mut Bindings::new())
+            })
     }
 
     fn check_fact(&self, step: &Step) -> Verdict {
@@ -284,17 +349,27 @@ pub(crate) fn match_term(pattern: &Term, target: &Term, bindings: &mut Bindings)
     }
     match (pattern, target) {
         (Term::List(left), Term::List(right)) => {
-            left.len() == right.len() && left.iter().zip(right.iter()).all(|(l, r)| match_term(l, r, bindings))
+            left.len() == right.len()
+                && left
+                    .iter()
+                    .zip(right.iter())
+                    .all(|(l, r)| match_term(l, r, bindings))
         }
         (Term::Formula(left), Term::Formula(right)) => {
-            left.len() == right.len() && left.iter().zip(right.iter()).all(|(l, r)| match_triple(l, r, bindings))
+            left.len() == right.len()
+                && left
+                    .iter()
+                    .zip(right.iter())
+                    .all(|(l, r)| match_triple(l, r, bindings))
         }
         _ => pattern == target,
     }
 }
 
 pub(crate) fn match_triple(pattern: &Triple, target: &Triple, bindings: &mut Bindings) -> bool {
-    match_term(&pattern.s, &target.s, bindings) && match_term(&pattern.p, &target.p, bindings) && match_term(&pattern.o, &target.o, bindings)
+    match_term(&pattern.s, &target.s, bindings)
+        && match_term(&pattern.p, &target.p, bindings)
+        && match_term(&pattern.o, &target.o, bindings)
 }
 
 /// The triples a rule concludes when its conclusion is not written out but
@@ -323,7 +398,9 @@ struct RuleView<'a> {
 }
 
 fn describe(triple: &Triple) -> String {
-    crate::printing::triples_to_n3(&BTreeMap::new(), std::slice::from_ref(triple)).trim().to_string()
+    crate::printing::triples_to_n3(&BTreeMap::new(), std::slice::from_ref(triple))
+        .trim()
+        .to_string()
 }
 
 /// Lift a proof document's triples into steps, grouping by the
@@ -346,7 +423,9 @@ fn read_steps(body: &[Triple]) -> Vec<Step> {
     let mut order: Vec<&Term> = Vec::new();
     let mut grouped: BTreeMap<&Term, Vec<&Triple>> = BTreeMap::new();
     for triple in body {
-        let Term::Formula(_) = &triple.s else { continue };
+        let Term::Formula(_) = &triple.s else {
+            continue;
+        };
         if !grouped.contains_key(&triple.s) {
             order.push(&triple.s);
         }
@@ -355,7 +434,9 @@ fn read_steps(body: &[Triple]) -> Vec<Step> {
 
     let mut steps = Vec::new();
     for subject in order {
-        let Some(conclusion) = formula_triple(subject) else { continue };
+        let Some(conclusion) = formula_triple(subject) else {
+            continue;
+        };
         let mut step = Step {
             conclusion: conclusion.clone(),
             kind: Kind::Unproven,
@@ -393,7 +474,9 @@ fn read_steps(body: &[Triple]) -> Vec<Step> {
                     }
                 }
                 p if *p == pe("binding") => {
-                    if let (Some(name), Some(bound)) = (variable.get(&triple.o), value.get(&triple.o)) {
+                    if let (Some(name), Some(bound)) =
+                        (variable.get(&triple.o), value.get(&triple.o))
+                    {
                         step.bindings.push((name.clone(), bound.clone()));
                     }
                 }
@@ -417,8 +500,12 @@ fn carried_rule(term: &Term) -> Option<(Vec<Triple>, Vec<Triple>, Triple)> {
     let forward = statement.p == Term::Iri(crate::ast::LOG_IMPLIES.to_string().into());
     let backward = statement.p == Term::Iri(crate::ast::LOG_IMPLIED_BY.to_string().into());
     match (&statement.s, &statement.o) {
-        (Term::Formula(left), Term::Formula(right)) if forward => Some((left.clone(), right.clone(), statement.clone())),
-        (Term::Formula(left), Term::Formula(right)) if backward => Some((right.clone(), left.clone(), statement.clone())),
+        (Term::Formula(left), Term::Formula(right)) if forward => {
+            Some((left.clone(), right.clone(), statement.clone()))
+        }
+        (Term::Formula(left), Term::Formula(right)) if backward => {
+            Some((right.clone(), left.clone(), statement.clone()))
+        }
         _ => None,
     }
 }
@@ -444,7 +531,11 @@ impl ProofDocument for N3Proof {
     }
 
     fn dependencies(&self, index: usize) -> Vec<Resolution> {
-        self.steps[index].uses.iter().map(|used| self.resolve(used)).collect()
+        self.steps[index]
+            .uses
+            .iter()
+            .map(|used| self.resolve(used))
+            .collect()
     }
 
     fn claims(&self) -> Vec<String> {
@@ -461,7 +552,9 @@ impl ProofDocument for N3Proof {
             Kind::Rule => self.check_rule(step),
             Kind::Fact => self.check_fact(step),
             Kind::Builtin => self.check_builtin(step),
-            Kind::Unproven => Err("is recorded as unproven: the engine could not justify it".to_string()),
+            Kind::Unproven => {
+                Err("is recorded as unproven: the engine could not justify it".to_string())
+            }
             Kind::Absent | Kind::Collected => Ok(Checked::Trusted(step.kind.label())),
         }
     }
@@ -475,7 +568,13 @@ mod tests {
 
     fn proof_of(source: &str) -> String {
         let document = crate::parser::parse_n3_with_source(source, None, Some("test.n3")).unwrap();
-        let result = crate::reasoner::reason(&document, &crate::reasoner::ReasonerOptions { proof: true, ..Default::default() });
+        let result = crate::reasoner::reason(
+            &document,
+            &crate::reasoner::ReasonerOptions {
+                proof: true,
+                ..Default::default()
+            },
+        );
         crate::proof_writer::proof_to_n3(&document.prefixes, &result)
     }
 

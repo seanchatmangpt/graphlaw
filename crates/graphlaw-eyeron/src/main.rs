@@ -4,8 +4,8 @@ use eyeron::proof_writer::proof_to_n3;
 use eyeron::reasoner::{reason, PreparedReasoner, ReasonerOptions};
 use eyeron::Document;
 use eyeron::{
-    fuse_report, is_rdf_message_log, parse_n3, parse_n3_with_source, parse_rdf12, parse_rdf_message_log,
-    RdfFormat,
+    fuse_report, is_rdf_message_log, parse_n3, parse_n3_with_source, parse_rdf12,
+    parse_rdf_message_log, RdfFormat,
 };
 use std::collections::BTreeMap;
 use std::env;
@@ -323,8 +323,12 @@ fn read_text_source(source: &str) -> Result<String> {
         io::stdin().read_to_string(&mut s)?;
         Ok(s)
     } else if is_http_url(source) {
-        let response = ureq::get(source).call().map_err(|err| EyeronError::new(format!("failed to fetch {source}: {err}")))?;
-        response.into_body().read_to_string().map_err(|err| EyeronError::new(format!("failed to read response from {source}: {err}")))
+        let response = ureq::get(source)
+            .call()
+            .map_err(|err| EyeronError::new(format!("failed to fetch {source}: {err}")))?;
+        response.into_body().read_to_string().map_err(|err| {
+            EyeronError::new(format!("failed to read response from {source}: {err}"))
+        })
     } else {
         Ok(fs::read_to_string(source)?)
     }
@@ -334,8 +338,15 @@ fn read_text_source(source: &str) -> Result<String> {
 /// program, reporting the verdict the specification's §9 requires.
 fn run_check_proof(path: &str, sources: &[(String, String)]) -> Result<()> {
     let proof = read_text_source(path)?;
-    let source: String = sources.iter().map(|(_, text)| text.as_str()).collect::<Vec<_>>().join("\n");
-    let label = sources.first().map(|(label, _)| label.clone()).unwrap_or_else(|| "<input>".to_string());
+    let source: String = sources
+        .iter()
+        .map(|(_, text)| text.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
+    let label = sources
+        .first()
+        .map(|(label, _)| label.clone())
+        .unwrap_or_else(|| "<input>".to_string());
 
     let report = eyeron::proof_check_n3::check_proof(&source, &proof, &label)?;
 
@@ -347,10 +358,16 @@ fn run_check_proof(path: &str, sources: &[(String, String)]) -> Result<()> {
         println!("  trusted ({}): {}", obligation.kind, obligation.conclusion);
     }
     for failure in &report.failures {
-        println!("  [{}] {} -- {}", failure.condition, failure.conclusion, failure.detail);
+        println!(
+            "  [{}] {} -- {}",
+            failure.condition, failure.conclusion, failure.detail
+        );
     }
     if !report.valid() {
-        return Err(EyeronError::new(format!("{} is not a valid proof for the given program", path)));
+        return Err(EyeronError::new(format!(
+            "{} is not a valid proof for the given program",
+            path
+        )));
     }
     Ok(())
 }
