@@ -1,8 +1,9 @@
 use praxis_graphlaw::{BACKEND_AUTHORITIES, LEGACY_FALLBACK_ENABLED};
 
+const _: () = assert!(!LEGACY_FALLBACK_ENABLED);
+
 #[test]
-fn authority_manifest_has_no_legacy_fallback() {
-    assert!(!LEGACY_FALLBACK_ENABLED);
+fn authority_manifest_names_external_backends() {
     assert!(BACKEND_AUTHORITIES.iter().any(|a| a.authority == "purrdf"));
     assert!(BACKEND_AUTHORITIES.iter().any(|a| a.authority == "eyeron"));
 }
