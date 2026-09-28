@@ -46,7 +46,9 @@ pub mod dialect;
 pub mod hooks;
 pub mod law;
 pub mod plan;
+pub mod policy;
 pub mod receipt;
+pub mod receipt_store;
 #[cfg(feature = "pack-tools")]
 pub mod smon;
 

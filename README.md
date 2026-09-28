@@ -94,3 +94,20 @@ The complete upstream surfaces are intentionally re-exported. Consumers can use 
 The pre-v26.9.28 engine remains available through Git history only. There is no `legacy` feature and no extraction workflow capable of restoring it onto `main`.
 
 See `MIGRATION.md` for the old-to-new surface map.
+
+## Authority leases
+
+A `Lease { id, holder, ceiling, scope, expires_unix }` grants a holder authority to run
+named steps until it expires. `LawState::transition_leased(&lease, &step, now_unix)` refuses
+with `LawError::LeaseRefused { reason: Expired | OutOfScope | Ceiling }`. Required ceilings:
+`Observe` for gates (`admit:shacl`, `admit:require-receipt`), `Select` for `admit:plan`,
+`Construct` for `derive:*`. The receipt carries `lease_id`, and `receipt::record` writes it as
+a triple. The JSON ABI `law` op accepts `"lease"` plus `"now_unix"`; receipts then carry
+`lease_id`. Unleased behavior is unchanged.
+
+## Out-of-subject receipt store
+
+`receipt_store::ReceiptStore` keeps receipts outside the subject's tree, at
+`<dir>/<subject>/<sha256>.json` (canonical JSON, atomic write, no git dependency).
+`verify(subject)` re-hashes every file, requires canonical form, and requires one linear
+`parent -> child` chain; a tampered or missing file is refused with a typed `StoreError`.

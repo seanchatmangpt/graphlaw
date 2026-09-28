@@ -416,3 +416,75 @@ fn native_and_wasm_law_plan_responses_are_byte_identical() {
     assert!(v["receipts"][0]["plan_sha256"].is_string());
     assert_eq!(ok(json!({"op": "capabilities"}))["abi_version"], 1);
 }
+
+fn lease_req(ceiling: &str, scope: Value, expires: u64, now: u64) -> Value {
+    json!({"op": "law",
+        "data": {"text": "<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .\n<urn:a:x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <urn:a:C> .\n", "dialect": "ntriples"},
+        "lease": {"id": "L1", "holder": "h", "ceiling": ceiling, "scope": scope, "expires_unix": expires},
+        "now_unix": now,
+        "steps": [{"step": "rdfs"}]})
+}
+
+#[test]
+fn wasm_leased_law_steps_carry_lease_id_and_refuse_typed() {
+    let r = ok(lease_req("construct", json!(["derive:rdfs"]), 100, 50));
+    assert_eq!(r["receipts"][0]["lease_id"], "L1");
+    for (req, reason) in [
+        (
+            lease_req("construct", json!(["derive:rdfs"]), 100, 100),
+            "expired",
+        ),
+        (
+            lease_req("construct", json!(["derive:n3"]), 100, 1),
+            "out_of_scope",
+        ),
+        (
+            lease_req("select", json!(["derive:rdfs"]), 100, 1),
+            "ceiling",
+        ),
+    ] {
+        let e = call(req);
+        assert_eq!(e["ok"], false);
+        assert!(
+            e["error"]["message"].as_str().unwrap().contains(reason),
+            "{e}"
+        );
+    }
+    // unleased receipts carry no lease_id key
+    let plain = ok(json!({"op": "law",
+        "data": {"text": "<urn:a:x> <urn:a:p> <urn:a:y> .\n", "dialect": "ntriples"},
+        "steps": [{"step": "rdfs"}]}));
+    assert!(plain["receipts"][0].get("lease_id").is_none());
+}
+
+#[test]
+fn fond_policy_admission_runs_in_wasm() {
+    let problem = json!({
+        "states": [{"id": "s0"}, {"id": "g", "facts": ["done"]}],
+        "initial_states": ["s0"],
+        "goal": {"facts": ["done"]},
+        "transitions": [
+            {"action": "flip", "from": "s0", "to": "g", "probability_ppm": 500000},
+            {"action": "flip", "from": "s0", "to": "s0", "probability_ppm": 500000}]
+    });
+    let policy = json!({"policy": [{"state": "s0", "action": "flip", "outcomes": [
+        {"state": "g", "probability_ppm": 500000},
+        {"state": "s0", "probability_ppm": 500000}]}]});
+    let r = ok(json!({"op": "policy", "problem": problem, "policy": policy}));
+    assert_eq!(r["goal_states"], json!(["g"]));
+    assert_eq!(r["entries"], json!([["s0", "flip"]]));
+
+    let mut skewed = policy.clone();
+    skewed["policy"][0]["outcomes"][0]["probability_ppm"] = json!(400000);
+    let refused = call(json!({"op": "policy", "problem": problem, "policy": skewed}));
+    assert_eq!(refused["ok"], false);
+    assert!(
+        refused["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("policy refused (BadMass)")
+    );
+
+    let empty = call(json!({"op": "policy", "problem": problem, "policy": {"policy": []}}));
+    assert_eq!(empty["ok"], false);
+}

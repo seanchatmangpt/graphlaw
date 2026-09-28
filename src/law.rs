@@ -41,7 +41,8 @@ pub enum Step<'a> {
 }
 
 impl Step<'_> {
-    fn name(&self) -> &'static str {
+    /// Stable step name recorded in receipts and matched by [`Lease::scope`].
+    pub fn name(&self) -> &'static str {
         match self {
             Step::AdmitShacl { .. } => "admit:shacl",
             Step::DeriveN3 { .. } => "derive:n3",
@@ -50,6 +51,17 @@ impl Step<'_> {
             Step::RequireReceipt { .. } => "admit:require-receipt",
             Step::EntailRdfs => "derive:rdfs",
             Step::EntailOwlRl => "derive:owl-rl",
+        }
+    }
+
+    /// Ceiling a lease must grant: gates observe, plans select, derivations construct.
+    pub fn required_ceiling(&self) -> Ceiling {
+        match self {
+            Step::AdmitShacl { .. } | Step::RequireReceipt { .. } => Ceiling::Observe,
+            Step::Plan { .. } => Ceiling::Select,
+            Step::Hooks { .. } | Step::DeriveN3 { .. } | Step::EntailRdfs | Step::EntailOwlRl => {
+                Ceiling::Construct
+            }
         }
     }
 
@@ -73,6 +85,78 @@ pub struct Receipt {
     pub authority: BackendAuthority,
     /// Quads added by the step (0 for an admission gate).
     pub added: usize,
+    /// Id of the [`Lease`] the step ran under (`None` for unleased steps).
+    pub lease_id: Option<String>,
+}
+
+/// Authority ceiling, ordered `Observe < Select < Construct`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Ceiling {
+    /// Read-only gates that never change the state (`admit:shacl`, `admit:require-receipt`).
+    Observe,
+    /// Selection: replaying/admitting a candidate plan (`admit:plan`).
+    Select,
+    /// Construction: steps that derive new triples (`derive:*`).
+    Construct,
+}
+
+impl Ceiling {
+    pub fn name(self) -> &'static str {
+        match self {
+            Ceiling::Observe => "observe",
+            Ceiling::Select => "select",
+            Ceiling::Construct => "construct",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "observe" => Some(Ceiling::Observe),
+            "select" => Some(Ceiling::Select),
+            "construct" => Some(Ceiling::Construct),
+            _ => None,
+        }
+    }
+}
+
+/// A time-boxed grant of authority: who may run which steps, up to which ceiling.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Lease {
+    pub id: String,
+    pub holder: String,
+    pub ceiling: Ceiling,
+    /// Step names (`Step::name`, e.g. `derive:rdfs`) the lease covers.
+    pub scope: Vec<String>,
+    /// The lease is expired when `now_unix >= expires_unix`.
+    pub expires_unix: u64,
+}
+
+/// Why a lease refused a step.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LeaseReason {
+    Expired,
+    OutOfScope,
+    Ceiling,
+}
+
+impl Lease {
+    /// Check a step (by name and required ceiling) against this lease.
+    pub fn authorize(&self, step: &str, required: Ceiling, now_unix: u64) -> Result<(), LawError> {
+        let reason = if now_unix >= self.expires_unix {
+            LeaseReason::Expired
+        } else if !self.scope.iter().any(|s| s == step) {
+            LeaseReason::OutOfScope
+        } else if required > self.ceiling {
+            LeaseReason::Ceiling
+        } else {
+            return Ok(());
+        };
+        Err(LawError::LeaseRefused {
+            lease_id: self.id.clone(),
+            step: step.to_string(),
+            reason,
+        })
+    }
 }
 
 /// A transition was refused; no child state exists.
@@ -89,6 +173,12 @@ pub enum LawError {
     },
     /// No recorded receipt for `step` exists in the state.
     ReceiptRequired { step: String },
+    /// The lease does not authorize the step.
+    LeaseRefused {
+        lease_id: String,
+        step: String,
+        reason: LeaseReason,
+    },
     /// An upstream engine or routing refused the input.
     Refused(Refusal),
 }
@@ -111,6 +201,19 @@ impl std::fmt::Display for LawError {
             LawError::ReceiptRequired { step } => {
                 write!(f, "receipt required: no recorded receipt for step `{step}`")
             }
+            LawError::LeaseRefused {
+                lease_id,
+                step,
+                reason,
+            } => write!(
+                f,
+                "lease `{lease_id}` refused step `{step}`: {}",
+                match reason {
+                    LeaseReason::Expired => "expired",
+                    LeaseReason::OutOfScope => "out_of_scope",
+                    LeaseReason::Ceiling => "ceiling",
+                }
+            ),
             LawError::Refused(r) => write!(f, "{r}"),
         }
     }
@@ -186,6 +289,20 @@ impl LawState {
         )
         .map_err(|e| Refusal::engine(Dialect::NQuads, e))?;
         String::from_utf8(bytes).map_err(|e| Refusal::engine(Dialect::NQuads, e))
+    }
+
+    /// Apply `step` only if `lease` authorizes it at `now_unix`; the receipt
+    /// carries the lease id. Refused (typed) when expired, out of scope, or over ceiling.
+    pub fn transition_leased(
+        &self,
+        lease: &Lease,
+        step: &Step<'_>,
+        now_unix: u64,
+    ) -> Result<(LawState, Receipt), LawError> {
+        lease.authorize(step.name(), step.required_ceiling(), now_unix)?;
+        let (child, mut receipt) = self.transition(step)?;
+        receipt.lease_id = Some(lease.id.clone());
+        Ok((child, receipt))
     }
 
     /// Apply `step`, returning the child state and a receipt, or a refusal.
@@ -264,6 +381,7 @@ impl LawState {
             step: step.name(),
             authority,
             added: child.quad_count().saturating_sub(self.quad_count()),
+            lease_id: None,
         };
         Ok((child, receipt))
     }

@@ -21,7 +21,7 @@ use serde_json::{Value, json};
 
 use crate::dialect::{Dialect, Engine, Refusal, RefusalKind, check, sniff};
 use crate::hooks::HookPack;
-use crate::law::{LawError, LawState, Step};
+use crate::law::{Ceiling, LawError, LawState, Lease, Step};
 
 /// ABI revision; bumped on any incompatible request/response change.
 pub const ABI_VERSION: u32 = 1;
@@ -85,6 +85,12 @@ fn law_err(e: LawError) -> Refusal {
             dialect: None,
             engine: Some(Engine::PurRdf),
             message: format!("receipt required: no recorded receipt for step `{step}`"),
+        },
+        e @ LawError::LeaseRefused { .. } => Refusal {
+            kind: RefusalKind::EngineRejected,
+            dialect: None,
+            engine: None,
+            message: e.to_string(),
         },
         LawError::NotAdmitted { violations } => Refusal {
             kind: RefusalKind::EngineRejected,
@@ -208,6 +214,7 @@ fn dispatch(v: &Value) -> Res<Value> {
         "datalog" => op_datalog(v),
         "hooks" => op_hooks(v),
         "law" => op_law(v),
+        "policy" => op_policy(v),
         other => Err(bad(format!("unknown op `{other}`"))),
     }
 }
@@ -223,7 +230,7 @@ fn capabilities() -> Value {
         "rdf_dialects": ["turtle", "trig", "ntriples", "nquads", "rdfxml", "jsonld", "yamlld", "trix", "hextuples"],
         "other_dialects": ["n3", "sparql", "shexc", "shexj"],
         "ops": ["capabilities", "sniff", "parse", "convert", "canonical", "sparql", "shacl", "shex",
-                "n3", "entail", "datalog", "hooks", "law"],
+                "n3", "entail", "datalog", "hooks", "law", "policy"],
     })
 }
 
@@ -498,7 +505,78 @@ fn plan_field(step: &Value) -> Res<crate::plan::Plan> {
     })
 }
 
+fn lease_of(v: &Value) -> Res<Option<(Lease, u64)>> {
+    let Some(l) = v.get("lease") else {
+        return Ok(None);
+    };
+    let ceiling = Ceiling::parse(str_field(l, "ceiling")?)
+        .ok_or_else(|| bad("lease `ceiling` must be observe|select|construct"))?;
+    let scope = l
+        .get("scope")
+        .and_then(Value::as_array)
+        .ok_or_else(|| bad("lease `scope` must be an array of step names"))?
+        .iter()
+        .map(|s| {
+            s.as_str()
+                .map(str::to_string)
+                .ok_or_else(|| bad("lease `scope` entries are strings"))
+        })
+        .collect::<Res<Vec<_>>>()?;
+    let expires_unix = l
+        .get("expires_unix")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| bad("lease `expires_unix` must be an unsigned integer"))?;
+    let now = v
+        .get("now_unix")
+        .and_then(Value::as_u64)
+        .ok_or_else(|| bad("a `lease` requires integer `now_unix`"))?;
+    Ok(Some((
+        Lease {
+            id: str_field(l, "id")?.to_string(),
+            holder: str_field(l, "holder")?.to_string(),
+            ceiling,
+            scope,
+            expires_unix,
+        },
+        now,
+    )))
+}
+
+/// `{"op":"policy","problem":<PlanningProblem JSON|string>,"policy":<UniversalPlan|entries JSON|string>}`:
+/// independent strong-cyclic admission of a FOND policy (see `policy`).
+fn op_policy(v: &Value) -> Res<Value> {
+    let text = |k: &str| -> Res<String> {
+        match v.get(k) {
+            Some(Value::String(t)) => Ok(t.clone()),
+            Some(o) if o.is_object() || o.is_array() => Ok(o.to_string()),
+            _ => Err(bad(format!("missing `{k}` (JSON object or string)"))),
+        }
+    };
+    let admitted =
+        crate::policy::admit(&text("problem")?, &text("policy")?).map_err(|r| Refusal {
+            kind: RefusalKind::EngineRejected,
+            dialect: None,
+            engine: None,
+            message: format!(
+                "policy refused ({}) at state `{}` action `{}`: {}",
+                r.kind.as_str(),
+                r.state,
+                r.action,
+                r.message
+            ),
+        })?;
+    Ok(json!({
+        "initial_states": admitted.initial_states,
+        "reachable": admitted.reachable,
+        "goal_states": admitted.goal_states,
+        "entries": admitted.entries.iter().map(|(s, a)| json!([s, a])).collect::<Vec<_>>(),
+        "ntriples": admitted.to_ntriples(),
+    }))
+}
+
 fn op_law(v: &Value) -> Res<Value> {
+    let lease = lease_of(v)?;
+    let lease_id = lease.as_ref().map(|(l, _)| l.id.clone());
     let mut state = state_field(v, "data")?;
     let mut ids = vec![state.id().to_string()];
     let mut receipts = Vec::new();
@@ -511,15 +589,25 @@ fn op_law(v: &Value) -> Res<Value> {
     {
         if str_field(step, "step")? == "plan" {
             let plan = plan_field(step)?;
+            if let Some((l, now)) = &lease {
+                l.authorize("admit:plan", Ceiling::Select, *now)
+                    .map_err(law_err)?;
+            }
             let admitted = plan.admit(&state).map_err(law_err)?;
             for (index, r) in admitted.receipts.iter().enumerate() {
-                receipts.push(json!({
+                let mut rj = json!({
                     "step": r.step, "parent": r.parent, "child": r.child, "added": r.added,
                     "authority": r.authority.authority, "revision": r.authority.revision,
                     "plan_sha256": admitted.plan_digest, "index": index,
-                }));
+                });
+                if let Some(id) = &lease_id {
+                    rj["lease_id"] = json!(id);
+                }
+                receipts.push(rj);
                 ids.push(r.child.clone());
-                produced.push(r.clone());
+                let mut r = r.clone();
+                r.lease_id = lease_id.clone();
+                produced.push(r);
             }
             state = admitted.state;
             continue;
@@ -559,11 +647,19 @@ fn op_law(v: &Value) -> Res<Value> {
             }
             other => return Err(bad(format!("unknown step `{other}`"))),
         };
-        let (child, r) = state.transition(&step_ref).map_err(law_err)?;
-        receipts.push(json!({
+        let (child, r) = match &lease {
+            Some((l, now)) => state.transition_leased(l, &step_ref, *now),
+            None => state.transition(&step_ref),
+        }
+        .map_err(law_err)?;
+        let mut rj = json!({
             "step": r.step, "parent": r.parent, "child": r.child, "added": r.added,
             "authority": r.authority.authority, "revision": r.authority.revision,
-        }));
+        });
+        if let Some(id) = &r.lease_id {
+            rj["lease_id"] = json!(id);
+        }
+        receipts.push(rj);
         ids.push(child.id().to_string());
         produced.push(r);
         state = child;

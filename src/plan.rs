@@ -188,6 +188,7 @@ impl Plan {
                 step: "plan-action",
                 authority: authority(),
                 added: child.quad_count().saturating_sub(state.quad_count()),
+                lease_id: None,
             });
             state = child;
             have = next;

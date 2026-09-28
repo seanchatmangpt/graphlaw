@@ -63,6 +63,10 @@ pub fn record(state: &LawState, receipt: &Receipt) -> Result<LawState, LawError>
         ("revision", receipt.authority.revision.to_string()),
         ("added", receipt.added.to_string()),
     ];
+    let mut facts = facts.to_vec();
+    if let Some(id) = &receipt.lease_id {
+        facts.push(("lease_id", id.clone()));
+    }
     let mut all: BTreeSet<String> = lines(state)?.into_iter().collect();
     let mut nt = String::new();
     for (p, o) in facts {
