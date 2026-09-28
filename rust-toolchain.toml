@@ -1,7 +1,4 @@
-# Toolchain carried from the exact Praxis source boundary used for extraction.
-# wasm4pm-compat requires generic_const_exprs; this date is the admitted
-# pinned nightly recorded by Praxis, not a floating toolchain.
 [toolchain]
-channel = "nightly-2026-06-22"
-components = ["rustfmt", "clippy", "llvm-tools-preview"]
+channel = "1.96.0"
+components = ["rustfmt", "clippy"]
 profile = "minimal"
