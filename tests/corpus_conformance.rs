@@ -20,11 +20,6 @@ const BASE: &str = "https://example.org/base/";
 const SLOW_BYTES: u64 = 1_000_000;
 const ROOTS: [&str; 4] = ["ontologies", "packs", "queries", "innovation"];
 
-/// Files that are scraped HTML specification pages, not RDF. They are excluded
-/// from the corpus explicitly (never silently) and must be replaced with the
-/// real vocabulary or deleted; `quarantine_is_still_broken` fails once fixed.
-const QUARANTINED: &[&str] = &["ontologies/catalogs/void.ttl"];
-
 fn root() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
 }
@@ -69,7 +64,6 @@ fn semantic(slow: bool) -> Vec<PathBuf> {
     all_files()
         .into_iter()
         .filter(|p| is_semantic(p))
-        .filter(|p| !QUARANTINED.contains(&rel(p).as_str()))
         .filter(|p| (fs::metadata(p).unwrap().len() >= SLOW_BYTES) == slow)
         .collect()
 }
@@ -140,19 +134,6 @@ fn shacl_shape_files_load_in_purrdf() {
         }
     }
     assert!(n > 0);
-}
-
-#[test]
-fn quarantine_is_still_broken() {
-    for q in QUARANTINED {
-        let Ok(bytes) = fs::read(root().join(q)) else {
-            continue;
-        };
-        assert!(
-            check(&bytes, Dialect::Turtle, Some(BASE)).is_err(),
-            "{q} now parses; remove it from QUARANTINED"
-        );
-    }
 }
 
 fn manifest_text() -> String {

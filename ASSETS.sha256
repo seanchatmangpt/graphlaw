@@ -14,7 +14,6 @@ a05c919b7d2d45dbb2a217ff546375613e7647e6eebd5df8f17ff12466761dc1  91757  RdfXml 
 d1624d3bbf364f6fc1d43b9a188bbb9e67639b1a7d46a5cb7ea3f5d47d02b62f  200345  Turtle  ontologies/catalogs/dcat-v2.ttl
 d1624d3bbf364f6fc1d43b9a188bbb9e67639b1a7d46a5cb7ea3f5d47d02b62f  200345  Turtle  ontologies/catalogs/dcat-v3.ttl
 d7ea634dbcd31347eba38157197f69d314077ef7f88fd4f90e4f24a78bfe1097  112777  Turtle  ontologies/catalogs/prov.ttl
-de802a7e92e5f6510c2f83a0ef0e37be4b94f3a494d66aa96f05e6322b00ffba  35316  Turtle  ontologies/catalogs/void.ttl
 c4baef8089b4bee0a9358d0970e77072859c8420cc0891ba256e05712b76398f  6223  Turtle  ontologies/core/bench-obs.ttl
 d1624d3bbf364f6fc1d43b9a188bbb9e67639b1a7d46a5cb7ea3f5d47d02b62f  200345  Turtle  ontologies/core/dcat.ttl
 13df401072dd7015bf9d75162f3e41c8138075304b7b9cc1aa1e9c16db976797  47834  Turtle  ontologies/core/dcterms.ttl
