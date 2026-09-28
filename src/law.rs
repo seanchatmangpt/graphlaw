@@ -31,6 +31,9 @@ pub enum Step<'a> {
     Hooks { pack: &'a crate::hooks::HookPack },
     /// Replay a candidate plan; refused at the first violated precondition.
     Plan { plan: &'a crate::plan::Plan },
+    /// Admission gate: a receipt for `step` must be recorded in the state
+    /// (see [`crate::receipt::record`]). Never changes the state.
+    RequireReceipt { step: &'a str },
     /// RDFS entailment closure.
     EntailRdfs,
     /// OWL 2 RL entailment closure.
@@ -44,6 +47,7 @@ impl Step<'_> {
             Step::DeriveN3 { .. } => "derive:n3",
             Step::Hooks { .. } => "derive:hooks",
             Step::Plan { .. } => "admit:plan",
+            Step::RequireReceipt { .. } => "admit:require-receipt",
             Step::EntailRdfs => "derive:rdfs",
             Step::EntailOwlRl => "derive:owl-rl",
         }
@@ -54,7 +58,7 @@ impl Step<'_> {
             Step::AdmitShacl { .. } => "SHACL",
             Step::DeriveN3 { .. } => "Notation3",
             Step::Hooks { .. } => "Knowledge hooks (kh: orchestration over SPARQL)",
-            Step::Plan { .. } => "RDF 1.2 / codecs / storage IR",
+            Step::Plan { .. } | Step::RequireReceipt { .. } => "RDF 1.2 / codecs / storage IR",
             Step::EntailRdfs | Step::EntailOwlRl => "RDF/RDFS/OWL-RL entailment",
         }
     }
@@ -83,6 +87,8 @@ pub enum LawError {
         action: String,
         missing: Vec<String>,
     },
+    /// No recorded receipt for `step` exists in the state.
+    ReceiptRequired { step: String },
     /// An upstream engine or routing refused the input.
     Refused(Refusal),
 }
@@ -102,6 +108,9 @@ impl std::fmt::Display for LawError {
                 "plan refused at step {index} (`{action}`): {} unmet triple(s)",
                 missing.len()
             ),
+            LawError::ReceiptRequired { step } => {
+                write!(f, "receipt required: no recorded receipt for step `{step}`")
+            }
             LawError::Refused(r) => write!(f, "{r}"),
         }
     }
@@ -196,6 +205,10 @@ impl LawState {
             }
             Step::Hooks { pack } => pack.materialize(self)?.state,
             Step::Plan { plan } => plan.admit(self)?.state,
+            Step::RequireReceipt { step } => {
+                crate::receipt::require(self, step)?;
+                self.clone()
+            }
             Step::EntailRdfs | Step::EntailOwlRl => {
                 let plan = if matches!(step, Step::EntailRdfs) {
                     purrdf::entail::Materialization::Rdfs

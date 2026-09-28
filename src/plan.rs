@@ -47,6 +47,8 @@ pub struct Plan {
 pub struct Admitted {
     pub state: LawState,
     pub receipts: Vec<Receipt>,
+    /// [`Plan::digest`] of the admitted plan.
+    pub plan_digest: String,
 }
 
 fn authority() -> BackendAuthority {
@@ -109,7 +111,57 @@ fn rebuild(lines: &BTreeSet<String>) -> Result<LawState, LawError> {
     Ok(LawState::parse(doc.as_bytes(), Dialect::NQuads, None)?)
 }
 
+fn json_str(s: &str) -> String {
+    let mut o = String::from("\"");
+    for c in s.chars() {
+        match c {
+            '"' => o.push_str("\\\""),
+            '\\' => o.push_str("\\\\"),
+            '\n' => o.push_str("\\n"),
+            '\r' => o.push_str("\\r"),
+            '\t' => o.push_str("\\t"),
+            c if (c as u32) < 0x20 => o.push_str(&format!("\\u{:04x}", c as u32)),
+            c => o.push(c),
+        }
+    }
+    o.push('"');
+    o
+}
+
 impl Plan {
+    /// Canonical JSON of the plan (actions in order, keys sorted, no
+    /// whitespace): `{"actions":[{"add","del","name","pre"}],"goal"}`.
+    pub fn canonical_json(&self) -> String {
+        let actions = self
+            .actions
+            .iter()
+            .map(|a| {
+                format!(
+                    "{{\"add\":{},\"del\":{},\"name\":{},\"pre\":{}}}",
+                    json_str(&a.add),
+                    json_str(&a.del),
+                    json_str(&a.name),
+                    json_str(&a.pre)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        format!(
+            "{{\"actions\":[{actions}],\"goal\":{}}}",
+            json_str(&self.goal)
+        )
+    }
+
+    /// `sha256:` of [`Plan::canonical_json`].
+    pub fn digest(&self) -> String {
+        use sha2::{Digest, Sha256};
+        let d = Sha256::digest(self.canonical_json().as_bytes());
+        format!(
+            "sha256:{}",
+            d.iter().map(|b| format!("{b:02x}")).collect::<String>()
+        )
+    }
+
     /// Replay the plan over `start`. Refuses at the first violated
     /// precondition, or after the last action if the goal does not hold.
     pub fn admit(&self, start: &LawState) -> Result<Admitted, LawError> {
@@ -148,6 +200,10 @@ impl Plan {
                 missing: gap,
             });
         }
-        Ok(Admitted { state, receipts })
+        Ok(Admitted {
+            state,
+            receipts,
+            plan_digest: self.digest(),
+        })
     }
 }

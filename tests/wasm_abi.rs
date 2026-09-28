@@ -86,6 +86,10 @@ impl Host {
     }
 
     fn request(&mut self, req: &Value) -> Value {
+        serde_json::from_slice(&self.request_bytes(req)).expect("response is JSON")
+    }
+
+    fn request_bytes(&mut self, req: &Value) -> Vec<u8> {
         let body = req.to_string().into_bytes();
         let ptr = self.alloc.call(&mut self.store, body.len() as u32).unwrap();
         self.memory
@@ -101,7 +105,7 @@ impl Host {
             .read(&self.store, out_ptr as usize, &mut out)
             .unwrap();
         self.free.call(&mut self.store, (out_ptr, out_len)).unwrap();
-        serde_json::from_slice(&out).expect("response is JSON")
+        out
     }
 }
 
@@ -388,4 +392,27 @@ fn protocol_errors_are_json_not_traps() {
         call(json!({"op": "parse", "text": "<a> <b> .", "dialect": "turtle"}))["error"]["engine"],
         "PurRdf"
     );
+}
+
+#[cfg(feature = "abi")]
+#[test]
+fn native_and_wasm_law_plan_responses_are_byte_identical() {
+    let at = |o: &str| format!("<urn:p:robot> <urn:p:at> <urn:p:{o}> .\n");
+    let req = json!({"op": "law", "data": {"text": at("a"), "dialect": "ntriples"},
+        "steps": [
+            {"step": "plan", "plan": {
+                "actions": [{"name": "a-b", "pre": at("a"), "add": at("b"), "del": at("a")}],
+                "goal": at("b")}},
+            {"step": "record-receipts"},
+            {"step": "require-receipt", "step_name": "plan-action"}]});
+    let native = graphlaw::abi::call(req.to_string().as_bytes());
+    let wasm = host()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .request_bytes(&req);
+    assert_eq!(native, wasm, "native and wasm responses diverge");
+    let v: Value = serde_json::from_slice(&native).unwrap();
+    assert_eq!(v["ok"], true, "{v}");
+    assert!(v["receipts"][0]["plan_sha256"].is_string());
+    assert_eq!(ok(json!({"op": "capabilities"}))["abi_version"], 1);
 }
