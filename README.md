@@ -43,6 +43,10 @@ One self-contained WASI module (imports are `wasi_snapshot_preview1` only: clock
 
 There is nothing to run. When a change that bumps the version in `Cargo.toml` reaches `main`, `.github/workflows/release.yml` builds and tests, tags `vX.Y.Z`, creates the GitHub release with `graphlaw.wasm` (plus checksum), and publishes `graphlaw-eyeron` then `graphlaw` to crates.io (each only if that version is not already there; every step is idempotent). The only one-time setup is the `CARGO_REGISTRY_TOKEN` repository secret; without it the release and tag still happen and the publish step fails loudly until it is added. Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
 
+## Plan admission
+
+A planner only proposes. `plan::Plan::admit(&LawState)` (also `Step::Plan`, and `{"step":"plan","plan":{"actions":[{"name","pre","add","del"}],"goal"}}` in the `law` op) replays a candidate plan: every `pre` triple (N-Triples, ground) must be present in the current state, `del` then `add` produce the child state, and `goal` must hold at the end. The first violated precondition, or an unmet goal, refuses the whole plan with `LawError::PlanRefused { index, action, missing }` and yields no state. Each applied action returns a `Receipt` (`step: "plan-action"`, authority `purrdf`), so an admitted plan is a chain of content-addressed states; replay is byte-identical. Blank nodes are refused. See `tests/plan_admission.rs`.
+
 ## Knowledge hooks
 
 `hooks::HookPack` loads `kh:Hook` / `kh:Action` resources from any RDF pack (see `packs/self-monitoring-pack/hook.ttl`) and runs them to a fixpoint over a `LawState` (`Step::Hooks`). Triggers and actions are SPARQL executed by PurRDF; each firing is recorded in the state so re-running a saturated state changes nothing.

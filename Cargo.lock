@@ -652,7 +652,7 @@ dependencies = [
 
 [[package]]
 name = "graphlaw"
-version = "26.9.28"
+version = "26.9.29"
 dependencies = [
  "graphlaw-eyeron",
  "purrdf",
@@ -677,7 +677,7 @@ dependencies = [
 
 [[package]]
 name = "graphlaw-wasm"
-version = "26.9.28"
+version = "26.9.29"
 dependencies = [
  "graphlaw",
 ]

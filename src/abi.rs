@@ -8,6 +8,9 @@
 //!
 //! Ops: `capabilities`, `sniff`, `parse`, `convert`, `canonical`, `sparql`,
 //! `shacl`, `shex`, `n3`, `entail`, `datalog`, `hooks`, `law`.
+//! `law` steps: `shacl`, `n3`, `rdfs`, `owl-rl`, `hooks`, and `plan`
+//! (`{"step":"plan","plan":{"actions":[{"name","pre","add","del"}],"goal"}}`,
+//! N-Triples strings; one receipt per action, refused at the first unmet precondition).
 //! A *data spec* is `{"text": "...", "dialect"?: "turtle", "hint"?: "ttl", "base"?: "..."}`;
 //! without `dialect` the router sniffs the content.
 
@@ -62,6 +65,19 @@ fn refusal_json(r: &Refusal) -> Value {
 fn law_err(e: LawError) -> Refusal {
     match e {
         LawError::Refused(r) => r,
+        LawError::PlanRefused {
+            index,
+            action,
+            missing,
+        } => Refusal {
+            kind: RefusalKind::EngineRejected,
+            dialect: Some(Dialect::NTriples),
+            engine: Some(Engine::PurRdf),
+            message: format!(
+                "plan refused at step {index} (`{action}`): unmet {}",
+                missing.join(" ")
+            ),
+        },
         LawError::NotAdmitted { violations } => Refusal {
             kind: RefusalKind::EngineRejected,
             dialect: Some(Dialect::Turtle),
@@ -444,6 +460,35 @@ fn op_hooks(v: &Value) -> Res<Value> {
     }))
 }
 
+fn plan_field(step: &Value) -> Res<crate::plan::Plan> {
+    let p = step.get("plan").ok_or_else(|| bad("missing `plan`"))?;
+    let text = |o: &Value, k: &str| -> Res<String> {
+        match o.get(k) {
+            None | Some(Value::Null) => Ok(String::new()),
+            Some(Value::String(t)) => Ok(t.clone()),
+            Some(_) => Err(bad(format!("`{k}` must be an N-Triples string"))),
+        }
+    };
+    let actions = p
+        .get("actions")
+        .and_then(Value::as_array)
+        .ok_or_else(|| bad("plan needs an `actions` array"))?
+        .iter()
+        .map(|a| {
+            Ok(crate::plan::Action {
+                name: text(a, "name")?,
+                pre: text(a, "pre")?,
+                add: text(a, "add")?,
+                del: text(a, "del")?,
+            })
+        })
+        .collect::<Res<Vec<_>>>()?;
+    Ok(crate::plan::Plan {
+        actions,
+        goal: text(p, "goal")?,
+    })
+}
+
 fn op_law(v: &Value) -> Res<Value> {
     let mut state = state_field(v, "data")?;
     let mut ids = vec![state.id().to_string()];
@@ -453,6 +498,19 @@ fn op_law(v: &Value) -> Res<Value> {
         .and_then(Value::as_array)
         .ok_or_else(|| bad("missing `steps` array"))?
     {
+        if str_field(step, "step")? == "plan" {
+            let plan = plan_field(step)?;
+            let admitted = plan.admit(&state).map_err(law_err)?;
+            for r in &admitted.receipts {
+                receipts.push(json!({
+                    "step": r.step, "parent": r.parent, "child": r.child, "added": r.added,
+                    "authority": r.authority.authority, "revision": r.authority.revision,
+                }));
+                ids.push(r.child.clone());
+            }
+            state = admitted.state;
+            continue;
+        }
         let pack;
         let shapes;
         let rules;
