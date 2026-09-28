@@ -1,45 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE rdf:RDF [
-	<!ENTITY cmns-av "https://www.omg.org/spec/Commons/AnnotationVocabulary/">
-	<!ENTITY cmns-bauth "https://www.omg.org/spec/Commons/BusinessAuthorizations/">
-	<!ENTITY cmns-col "https://www.omg.org/spec/Commons/Collections/">
-	<!ENTITY cmns-org "https://www.omg.org/spec/Commons/Organizations/">
-	<!ENTITY cmns-pts "https://www.omg.org/spec/Commons/PartiesAndSituations/">
-	<!ENTITY cmns-rga "https://www.omg.org/spec/Commons/RegulatoryAgencies/">
-	<!ENTITY cmns-rlcmp "https://www.omg.org/spec/Commons/RolesAndCompositions/">
-	<!ENTITY dct "http://purl.org/dc/terms/">
-	<!ENTITY fibo-be-le-fbo "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/">
-	<!ENTITY fibo-be-le-lp "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/">
-	<!ENTITY fibo-be-tr-tr "https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/">
-	<!ENTITY fibo-fnd-agr-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
-	<!ENTITY fibo-fnd-agr-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
-	<!ENTITY fibo-fnd-utl-av "https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/">
-	<!ENTITY owl "http://www.w3.org/2002/07/owl#">
-	<!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-	<!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">
-	<!ENTITY skos "http://www.w3.org/2004/02/skos/core#">
-	<!ENTITY xsd "http://www.w3.org/2001/XMLSchema#">
-]>
-<rdf:RDF xml:base="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/"
-	xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/"
-	xmlns:cmns-bauth="https://www.omg.org/spec/Commons/BusinessAuthorizations/"
-	xmlns:cmns-col="https://www.omg.org/spec/Commons/Collections/"
-	xmlns:cmns-org="https://www.omg.org/spec/Commons/Organizations/"
-	xmlns:cmns-pts="https://www.omg.org/spec/Commons/PartiesAndSituations/"
-	xmlns:cmns-rga="https://www.omg.org/spec/Commons/RegulatoryAgencies/"
-	xmlns:cmns-rlcmp="https://www.omg.org/spec/Commons/RolesAndCompositions/"
-	xmlns:dct="http://purl.org/dc/terms/"
-	xmlns:fibo-be-le-fbo="https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/"
-	xmlns:fibo-be-le-lp="https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/"
-	xmlns:fibo-be-tr-tr="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/"
-	xmlns:fibo-fnd-agr-agr="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/"
-	xmlns:fibo-fnd-agr-ctr="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/"
-	xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"
-	xmlns:owl="http://www.w3.org/2002/07/owl#"
-	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-	xmlns:skos="http://www.w3.org/2004/02/skos/core#"
-	xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+<rdf:RDF xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/" xmlns:cmns-bauth="https://www.omg.org/spec/Commons/BusinessAuthorizations/" xmlns:cmns-col="https://www.omg.org/spec/Commons/Collections/" xmlns:cmns-org="https://www.omg.org/spec/Commons/Organizations/" xmlns:cmns-pts="https://www.omg.org/spec/Commons/PartiesAndSituations/" xmlns:cmns-rga="https://www.omg.org/spec/Commons/RegulatoryAgencies/" xmlns:cmns-rlcmp="https://www.omg.org/spec/Commons/RolesAndCompositions/" xmlns:dct="http://purl.org/dc/terms/" xmlns:fibo-be-le-fbo="https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/" xmlns:fibo-be-le-lp="https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/" xmlns:fibo-be-tr-tr="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/" xmlns:fibo-fnd-agr-agr="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/" xmlns:fibo-fnd-agr-ctr="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/" xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:skos="http://www.w3.org/2004/02/skos/core#" xmlns:xsd="http://www.w3.org/2001/XMLSchema#" xml:base="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/">
 	
 	<owl:Ontology rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/">
 		<rdfs:label>Trusts Ontology</rdfs:label>
@@ -47,11 +7,11 @@
 		<dct:license>Copyright (c) 2013-2025 EDM Council, Inc.
 Copyright (c) 2013-2025 Object Management Group, Inc.
 		
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &apos;Software&apos;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		
 		See https://opensource.org/licenses/MIT.</dct:license>
 		<owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/"/>
@@ -74,114 +34,114 @@ THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRES
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20200301/Trusts/Trusts.rdf version of this ontology was modified to add a number of kinds of trusts, clean-up extraneous concepts, and eliminate circularity and ambiguity in definitions.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20201201/Trusts/Trusts.rdf version of this ontology was modified to eliminate references to external dictionary sites that no longer resolve.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20210101/Trusts/Trusts.rdf version of this ontology was modified to reflect the move of OrganizationMember from Parties to Organizations in FND.</skos:changeNote>
-		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20210401/Trusts/Trusts.rdf version of the ontology was modified to use the Commons Ontology Library (Commons) Annotation Vocabulary rather than the OMG&apos;s Specification Metadata vocabulary.</skos:changeNote>
-		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20230101/Trusts/Trusts.rdf version of this ontology was modified to use the Commons Ontology Library (Commons) rather than the OMG&apos;s Languages, Countries and Codes (LCC), eliminating redundancies in FIBO as appropriate.</skos:changeNote>
+		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20210401/Trusts/Trusts.rdf version of the ontology was modified to use the Commons Ontology Library (Commons) Annotation Vocabulary rather than the OMG's Specification Metadata vocabulary.</skos:changeNote>
+		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20230101/Trusts/Trusts.rdf version of this ontology was modified to use the Commons Ontology Library (Commons) rather than the OMG's Languages, Countries and Codes (LCC), eliminating redundancies in FIBO as appropriate.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20230301/Trusts/Trusts.rdf version of this ontology was modified to replace content that is now available in the OMG Commons Ontology Library (Commons) v1.1 (FND-380).</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20240101/Trusts/Trusts.rdf version of the ontology was modified to replace additional content that is now available in the OMG Commons Ontology Library (Commons) v1.2 (FND-389).</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20250301/Trusts/Trusts.rdf version of this ontology was modified to move hasBeneficiary and isBeneficiaryOf to contracts (DER-55a).</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20250501/Trusts/Trusts.rdf version of this ontology was modified to to use new constructs from the Commons 1.3 Business Authorizations ontology (FND-401).</skos:changeNote>
-		<fibo-fnd-utl-av:hasMaturityLevel rdf:resource="&fibo-fnd-utl-av;Release"/>
+		<fibo-fnd-utl-av:hasMaturityLevel rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/Release"/>
 		<cmns-av:copyright>Copyright (c) 2013-2025 EDM Council, Inc.</cmns-av:copyright>
 		<cmns-av:copyright>Copyright (c) 2013-2025 Object Management Group, Inc.</cmns-av:copyright>
 	</owl:Ontology>
 	
-	<owl:Class rdf:about="&fibo-be-tr-tr;IrrevocableTrust">
-		<rdfs:subClassOf rdf:resource="&fibo-be-tr-tr;Trust"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/IrrevocableTrust">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trust"/>
 		<rdfs:label>irrevocable trust</rdfs:label>
-		<skos:definition>trust that cannot be modified, amended or terminated except under certain legal circumstances and typically not without the permission of the grantor&apos;s named beneficiary or beneficiaries</skos:definition>
+		<skos:definition>trust that cannot be modified, amended or terminated except under certain legal circumstances and typically not without the permission of the grantor's named beneficiary or beneficiaries</skos:definition>
 		<cmns-av:explanatoryNote>Irrevocable trusts also offer asset protection from future creditors and lawsuits.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-be-tr-tr;LivingTrust">
-		<rdfs:subClassOf rdf:resource="&fibo-be-tr-tr;Trust"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/LivingTrust">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trust"/>
 		<rdfs:label>living trust</rdfs:label>
-		<skos:definition>trust created during an individual&apos;s lifetime where a designated person, the trustee, is given responsibility for managing that individual&apos;s assets for the benefit of the eventual beneficiary</skos:definition>
-		<cmns-av:explanatoryNote>A living trust is designed to allow for the easy transfer of the trust creator or settlor&apos;s assets while bypassing the often complex and expensive legal process of probate. Living trust agreements designate a trustee who holds legal possession of assets and property that flow into the trust.</cmns-av:explanatoryNote>
+		<skos:definition>trust created during an individual's lifetime where a designated person, the trustee, is given responsibility for managing that individual's assets for the benefit of the eventual beneficiary</skos:definition>
+		<cmns-av:explanatoryNote>A living trust is designed to allow for the easy transfer of the trust creator or settlor's assets while bypassing the often complex and expensive legal process of probate. Living trust agreements designate a trustee who holds legal possession of assets and property that flow into the trust.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-be-tr-tr;RevocableTrust">
-		<rdfs:subClassOf rdf:resource="&fibo-be-tr-tr;Trust"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/RevocableTrust">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trust"/>
 		<rdfs:label>revocable trust</rdfs:label>
-		<owl:disjointWith rdf:resource="&fibo-be-tr-tr;IrrevocableTrust"/>
+		<owl:disjointWith rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/IrrevocableTrust"/>
 		<skos:definition>trust in which legal ownership of the trust property is transferred to the trustee, but the trustor retains full power to revoke, modify or amend the trust</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-be-tr-tr;TestamentaryTrust">
-		<rdfs:subClassOf rdf:resource="&fibo-be-tr-tr;IrrevocableTrust"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/TestamentaryTrust">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/IrrevocableTrust"/>
 		<rdfs:label>testamentary trust</rdfs:label>
 		<skos:definition>trust established in accordance with the instructions contained in a last will and testament</skos:definition>
-		<cmns-av:explanatoryNote>A will could have more than one testamentary trust. The trustee named is responsible for managing and distributing the trustor&apos;s assets to the beneficiaries as directed in the will. Sometimes called a will trust, the testamentary trust is irrevocable.</cmns-av:explanatoryNote>
+		<cmns-av:explanatoryNote>A will could have more than one testamentary trust. The trustee named is responsible for managing and distributing the trustor's assets to the beneficiaries as directed in the will. Sometimes called a will trust, the testamentary trust is irrevocable.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-be-tr-tr;Trust">
-		<rdfs:subClassOf rdf:resource="&fibo-be-le-lp;BusinessEntity"/>
-		<rdfs:subClassOf rdf:resource="&cmns-org;LegalEntity"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trust">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/BusinessEntity"/>
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/Organizations/LegalEntity"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-rga;isGovernedBy"/>
-				<owl:onClass rdf:resource="&fibo-be-tr-tr;TrustAgreement"/>
-				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RegulatoryAgencies/isGovernedBy"/>
+				<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/TrustAgreement"/>
+				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-pts;hasPartyRole"/>
-				<owl:someValuesFrom rdf:resource="&fibo-be-tr-tr;TrustBeneficiary"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/TrustBeneficiary"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-pts;hasPartyRole"/>
-				<owl:someValuesFrom rdf:resource="&fibo-be-tr-tr;Trustee"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trustee"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-pts;hasPartyRole"/>
-				<owl:someValuesFrom rdf:resource="&fibo-be-tr-tr;Trustor"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trustor"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>trust</rdfs:label>
 		<skos:definition>fiduciary relationship and legal entity in which one party, known as a trustor, gives another party, the trustee, the right to hold title to and manage assets for the benefit of a third party, the beneficiary</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-be-tr-tr;TrustAgreement">
-		<rdfs:subClassOf rdf:resource="&fibo-be-le-fbo;OrganizationCoveringAgreement"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/TrustAgreement">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/OrganizationCoveringAgreement"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-pts;hasPartyRole"/>
-				<owl:someValuesFrom rdf:resource="&fibo-be-tr-tr;TrustBeneficiary"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/TrustBeneficiary"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-pts;hasPartyRole"/>
-				<owl:someValuesFrom rdf:resource="&fibo-be-tr-tr;Trustee"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trustee"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-pts;hasPartyRole"/>
-				<owl:someValuesFrom rdf:resource="&fibo-be-tr-tr;Trustor"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trustor"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>trust agreement</rdfs:label>
 		<skos:definition>formal agreement that establishes a trust, whereby the trustor(s) gives the trustee(s) the responsibility to hold and manage assets for the beneficiary(ies)</skos:definition>
-		<cmns-av:explanatoryNote>A trust agreement typically states the (1) purpose for which the trust was established and fulfillment of which will terminate the trust, (2) details of the assets placed in the trust, (3) powers and limitations of the trustees, their reporting requirements, and other associated provisions, and (4) may also specify the trustees&apos; compensation, if any. A trust agreement involving real estate requires its exact description and the trustor&apos;s express, written consent to create the trust to be valid.</cmns-av:explanatoryNote>
+		<cmns-av:explanatoryNote>A trust agreement typically states the (1) purpose for which the trust was established and fulfillment of which will terminate the trust, (2) details of the assets placed in the trust, (3) powers and limitations of the trustees, their reporting requirements, and other associated provisions, and (4) may also specify the trustees' compensation, if any. A trust agreement involving real estate requires its exact description and the trustor's express, written consent to create the trust to be valid.</cmns-av:explanatoryNote>
 		<cmns-av:synonym>trust deed</cmns-av:synonym>
 		<cmns-av:synonym>trust document</cmns-av:synonym>
 		<cmns-av:synonym>trust instrument</cmns-av:synonym>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-be-tr-tr;TrustBeneficiary">
-		<rdfs:subClassOf rdf:resource="&fibo-fnd-agr-agr;Beneficiary"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/TrustBeneficiary">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Beneficiary"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-rlcmp;isPlayedBy"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/isPlayedBy"/>
 				<owl:someValuesFrom>
 					<owl:Restriction>
-						<owl:onProperty rdf:resource="&cmns-pts;isAPartyTo"/>
-						<owl:allValuesFrom rdf:resource="&fibo-be-tr-tr;TrustAgreement"/>
+						<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/isAPartyTo"/>
+						<owl:allValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/TrustAgreement"/>
 					</owl:Restriction>
 				</owl:someValuesFrom>
 			</owl:Restriction>
@@ -190,15 +150,15 @@ THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRES
 		<skos:definition>party for whose interest (benefit) an annuity, assignment (such as a letter of credit), contract, insurance policy, judgment, promise, trust, will, etc., is made</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-be-tr-tr;TrustFundManager">
-		<rdfs:subClassOf rdf:resource="&cmns-bauth;LegallyDelegatedAuthority"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/TrustFundManager">
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/BusinessAuthorizations/LegallyDelegatedAuthority"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-rlcmp;isPlayedBy"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/isPlayedBy"/>
 				<owl:someValuesFrom>
 					<owl:Restriction>
-						<owl:onProperty rdf:resource="&cmns-org;manages"/>
-						<owl:allValuesFrom rdf:resource="&fibo-be-tr-tr;Trust"/>
+						<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Organizations/manages"/>
+						<owl:allValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trust"/>
 					</owl:Restriction>
 				</owl:someValuesFrom>
 			</owl:Restriction>
@@ -207,64 +167,64 @@ THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRES
 		<skos:definition>party empowered to act on behalf of the trustee to manage the assets of the trust</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-be-tr-tr;Trustee">
-		<rdfs:subClassOf rdf:resource="&cmns-bauth;LegallyDelegatedAuthority"/>
-		<rdfs:subClassOf rdf:resource="&cmns-org;OrganizationMember"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trustee">
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/BusinessAuthorizations/LegallyDelegatedAuthority"/>
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/Organizations/OrganizationMember"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-rlcmp;isPlayedBy"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/isPlayedBy"/>
 				<owl:someValuesFrom>
 					<owl:Restriction>
-						<owl:onProperty rdf:resource="&cmns-col;isMemberOf"/>
-						<owl:allValuesFrom rdf:resource="&fibo-be-tr-tr;Trust"/>
+						<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Collections/isMemberOf"/>
+						<owl:allValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trust"/>
 					</owl:Restriction>
 				</owl:someValuesFrom>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-rlcmp;isPlayedBy"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/isPlayedBy"/>
 				<owl:someValuesFrom>
 					<owl:Restriction>
-						<owl:onProperty rdf:resource="&cmns-org;manages"/>
-						<owl:allValuesFrom rdf:resource="&fibo-be-tr-tr;Trust"/>
+						<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Organizations/manages"/>
+						<owl:allValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trust"/>
 					</owl:Restriction>
 				</owl:someValuesFrom>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-rlcmp;isPlayedBy"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/isPlayedBy"/>
 				<owl:someValuesFrom>
 					<owl:Restriction>
-						<owl:onProperty rdf:resource="&cmns-pts;isAPartyTo"/>
-						<owl:onClass rdf:resource="&fibo-be-tr-tr;TrustAgreement"/>
-						<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+						<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/isAPartyTo"/>
+						<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/TrustAgreement"/>
+						<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
 					</owl:Restriction>
 				</owl:someValuesFrom>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>trustee</rdfs:label>
 		<skos:definition>party that holds and manages assets for the benefit of another</skos:definition>
-		<cmns-av:explanatoryNote>The trustee is legally obliged to make all trust-related decisions with the beneficiary&apos;s interests in mind, and may be liable for damages in the event of not doing so. Trustees may be entitled to a payment for their services, if specified in the trust agreement. In the specific case of the bond market, a trustee administers a bond issue for a borrower, and ensures that the issuer meets all the terms and conditions associated with the borrowing.</cmns-av:explanatoryNote>
+		<cmns-av:explanatoryNote>The trustee is legally obliged to make all trust-related decisions with the beneficiary's interests in mind, and may be liable for damages in the event of not doing so. Trustees may be entitled to a payment for their services, if specified in the trust agreement. In the specific case of the bond market, a trustee administers a bond issue for a borrower, and ensures that the issuer meets all the terms and conditions associated with the borrowing.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-be-tr-tr;Trustor">
-		<rdfs:subClassOf rdf:resource="&cmns-org;OrganizationMember"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trustor">
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/Organizations/OrganizationMember"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-rlcmp;isPlayedBy"/>
-				<owl:allValuesFrom rdf:resource="&cmns-pts;Party"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/isPlayedBy"/>
+				<owl:allValuesFrom rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/Party"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-rlcmp;isPlayedBy"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/isPlayedBy"/>
 				<owl:someValuesFrom>
 					<owl:Restriction>
-						<owl:onProperty rdf:resource="&cmns-pts;isAPartyTo"/>
-						<owl:onClass rdf:resource="&fibo-be-tr-tr;TrustAgreement"/>
-						<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+						<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/isAPartyTo"/>
+						<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/TrustAgreement"/>
+						<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
 					</owl:Restriction>
 				</owl:someValuesFrom>
 			</owl:Restriction>
@@ -276,30 +236,30 @@ THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRES
 		<cmns-av:synonym>settlor</cmns-av:synonym>
 	</owl:Class>
 	
-	<owl:ObjectProperty rdf:about="&fibo-be-tr-tr;hasBeneficiary">
-		<owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
-		<owl:equivalentProperty rdf:resource="&fibo-fnd-agr-ctr;hasBeneficiary"/>
+	<owl:ObjectProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/hasBeneficiary">
+		<owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+		<owl:equivalentProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasBeneficiary"/>
 	</owl:ObjectProperty>
 	
-	<owl:ObjectProperty rdf:about="&fibo-be-tr-tr;hasTrustee">
-		<rdfs:subPropertyOf rdf:resource="&cmns-pts;isAffectedBy"/>
+	<owl:ObjectProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/hasTrustee">
+		<rdfs:subPropertyOf rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/isAffectedBy"/>
 		<rdfs:label>has trustee</rdfs:label>
-		<rdfs:domain rdf:resource="&fibo-be-tr-tr;Trust"/>
-		<rdfs:range rdf:resource="&fibo-be-tr-tr;Trustee"/>
-		<owl:inverseOf rdf:resource="&fibo-be-tr-tr;isTrusteeOf"/>
+		<rdfs:domain rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trust"/>
+		<rdfs:range rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trustee"/>
+		<owl:inverseOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/isTrusteeOf"/>
 		<skos:definition>links a trust to a named trustee</skos:definition>
 	</owl:ObjectProperty>
 	
-	<owl:ObjectProperty rdf:about="&fibo-be-tr-tr;isBeneficiaryOf">
-		<owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
-		<owl:equivalentProperty rdf:resource="&fibo-fnd-agr-ctr;isBeneficiaryOf"/>
+	<owl:ObjectProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/isBeneficiaryOf">
+		<owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+		<owl:equivalentProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isBeneficiaryOf"/>
 	</owl:ObjectProperty>
 	
-	<owl:ObjectProperty rdf:about="&fibo-be-tr-tr;isTrusteeOf">
-		<rdfs:subPropertyOf rdf:resource="&cmns-pts;actsOn"/>
+	<owl:ObjectProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/isTrusteeOf">
+		<rdfs:subPropertyOf rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/actsOn"/>
 		<rdfs:label>is trustee of</rdfs:label>
-		<rdfs:domain rdf:resource="&fibo-be-tr-tr;Trustee"/>
-		<rdfs:range rdf:resource="&fibo-be-tr-tr;Trust"/>
+		<rdfs:domain rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trustee"/>
+		<rdfs:range rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Trusts/Trusts/Trust"/>
 		<skos:definition>identifies the trust over which a trustee has some measure of control</skos:definition>
 	</owl:ObjectProperty>
 

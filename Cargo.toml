@@ -16,6 +16,7 @@ path = "src/lib.rs"
 
 [dependencies]
 purrdf = "=2.0.2"
+sha2 = "0.10"
 eyeron = { git = "https://github.com/eyereasoner/eyeron", rev = "d6568f657c19805b64223acf28d74234156bb837" }
 
 [package.metadata.docs.rs]
