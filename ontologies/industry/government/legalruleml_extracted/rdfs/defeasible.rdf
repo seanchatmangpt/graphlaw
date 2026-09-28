@@ -1,17 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
- <!DOCTYPE RDF [
-   <!ENTITY dcterms "http://purl.org/dc/terms">  
-   <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns">  
-   <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema">  
-   <!ENTITY owl "http://www.w3.org/2002/07/owl">    
-   <!ENTITY xs "http://www.w3.org/2001/XMLSchema">    
-   <!ENTITY rulemm "http://docs.oasis-open.org/legalruleml/ns/v1.0/rule-metamodel">  
-   <!ENTITY lrmlmm "http://docs.oasis-open.org/legalruleml/ns/v1.0/metamodel">    
-   <!ENTITY lrmlv "http://docs.oasis-open.org/legalruleml/ns/v1.0/vocab">  
- ]>
-<rdf:RDF   xmlns:dc="&dcterms;/"
-  xmlns:rdf="&rdf;#" xmlns:rdfs="&rdfs;#" xmlns:xs="&xs;" xmlns:owl="&owl;#" 
-  xmlns:rulemm="&rulemm;#" xmlns:lrmlmm="&lrmlmm;#" xml:base="&lrmlmm;">
+<rdf:RDF xmlns:dc="http://purl.org/dc/terms/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rulemm="http://docs.oasis-open.org/legalruleml/ns/v1.0/rule-metamodel#" xmlns:lrmlmm="http://docs.oasis-open.org/legalruleml/ns/v1.0/metamodel#" xml:base="http://docs.oasis-open.org/legalruleml/ns/v1.0/metamodel">
  <!-- <owl:Ontology rdf:about="&lrmlmm;/modules/defeasible.rdfs" dc:title="The LegalRuleML MetaModel Defeasible Rules vocabulary"/>-->
 
   <rdfs:Class rdf:about="#DefeasibleStrength">
@@ -29,12 +17,12 @@
   <rdfs:Class rdf:about="#Override">
     <rdfs:label>override</rdfs:label>
     <rdfs:comment>an indication that a Legal Rule takes precedence over another Legal Rule. The ordered pair of Legal Rules is an instance in a defeasible priority relation.</rdfs:comment>
-    <rdfs:subClassOf rdf:resource="&rulemm;#Atom"/>
+    <rdfs:subClassOf rdf:resource="http://docs.oasis-open.org/legalruleml/ns/v1.0/rule-metamodel#Atom"/>
   </rdfs:Class>
 
   <!-- Import from RuleML for diagramming purposes -->  
-  <rdfs:Class rdf:about="&rulemm;#Atom">
-    <rdfs:subClassOf rdf:resource="&rulemm;#Formula"/>
+  <rdfs:Class rdf:about="http://docs.oasis-open.org/legalruleml/ns/v1.0/rule-metamodel#Atom">
+    <rdfs:subClassOf rdf:resource="http://docs.oasis-open.org/legalruleml/ns/v1.0/rule-metamodel#Formula"/>
   </rdfs:Class>
   
   <rdfs:Class rdf:about="#Strength">
@@ -61,7 +49,7 @@
     <rdfs:comment>a qualification (e.g. an Override) of the Statements.
     </rdfs:comment>
     <rdfs:domain rdf:resource="#Statements"/>
-    <rdfs:range rdf:resource="&rulemm;#Formula"/>
+    <rdfs:range rdf:resource="http://docs.oasis-open.org/legalruleml/ns/v1.0/rule-metamodel#Formula"/>
   </rdf:Property>
 
   <rdf:Property rdf:about="#hasStrength">

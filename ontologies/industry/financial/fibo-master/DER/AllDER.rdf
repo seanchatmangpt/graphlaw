@@ -1,55 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE rdf:RDF [
-	<!ENTITY cmns-av "https://www.omg.org/spec/Commons/AnnotationVocabulary/">
-	<!ENTITY dct "http://purl.org/dc/terms/">
-	<!ENTITY fibo-der-all "https://spec.edmcouncil.org/fibo/ontology/DER/AllDER/">
-	<!ENTITY fibo-der-cr-cds "https://spec.edmcouncil.org/fibo/ontology/DER/CreditDerivatives/CreditDefaultSwaps/">
-	<!ENTITY fibo-der-drc-bsc "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/DerivativesBasics/">
-	<!ENTITY fibo-der-drc-comm "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/CommoditiesContracts/">
-	<!ENTITY fibo-der-drc-cur "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/CurrencyContracts/">
-	<!ENTITY fibo-der-drc-exo "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/ExoticOptions/">
-	<!ENTITY fibo-der-drc-ff "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/FuturesAndForwards/">
-	<!ENTITY fibo-der-drc-ma "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/DerivativesMasterAgreements/">
-	<!ENTITY fibo-der-drc-opt "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/Options/">
-	<!ENTITY fibo-der-drc-raw "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/RightsAndWarrants/">
-	<!ENTITY fibo-der-drc-str "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/StructuredInstruments/">
-	<!ENTITY fibo-der-drc-swp "https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/Swaps/">
-	<!ENTITY fibo-der-rtd-irswp "https://spec.edmcouncil.org/fibo/ontology/DER/RateDerivatives/IRSwaps/">
-	<!ENTITY fibo-der-rtd-rtd "https://spec.edmcouncil.org/fibo/ontology/DER/RateDerivatives/RateDerivatives/">
-	<!ENTITY fibo-der-sbd-eqs "https://spec.edmcouncil.org/fibo/ontology/DER/SecurityBasedDerivatives/EquitySwaps/">
-	<!ENTITY fibo-der-sbd-sbd "https://spec.edmcouncil.org/fibo/ontology/DER/SecurityBasedDerivatives/SecurityBasedDerivatives/">
-	<!ENTITY fibo-fnd-utl-av "https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/">
-	<!ENTITY owl "http://www.w3.org/2002/07/owl#">
-	<!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-	<!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">
-	<!ENTITY skos "http://www.w3.org/2004/02/skos/core#">
-	<!ENTITY xsd "http://www.w3.org/2001/XMLSchema#">
-]>
-<rdf:RDF xml:base="https://spec.edmcouncil.org/fibo/ontology/DER/AllDER/"
-	xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/"
-	xmlns:dct="http://purl.org/dc/terms/"
-	xmlns:fibo-der-all="https://spec.edmcouncil.org/fibo/ontology/DER/AllDER/"
-	xmlns:fibo-der-cr-cds="https://spec.edmcouncil.org/fibo/ontology/DER/CreditDerivatives/CreditDefaultSwaps/"
-	xmlns:fibo-der-drc-bsc="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/DerivativesBasics/"
-	xmlns:fibo-der-drc-comm="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/CommoditiesContracts/"
-	xmlns:fibo-der-drc-cur="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/CurrencyContracts/"
-	xmlns:fibo-der-drc-exo="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/ExoticOptions/"
-	xmlns:fibo-der-drc-ff="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/FuturesAndForwards/"
-	xmlns:fibo-der-drc-ma="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/DerivativesMasterAgreements/"
-	xmlns:fibo-der-drc-opt="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/Options/"
-	xmlns:fibo-der-drc-raw="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/RightsAndWarrants/"
-	xmlns:fibo-der-drc-str="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/StructuredInstruments/"
-	xmlns:fibo-der-drc-swp="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/Swaps/"
-	xmlns:fibo-der-rtd-irswp="https://spec.edmcouncil.org/fibo/ontology/DER/RateDerivatives/IRSwaps/"
-	xmlns:fibo-der-rtd-rtd="https://spec.edmcouncil.org/fibo/ontology/DER/RateDerivatives/RateDerivatives/"
-	xmlns:fibo-der-sbd-eqs="https://spec.edmcouncil.org/fibo/ontology/DER/SecurityBasedDerivatives/EquitySwaps/"
-	xmlns:fibo-der-sbd-sbd="https://spec.edmcouncil.org/fibo/ontology/DER/SecurityBasedDerivatives/SecurityBasedDerivatives/"
-	xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"
-	xmlns:owl="http://www.w3.org/2002/07/owl#"
-	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-	xmlns:skos="http://www.w3.org/2004/02/skos/core#"
-	xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+<rdf:RDF xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/" xmlns:dct="http://purl.org/dc/terms/" xmlns:fibo-der-all="https://spec.edmcouncil.org/fibo/ontology/DER/AllDER/" xmlns:fibo-der-cr-cds="https://spec.edmcouncil.org/fibo/ontology/DER/CreditDerivatives/CreditDefaultSwaps/" xmlns:fibo-der-drc-bsc="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/DerivativesBasics/" xmlns:fibo-der-drc-comm="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/CommoditiesContracts/" xmlns:fibo-der-drc-cur="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/CurrencyContracts/" xmlns:fibo-der-drc-exo="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/ExoticOptions/" xmlns:fibo-der-drc-ff="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/FuturesAndForwards/" xmlns:fibo-der-drc-ma="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/DerivativesMasterAgreements/" xmlns:fibo-der-drc-opt="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/Options/" xmlns:fibo-der-drc-raw="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/RightsAndWarrants/" xmlns:fibo-der-drc-str="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/StructuredInstruments/" xmlns:fibo-der-drc-swp="https://spec.edmcouncil.org/fibo/ontology/DER/DerivativesContracts/Swaps/" xmlns:fibo-der-rtd-irswp="https://spec.edmcouncil.org/fibo/ontology/DER/RateDerivatives/IRSwaps/" xmlns:fibo-der-rtd-rtd="https://spec.edmcouncil.org/fibo/ontology/DER/RateDerivatives/RateDerivatives/" xmlns:fibo-der-sbd-eqs="https://spec.edmcouncil.org/fibo/ontology/DER/SecurityBasedDerivatives/EquitySwaps/" xmlns:fibo-der-sbd-sbd="https://spec.edmcouncil.org/fibo/ontology/DER/SecurityBasedDerivatives/SecurityBasedDerivatives/" xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:skos="http://www.w3.org/2004/02/skos/core#" xmlns:xsd="http://www.w3.org/2001/XMLSchema#" xml:base="https://spec.edmcouncil.org/fibo/ontology/DER/AllDER/">
 	
 	<owl:Ontology rdf:about="https://spec.edmcouncil.org/fibo/ontology/DER/AllDER/">
 		<rdfs:label>Derivatives Domain</rdfs:label>
@@ -74,19 +24,19 @@
 		<dct:contributor>Wells Fargo Bank, N.A.</dct:contributor>
 		<dct:contributor>Working Ontologist</dct:contributor>
 		<dct:contributor>agnos.ai</dct:contributor>
-		<dct:creator rdf:datatype="&xsd;anyURI">https://wiki.edmcouncil.org/display/DER/FIBO+-+FCT+-+Derivatives+Home</dct:creator>
-		<dct:issued rdf:datatype="&xsd;dateTime">2018-03-31T18:00:00</dct:issued>
+		<dct:creator rdf:datatype="http://www.w3.org/2001/XMLSchema#anyURI">https://wiki.edmcouncil.org/display/DER/FIBO+-+FCT+-+Derivatives+Home</dct:creator>
+		<dct:issued rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2018-03-31T18:00:00</dct:issued>
 		<dct:license>Copyright (c) 2013-2025 EDM Council, Inc.
 Copyright (c) 2013-2025 Object Management Group, Inc.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &apos;Software&apos;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		
 		See https://opensource.org/licenses/MIT.</dct:license>
-		<dct:modified rdf:datatype="&xsd;dateTime">2025-06-24T18:00:00</dct:modified>
+		<dct:modified rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">2025-06-24T18:00:00</dct:modified>
 		<dct:title>Financial Industry Business Ontology (FIBO) Derivatives (DER) Domain</dct:title>
 		<rdfs:seeAlso rdf:resource="https://www.edmcouncil.org/fibo/"/>
 		<owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/DER/CreditDerivatives/CreditDefaultSwaps/"/>
@@ -110,7 +60,7 @@ THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRES
 		<owl:versionIRI rdf:resource="https://spec.edmcouncil.org/fibo/ontology/DER/20250601/AllDER/"/>
 		<cmns-av:copyright>Copyright (c) 2018-2025 EDM Council, Inc.</cmns-av:copyright>
 		<cmns-av:copyright>Copyright (c) 2018-2025 Object Management Group, Inc.</cmns-av:copyright>
-		<cmns-av:explanatoryNote>The &apos;all&apos; ontology for DER is provided for convenience for FIBO users.  This ontology does not add new assertions, but imports most of the Production (Released) ontologies that comprise the FIBO Foundations (FND), Business Entities (BE), Financial Business and Commerce (FBC), Indices and Indicators (IND), Securities (SEC), and Derivatives (DER) domains, excluding individuals for governments and jurisdictions, financial services, regulatory organizations and related registries, and reference individuals, as well as the LCC region-specific ontologies.</cmns-av:explanatoryNote>
+		<cmns-av:explanatoryNote>The 'all' ontology for DER is provided for convenience for FIBO users.  This ontology does not add new assertions, but imports most of the Production (Released) ontologies that comprise the FIBO Foundations (FND), Business Entities (BE), Financial Business and Commerce (FBC), Indices and Indicators (IND), Securities (SEC), and Derivatives (DER) domains, excluding individuals for governments and jurisdictions, financial services, regulatory organizations and related registries, and reference individuals, as well as the LCC region-specific ontologies.</cmns-av:explanatoryNote>
 	</owl:Ontology>
 
 </rdf:RDF>

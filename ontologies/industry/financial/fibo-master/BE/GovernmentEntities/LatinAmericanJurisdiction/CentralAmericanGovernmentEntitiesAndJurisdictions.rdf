@@ -1,31 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE rdf:RDF [
-	<!ENTITY cmns-av "https://www.omg.org/spec/Commons/AnnotationVocabulary/">
-	<!ENTITY cmns-rga "https://www.omg.org/spec/Commons/RegulatoryAgencies/">
-	<!ENTITY dct "http://purl.org/dc/terms/">
-	<!ENTITY fibo-be-ge-ctlaj "https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/">
-	<!ENTITY fibo-be-ge-ge "https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/">
-	<!ENTITY fibo-fnd-utl-av "https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/">
-	<!ENTITY lcc-3166-1 "https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/">
-	<!ENTITY owl "http://www.w3.org/2002/07/owl#">
-	<!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-	<!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">
-	<!ENTITY skos "http://www.w3.org/2004/02/skos/core#">
-	<!ENTITY xsd "http://www.w3.org/2001/XMLSchema#">
-]>
-<rdf:RDF xml:base="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/"
-	xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/"
-	xmlns:cmns-rga="https://www.omg.org/spec/Commons/RegulatoryAgencies/"
-	xmlns:dct="http://purl.org/dc/terms/"
-	xmlns:fibo-be-ge-ctlaj="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/"
-	xmlns:fibo-be-ge-ge="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/"
-	xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"
-	xmlns:lcc-3166-1="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/"
-	xmlns:owl="http://www.w3.org/2002/07/owl#"
-	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-	xmlns:skos="http://www.w3.org/2004/02/skos/core#"
-	xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+<rdf:RDF xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/" xmlns:cmns-rga="https://www.omg.org/spec/Commons/RegulatoryAgencies/" xmlns:dct="http://purl.org/dc/terms/" xmlns:fibo-be-ge-ctlaj="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/" xmlns:fibo-be-ge-ge="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/" xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/" xmlns:lcc-3166-1="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:skos="http://www.w3.org/2004/02/skos/core#" xmlns:xsd="http://www.w3.org/2001/XMLSchema#" xml:base="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/">
 	
 	<owl:Ontology rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/">
 		<rdfs:label>Central American Government Entities and Jurisdictions Ontology</rdfs:label>
@@ -33,11 +7,11 @@
 		<dct:license>Copyright (c) 2020-2025 EDM Council, Inc.
 Copyright (c) 2020-2025 Object Management Group, Inc.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &apos;Software&apos;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		
 		See https://opensource.org/licenses/MIT.</dct:license>
 		<owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/"/>
@@ -46,187 +20,187 @@ THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRES
 		<owl:imports rdf:resource="https://www.omg.org/spec/Commons/RegulatoryAgencies/"/>
 		<owl:imports rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/"/>
 		<owl:versionIRI rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/20250301/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/"/>
-		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20201101/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions.rdf version of the ontology was modified to use the Commons Ontology Library (Commons) Annotation Vocabulary rather than the OMG&apos;s Specification Metadata vocabulary.</skos:changeNote>
-		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20230101/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions.rdf version of this ontology was modified to use the Commons Ontology Library (Commons) rather than the OMG&apos;s Languages, Countries and Codes (LCC) and to eliminate redundancies in FIBO as appropriate.</skos:changeNote>
+		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20201101/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions.rdf version of the ontology was modified to use the Commons Ontology Library (Commons) Annotation Vocabulary rather than the OMG's Specification Metadata vocabulary.</skos:changeNote>
+		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20230101/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions.rdf version of this ontology was modified to use the Commons Ontology Library (Commons) rather than the OMG's Languages, Countries and Codes (LCC) and to eliminate redundancies in FIBO as appropriate.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/20230301/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions.rdf version of the ontology was modified to replace additional content that is now available in the OMG Commons Ontology Library (Commons) v1.2 (FND-389) and to correct the prefix for the elements in the ontology.</skos:changeNote>
 		<skos:scopeNote>The initial version of this ontology reflects the highest national level only.</skos:scopeNote>
-		<fibo-fnd-utl-av:hasMaturityLevel rdf:resource="&fibo-fnd-utl-av;Release"/>
+		<fibo-fnd-utl-av:hasMaturityLevel rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/Release"/>
 		<cmns-av:copyright>Copyright (c) 2020-2025 EDM Council, Inc.</cmns-av:copyright>
 		<cmns-av:copyright>Copyright (c) 2020-2025 Object Management Group, Inc.</cmns-av:copyright>
 	</owl:Ontology>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;BelizeanEntity">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;SovereignState"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/BelizeanEntity">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/SovereignState"/>
 		<rdfs:label>Belizean entity</rdfs:label>
 		<skos:definition>sovereign state and polity that is a Caribbean country located on the northeastern coast of Central America</skos:definition>
-		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="&lcc-3166-1;Belize"/>
-		<fibo-be-ge-ge:isRepresentedBy rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfBelize"/>
+		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Belize"/>
+		<fibo-be-ge-ge:isRepresentedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfBelize"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;CostaRicanEntity">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;SovereignState"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/CostaRicanEntity">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/SovereignState"/>
 		<rdfs:label>Costa Rican entity</rdfs:label>
 		<skos:definition>sovereign state and polity that is a Central American country bordered by Nicaragua to the north, the Caribbean Sea to the northeast, Panama to the southeast, the Pacific Ocean to the southwest, and Ecuador to the south of Cocos Island</skos:definition>
-		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="&lcc-3166-1;CostaRica"/>
-		<fibo-be-ge-ge:isRepresentedBy rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfCostaRica"/>
+		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/CostaRica"/>
+		<fibo-be-ge-ge:isRepresentedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfCostaRica"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;GovernmentOfBelize">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;NationalGovernment"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfBelize">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/NationalGovernment"/>
 		<rdfs:label xml:lang="en">Government of Belize</rdfs:label>
 		<skos:definition>unitary parliamentary constitutional monarchy, with the queen (Elizabeth II) as head of state represented locally by a governor-general</skos:definition>
-		<cmns-rga:governs rdf:resource="&lcc-3166-1;Belize"/>
-		<cmns-rga:hasJurisdiction rdf:resource="&fibo-be-ge-ctlaj;JurisdictionOfBelize"/>
+		<cmns-rga:governs rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Belize"/>
+		<cmns-rga:hasJurisdiction rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfBelize"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfCostaRica">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;NationalGovernment"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfCostaRica">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/NationalGovernment"/>
 		<rdfs:label xml:lang="en">Government of the Republic of Costa Rica</rdfs:label>
 		<rdfs:label xml:lang="es">República de Costa Rica</rdfs:label>
 		<skos:definition>unitary presidential constitutional republic known for its long-standing and stable democracy</skos:definition>
-		<cmns-rga:governs rdf:resource="&lcc-3166-1;CostaRica"/>
-		<cmns-rga:hasJurisdiction rdf:resource="&fibo-be-ge-ctlaj;JurisdictionOfCostaRica"/>
+		<cmns-rga:governs rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/CostaRica"/>
+		<cmns-rga:hasJurisdiction rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfCostaRica"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfElSalvador">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;NationalGovernment"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfElSalvador">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/NationalGovernment"/>
 		<rdfs:label xml:lang="en">Government of the Republic of El Salvador</rdfs:label>
 		<rdfs:label xml:lang="es">República de El Salvador</rdfs:label>
 		<skos:definition>Unitary presidential, constitutional and representative democratic republic whose president is both head of state and head of government</skos:definition>
-		<cmns-rga:governs rdf:resource="&lcc-3166-1;ElSalvador"/>
-		<cmns-rga:hasJurisdiction rdf:resource="&fibo-be-ge-ctlaj;JurisdictionOfElSalvador"/>
+		<cmns-rga:governs rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/ElSalvador"/>
+		<cmns-rga:hasJurisdiction rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfElSalvador"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfGuatemala">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;NationalGovernment"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfGuatemala">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/NationalGovernment"/>
 		<rdfs:label xml:lang="en">Government of the Republic of Guatemala</rdfs:label>
 		<rdfs:label xml:lang="es">República de Guatemala</rdfs:label>
 		<skos:definition>unitary presidential and democratic republic that is the most populous country in Central America</skos:definition>
-		<cmns-rga:governs rdf:resource="&lcc-3166-1;Guatemala"/>
-		<cmns-rga:hasJurisdiction rdf:resource="&fibo-be-ge-ctlaj;JurisdictionOfGuatemala"/>
+		<cmns-rga:governs rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Guatemala"/>
+		<cmns-rga:hasJurisdiction rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfGuatemala"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfHonduras">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;NationalGovernment"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfHonduras">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/NationalGovernment"/>
 		<rdfs:label xml:lang="en">Government of the Republic of Honduras</rdfs:label>
 		<rdfs:label xml:lang="es">República de Honduras</rdfs:label>
 		<skos:definition>presidential representative democratic republic whose president is both head of state and head of government</skos:definition>
-		<cmns-rga:governs rdf:resource="&lcc-3166-1;Honduras"/>
-		<cmns-rga:hasJurisdiction rdf:resource="&fibo-be-ge-ctlaj;JurisdictionOfHonduras"/>
+		<cmns-rga:governs rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Honduras"/>
+		<cmns-rga:hasJurisdiction rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfHonduras"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfNicaragua">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;NationalGovernment"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfNicaragua">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/NationalGovernment"/>
 		<rdfs:label xml:lang="en">Government of the Republic of Nicaragua</rdfs:label>
 		<rdfs:label xml:lang="es">República de Nicaragua</rdfs:label>
 		<skos:definition>Unitary dominant-party presidential constitutional republic whose president is both head of state and head of government</skos:definition>
-		<cmns-rga:governs rdf:resource="&lcc-3166-1;Nicaragua"/>
-		<cmns-rga:hasJurisdiction rdf:resource="&fibo-be-ge-ctlaj;JurisdictionOfNicaragua"/>
+		<cmns-rga:governs rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Nicaragua"/>
+		<cmns-rga:hasJurisdiction rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfNicaragua"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfPanama">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;NationalGovernment"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfPanama">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/NationalGovernment"/>
 		<rdfs:label xml:lang="en">Government of the Republic of Panama</rdfs:label>
 		<rdfs:label xml:lang="es">República de Panamá</rdfs:label>
 		<skos:definition>Unitary presidential, constitutional and representative democratic republic whose president is both head of state and head of government</skos:definition>
-		<cmns-rga:governs rdf:resource="&lcc-3166-1;Panama"/>
-		<cmns-rga:hasJurisdiction rdf:resource="&fibo-be-ge-ctlaj;JurisdictionOfPanama"/>
+		<cmns-rga:governs rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Panama"/>
+		<cmns-rga:hasJurisdiction rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfPanama"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;GuatemalanEntity">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;SovereignState"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GuatemalanEntity">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/SovereignState"/>
 		<rdfs:label>Guatemalan entity</rdfs:label>
 		<skos:definition>sovereign state and polity that is a Central American country bordered by Mexico to the north and west, Belize and the Caribbean to the northeast, Honduras to the east, El Salvador to the southeast and the Pacific Ocean to the south</skos:definition>
-		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="&lcc-3166-1;Guatemala"/>
-		<fibo-be-ge-ge:isRepresentedBy rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfGuatemala"/>
+		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Guatemala"/>
+		<fibo-be-ge-ge:isRepresentedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfGuatemala"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;HonduranEntity">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;SovereignState"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/HonduranEntity">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/SovereignState"/>
 		<rdfs:label>Honduran entity</rdfs:label>
 		<skos:definition>sovereign state and polity that is a Central American country bordered to the west by Guatemala, to the southwest by El Salvador, to the southeast by Nicaragua, to the south by the Pacific Ocean at the Gulf of Fonseca, and to the north by the Gulf of Honduras, a large inlet of the Caribbean Sea</skos:definition>
-		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="&lcc-3166-1;Honduras"/>
-		<fibo-be-ge-ge:isRepresentedBy rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfHonduras"/>
+		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Honduras"/>
+		<fibo-be-ge-ge:isRepresentedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfHonduras"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;JurisdictionOfBelize">
-		<rdf:type rdf:resource="&cmns-rga;Jurisdiction"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfBelize">
+		<rdf:type rdf:resource="https://www.omg.org/spec/Commons/RegulatoryAgencies/Jurisdiction"/>
 		<rdfs:label>jurisdiction of Belize</rdfs:label>
 		<skos:definition>jurisdiction of the Supreme Court and Court of Appeals in Belize, with the Caribbean Court of Justice as the highest level of appeal for certain cases</skos:definition>
-		<cmns-rga:hasReach rdf:resource="&lcc-3166-1;Belize"/>
-		<cmns-rga:isJurisdictionOf rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfBelize"/>
+		<cmns-rga:hasReach rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Belize"/>
+		<cmns-rga:isJurisdictionOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfBelize"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;JurisdictionOfCostaRica">
-		<rdf:type rdf:resource="&cmns-rga;Jurisdiction"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfCostaRica">
+		<rdf:type rdf:resource="https://www.omg.org/spec/Commons/RegulatoryAgencies/Jurisdiction"/>
 		<rdfs:label>jurisdiction of Costa Rica</rdfs:label>
 		<skos:definition>jurisdiction of the judiciary of Costa Rica, which is the system of courts that interprets and applies the law in Costa Rica</skos:definition>
-		<cmns-rga:hasReach rdf:resource="&lcc-3166-1;CostaRica"/>
-		<cmns-rga:isJurisdictionOf rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfCostaRica"/>
+		<cmns-rga:hasReach rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/CostaRica"/>
+		<cmns-rga:isJurisdictionOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfCostaRica"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;JurisdictionOfElSalvador">
-		<rdf:type rdf:resource="&cmns-rga;Jurisdiction"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfElSalvador">
+		<rdf:type rdf:resource="https://www.omg.org/spec/Commons/RegulatoryAgencies/Jurisdiction"/>
 		<rdfs:label>jurisdiction of ElSalvador</rdfs:label>
 		<skos:definition>jurisdiction of the Salvadorian judiciary, headed by the Supreme Court, which is composed of 15 judges, one of them being elected as President of the Judiciary</skos:definition>
-		<cmns-rga:hasReach rdf:resource="&lcc-3166-1;ElSalvador"/>
-		<cmns-rga:isJurisdictionOf rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfElSalvador"/>
+		<cmns-rga:hasReach rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/ElSalvador"/>
+		<cmns-rga:isJurisdictionOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfElSalvador"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;JurisdictionOfGuatemala">
-		<rdf:type rdf:resource="&cmns-rga;Jurisdiction"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfGuatemala">
+		<rdf:type rdf:resource="https://www.omg.org/spec/Commons/RegulatoryAgencies/Jurisdiction"/>
 		<rdfs:label>jurisdiction of Guatemala</rdfs:label>
 		<skos:definition>jurisdiction of the judiciary of Guatemala, which is the system of courts that interprets and applies the law in Guatemala</skos:definition>
-		<cmns-rga:hasReach rdf:resource="&lcc-3166-1;Guatemala"/>
-		<cmns-rga:isJurisdictionOf rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfGuatemala"/>
+		<cmns-rga:hasReach rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Guatemala"/>
+		<cmns-rga:isJurisdictionOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfGuatemala"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;JurisdictionOfHonduras">
-		<rdf:type rdf:resource="&cmns-rga;Jurisdiction"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfHonduras">
+		<rdf:type rdf:resource="https://www.omg.org/spec/Commons/RegulatoryAgencies/Jurisdiction"/>
 		<rdfs:label>jurisdiction of Honduras</rdfs:label>
 		<skos:definition>jurisdiction of the judiciary of Honduras, which is the system of courts that interprets and applies the law in Honduras</skos:definition>
-		<cmns-rga:hasReach rdf:resource="&lcc-3166-1;Honduras"/>
-		<cmns-rga:isJurisdictionOf rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfHonduras"/>
+		<cmns-rga:hasReach rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Honduras"/>
+		<cmns-rga:isJurisdictionOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfHonduras"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;JurisdictionOfNicaragua">
-		<rdf:type rdf:resource="&cmns-rga;Jurisdiction"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfNicaragua">
+		<rdf:type rdf:resource="https://www.omg.org/spec/Commons/RegulatoryAgencies/Jurisdiction"/>
 		<rdfs:label>jurisdiction of Nicaragua</rdfs:label>
 		<skos:definition>jurisdiction of the judiciary of Nicaragua, which is the system of courts that interprets and applies the law in Nicaragua</skos:definition>
-		<cmns-rga:hasReach rdf:resource="&lcc-3166-1;Nicaragua"/>
-		<cmns-rga:isJurisdictionOf rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfNicaragua"/>
+		<cmns-rga:hasReach rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Nicaragua"/>
+		<cmns-rga:isJurisdictionOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfNicaragua"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;JurisdictionOfPanama">
-		<rdf:type rdf:resource="&cmns-rga;Jurisdiction"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/JurisdictionOfPanama">
+		<rdf:type rdf:resource="https://www.omg.org/spec/Commons/RegulatoryAgencies/Jurisdiction"/>
 		<rdfs:label>jurisdiction of Panama</rdfs:label>
 		<skos:definition>jurisdiction of the Panamanian judiciary, which is the system of courts that interprets and applies the law in Panama</skos:definition>
-		<cmns-rga:hasReach rdf:resource="&lcc-3166-1;Panama"/>
-		<cmns-rga:isJurisdictionOf rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfPanama"/>
+		<cmns-rga:hasReach rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Panama"/>
+		<cmns-rga:isJurisdictionOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfPanama"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;NicaraguanEntity">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;SovereignState"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/NicaraguanEntity">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/SovereignState"/>
 		<rdfs:label>Nicaraguan entity</rdfs:label>
 		<skos:definition>sovereign state and polity that is the largest country in the Central American isthmus, bordered by Honduras to the northwest, the Caribbean to the east, Costa Rica to the south, and the Pacific Ocean to the southwest</skos:definition>
-		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="&lcc-3166-1;Nicaragua"/>
-		<fibo-be-ge-ge:isRepresentedBy rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfNicaragua"/>
+		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Nicaragua"/>
+		<fibo-be-ge-ge:isRepresentedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfNicaragua"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;PanamanianEntity">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;SovereignState"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/PanamanianEntity">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/SovereignState"/>
 		<rdfs:label>Panamanian entity</rdfs:label>
 		<skos:definition>sovereign state and polity that is a transcontinental country in Central America and South America, bordered by Costa Rica to the west, Colombia to the southeast, the Caribbean Sea to the north, and the Pacific Ocean to the south</skos:definition>
-		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="&lcc-3166-1;Panama"/>
-		<fibo-be-ge-ge:isRepresentedBy rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfPanama"/>
+		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/Panama"/>
+		<fibo-be-ge-ge:isRepresentedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfPanama"/>
 	</owl:NamedIndividual>
 	
-	<owl:NamedIndividual rdf:about="&fibo-be-ge-ctlaj;SalvadorianEntity">
-		<rdf:type rdf:resource="&fibo-be-ge-ge;SovereignState"/>
+	<owl:NamedIndividual rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/SalvadorianEntity">
+		<rdf:type rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/GovernmentEntities/SovereignState"/>
 		<rdfs:label>Salvadorian entity</rdfs:label>
 		<skos:definition>sovereign state and polity that is bordered on the northeast by Honduras, on the northwest by Guatemala, and on the south by the Pacific Ocean</skos:definition>
-		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="&lcc-3166-1;ElSalvador"/>
-		<fibo-be-ge-ge:isRepresentedBy rdf:resource="&fibo-be-ge-ctlaj;GovernmentOfTheRepublicOfElSalvador"/>
+		<fibo-be-ge-ge:hasFullSovereigntyOver rdf:resource="https://www.omg.org/spec/LCC/Countries/ISO3166-1-CountryCodes/ElSalvador"/>
+		<fibo-be-ge-ge:isRepresentedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/GovernmentEntities/LatinAmericanJurisdiction/CentralAmericanGovernmentEntitiesAndJurisdictions/GovernmentOfTheRepublicOfElSalvador"/>
 	</owl:NamedIndividual>
 
 </rdf:RDF>

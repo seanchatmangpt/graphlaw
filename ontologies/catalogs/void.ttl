@@ -1,17 +1,17 @@
-@prefix void: &lt;http://rdfs.org/ns/void#&gt; .
-@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .
-@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
-@prefix owl: &lt;http://www.w3.org/2002/07/owl#&gt; .
-@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
-@prefix dcterms: &lt;http://purl.org/dc/terms/&gt; .
-@prefix foaf: &lt;http://xmlns.com/foaf/0.1/&gt; .
-@prefix wv: &lt;http://vocab.org/waiver/terms/norms&gt; .        
-@prefix sd: &lt;http://www.w3.org/ns/sparql-service-description#&gt; .
+@prefix void: <http://rdfs.org/ns/void#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix wv: <http://vocab.org/waiver/terms/norms> .        
+@prefix sd: <http://www.w3.org/ns/sparql-service-description#> .
 </pre>
 
 <p>Furthermore, we assume that the empty prefix is bound to the base URL of the current file like this:</p>
 
-<pre class="turtle">@prefix : &lt;#&gt; .</pre>
+<pre class="turtle">@prefix : <#> .</pre>
 
 <p>This allows us to quickly mint new identifiers in the local namespace: <code>:MyDataset</code>, <code>:DBpedia</code> and so on. Later sections of this specification provide more guidance on <a href="#deploying">deploying VoID descriptions</a>.</p>
 
@@ -64,7 +64,7 @@
 <p>Almost every dataset will have a homepage of some sort on the web, where further information about the dataset can be found. A link to the dataset's homepage can be provided with the <code>foaf:homepage</code> property:</p>
 
 <pre class="turtle">:DBpedia a void:Dataset;
-    foaf:homepage &lt;http://dbpedia.org/&gt;;
+    foaf:homepage <http://dbpedia.org/>;
     .</pre>
 
 <p>It is expected that the homepage linked to in fact talks about the dataset described.</p>
@@ -74,9 +74,9 @@
 <p>Additional web pages with relevant information that can not be considered the homepage of the dataset can be linked with <code>foaf:page</code>:</p>
 
 <pre class="turtle">:DBpedia a void:Dataset;
-    foaf:homepage &lt;http://dbpedia.org/&gt;;
-    foaf:page &lt;http://ckan.net/package/dbpedia&gt;;
-    foaf:page &lt;http://dbpedia.org/Downloads&gt;;
+    foaf:homepage <http://dbpedia.org/>;
+    foaf:page <http://ckan.net/package/dbpedia>;
+    foaf:page <http://dbpedia.org/Downloads>;
     .</pre>
 
 
@@ -145,12 +145,12 @@
     dcterms:contributor :University_Leipzig;
     dcterms:contributor :OpenLink_Software;
     dcterms:contributor :DBpedia_community;
-    dcterms:source &lt;http://dbpedia.org/resource/Wikipedia&gt;;
+    dcterms:source <http://dbpedia.org/resource/Wikipedia>;
     dcterms:modified "2008-11-17"^^xsd:date;
     .
 :FU_Berlin a foaf:Organization;
-    rdfs:label "Freie Universit&auml;t Berlin";
-    foaf:homepage &lt;http://www.fu-berlin.de/&gt;;
+    rdfs:label "Freie Universität Berlin";
+    foaf:homepage <http://www.fu-berlin.de/>;
     .
  # Similar descriptions of the other contributors go here</pre>
 
@@ -167,7 +167,7 @@
     .
 :Alice a foaf:Person;
     rdfs:label "Alice McExample";
-    foaf:mbox &lt;mailto:alice@example.com&gt;;
+    foaf:mbox <mailto:alice@example.com>;
     .
 </pre>
 
@@ -213,8 +213,8 @@
 <p>The following example states that the Example dataset is published under the terms of the Open Data Commons Public Domain  Dedication and License, and that users are encouraged (but not legally bound) to follow the community norms mentioned above.</p>
  
 <pre class="turtle">:Example a void:Dataset ;
-    dcterms:license &lt;http://www.opendatacommons.org/odc-public-domain-dedication-and-licence/&gt;;
-    wv:norms &lt;http://www.opendatacommons.org/norms/odc-by-sa/&gt;;
+    dcterms:license <http://www.opendatacommons.org/odc-public-domain-dedication-and-licence/>;
+    wv:norms <http://www.opendatacommons.org/norms/odc-by-sa/>;
     wv:waiver """To the extent possible under law, The Example Organisation has waived all
           copyright and related or neighboring rights to The Example Dataset.""";
     .</pre>
@@ -233,12 +233,12 @@
 <p>Two examples are given below. DBLP is a computer science bibliography database, and Geonames offers data about places. We define this in VoID:</p>
 
 <pre class="turtle">:DBLP a void:Dataset; 
-    dcterms:subject &lt;http://dbpedia.org/resource/Computer_science&gt;;
-    dcterms:subject &lt;http://dbpedia.org/resource/Journal&gt;;
-    dcterms:subject &lt;http://dbpedia.org/resource/Proceedings&gt;;
+    dcterms:subject <http://dbpedia.org/resource/Computer_science>;
+    dcterms:subject <http://dbpedia.org/resource/Journal>;
+    dcterms:subject <http://dbpedia.org/resource/Proceedings>;
     .
 :Geonames a void:Dataset; 
-    dcterms:subject &lt;http://dbpedia.org/resource/Location&gt;;
+    dcterms:subject <http://dbpedia.org/resource/Location>;
     .</pre>
 
 <p>DBpedia might not contain the concepts for describing some domain specific datasets. For example, there are no exact DBpedia resource URIs for “<em>in situ</em> hybridisation images” or “UniProt Genes”.</p>
@@ -248,7 +248,7 @@
 <p>For example, we could define that:</p>
 
 <pre class="turtle">:Bio2RDF a void:Dataset;
-    dcterms:subject &lt;http://purl.uniprot.org/core/Gene&gt;;
+    dcterms:subject <http://purl.uniprot.org/core/Gene>;
     .</pre>
 
 
@@ -288,10 +288,10 @@
     </tbody>
 </table>
 
-<p>For example, using the W3C URIs together with <code>void:feature</code> we can express that &ldquo;a dataset is available as RDF/XML&rdquo;:</p> 
+<p>For example, using the W3C URIs together with <code>void:feature</code> we can express that “a dataset is available as RDF/XML”:</p> 
 
 <pre class="turtle">:DBpedia a void:Dataset;
-    void:feature &lt;http://www.w3.org/ns/formats/RDF_XML&gt;;
+    void:feature <http://www.w3.org/ns/formats/RDF_XML>;
     .</pre>
 			
 <p>These W3C URIs are instances of class <code>http://www.w3.org/ns/formats/vocab-data/Format</code>, which is a sub-class of <code>void:TechnicalFeature</code>. If users need to describe, for example, other media types besides those provided by W3C or HTTP features such as content negotiation or ETag headers, they should create the URIs under their own namespace or reuse existing URIs and define them as an instance of <code>void:TechnicalFeature</code>. For example, the following code shows how one could define a feature <code>:HTTPCachingETags</code> as an instance of <code>void:TechnicalFeature</code>.</p>
@@ -299,7 +299,7 @@
 <pre class="turtle">:HTTPCachingETags a void:TechnicalFeature;
     rdfs:label "HTTP ETag support";
     rdfs:comment "the dataset supports HTTP caching using ETags";
-    rdfs:seeAlso &lt;http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#&gt;;
+    rdfs:seeAlso <http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#>;
     .</pre>
 
 
@@ -318,7 +318,7 @@
 <p>A SPARQL endpoint that provides access to a dataset via the SPARQL protocol can be announced using <code>void:sparqlEndpoint</code>:</p>
 
 <pre class="turtle">:DBpedia a void:Dataset;
-    void:sparqlEndpoint &lt;http://dbpedia.org/sparql&gt;;
+    void:sparqlEndpoint <http://dbpedia.org/sparql>;
     .</pre>
 
 <p>This states that the default graph of the SPARQL endpoint contains the triples in the DBpedia dataset.</p>
@@ -337,10 +337,10 @@
 <p>The following example states that the complete <code>:NYTimes</code> dataset is available as a set of four RDF files.</p>
 
 <pre class="turtle">:NYTimes a void:Dataset;
-    void:dataDump &lt;http://data.nytimes.com/people.rdf&gt;;
-    void:dataDump &lt;http://data.nytimes.com/organizations.rdf&gt;;
-    void:dataDump &lt;http://data.nytimes.com/locations.rdf&gt;;
-    void:dataDump &lt;http://data.nytimes.com/descriptors.rdf&gt;;
+    void:dataDump <http://data.nytimes.com/people.rdf>;
+    void:dataDump <http://data.nytimes.com/organizations.rdf>;
+    void:dataDump <http://data.nytimes.com/locations.rdf>;
+    void:dataDump <http://data.nytimes.com/descriptors.rdf>;
     .</pre>
 
 <p class="note"><em>Note:</em> The <code>void:dataDump</code> property should not be used for linking to a download web page. It should only be used for linking directly to dump files. This is to ensure that the link can be used by automated spiders that cannot find their way through an HTML page. If a publisher desires to provide a link to a download page as well, then they should use the <code>foaf:page</code> property instead.</p>
@@ -378,7 +378,7 @@
 <p>The following example shows how the <a href="http://sindice.com/developers/api">Sindice API</a> [<a href="#ref-SINDICE-API">SINDICE-API</a>] could be described as a VoID dataset with a URI lookup endpoint:</p>
 
 <pre class="turtle">:Sindice a void:Dataset ; 
-    void:uriLookupEndpoint &lt;http://api.sindice.com/v2/search?qt=term&amp;q=&gt; .</pre>
+    void:uriLookupEndpoint <http://api.sindice.com/v2/search?qt=term&q=> .</pre>
 
 
 <h3 id="opensearch">3.6 OpenSearch description documents</h3>
@@ -386,7 +386,7 @@
 <p>Some datasets offer a free text search capability. Dataset publishers may create an <a href="http://www.opensearch.org/Specifications/OpenSearch/1.1">OpenSearch Description Document</a> [<a href="#ref-OPENSEARCH">OPENSEARCH</a>] that describes their text search service. This can be linked to a Dataset resource using the <code>void:openSearchDescription</code> property:</p>
 
 <pre class="turtle">:Sindice a void:Dataset;
-    void:openSearchDescription &lt;http://www.sindice.com/opensearch.xml&gt;.</pre>
+    void:openSearchDescription <http://www.sindice.com/opensearch.xml>.</pre>
 
 
 <h2 id="structural">4. Structural metadata</h2>
@@ -399,9 +399,9 @@
 <p>For documentation purposes, it can be helpful to name some representative example entites for a dataset. Looking up these entities allows users to quickly get an impression of the kind of data that is present in a dataset. The <code>void:exampleResource</code> property names one or more such examples:</p>
 
 <pre class="turtle">:DBpedia a void:Dataset;
-    void:exampleResource &lt;http://dbpedia.org/resource/Berlin&gt; ; 
-    void:exampleResource &lt;http://dbpedia.org/resource/Physics&gt; ;
-    void:exampleResource &lt;http://dbpedia.org/resource/Ludwig_van_Beethoven&gt; ;
+    void:exampleResource <http://dbpedia.org/resource/Berlin> ; 
+    void:exampleResource <http://dbpedia.org/resource/Physics> ;
+    void:exampleResource <http://dbpedia.org/resource/Ludwig_van_Beethoven> ;
     .</pre>
 
 <p class="note"><em>Note:</em> Datasets that are published as linked data with resolvable URIs often have <a href="https://www.w3.org/TR/2008/NOTE-cooluris-20081203/">two distinct URIs for an entity and for the RDF document describing the entity</a> [<a href="#ref-COOL">COOL</a>]. True entity URIs should be preferred as <code>void:exampleResource</code>s.</p>
@@ -410,7 +410,7 @@
 
 <p>If the linkset is a <code>void:subset</code> (see <a href="#subset">Section 4.4</a>) of another dataset <em>D</em>, that is, the linkset is contained in <em>D</em>, then a resource described in <em>D</em> should be preferred as the example for the linkset. For example, if the linkset <code>:DBpedia_Geonames</code> is a subset of DBpedia, and we choose</p>
 
-<pre class="turtle">&lt;http://dbpedia.org/resource/Berlin&gt; owl:sameAs &lt;http://sws.geonames.org/2950159/&gt;.</pre>
+<pre class="turtle"><http://dbpedia.org/resource/Berlin> owl:sameAs <http://sws.geonames.org/2950159/>.</pre>
 
 <p>as a representative link, then we should use the resource from the DBpedia side as the <code>void:exampleResource</code> for the linkset, because users can look up the example in DBpedia, but not necessarily in Geonames.</p>
 
@@ -425,7 +425,7 @@
     void:uriSpace "http://dbpedia.org/resource/";
     .</pre>
 
-<p class="note"><em>Note</em>: The value of <tt>void:uriSpace</tt> is an RDF literal. That is, in Turtle it is written like <code>"http://dbpedia.org/resource/"</code>, not <code>&lt;http://dbpedia.org/resource/&gt;</code>.</p>
+<p class="note"><em>Note</em>: The value of <tt>void:uriSpace</tt> is an RDF literal. That is, in Turtle it is written like <code>"http://dbpedia.org/resource/"</code>, not <code><http://dbpedia.org/resource/></code>.</p>
 
 <p>In cases where a simple string prefix match is insufficient, the <code>void:uriRegexPattern</code> property can be used. It expresses a regular expression pattern that matches the URIs of the dataset's entities.</p>
 
@@ -440,14 +440,14 @@
 <div class="note">
 <p><em>Note: In the Turtle syntax, any backslashes in literals have to be escaped with another backslash. This is why the example above contains double backslashes. In RDF/XML, the same literal would be written as:</em></p>
 
-<pre class="rdfxml-fragment">&lt;void:uriRegexPattern&gt;^http://dbpedia\.org/resource/&lt;/void:uriRegexPattern&gt;</pre>
+<pre class="rdfxml-fragment"><void:uriRegexPattern>^http://dbpedia\.org/resource/</void:uriRegexPattern></pre>
 </div>
 
 <p>A more complex example follows:</p>
 
 <pre class="turtle">:DBpediaTurtleFiles a void:Dataset;
     void:uriRegexPattern "^http://dbpedia\\.org/(.+)\\.ttl$";
-    void:feature &lt;http://www.w3.org/ns/formats/Turtle&gt;;
+    void:feature <http://www.w3.org/ns/formats/Turtle>;
     .</pre>
 
 <p>This defines a dataset (presumably a <a href="#subset">subset</a> of <code>:DBpedia</code>) that contains only URIs ending in <code>.ttl</code>, and states that they have Turtle representations, using <a href="#features"><code>void:feature</code></a>.</p>
@@ -494,7 +494,7 @@
 <a href="http://xmlns.com/foaf/spec/20100809.html">FOAF vocabulary</a> [<a href="#ref-FOAF">FOAF</a>].</p>
 
 <pre class="turtle">:LiveJournal a void:Dataset;
-    void:vocabulary &lt;http://xmlns.com/foaf/0.1/&gt;;
+    void:vocabulary <http://xmlns.com/foaf/0.1/>;
     .</pre>
 
 <p>The <code>void:vocabulary</code> property can only be used for entire vocabularies. It can <em>not</em> be used to express that individual classes and properties occur in a dataset. For this purpose, <a href="#class-property-partitions"><em>class partitions</em> and <em>property partitions</em></a> can be used.</p>

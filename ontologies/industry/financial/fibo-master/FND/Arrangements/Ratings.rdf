@@ -1,49 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE rdf:RDF [
-	<!ENTITY cmns-av "https://www.omg.org/spec/Commons/AnnotationVocabulary/">
-	<!ENTITY cmns-cds "https://www.omg.org/spec/Commons/CodesAndCodeSets/">
-	<!ENTITY cmns-cls "https://www.omg.org/spec/Commons/Classifiers/">
-	<!ENTITY cmns-dsg "https://www.omg.org/spec/Commons/Designators/">
-	<!ENTITY cmns-dt "https://www.omg.org/spec/Commons/DatesAndTimes/">
-	<!ENTITY cmns-org "https://www.omg.org/spec/Commons/Organizations/">
-	<!ENTITY cmns-pts "https://www.omg.org/spec/Commons/PartiesAndSituations/">
-	<!ENTITY cmns-rlcmp "https://www.omg.org/spec/Commons/RolesAndCompositions/">
-	<!ENTITY dct "http://purl.org/dc/terms/">
-	<!ENTITY fibo-fnd-agr-ctr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/">
-	<!ENTITY fibo-fnd-arr-asmt "https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Assessments/">
-	<!ENTITY fibo-fnd-arr-rep "https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Reporting/">
-	<!ENTITY fibo-fnd-arr-rt "https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/">
-	<!ENTITY fibo-fnd-dt-oc "https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/Occurrences/">
-	<!ENTITY fibo-fnd-rel-rel "https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/">
-	<!ENTITY fibo-fnd-utl-av "https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/">
-	<!ENTITY owl "http://www.w3.org/2002/07/owl#">
-	<!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-	<!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">
-	<!ENTITY skos "http://www.w3.org/2004/02/skos/core#">
-	<!ENTITY xsd "http://www.w3.org/2001/XMLSchema#">
-]>
-<rdf:RDF xml:base="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/"
-	xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/"
-	xmlns:cmns-cds="https://www.omg.org/spec/Commons/CodesAndCodeSets/"
-	xmlns:cmns-cls="https://www.omg.org/spec/Commons/Classifiers/"
-	xmlns:cmns-dsg="https://www.omg.org/spec/Commons/Designators/"
-	xmlns:cmns-dt="https://www.omg.org/spec/Commons/DatesAndTimes/"
-	xmlns:cmns-org="https://www.omg.org/spec/Commons/Organizations/"
-	xmlns:cmns-pts="https://www.omg.org/spec/Commons/PartiesAndSituations/"
-	xmlns:cmns-rlcmp="https://www.omg.org/spec/Commons/RolesAndCompositions/"
-	xmlns:dct="http://purl.org/dc/terms/"
-	xmlns:fibo-fnd-agr-ctr="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/"
-	xmlns:fibo-fnd-arr-asmt="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Assessments/"
-	xmlns:fibo-fnd-arr-rep="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Reporting/"
-	xmlns:fibo-fnd-arr-rt="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/"
-	xmlns:fibo-fnd-dt-oc="https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/Occurrences/"
-	xmlns:fibo-fnd-rel-rel="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/"
-	xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"
-	xmlns:owl="http://www.w3.org/2002/07/owl#"
-	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-	xmlns:skos="http://www.w3.org/2004/02/skos/core#"
-	xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
+<rdf:RDF xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/" xmlns:cmns-cds="https://www.omg.org/spec/Commons/CodesAndCodeSets/" xmlns:cmns-cls="https://www.omg.org/spec/Commons/Classifiers/" xmlns:cmns-dsg="https://www.omg.org/spec/Commons/Designators/" xmlns:cmns-dt="https://www.omg.org/spec/Commons/DatesAndTimes/" xmlns:cmns-org="https://www.omg.org/spec/Commons/Organizations/" xmlns:cmns-pts="https://www.omg.org/spec/Commons/PartiesAndSituations/" xmlns:cmns-rlcmp="https://www.omg.org/spec/Commons/RolesAndCompositions/" xmlns:dct="http://purl.org/dc/terms/" xmlns:fibo-fnd-agr-ctr="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/" xmlns:fibo-fnd-arr-asmt="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Assessments/" xmlns:fibo-fnd-arr-rep="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Reporting/" xmlns:fibo-fnd-arr-rt="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/" xmlns:fibo-fnd-dt-oc="https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/Occurrences/" xmlns:fibo-fnd-rel-rel="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/" xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:skos="http://www.w3.org/2004/02/skos/core#" xmlns:xsd="http://www.w3.org/2001/XMLSchema#" xml:base="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/">
 	
 	<owl:Ontology rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/">
 		<rdfs:label>Ratings Ontology</rdfs:label>
@@ -51,11 +7,11 @@
 		<dct:license>Copyright (c) 2019-2025 EDM Council, Inc.
 Copyright (c) 2019-2025 Object Management Group, Inc.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &apos;Software&apos;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		
 		See https://opensource.org/licenses/MIT.</dct:license>
 		<owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/"/>
@@ -74,29 +30,29 @@ THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRES
 		<owl:imports rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/"/>
 		<owl:versionIRI rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/20250301/Arrangements/Ratings/"/>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20190601/Arrangements/Ratings.rdf version of this ontology was revised to replace hasDefinition with isDefinedIn to clarify intent.</skos:changeNote>
-		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20190701/Arrangements/Ratings.rdf version of this ontology was revised to add properties indicating the &apos;best&apos; and &apos;worst&apos; scores on a given scale.</skos:changeNote>
+		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20190701/Arrangements/Ratings.rdf version of this ontology was revised to add properties indicating the 'best' and 'worst' scores on a given scale.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20190901/Arrangements/Ratings.rdf version of this ontology was revised to eliminate duplication with LCC.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20200201/Arrangements/Ratings.rdf version of this ontology was revised to replace uses of hasTag in Relations with hasTag from LCC, as the more complex union of datatypes in the Relations concept is not needed here.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20200701/Arrangements/Ratings.rdf version of this ontology was revised to eliminate circular definitions.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20210201/Arrangements/Ratings.rdf version of this ontology was revised to address hygiene issues with respect to text formatting.</skos:changeNote>
-		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20220701/Arrangements/Ratings.rdf version of the ontology was modified to use the Commons Ontology Library (Commons) Annotation Vocabulary rather than the OMG&apos;s Specification Metadata vocabulary.</skos:changeNote>
-		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20230101/Arrangements/Ratings.rdf version of this ontology was modified to use the Commons Ontology Library (Commons) rather than the OMG&apos;s Languages, Countries and Codes (LCC) and to eliminate redundancies in FIBO as appropriate.</skos:changeNote>
+		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20220701/Arrangements/Ratings.rdf version of the ontology was modified to use the Commons Ontology Library (Commons) Annotation Vocabulary rather than the OMG's Specification Metadata vocabulary.</skos:changeNote>
+		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20230101/Arrangements/Ratings.rdf version of this ontology was modified to use the Commons Ontology Library (Commons) rather than the OMG's Languages, Countries and Codes (LCC) and to eliminate redundancies in FIBO as appropriate.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20230301/Arrangements/Ratings.rdf version of the ontology was modified to replace content that is now available in the OMG Commons Ontology Library (Commons) v1.1 (FND-380).</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20240101/Arrangements/Ratings.rdf version of the ontology was modified to replace an additional property with its equivalent in the Commons Ontology Library (Commons) v1.1 (FBC-322).</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20241001/Arrangements/Ratings.rdf version of the ontology was modified to replace additional content that is now available in the OMG Commons Ontology Library (Commons) v1.2 (FND-389).</skos:changeNote>
-		<fibo-fnd-utl-av:hasMaturityLevel rdf:resource="&fibo-fnd-utl-av;Release"/>
+		<fibo-fnd-utl-av:hasMaturityLevel rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/Release"/>
 		<cmns-av:copyright>Copyright (c) 2019-2025 EDM Council, Inc.</cmns-av:copyright>
 		<cmns-av:copyright>Copyright (c) 2019-2025 Object Management Group, Inc.</cmns-av:copyright>
 	</owl:Ontology>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;QualitativeRatingScore">
-		<rdfs:subClassOf rdf:resource="&fibo-fnd-arr-rt;RatingScore"/>
-		<rdfs:subClassOf rdf:resource="&cmns-cds;CodeElement"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/QualitativeRatingScore">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScore"/>
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/CodesAndCodeSets/CodeElement"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-rel-rel;hasTag"/>
-				<owl:onDataRange rdf:resource="&xsd;string"/>
-				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/hasTag"/>
+				<owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>qualitative rating score</rdfs:label>
@@ -104,128 +60,128 @@ THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRES
 		<cmns-av:explanatoryNote>Ratings for the creditworthiness of securities are often qualitative, rather than quantitative, such as a triple-A (i.e., AAA). Many ratings for products and businesses on the Internet are also qualitative, such as 5-star ratings for something.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;QuantitativeRatingScore">
-		<rdfs:subClassOf rdf:resource="&fibo-fnd-arr-rt;RatingScore"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/QuantitativeRatingScore">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScore"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-arr-rt;hasMeasureWithinScale"/>
-				<owl:onDataRange rdf:resource="&xsd;decimal"/>
-				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/hasMeasureWithinScale"/>
+				<owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
+				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>quantitative rating score</rdfs:label>
 		<skos:definition>rating score that is a simple numeric value on some scale, such as a credit rating for an individual</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;Rating">
-		<rdfs:subClassOf rdf:resource="&fibo-fnd-arr-asmt;Opinion"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/Rating">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Assessments/Opinion"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-arr-rt;rates"/>
-				<owl:cardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:cardinality>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/rates"/>
+				<owl:cardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:cardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-agr-ctr;hasEffectiveDate"/>
-				<owl:onClass rdf:resource="&cmns-dt;Date"/>
-				<owl:maxQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxQualifiedCardinality>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasEffectiveDate"/>
+				<owl:onClass rdf:resource="https://www.omg.org/spec/Commons/DatesAndTimes/Date"/>
+				<owl:maxQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxQualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-rel-rel;isIssuedBy"/>
-				<owl:onClass rdf:resource="&fibo-fnd-arr-rt;RatingIssuer"/>
-				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/isIssuedBy"/>
+				<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingIssuer"/>
+				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-rel-rel;isGeneratedBy"/>
-				<owl:onClass rdf:resource="&fibo-fnd-arr-rt;RatingParty"/>
-				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/isGeneratedBy"/>
+				<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingParty"/>
+				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-dt;hasDateOfIssuance"/>
-				<owl:onClass rdf:resource="&cmns-dt;Date"/>
-				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/DatesAndTimes/hasDateOfIssuance"/>
+				<owl:onClass rdf:resource="https://www.omg.org/spec/Commons/DatesAndTimes/Date"/>
+				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-arr-rt;hasRatingScore"/>
-				<owl:someValuesFrom rdf:resource="&fibo-fnd-arr-rt;RatingScore"/>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/hasRatingScore"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScore"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>rating</rdfs:label>
 		<skos:definition>standing of something at a particular time, indicated by at least one scores with respect to some scale, based on an assessment by some party</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;RatingAgency">
-		<rdfs:subClassOf rdf:resource="&fibo-fnd-arr-rt;RatingIssuer"/>
-		<rdfs:subClassOf rdf:resource="&fibo-fnd-arr-rt;RatingScalePublisher"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingAgency">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingIssuer"/>
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScalePublisher"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-rlcmp;isPlayedBy"/>
-				<owl:someValuesFrom rdf:resource="&cmns-org;FormalOrganization"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/isPlayedBy"/>
+				<owl:someValuesFrom rdf:resource="https://www.omg.org/spec/Commons/Organizations/FormalOrganization"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>rating agency</rdfs:label>
 		<skos:definition>rating issuer that is also a rating scale publisher, frequently but not always an independent rating service</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;RatingAssessmentActivity">
-		<rdfs:subClassOf rdf:resource="&fibo-fnd-arr-asmt;AssessmentActivity"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingAssessmentActivity">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Assessments/AssessmentActivity"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-org;isProvidedBy"/>
-				<owl:someValuesFrom rdf:resource="&fibo-fnd-arr-rt;RatingParty"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Organizations/isProvidedBy"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingParty"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>rating assessment activity</rdfs:label>
 		<skos:definition>assessment activity resulting in a grade or score and potentially a report describing the score and the process used to determine that score</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;RatingAssessmentEvent">
-		<rdfs:subClassOf rdf:resource="&fibo-fnd-arr-asmt;AssessmentEvent"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingAssessmentEvent">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Assessments/AssessmentEvent"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-dt-oc;hasOutput"/>
-				<owl:onClass rdf:resource="&fibo-fnd-arr-rt;RatingReport"/>
-				<owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">0</owl:minQualifiedCardinality>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/Occurrences/hasOutput"/>
+				<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingReport"/>
+				<owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:minQualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-rel-rel;exemplifies"/>
-				<owl:onClass rdf:resource="&fibo-fnd-arr-rt;RatingAssessmentActivity"/>
-				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/exemplifies"/>
+				<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingAssessmentActivity"/>
+				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-dt-oc;hasOutput"/>
-				<owl:someValuesFrom rdf:resource="&fibo-fnd-arr-rt;Rating"/>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/Occurrences/hasOutput"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/Rating"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-org;isProvidedBy"/>
-				<owl:someValuesFrom rdf:resource="&fibo-fnd-arr-rt;RatingParty"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Organizations/isProvidedBy"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingParty"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>rating assessment event</rdfs:label>
 		<skos:definition>individual assessment resulting in a grade or score and potentially a report describing the score</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;RatingIssuer">
-		<rdfs:subClassOf rdf:resource="&cmns-pts;PartyRole"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingIssuer">
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-rel-rel;issues"/>
-				<owl:someValuesFrom rdf:resource="&fibo-fnd-arr-rt;Rating"/>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/issues"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/Rating"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>rating issuer</rdfs:label>
@@ -233,69 +189,69 @@ THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRES
 		<cmns-av:explanatoryNote>A rating issuer is frequently, but not always the rating scale publisher. A rating issuer may delegate responsibility for producing a rating to a rating party.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;RatingParty">
-		<rdfs:subClassOf rdf:resource="&cmns-pts;PartyRole"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingParty">
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-rel-rel;generates"/>
-				<owl:someValuesFrom rdf:resource="&fibo-fnd-arr-rt;Rating"/>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/generates"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/Rating"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>rating party</rdfs:label>
 		<skos:definition>person, organization or group that analyzes some aspect of something and develops a rating</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;RatingReport">
-		<rdfs:subClassOf rdf:resource="&fibo-fnd-arr-asmt;AssessmentReport"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingReport">
+		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Assessments/AssessmentReport"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-arr-rep;reportsOn"/>
-				<owl:someValuesFrom rdf:resource="&fibo-fnd-arr-rt;Rating"/>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Reporting/reportsOn"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/Rating"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>rating report</rdfs:label>
 		<skos:definition>report describing a set of ratings</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;RatingScale">
-		<rdfs:subClassOf rdf:resource="&cmns-cls;ClassificationScheme"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScale">
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/Classifiers/ClassificationScheme"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-arr-rt;hasBestMeasure"/>
-				<owl:maxQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxQualifiedCardinality>
-				<owl:onDataRange rdf:resource="&xsd;decimal"/>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/hasBestMeasure"/>
+				<owl:maxQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxQualifiedCardinality>
+				<owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-arr-rt;hasWorstMeasure"/>
-				<owl:maxQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxQualifiedCardinality>
-				<owl:onDataRange rdf:resource="&xsd;decimal"/>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/hasWorstMeasure"/>
+				<owl:maxQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxQualifiedCardinality>
+				<owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-org;isManagedBy"/>
-				<owl:onClass rdf:resource="&fibo-fnd-arr-rt;RatingScalePublisher"/>
-				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Organizations/isManagedBy"/>
+				<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScalePublisher"/>
+				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-dsg;defines"/>
-				<owl:someValuesFrom rdf:resource="&fibo-fnd-arr-rt;RatingScore"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Designators/defines"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScore"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>rating scale</rdfs:label>
 		<skos:definition>system for assigning a value to something according to some scale with respect to quality, a standard, or ranking</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;RatingScalePublisher">
-		<rdfs:subClassOf rdf:resource="&cmns-pts;PartyRole"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScalePublisher">
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-org;manages"/>
-				<owl:someValuesFrom rdf:resource="&fibo-fnd-arr-rt;RatingScale"/>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Organizations/manages"/>
+				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScale"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>rating scale publisher</rdfs:label>
@@ -303,20 +259,20 @@ THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRES
 		<cmns-av:explanatoryNote>Rating scale publishers are frequently also rating agencies.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="&fibo-fnd-arr-rt;RatingScore">
-		<rdfs:subClassOf rdf:resource="&cmns-cls;Classifier"/>
+	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScore">
+		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/Classifiers/Classifier"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&fibo-fnd-arr-rt;hasMeasureWithinScale"/>
-				<owl:maxQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxQualifiedCardinality>
-				<owl:onDataRange rdf:resource="&xsd;decimal"/>
+				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/hasMeasureWithinScale"/>
+				<owl:maxQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxQualifiedCardinality>
+				<owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="&cmns-dsg;isDefinedIn"/>
-				<owl:onClass rdf:resource="&fibo-fnd-arr-rt;RatingScale"/>
-				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Designators/isDefinedIn"/>
+				<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScale"/>
+				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>rating score</rdfs:label>
@@ -324,66 +280,66 @@ THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRES
 		<cmns-av:explanatoryNote>The meaning and methodology for determining a rating score for the rating of something is determined by a rating issuer. A given rating may apply at some point in time, as a part of a lifecycle or process, or generally. Typically ratings reflect an assessment of a state of affairs at some point in time.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:DatatypeProperty rdf:about="&fibo-fnd-arr-rt;hasBestMeasure">
+	<owl:DatatypeProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/hasBestMeasure">
 		<rdfs:label>has best measure</rdfs:label>
-		<rdfs:domain rdf:resource="&fibo-fnd-arr-rt;RatingScale"/>
-		<rdfs:range rdf:resource="&xsd;decimal"/>
-		<skos:definition>indicates the &apos;best&apos; (most desirable) possible value for a rating score&apos;s hasMeasureWithinScale property</skos:definition>
-		<cmns-av:explanatoryNote>Note that hasBestMeasure and hasWorstMeasure may be used together to determine the direction and range of a scale&apos;s measure values.</cmns-av:explanatoryNote>
+		<rdfs:domain rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScale"/>
+		<rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
+		<skos:definition>indicates the 'best' (most desirable) possible value for a rating score's hasMeasureWithinScale property</skos:definition>
+		<cmns-av:explanatoryNote>Note that hasBestMeasure and hasWorstMeasure may be used together to determine the direction and range of a scale's measure values.</cmns-av:explanatoryNote>
 	</owl:DatatypeProperty>
 	
-	<owl:DatatypeProperty rdf:about="&fibo-fnd-arr-rt;hasMeasureWithinScale">
+	<owl:DatatypeProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/hasMeasureWithinScale">
 		<rdfs:label>has measure within scale</rdfs:label>
-		<rdfs:domain rdf:resource="&fibo-fnd-arr-rt;RatingScore"/>
-		<rdfs:range rdf:resource="&xsd;decimal"/>
+		<rdfs:domain rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScore"/>
+		<rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
 		<skos:definition>indicates a relative, numeric measure or ordering on a rating scale</skos:definition>
 	</owl:DatatypeProperty>
 	
-	<owl:ObjectProperty rdf:about="&fibo-fnd-arr-rt;hasRating">
-		<rdfs:subPropertyOf rdf:resource="&cmns-cls;isClassifiedBy"/>
+	<owl:ObjectProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/hasRating">
+		<rdfs:subPropertyOf rdf:resource="https://www.omg.org/spec/Commons/Classifiers/isClassifiedBy"/>
 		<rdfs:label>has rating</rdfs:label>
-		<rdfs:range rdf:resource="&fibo-fnd-arr-rt;Rating"/>
-		<owl:inverseOf rdf:resource="&fibo-fnd-arr-rt;rates"/>
+		<rdfs:range rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/Rating"/>
+		<owl:inverseOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/rates"/>
 		<skos:definition>indicates the rating assigned to a thing based on a grade or score according to a particular rating scale</skos:definition>
 	</owl:ObjectProperty>
 	
-	<owl:ObjectProperty rdf:about="&fibo-fnd-arr-rt;hasRatingScore">
-		<rdfs:subPropertyOf rdf:resource="&cmns-cls;isClassifiedBy"/>
+	<owl:ObjectProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/hasRatingScore">
+		<rdfs:subPropertyOf rdf:resource="https://www.omg.org/spec/Commons/Classifiers/isClassifiedBy"/>
 		<rdfs:label>has rating score</rdfs:label>
-		<rdfs:domain rdf:resource="&fibo-fnd-arr-rt;Rating"/>
-		<rdfs:range rdf:resource="&fibo-fnd-arr-rt;RatingScore"/>
+		<rdfs:domain rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/Rating"/>
+		<rdfs:range rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScore"/>
 		<skos:definition>indicates the grade or score associated with a rating with respect to a particular rating scale</skos:definition>
 	</owl:ObjectProperty>
 	
-	<owl:DatatypeProperty rdf:about="&fibo-fnd-arr-rt;hasWorstMeasure">
+	<owl:DatatypeProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/hasWorstMeasure">
 		<rdfs:label>has worst measure</rdfs:label>
-		<rdfs:domain rdf:resource="&fibo-fnd-arr-rt;RatingScale"/>
-		<rdfs:range rdf:resource="&xsd;decimal"/>
-		<skos:definition>indicates the &apos;worst&apos; (least desirable) possible value for a rating score&apos;s hasMeasureWithinScale property</skos:definition>
-		<cmns-av:explanatoryNote>Note that hasBestMeasure and hasWorstMeasure may be used together to determine the direction and range of a scale&apos;s measure values.</cmns-av:explanatoryNote>
+		<rdfs:domain rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingScale"/>
+		<rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#decimal"/>
+		<skos:definition>indicates the 'worst' (least desirable) possible value for a rating score's hasMeasureWithinScale property</skos:definition>
+		<cmns-av:explanatoryNote>Note that hasBestMeasure and hasWorstMeasure may be used together to determine the direction and range of a scale's measure values.</cmns-av:explanatoryNote>
 	</owl:DatatypeProperty>
 	
-	<owl:ObjectProperty rdf:about="&fibo-fnd-arr-rt;producesRatingsFor">
-		<rdfs:subPropertyOf rdf:resource="&fibo-fnd-rel-rel;produces"/>
+	<owl:ObjectProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/producesRatingsFor">
+		<rdfs:subPropertyOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/produces"/>
 		<rdfs:label>produces ratings for</rdfs:label>
-		<rdfs:domain rdf:resource="&fibo-fnd-arr-rt;RatingParty"/>
-		<rdfs:range rdf:resource="&fibo-fnd-arr-rt;RatingIssuer"/>
-		<owl:inverseOf rdf:resource="&fibo-fnd-arr-rt;usesRatingParty"/>
+		<rdfs:domain rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingParty"/>
+		<rdfs:range rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingIssuer"/>
+		<owl:inverseOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/usesRatingParty"/>
 		<skos:definition>issuer for which ratings are produced or posted through</skos:definition>
 	</owl:ObjectProperty>
 	
-	<owl:ObjectProperty rdf:about="&fibo-fnd-arr-rt;rates">
-		<rdfs:subPropertyOf rdf:resource="&cmns-cls;classifies"/>
+	<owl:ObjectProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/rates">
+		<rdfs:subPropertyOf rdf:resource="https://www.omg.org/spec/Commons/Classifiers/classifies"/>
 		<rdfs:label>rates</rdfs:label>
-		<rdfs:domain rdf:resource="&fibo-fnd-arr-rt;Rating"/>
+		<rdfs:domain rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/Rating"/>
 		<skos:definition>indicates the instrument, party or something else to which a rating applies</skos:definition>
 	</owl:ObjectProperty>
 	
-	<owl:ObjectProperty rdf:about="&fibo-fnd-arr-rt;usesRatingParty">
-		<rdfs:subPropertyOf rdf:resource="&fibo-fnd-rel-rel;isProducedBy"/>
+	<owl:ObjectProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/usesRatingParty">
+		<rdfs:subPropertyOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/isProducedBy"/>
 		<rdfs:label>uses rating performer</rdfs:label>
-		<rdfs:domain rdf:resource="&fibo-fnd-arr-rt;RatingIssuer"/>
-		<rdfs:range rdf:resource="&fibo-fnd-arr-rt;RatingParty"/>
+		<rdfs:domain rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingIssuer"/>
+		<rdfs:range rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Ratings/RatingParty"/>
 		<skos:definition>rating performer an issuer uses to assess ratings</skos:definition>
 	</owl:ObjectProperty>
 
