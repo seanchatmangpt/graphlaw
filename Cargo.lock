@@ -522,6 +522,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "graphlaw-wasm"
+version = "26.9.28"
+dependencies = [
+ "praxis-graphlaw",
+]
+
+[[package]]
 name = "half"
 version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

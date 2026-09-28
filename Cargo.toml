@@ -10,6 +10,19 @@ repository = "https://github.com/seanchatmangpt/graphlaw"
 keywords = ["rdf", "n3", "datalog", "shacl", "shex"]
 categories = ["data-structures", "parser-implementations"]
 
+[workspace]
+members = [".", "wasm"]
+
+# Size-optimised profile for the WebAssembly module (`--profile wasm`); kept
+# separate so native release builds and tests are unaffected.
+[profile.wasm]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
 [lib]
 name = "praxis_graphlaw"
 path = "src/lib.rs"
@@ -25,6 +38,8 @@ eyeron = { git = "https://github.com/eyereasoner/eyeron", rev = "d6568f657c19805
 # Capture/rewrite tooling for packs/self-monitoring-pack (replaces the former
 # Python scripts). Off by default so the library stays dependency-light.
 pack-tools = ["dep:regex", "dep:serde_json"]
+# JSON request/response ABI (src/abi.rs) consumed by the wasm module in ./wasm.
+abi = ["dep:serde_json"]
 
 [[bin]]
 name = "smon-transcript-to-turtle"
@@ -38,3 +53,7 @@ required-features = ["pack-tools"]
 
 [package.metadata.docs.rs]
 all-features = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+wasmi = "1"
+serde_json = "1"

@@ -1,0 +1,3 @@
+[target.wasm32-unknown-unknown]
+# Eyeron and SPARQL evaluation recurse; the 1 MiB default stack is too small.
+rustflags = ["-C", "link-arg=-zstack-size=16777216"]

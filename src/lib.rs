@@ -13,7 +13,10 @@
 
 #![forbid(unsafe_code)]
 
+#[cfg(feature = "abi")]
+pub mod abi;
 pub mod dialect;
+pub mod hooks;
 pub mod law;
 #[cfg(feature = "pack-tools")]
 pub mod smon;
@@ -118,6 +121,11 @@ pub const BACKEND_AUTHORITIES: &[BackendAuthority] = &[
     BackendAuthority {
         capability: "RDF/RDFS/OWL-RL entailment",
         authority: "purrdf::entail",
+        revision: "2.0.2",
+    },
+    BackendAuthority {
+        capability: "Knowledge hooks (kh: orchestration over SPARQL)",
+        authority: "purrdf::sparql",
         revision: "2.0.2",
     },
     BackendAuthority {

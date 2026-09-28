@@ -17,6 +17,9 @@ pub enum Dialect {
     NQuads,
     RdfXml,
     JsonLd,
+    YamlLd,
+    TriX,
+    HexTuples,
     N3,
     ShExC,
     ShExJ,
@@ -48,6 +51,9 @@ impl Dialect {
             Dialect::NQuads => Some("application/n-quads"),
             Dialect::RdfXml => Some("application/rdf+xml"),
             Dialect::JsonLd => Some("application/ld+json"),
+            Dialect::YamlLd => Some("application/ld+yaml"),
+            Dialect::TriX => Some("application/trix"),
+            Dialect::HexTuples => Some("application/x-hextuples"),
             _ => None,
         }
     }
@@ -261,6 +267,12 @@ pub fn sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> {
         Some("shex" | "shexc") => return Ok(Dialect::ShExC),
         Some("trig") => return Ok(Dialect::TriG),
         _ => {}
+    }
+    if head.contains("<TriX") {
+        return Ok(Dialect::TriX);
+    }
+    if head.starts_with("[\"") {
+        return Ok(Dialect::HexTuples);
     }
     if head.starts_with("<?xml") || head.contains("<rdf:RDF") || lower.starts_with("<rdf:rdf") {
         return Ok(Dialect::RdfXml);

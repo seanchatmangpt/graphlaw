@@ -27,6 +27,8 @@ pub enum Step<'a> {
     AdmitShacl { shapes_ttl: &'a str },
     /// Forward-chain Notation3 rules with Eyeron; derived triples are added.
     DeriveN3 { rules: &'a str },
+    /// Run a knowledge-hook pack to a fixpoint.
+    Hooks { pack: &'a crate::hooks::HookPack },
     /// RDFS entailment closure.
     EntailRdfs,
     /// OWL 2 RL entailment closure.
@@ -38,6 +40,7 @@ impl Step<'_> {
         match self {
             Step::AdmitShacl { .. } => "admit:shacl",
             Step::DeriveN3 { .. } => "derive:n3",
+            Step::Hooks { .. } => "derive:hooks",
             Step::EntailRdfs => "derive:rdfs",
             Step::EntailOwlRl => "derive:owl-rl",
         }
@@ -47,6 +50,7 @@ impl Step<'_> {
         match self {
             Step::AdmitShacl { .. } => "SHACL",
             Step::DeriveN3 { .. } => "Notation3",
+            Step::Hooks { .. } => "Knowledge hooks (kh: orchestration over SPARQL)",
             Step::EntailRdfs | Step::EntailOwlRl => "RDF/RDFS/OWL-RL entailment",
         }
     }
@@ -170,6 +174,7 @@ impl LawState {
                 }
                 self.clone()
             }
+            Step::Hooks { pack } => pack.materialize(self)?.state,
             Step::EntailRdfs | Step::EntailOwlRl => {
                 let plan = if matches!(step, Step::EntailRdfs) {
                     purrdf::entail::Materialization::Rdfs
