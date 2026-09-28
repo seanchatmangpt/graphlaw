@@ -29,6 +29,17 @@ GraphLaw's own code is the composition layer above the engines:
 - `tests/differential.rs` is a cross-engine oracle: N3 (Eyeron), Datalog and OWL-RL (PurRDF) must agree with each other and with an independent Warshall closure.
 - `ASSETS.sha256` pins every shipped asset by hash and sniffed dialect; `tests/corpus_conformance.rs` routes and parses all of them (`cargo test -- --ignored` adds the large vendored vocabularies).
 
+## Pack tooling (Rust, feature `pack-tools`)
+
+The self-monitoring pack's former Python scripts are Rust binaries that write RDF through PurRDF only:
+
+```sh
+cargo run --features pack-tools --bin smon-transcript-to-turtle -- --transcript S.jsonl --out out.ttl
+cargo run --features pack-tools --bin smon-broaden-topic -- --in-ttl in.ttl --out-ttl out.ttl
+```
+
+`tests/smon_tools.rs` checks the broadening output against the committed fixture the Python script produced.
+
 ## Rust surface
 
 ```rust

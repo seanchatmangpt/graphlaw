@@ -15,6 +15,8 @@
 
 pub mod dialect;
 pub mod law;
+#[cfg(feature = "pack-tools")]
+pub mod smon;
 
 /// Unstable escape hatch: the whole PurRDF crate. Not covered by GraphLaw's own
 /// API stability; prefer the curated modules below.

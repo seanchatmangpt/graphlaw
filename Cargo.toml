@@ -17,7 +17,24 @@ path = "src/lib.rs"
 [dependencies]
 purrdf = "=2.0.2"
 sha2 = "0.10"
+regex = { version = "1", optional = true }
+serde_json = { version = "1", optional = true }
 eyeron = { git = "https://github.com/eyereasoner/eyeron", rev = "d6568f657c19805b64223acf28d74234156bb837" }
+
+[features]
+# Capture/rewrite tooling for packs/self-monitoring-pack (replaces the former
+# Python scripts). Off by default so the library stays dependency-light.
+pack-tools = ["dep:regex", "dep:serde_json"]
+
+[[bin]]
+name = "smon-transcript-to-turtle"
+path = "src/bin/smon_transcript_to_turtle.rs"
+required-features = ["pack-tools"]
+
+[[bin]]
+name = "smon-broaden-topic"
+path = "src/bin/smon_broaden_topic.rs"
+required-features = ["pack-tools"]
 
 [package.metadata.docs.rs]
 all-features = true

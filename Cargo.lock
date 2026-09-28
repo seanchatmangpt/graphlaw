@@ -763,6 +763,8 @@ version = "26.9.28"
 dependencies = [
  "eyeron",
  "purrdf",
+ "regex",
+ "serde_json",
  "sha2",
 ]
 
