@@ -801,7 +801,7 @@ fn gnode_iri(base_iri: &str, path: &str, node: GNode) -> String {
 /// bound to the query that actually ran, rather than a second copy someone
 /// could let drift.
 pub const RENDER_MODEL_PROJECTION_QUERY: &str =
-    include_str!("../../../wasm4pm-arazzo/queries/render_model_projection.rq");
+    include_str!("../../queries/render_model_projection.rq");
 
 /// One flattened row of the Q(W) relational projection: the bound values of
 /// one `?elementId` solution of [`RENDER_MODEL_PROJECTION_QUERY`]. Every

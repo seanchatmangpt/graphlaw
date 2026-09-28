@@ -36,15 +36,16 @@ smallvec = { version = "1", features = ["serde"] }
 fixedbitset = "0.5"
 oxigraph = { version = "0.5.9", features = ["rdf-12"] }
 powl2-decompose = { path = "crates/powl2-decompose", version = "26.6.30" }
-bcinr-pddl = { version = "26.6.26" }
-bcinr-powl = { version = "26.6.25" }
+bcinr-pddl = { git = "https://github.com/seanchatmangpt/bcinr", rev = "d52e7ca222577b4ee88f1766eaf44b217587172b", package = "bcinr-pddl" }
+bcinr-powl = { git = "https://github.com/seanchatmangpt/bcinr", rev = "d52e7ca222577b4ee88f1766eaf44b217587172b", package = "bcinr-powl" }
 thiserror = "2"
 # compat owns receipt identity; all chatman hashing routes through wasm4pm_compat::hash.
-# Registry version (not a local path) so this resolves to the SAME crate instance as
-# bcinr-pddl's wasm4pm-compat dependency -- a path dep here creates a second, incompatible
-# copy of Pddl8GroundAtom/OCEL types even at an identical version string.
-wasm4pm-compat = { version = "26.6.29" }
-wasm4pm-cognition = { git = "https://github.com/seanchatmangpt/wasm4pm", rev = "9fc4f1ae3cc99cf65a5f014580db8e1ea3d08b55", package = "wasm4pm-cognition", optional = true }
+# Exact published identities reconstructed from Praxis's extraction-source Cargo.lock.
+# The original GraphLaw crate used sibling path dependencies whose package versions had
+# advanced beyond the stale lower bounds in this manifest. Standalone GraphLaw must pin
+# the actually-resolved CalVer releases rather than silently depend on Praxis topology.
+wasm4pm-compat = { version = "=26.8.7" }
+wasm4pm-cognition = { git = "https://github.com/seanchatmangpt/wasm4pm", rev = "b7ebccb53b1249d45d2472f7754c997982b2f1b7", package = "wasm4pm-cognition", optional = true }
 
 [features]
 cognition = ["dep:wasm4pm-cognition"]
@@ -89,10 +90,10 @@ rand = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 proptest = "1.5"
-# Required for chicago_tdd_tools::async_test! (expands to #[tokio::test]).
+# Required for chicago_tdd_tools::async_test! (expands to #[tokio::test]).\n# 26.8.9 is the first admitted test-harness release used by the extracted tree that\n# provides every requested feature below, including cli-proof.
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 # otel/weaver features left OFF: they drag network deps into the required build.
-chicago-tdd-tools = { version = "26.7.1", features = [
+chicago-tdd-tools = { version = "=26.8.9", features = [
     "property-testing",
     "snapshot-testing",
     "parameterized-testing",

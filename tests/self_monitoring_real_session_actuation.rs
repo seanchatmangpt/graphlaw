@@ -29,8 +29,8 @@ use praxis_graphlaw::parser::Syntax;
 use praxis_graphlaw::TripleStore;
 use std::collections::BTreeMap;
 
-const HOOK_TTL: &str = include_str!("../../../packs/self-monitoring-pack/hook.ttl");
-const ONTOLOGY_TTL: &str = include_str!("../../../packs/self-monitoring-pack/ontology.ttl");
+const HOOK_TTL: &str = include_str!("../packs/self-monitoring-pack/hook.ttl");
+const ONTOLOGY_TTL: &str = include_str!("../packs/self-monitoring-pack/ontology.ttl");
 /// The REAL session facts (default, disclosed keyword-heuristic
 /// classification/topic-tagging -- see `transcript_to_turtle.py`'s module
 /// docstring). Regenerated this session via:
@@ -42,14 +42,14 @@ const ONTOLOGY_TTL: &str = include_str!("../../../packs/self-monitoring-pack/ont
 /// 'SurveyResponse': 148, 'BlockerResponse': 7, 'RunResponse': 9,
 /// 'GroundingQuestion': 3}.
 const SESSION_REAL_TTL: &str =
-    include_str!("../../../packs/self-monitoring-pack/fixtures/session-real.ttl");
+    include_str!("../packs/self-monitoring-pack/fixtures/session-real.ttl");
 /// A DISCLOSED, CLEARLY-LABELED counterfactual (NOT the pack's default
 /// behavior) built by `packs/self-monitoring-pack/scripts/
 /// broaden_topic_experiment.py` from `session-real.ttl`, for ADVERSARIAL
 /// CHECK (3) -- topic-tag sensitivity. See that script's module docstring
 /// for the exact two rewrites applied and their justification.
 const SESSION_BROAD_TTL: &str =
-    include_str!("../../../packs/self-monitoring-pack/fixtures/session-real-broad-topic.ttl");
+    include_str!("../packs/self-monitoring-pack/fixtures/session-real-broad-topic.ttl");
 
 const SMON: &str = "http://seanchatmangpt.github.io/packs/self-monitoring#";
 const SESSION_IRI: &str = "http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session";
