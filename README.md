@@ -47,6 +47,8 @@ There is nothing to run. When a change that bumps the version in `Cargo.toml` re
 
 A planner only proposes. `plan::Plan::admit(&LawState)` (also `Step::Plan`, and `{"step":"plan","plan":{"actions":[{"name","pre","add","del"}],"goal"}}` in the `law` op) replays a candidate plan: every `pre` triple (N-Triples, ground) must be present in the current state, `del` then `add` produce the child state, and `goal` must hold at the end. The first violated precondition, or an unmet goal, refuses the whole plan with `LawError::PlanRefused { index, action, missing }` and yields no state. Each applied action returns a `Receipt` (`step: "plan-action"`, authority `purrdf`), so an admitted plan is a chain of content-addressed states; replay is byte-identical. Blank nodes are refused. See `tests/plan_admission.rs`.
 
+Receipt feedback: `receipt::record(&state, &receipt)` writes a receipt into the state as RDF (`urn:graphlaw:receipt:<child>`), so it changes the state id and the next admission; `Step::RequireReceipt { step }` (ABI `{"step":"record-receipts"}` / `{"step":"require-receipt","step_name":"..."}`) refuses with `LawError::ReceiptRequired` unless that step's receipt is recorded. Plan-action receipts carry `plan_sha256` and `index`; `Admitted.plan_digest` is the same digest. See `tests/receipt_feedback.rs`.
+
 ## Knowledge hooks
 
 `hooks::HookPack` loads `kh:Hook` / `kh:Action` resources from any RDF pack (see `packs/self-monitoring-pack/hook.ttl`) and runs them to a fixpoint over a `LawState` (`Step::Hooks`). Triggers and actions are SPARQL executed by PurRDF; each firing is recorded in the state so re-running a saturated state changes nothing.

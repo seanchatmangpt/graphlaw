@@ -8,7 +8,9 @@
 //!
 //! Ops: `capabilities`, `sniff`, `parse`, `convert`, `canonical`, `sparql`,
 //! `shacl`, `shex`, `n3`, `entail`, `datalog`, `hooks`, `law`.
-//! `law` steps: `shacl`, `n3`, `rdfs`, `owl-rl`, `hooks`, and `plan`
+//! `law` steps: `shacl`, `n3`, `rdfs`, `owl-rl`, `hooks`, and `plan`,
+//! `record-receipts` (writes receipts produced so far into the state) and
+//! `require-receipt` (`"step_name"`; refuses unless that step's receipt is recorded)
 //! (`{"step":"plan","plan":{"actions":[{"name","pre","add","del"}],"goal"}}`,
 //! N-Triples strings; one receipt per action, refused at the first unmet precondition).
 //! A *data spec* is `{"text": "...", "dialect"?: "turtle", "hint"?: "ttl", "base"?: "..."}`;
@@ -77,6 +79,12 @@ fn law_err(e: LawError) -> Refusal {
                 "plan refused at step {index} (`{action}`): unmet {}",
                 missing.join(" ")
             ),
+        },
+        LawError::ReceiptRequired { step } => Refusal {
+            kind: RefusalKind::EngineRejected,
+            dialect: None,
+            engine: Some(Engine::PurRdf),
+            message: format!("receipt required: no recorded receipt for step `{step}`"),
         },
         LawError::NotAdmitted { violations } => Refusal {
             kind: RefusalKind::EngineRejected,
@@ -207,6 +215,7 @@ fn dispatch(v: &Value) -> Res<Value> {
 fn capabilities() -> Value {
     json!({
         "abi": ABI_VERSION,
+        "abi_version": ABI_VERSION,
         "crate": env!("CARGO_PKG_VERSION"),
         "authorities": crate::BACKEND_AUTHORITIES.iter().map(|a| json!({
             "capability": a.capability, "authority": a.authority, "revision": a.revision,
@@ -493,6 +502,8 @@ fn op_law(v: &Value) -> Res<Value> {
     let mut state = state_field(v, "data")?;
     let mut ids = vec![state.id().to_string()];
     let mut receipts = Vec::new();
+    let mut produced: Vec<crate::law::Receipt> = Vec::new();
+    let mut recorded = 0usize;
     for step in v
         .get("steps")
         .and_then(Value::as_array)
@@ -501,19 +512,30 @@ fn op_law(v: &Value) -> Res<Value> {
         if str_field(step, "step")? == "plan" {
             let plan = plan_field(step)?;
             let admitted = plan.admit(&state).map_err(law_err)?;
-            for r in &admitted.receipts {
+            for (index, r) in admitted.receipts.iter().enumerate() {
                 receipts.push(json!({
                     "step": r.step, "parent": r.parent, "child": r.child, "added": r.added,
                     "authority": r.authority.authority, "revision": r.authority.revision,
+                    "plan_sha256": admitted.plan_digest, "index": index,
                 }));
                 ids.push(r.child.clone());
+                produced.push(r.clone());
             }
             state = admitted.state;
+            continue;
+        }
+        if str_field(step, "step")? == "record-receipts" {
+            for r in &produced[recorded..] {
+                state = crate::receipt::record(&state, r).map_err(law_err)?;
+            }
+            recorded = produced.len();
+            ids.push(state.id().to_string());
             continue;
         }
         let pack;
         let shapes;
         let rules;
+        let step_name;
         let step_ref = match str_field(step, "step")? {
             "shacl" => {
                 shapes = str_field(step, "shapes")?.to_string();
@@ -527,6 +549,10 @@ fn op_law(v: &Value) -> Res<Value> {
             }
             "rdfs" => Step::EntailRdfs,
             "owl-rl" => Step::EntailOwlRl,
+            "require-receipt" => {
+                step_name = str_field(step, "step_name")?.to_string();
+                Step::RequireReceipt { step: &step_name }
+            }
             "hooks" => {
                 pack = HookPack::load(&state_field(step, "pack")?)?;
                 Step::Hooks { pack: &pack }
@@ -539,6 +565,7 @@ fn op_law(v: &Value) -> Res<Value> {
             "authority": r.authority.authority, "revision": r.authority.revision,
         }));
         ids.push(child.id().to_string());
+        produced.push(r);
         state = child;
     }
     Ok(json!({"states": ids, "receipts": receipts, "nquads": nquads_of(state.dataset())?}))
