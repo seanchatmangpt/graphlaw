@@ -1,18 +1,16 @@
 name: Release
 
-# Fully automatic. After CI passes on main, this releases whatever version
-# Cargo.toml declares if that version has not been released yet:
-#   1. tags vX.Y.Z and creates the GitHub release with the CI-built, CI-tested
-#      graphlaw.wasm (+ checksum),
-#   2. publishes graphlaw-eyeron then graphlaw to crates.io, each only if that
+# Fully automatic. On every push to main, release whatever version Cargo.toml
+# declares if that version is not released yet:
+#   1. build and test the WASI module and the whole workspace,
+#   2. tag vX.Y.Z and create the GitHub release with graphlaw.wasm (+ checksum),
+#   3. publish graphlaw-eyeron then graphlaw to crates.io, each only if that
 #      exact version is not already on the registry.
-# Every step is idempotent, so re-runs and no-op merges are safe. To release,
-# merge a change that bumps the version; nothing else is required.
+# A run with nothing to release exits in seconds. All steps are idempotent.
+# To release: merge a change that bumps the version. Nothing else is required.
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
+  push:
     branches: [main]
   workflow_dispatch:
 
@@ -22,23 +20,21 @@ concurrency:
 
 permissions:
   contents: write
-  actions: read
 
 jobs:
   release:
     name: release if unreleased
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
-      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ env.SHA }}
+          ref: main
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.96.0
+          targets: wasm32-wasip1
 
       - name: Decide what is unreleased
         id: plan
@@ -54,31 +50,35 @@ jobs:
             if grep -q "\"vers\":\"$v\"" <<<"$idx"; then echo yes; else echo no; fi
           }
           g=$(ver graphlaw); e=$(ver graphlaw-eyeron)
-          echo "graphlaw=$g" >> "$GITHUB_OUTPUT"
           tags=$(git ls-remote --tags origin "refs/tags/v$g" || true)
-          echo "tag_exists=$([ -n "$tags" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
-          echo "eyeron_published=$(on_registry graphlaw-eyeron "$e")" >> "$GITHUB_OUTPUT"
-          echo "graphlaw_published=$(on_registry graphlaw "$g")" >> "$GITHUB_OUTPUT"
+          tag=$([ -n "$tags" ] && echo yes || echo no)
+          ep=$(on_registry graphlaw-eyeron "$e")
+          gp=$(on_registry graphlaw "$g")
+          work=no
+          if [ "$tag" = no ] || [ "$ep" = no ] || [ "$gp" = no ]; then work=yes; fi
+          {
+            echo "graphlaw=$g"; echo "tag_exists=$tag"
+            echo "eyeron_published=$ep"; echo "graphlaw_published=$gp"; echo "work=$work"
+          } >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
 
-      - name: Fetch the module CI built and tested for this commit
-        if: steps.plan.outputs.tag_exists == 'no'
-        uses: actions/download-artifact@v4
-        with:
-          name: graphlaw-wasm
-          github-token: ${{ github.token }}
-          run-id: ${{ github.event.workflow_run.id }}
-          path: dist
+      - name: Build and test (only when there is something to release)
+        if: steps.plan.outputs.work == 'yes'
+        run: |
+          set -euo pipefail
+          cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+          GRAPHLAW_WASM="$PWD/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm" cargo test --all-targets --all-features
+          cargo package -p graphlaw-eyeron -p graphlaw
 
       - name: Tag and create the GitHub release
         if: steps.plan.outputs.tag_exists == 'no'
         run: |
           set -euo pipefail
-          test -s dist/graphlaw_wasm.wasm
-          mv dist/graphlaw_wasm.wasm dist/graphlaw.wasm
+          mkdir dist
+          cp target/wasm32-wasip1/wasm/graphlaw_wasm.wasm dist/graphlaw.wasm
           (cd dist && sha256sum graphlaw.wasm > graphlaw.wasm.sha256)
           gh release create "v${{ steps.plan.outputs.graphlaw }}" dist/graphlaw.wasm dist/graphlaw.wasm.sha256 \
-            --target "$SHA" --generate-notes --title "graphlaw v${{ steps.plan.outputs.graphlaw }}"
+            --target "$(git rev-parse HEAD)" --generate-notes --title "graphlaw v${{ steps.plan.outputs.graphlaw }}"
 
       - name: Publish graphlaw-eyeron
         if: steps.plan.outputs.eyeron_published == 'no'

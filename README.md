@@ -41,7 +41,7 @@ One self-contained WASI module (imports are `wasi_snapshot_preview1` only: clock
 
 ### Releasing (automatic)
 
-There is nothing to run. When a change that bumps the version in `Cargo.toml` reaches `main` and CI passes, `.github/workflows/release.yml` tags `vX.Y.Z`, creates the GitHub release with the CI-built and CI-tested `graphlaw.wasm` (plus checksum), and publishes `graphlaw-eyeron` then `graphlaw` to crates.io (each only if that version is not already there; every step is idempotent). The only one-time setup is the `CARGO_REGISTRY_TOKEN` repository secret; without it the release and tag still happen and the publish step fails loudly until it is added. Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
+There is nothing to run. When a change that bumps the version in `Cargo.toml` reaches `main`, `.github/workflows/release.yml` builds and tests, tags `vX.Y.Z`, creates the GitHub release with `graphlaw.wasm` (plus checksum), and publishes `graphlaw-eyeron` then `graphlaw` to crates.io (each only if that version is not already there; every step is idempotent). The only one-time setup is the `CARGO_REGISTRY_TOKEN` repository secret; without it the release and tag still happen and the publish step fails loudly until it is added. Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
 
 ## Knowledge hooks
 
