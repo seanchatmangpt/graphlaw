@@ -113,8 +113,8 @@ ex:PersonShape a sh:NodeShape ;
     sh:targetClass ex:Person ;
     sh:property [ sh:path ex:age ; sh:datatype xsd:integer ] .
 "#;
-    let report =
-        praxis_graphlaw::shacl::engine::validate_graphs(data, shapes, None).expect("SHACL evaluates");
+    let report = praxis_graphlaw::shacl::engine::validate_graphs(data, shapes, None)
+        .expect("SHACL evaluates");
     assert!(!report.conforms);
     assert!(!report.results.is_empty());
 }
