@@ -1,15 +1,49 @@
 name: CI
+
 on:
   push:
     branches: [main]
   pull_request:
+
 permissions:
   contents: read
+
 jobs:
-  graphlaw:
+  native:
+    name: native workspace
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo metadata --format-version 1 --no-deps
-      - run: cargo check -p praxis-graphlaw --lib
+      - name: Resolve full workspace graph
+        run: cargo metadata --format-version 1 --all-features --no-deps
+      - name: Check all native targets
+        run: cargo check --workspace --all-targets
+      - name: Test POWL decomposition
+        run: cargo test -p powl2-decompose
+      - name: Test GraphLaw library
+        run: cargo test -p praxis-graphlaw --lib
+      - name: Test GraphLaw integration suites
+        run: cargo test -p praxis-graphlaw --tests
+      - name: Test WASM wrapper on host
+        run: cargo test -p praxis-graphlaw-wasm
+
+  cognition:
+    name: optional cognition feature
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check cognition-enabled GraphLaw
+        run: cargo check -p praxis-graphlaw --lib --features cognition
+
+  wasm:
+    name: wasm32 wrapper
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Compile WASM wrapper
+        run: cargo check -p praxis-graphlaw-wasm --target wasm32-unknown-unknown
