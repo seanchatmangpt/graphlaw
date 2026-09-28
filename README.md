@@ -39,6 +39,10 @@ One self-contained WASI module (imports are `wasi_snapshot_preview1` only: clock
 
 `vendor/` carries two cfg-only upstream patches that give WASI the standard clock/RNG path; see `vendor/README.md`.
 
+### Releasing
+
+Tag `v26.9.28` (must equal the crate version) after adding the `CARGO_REGISTRY_TOKEN` repository secret. `.github/workflows/release.yml` tests, attaches `graphlaw.wasm` and its checksum to the GitHub release, and publishes `graphlaw-eyeron` then `graphlaw`. Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
+
 ## Knowledge hooks
 
 `hooks::HookPack` loads `kh:Hook` / `kh:Action` resources from any RDF pack (see `packs/self-monitoring-pack/hook.ttl`) and runs them to a fixpoint over a `LawState` (`Step::Hooks`). Triggers and actions are SPARQL executed by PurRDF; each firing is recorded in the state so re-running a saturated state changes nothing.

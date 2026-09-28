@@ -1,0 +1,47 @@
+name: Release
+
+# Push a tag like v26.9.28. Builds the WASI module, attaches it (with a
+# checksum) to a GitHub release, and publishes graphlaw-eyeron then graphlaw to
+# crates.io. Requires the repository secret CARGO_REGISTRY_TOKEN.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: build, release, publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+          targets: wasm32-wasip1
+      - name: Tag must match the crate version
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name']=='graphlaw'))")
+          test "v${version}" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != graphlaw ${version}"; exit 1; }
+      - name: Test
+        run: |
+          cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+          GRAPHLAW_WASM="$PWD/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm" cargo test --all-targets --all-features
+      - name: Stage release assets
+        run: |
+          mkdir dist
+          cp target/wasm32-wasip1/wasm/graphlaw_wasm.wasm dist/graphlaw.wasm
+          (cd dist && sha256sum graphlaw.wasm > graphlaw.wasm.sha256)
+      - name: GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/graphlaw.wasm
+            dist/graphlaw.wasm.sha256
+          generate_release_notes: true
+      - name: Publish to crates.io (graphlaw-eyeron, then graphlaw)
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish -p graphlaw-eyeron -p graphlaw

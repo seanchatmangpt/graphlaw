@@ -11,4 +11,4 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-graphlaw = { path = "..", features = ["abi"] }
+graphlaw = { path = "..", features = ["abi", "wasi-patched-deps"] }

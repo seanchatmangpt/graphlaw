@@ -43,6 +43,9 @@ eyeron = { package = "graphlaw-eyeron", version = "0.7.7", path = "crates/graphl
 pack-tools = ["dep:regex", "dep:serde_json"]
 # JSON request/response ABI (src/abi.rs) consumed by the wasm module in ./wasm.
 abi = ["dep:serde_json"]
+# Asserts that the build applied the vendored WASI clock patch (see
+# vendor/README.md). Only the repo workspace (crates.io ignores [patch]) sets it.
+wasi-patched-deps = []
 
 [[bin]]
 name = "smon-transcript-to-turtle"

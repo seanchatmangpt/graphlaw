@@ -38,8 +38,8 @@ jobs:
         with:
           name: graphlaw-wasm
           path: target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
-      - name: Package vendored Eyeron (publish readiness)
-        run: cargo package -p graphlaw-eyeron
+      - name: Package both crates together (publish readiness)
+        run: cargo package -p graphlaw-eyeron -p graphlaw
       - name: Docs
         run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
 
