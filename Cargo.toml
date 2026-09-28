@@ -36,8 +36,8 @@ smallvec = { version = "1", features = ["serde"] }
 fixedbitset = "0.5"
 oxigraph = { version = "0.5.9", features = ["rdf-12"] }
 powl2-decompose = { path = "crates/powl2-decompose", version = "26.6.30" }
-bcinr-pddl = { version = "=26.7.28" }
-bcinr-powl = { version = "=26.7.28" }
+bcinr-pddl = { git = "https://github.com/seanchatmangpt/bcinr", rev = "d52e7ca222577b4ee88f1766eaf44b217587172b", package = "bcinr-pddl" }
+bcinr-powl = { git = "https://github.com/seanchatmangpt/bcinr", rev = "d52e7ca222577b4ee88f1766eaf44b217587172b", package = "bcinr-powl" }
 thiserror = "2"
 # compat owns receipt identity; all chatman hashing routes through wasm4pm_compat::hash.
 # Exact published identities reconstructed from Praxis's extraction-source Cargo.lock.
