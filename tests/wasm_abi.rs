@@ -348,6 +348,35 @@ fn law_pipeline_runs_end_to_end_in_wasm() {
 }
 
 #[test]
+fn plan_admission_runs_in_wasm() {
+    let at = |o: &str| format!("<urn:p:robot> <urn:p:at> <urn:p:{o}> .\n");
+    let mv =
+        |n: &str, f: &str, t: &str| json!({"name": n, "pre": at(f), "add": at(t), "del": at(f)});
+    let steps = |mid_pre: &str| {
+        json!([{"step": "plan", "plan": {
+            "actions": [mv("a-b", "a", "b"),
+                        {"name": "b-c", "pre": at(mid_pre), "add": at("c"), "del": at("b")}],
+            "goal": at("c")}}])
+    };
+    let r = ok(json!({"op": "law",
+        "data": {"text": at("a"), "dialect": "ntriples"}, "steps": steps("b")}));
+    let receipts = r["receipts"].as_array().unwrap();
+    assert_eq!(receipts.len(), 2);
+    assert_eq!(receipts[0]["step"], "plan-action");
+    assert_eq!(receipts[0]["child"], receipts[1]["parent"]);
+    assert_eq!(r["states"].as_array().unwrap().len(), 3);
+
+    let refused = call(json!({"op": "law",
+        "data": {"text": at("a"), "dialect": "ntriples"}, "steps": steps("z")}));
+    assert_eq!(refused["ok"], false);
+    let msg = refused["error"]["message"].as_str().unwrap();
+    assert!(
+        msg.contains("plan refused at step 1") && msg.contains("urn:p:z"),
+        "{msg}"
+    );
+}
+
+#[test]
 fn protocol_errors_are_json_not_traps() {
     let r = host()
         .lock()

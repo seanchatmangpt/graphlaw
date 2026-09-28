@@ -29,6 +29,8 @@ pub enum Step<'a> {
     DeriveN3 { rules: &'a str },
     /// Run a knowledge-hook pack to a fixpoint.
     Hooks { pack: &'a crate::hooks::HookPack },
+    /// Replay a candidate plan; refused at the first violated precondition.
+    Plan { plan: &'a crate::plan::Plan },
     /// RDFS entailment closure.
     EntailRdfs,
     /// OWL 2 RL entailment closure.
@@ -41,6 +43,7 @@ impl Step<'_> {
             Step::AdmitShacl { .. } => "admit:shacl",
             Step::DeriveN3 { .. } => "derive:n3",
             Step::Hooks { .. } => "derive:hooks",
+            Step::Plan { .. } => "admit:plan",
             Step::EntailRdfs => "derive:rdfs",
             Step::EntailOwlRl => "derive:owl-rl",
         }
@@ -51,6 +54,7 @@ impl Step<'_> {
             Step::AdmitShacl { .. } => "SHACL",
             Step::DeriveN3 { .. } => "Notation3",
             Step::Hooks { .. } => "Knowledge hooks (kh: orchestration over SPARQL)",
+            Step::Plan { .. } => "RDF 1.2 / codecs / storage IR",
             Step::EntailRdfs | Step::EntailOwlRl => "RDF/RDFS/OWL-RL entailment",
         }
     }
@@ -72,6 +76,13 @@ pub struct Receipt {
 pub enum LawError {
     /// The SHACL gate found violations.
     NotAdmitted { violations: usize },
+    /// A candidate plan failed replay: `action` (index `index`, or `<goal>`
+    /// one past the last action) is missing the listed N-Quads lines.
+    PlanRefused {
+        index: usize,
+        action: String,
+        missing: Vec<String>,
+    },
     /// An upstream engine or routing refused the input.
     Refused(Refusal),
 }
@@ -82,6 +93,15 @@ impl std::fmt::Display for LawError {
             LawError::NotAdmitted { violations } => {
                 write!(f, "SHACL admission refused: {violations} violation(s)")
             }
+            LawError::PlanRefused {
+                index,
+                action,
+                missing,
+            } => write!(
+                f,
+                "plan refused at step {index} (`{action}`): {} unmet triple(s)",
+                missing.len()
+            ),
             LawError::Refused(r) => write!(f, "{r}"),
         }
     }
@@ -175,6 +195,7 @@ impl LawState {
                 self.clone()
             }
             Step::Hooks { pack } => pack.materialize(self)?.state,
+            Step::Plan { plan } => plan.admit(self)?.state,
             Step::EntailRdfs | Step::EntailOwlRl => {
                 let plan = if matches!(step, Step::EntailRdfs) {
                     purrdf::entail::Materialization::Rdfs
