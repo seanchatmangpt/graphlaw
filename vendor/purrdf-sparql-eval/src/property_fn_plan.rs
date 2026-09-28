@@ -1,0 +1,1273 @@
+// SPDX-FileCopyrightText: 2026 Blackcat Informatics® Inc. <paudley@blackcatinformatics.ca>
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
+//! **Prepare-time feasibility ordering** for property-function calls: the rewrite that
+//! turns a group's textual order into one the registered relations can actually serve.
+//!
+//! A relation is rarely computable in every direction (see
+//! [`crate::property_fn`]). `split(?whole, ?part)` enumerates parts from a whole and
+//! not the reverse; a full-text relation wants its needle bound. So the order a query
+//! author writes is not necessarily an order the engine can run:
+//!
+//! ```text
+//! { ?doc ex:contains ("needle" ?score) . ?doc ex:section ex:intro }
+//! ```
+//!
+//! reads left to right as "invoke the relation with everything free, then filter", and
+//! for an `fb`-only relation that is not merely slow — it is infeasible. Ordering the
+//! data pattern first makes `?doc` bound and the call `bf`.
+//!
+//! # What this pass is, and is deliberately not
+//!
+//! It is **statistics-free and deterministic**. It reads only the algebra and the
+//! registry's declarations — never the dataset, never a cardinality estimate — so the
+//! order a query gets is a pure function of its text and the host's configuration, and
+//! two runs of the same query against different data plan identically. It is not a
+//! cost-based join planner: `crate::bgp` already reorders triple patterns inside a BGP
+//! using real cardinalities, and this pass never reaches inside one.
+//!
+//! # Where it runs, and why there
+//!
+//! At **prepare** time, on the parsed algebra, before evaluation begins — so the
+//! admission failures below (an unregistered IRI, an arity mismatch, an order no
+//! relation can serve) are raised before a governed execution has spent a single unit
+//! of its budget on a query that could never have run. A caller's ceiling is for the
+//! work its query does, not for discovering that the query is misconfigured.
+
+use purrdf_core::binding_pattern::BindingPattern;
+use purrdf_sparql_algebra::{
+    AggregateExpression, AggregateFunction, Expression, GraphPattern, Literal, NamedNodePattern,
+    OrderExpression, PropertyFunctionCall, Query, TermPattern, TriplePattern, Variable,
+};
+
+use crate::DetHashSet;
+use crate::agg_fn::{AggregateRegistry, ScalarvalKind, ScalarvalSpec};
+use crate::convert::literal_to_value;
+use crate::error::EvalError;
+use crate::expr::xsd_of;
+use crate::modifier::is_numeric_xsd;
+use crate::property_fn::{PfArity, PropertyFunctionRegistry};
+
+/// Which admission seam a [`plan_query`]/[`plan_where_pattern`] failure came from.
+///
+/// The planner admits two independent hazards in the same walk — a property-function
+/// call and a custom-aggregate call — and they are reported under two different
+/// diagnostic codes. A caller that reduced both to one opaque error (as this module
+/// used to) could only guess which contract to check a failure against; this is what a
+/// planner failure carries instead, so `crate::engine` and `crate::update`'s two
+/// admission call sites read it rather than hard-coding the property-function code for
+/// every failure this module can raise.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum PlanSeam {
+    /// A property-function call could not be admitted: an unregistered predicate IRI,
+    /// an arity mismatch between the call site and the relation's declaration, or a
+    /// chain no relation's declared modes can serve.
+    PropertyFunction,
+    /// A custom-aggregate call could not be admitted: an unregistered
+    /// `AggregateFunction::Custom` IRI, or a positional-argument count its registered
+    /// entry does not declare.
+    Aggregate,
+}
+
+/// A [`plan_query`]/[`plan_where_pattern`] admission failure, tagged with the
+/// [`PlanSeam`] that raised it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct PlanError {
+    pub(crate) seam: PlanSeam,
+    pub(crate) error: EvalError,
+}
+
+impl PlanError {
+    /// Tag `error` as a property-function admission failure.
+    fn property_function(error: EvalError) -> Self {
+        Self {
+            seam: PlanSeam::PropertyFunction,
+            error,
+        }
+    }
+
+    /// Tag `error` as a custom-aggregate admission failure.
+    fn aggregate(error: EvalError) -> Self {
+        Self {
+            seam: PlanSeam::Aggregate,
+            error,
+        }
+    }
+
+    /// The diagnostic code this failure must be reported under. The single chokepoint
+    /// both `crate::engine::PlanCache::prepare_with_relations` and
+    /// `crate::update::delete_insert` read, so the two admission call sites can never
+    /// again drift into hard-coding the wrong seam's code.
+    pub(crate) const fn diagnostic_code(&self) -> &'static str {
+        match self.seam {
+            PlanSeam::PropertyFunction => "native-sparql-property-function",
+            PlanSeam::Aggregate => "native-sparql-aggregate-function",
+        }
+    }
+}
+
+impl core::fmt::Display for PlanError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Display::fmt(&self.error, f)
+    }
+}
+
+/// Rewrite every property-function chain in `query` into a feasible order.
+///
+/// The query is returned unchanged — and no work is done at all — when it carries no
+/// call node, which is every query on a host that has not configured the seam.
+///
+/// # Errors
+///
+/// A [`PlanError`] tagged [`PlanSeam::PropertyFunction`] for an unregistered predicate
+/// IRI, an arity mismatch between the call site and the relation's declaration, or a
+/// chain no total order can serve. The same class of refusal, tagged
+/// [`PlanSeam::Aggregate`], for an `AggregateFunction::Custom(iri)` reached anywhere in
+/// `query`: an unregistered IRI, or a positional-argument count `agg_registry`'s
+/// registered entry does not declare — refused HERE, at prepare time, before any governor
+/// charge (see [`plan_aggregate`]).
+pub(crate) fn plan_query(
+    query: &Query,
+    relations: &PropertyFunctionRegistry,
+    agg_registry: &AggregateRegistry,
+) -> Result<Option<Query>, PlanError> {
+    let pattern = match query {
+        Query::Select { pattern, .. }
+        | Query::Ask { pattern, .. }
+        | Query::Construct { pattern, .. }
+        | Query::Describe { pattern, .. } => pattern,
+    };
+    let Some(planned) = plan_where_pattern(pattern, relations, agg_registry)? else {
+        return Ok(None);
+    };
+    let mut planned_query = query.clone();
+    match &mut planned_query {
+        Query::Select { pattern, .. }
+        | Query::Ask { pattern, .. }
+        | Query::Construct { pattern, .. }
+        | Query::Describe { pattern, .. } => *pattern = planned,
+    }
+    Ok(Some(planned_query))
+}
+
+/// [`plan_query`] on a standalone [`GraphPattern`] rather than a full [`Query`] — the
+/// entry an UPDATE's `WHERE` clause uses, because a `DELETE`/`INSERT … WHERE`
+/// operation has no `Query` wrapper to hand in. Same admission (unregistered IRI,
+/// arity mismatch, an infeasible chain), same feasibility rewrite, same "untouched,
+/// no work at all, when the pattern carries no call node" contract — an UPDATE
+/// WHERE is a triple-pattern context exactly like a query's, so it is planned
+/// exactly like one.
+///
+/// Returns `Ok(None)` unchanged (not merely equal) when `pattern` carries no call
+/// node, so a caller can keep evaluating its own borrowed `pattern` rather than a
+/// clone that happens to match it.
+///
+/// # Errors
+///
+/// A [`PlanError`] tagged [`PlanSeam::PropertyFunction`] for an unregistered predicate
+/// IRI, an arity mismatch between the call site and the relation's declaration, or a
+/// chain no total order can serve. The same class of refusal, tagged
+/// [`PlanSeam::Aggregate`], for a reachable `AggregateFunction::Custom` — see
+/// [`plan_query`]'s doc.
+pub(crate) fn plan_where_pattern(
+    pattern: &GraphPattern,
+    relations: &PropertyFunctionRegistry,
+    agg_registry: &AggregateRegistry,
+) -> Result<Option<GraphPattern>, PlanError> {
+    // Either hazard alone must still run the walk: a query with a `Custom`
+    // aggregate and no property-function call would otherwise skip this pass
+    // entirely on the property-function-only check, and its admission (below,
+    // via `plan_aggregate`) would never happen.
+    if !crate::property_fn_eval::pattern_needs_admission(pattern) {
+        return Ok(None);
+    }
+    // The rewriting walk is recursive just like evaluation. Apply its existing
+    // execution envelope before cloning or traversing an admitted call chain.
+    crate::governor::soundness::validate_graph_pattern_depth(pattern)
+        .map_err(PlanError::property_function)?;
+    plan_pattern(pattern, relations, agg_registry, &DetHashSet::default()).map(Some)
+}
+
+// ---------------------------------------------------------------------------
+// The chain
+// ---------------------------------------------------------------------------
+
+/// One member of a chain: the operand, and how it re-attaches when the chain is
+/// rebuilt.
+#[derive(Debug)]
+struct Atom<'a> {
+    /// The pattern itself.
+    pattern: &'a GraphPattern,
+    /// The call, when this atom is one — the only kind that can be infeasible.
+    call: Option<&'a PropertyFunctionCall>,
+    /// The atom's position in the chain as written, the last tie-break.
+    position: usize,
+}
+
+/// Rewrite `pattern`, and everything under it, into a feasible order.
+///
+/// `outer` is the set of variables CERTAINLY bound by the enclosing context — see
+/// [`collect_certainly_bound`] for what earns a variable a place in it.
+fn plan_pattern(
+    pattern: &GraphPattern,
+    relations: &PropertyFunctionRegistry,
+    agg_registry: &AggregateRegistry,
+    outer: &DetHashSet<Variable>,
+) -> Result<GraphPattern, PlanError> {
+    // Compiler-produced algebra may be a bare call, without the parser's Lateral
+    // wrapper. Apply the same admission as a chain member before cloning it.
+    if let GraphPattern::PropertyFunction(call) = pattern {
+        if admitted_row_bound(call, relations, outer)?.is_none() {
+            return Err(stuck(
+                &[Atom {
+                    pattern,
+                    call: Some(call),
+                    position: 0,
+                }],
+                relations,
+                outer,
+            ));
+        }
+        return Ok(pattern.clone());
+    }
+    // A chain is a left-deep spine of `Lateral`s (a call's join) and `Join`s (the
+    // residual data written between two calls), which is exactly the shape the parser
+    // assembles a triples block containing calls into. Anything else recurses
+    // structurally.
+    let mut atoms = Vec::new();
+    if collect_chain(pattern, &mut atoms) && atoms.iter().any(|atom| atom.call.is_some()) {
+        return order_chain(atoms, relations, agg_registry, outer);
+    }
+    map_children(pattern, relations, agg_registry, outer)
+}
+
+/// Peel the chain spine, pushing its atoms in TEXTUAL order (base first).
+///
+/// Returns whether `pattern` is a chain node at all: a bare `Bgp` or any other leaf is
+/// not, so an ordinary query never allocates past the empty vector above.
+fn collect_chain<'a>(pattern: &'a GraphPattern, atoms: &mut Vec<Atom<'a>>) -> bool {
+    match pattern {
+        GraphPattern::Lateral { left, right } | GraphPattern::Join { left, right } => {
+            let call = match (&**right, pattern) {
+                (GraphPattern::PropertyFunction(call), GraphPattern::Lateral { .. }) => Some(call),
+                // A call under a `Join` rather than a `Lateral` would lose the
+                // dependency the `Lateral` encodes, so it is not treated as a chain
+                // member; the structural recursion handles it.
+                (GraphPattern::PropertyFunction(_), _) => return false,
+                _ => None,
+            };
+            if !collect_chain(left, atoms) {
+                push_atom(left, None, atoms);
+            }
+            push_atom(right, call, atoms);
+            true
+        }
+        _ => false,
+    }
+}
+
+/// Push one chain member, dropping the EMPTY `Bgp` the parser leaves where a call opens
+/// its block. It is the identity table `Z`, so joining it back in would only widen the
+/// rebuilt tree with a node that binds nothing and matches everything.
+fn push_atom<'a>(
+    pattern: &'a GraphPattern,
+    call: Option<&'a PropertyFunctionCall>,
+    atoms: &mut Vec<Atom<'a>>,
+) {
+    if matches!(pattern, GraphPattern::Bgp { patterns } if patterns.is_empty()) {
+        return;
+    }
+    let position = atoms.len();
+    atoms.push(Atom {
+        pattern,
+        call,
+        position,
+    });
+}
+
+/// The greedy feasibility order over one chain's atoms, and the rebuilt spine.
+///
+/// The algorithm, in full:
+///
+/// 1. Start with the variables certainly bound by the enclosing context (`outer`).
+/// 2. Repeatedly pick the next atom that is FEASIBLE given what is bound so far. A
+///    non-call atom is always feasible; a call is feasible iff its relation
+///    [`admits`](crate::property_fn::PropertyFunction::admits) the access pattern in
+///    which a position is bound exactly when its term is a constant, or a variable
+///    already bound by an earlier atom.
+/// 3. Break ties by lowest declared `rows_per_invocation`, then by IRI, then by textual
+///    position — every one of them total, so the chosen order is a pure function of the
+///    input.
+/// 4. Add the chosen atom's certainly-bound variables to the bound set and repeat.
+///
+/// A non-call atom sorts as `rows_per_invocation = 0` under an empty IRI, so data
+/// patterns are scheduled ahead of calls. That is the whole point of the pass: a data
+/// atom can never be infeasible and can only ever ADD bindings, so running it first
+/// maximizes the access patterns available to the calls that follow — and it costs
+/// nothing, because a chain member is evaluated once regardless of where it sits.
+fn order_chain(
+    atoms: Vec<Atom<'_>>,
+    relations: &PropertyFunctionRegistry,
+    agg_registry: &AggregateRegistry,
+    outer: &DetHashSet<Variable>,
+) -> Result<GraphPattern, PlanError> {
+    let mut bound = outer.clone();
+    let mut remaining: Vec<Atom<'_>> = atoms;
+    let mut ordered: Vec<&GraphPattern> = Vec::with_capacity(remaining.len());
+    let mut is_call: Vec<bool> = Vec::with_capacity(remaining.len());
+    // The set `bound` held at the moment each atom was CHOSEN — i.e. exactly the
+    // variables its own subtree is allowed to see when it is recursively planned
+    // below. Capturing it here (rather than reusing the fully-accumulated `bound`
+    // after the loop) is what keeps a call NESTED inside an earlier atom (a `Union`
+    // arm's own chain, say) from being planned as though sibling atoms chosen AFTER
+    // it — and everything they bind — were already in scope.
+    let mut bound_before: Vec<DetHashSet<Variable>> = Vec::with_capacity(remaining.len());
+
+    while !remaining.is_empty() {
+        let mut best: Option<(usize, (u64, &str, usize))> = None;
+        for (index, atom) in remaining.iter().enumerate() {
+            let Some(call) = atom.call else {
+                let key = (0_u64, "", atom.position);
+                if best.is_none_or(|(_, current)| key < current) {
+                    best = Some((index, key));
+                }
+                continue;
+            };
+            let Some(rows_bound) = admitted_row_bound(call, relations, &bound)? else {
+                continue;
+            };
+            let key = (rows_bound, call.iri.as_str(), atom.position);
+            if best.is_none_or(|(_, current)| key < current) {
+                best = Some((index, key));
+            }
+        }
+        let Some((index, _)) = best else {
+            return Err(stuck(&remaining, relations, &bound));
+        };
+        let atom = remaining.remove(index);
+        bound_before.push(bound.clone());
+        collect_certainly_bound(atom.pattern, &mut bound);
+        ordered.push(atom.pattern);
+        is_call.push(atom.call.is_some());
+    }
+
+    // Rebuild the left-deep spine in the chosen order: a call re-attaches through a
+    // `Lateral` (it depends on what is to its left), everything else through a `Join`.
+    // Each atom is planned against ITS OWN `bound_before` snapshot — never the final,
+    // fully-accumulated `bound` — so a chain nested inside atom i sees exactly the
+    // variables atoms `0..i` bound, matching the set it was chosen against above.
+    let mut chain: Option<GraphPattern> = None;
+    for ((pattern, call), scope) in ordered.into_iter().zip(is_call).zip(bound_before) {
+        let planned = plan_pattern(pattern, relations, agg_registry, &scope)?;
+        chain = Some(match chain {
+            None => planned,
+            Some(left) => {
+                if call {
+                    GraphPattern::Lateral {
+                        left: Box::new(left),
+                        right: Box::new(planned),
+                    }
+                } else {
+                    GraphPattern::Join {
+                        left: Box::new(left),
+                        right: Box::new(planned),
+                    }
+                }
+            }
+        });
+    }
+    Ok(chain.unwrap_or(GraphPattern::Bgp { patterns: vec![] }))
+}
+
+/// The invocation access pattern a call would have with `bound` already established: a
+/// position is bound iff its term is fully determined by constants and bound variables.
+///
+/// Shared with the plan survey (`crate::bgp::survey_pattern_plans`), which needs the same
+/// answer to read the relation's declared row bound for the mode a call is actually
+/// invoked in: a relation that is cheap bound and expensive free would otherwise be
+/// admitted, or refused, against a mode the query never uses.
+pub(crate) fn invocation_mode(
+    call: &PropertyFunctionCall,
+    bound: &DetHashSet<Variable>,
+) -> BindingPattern {
+    BindingPattern::from_bools(
+        call.subject_args
+            .iter()
+            .chain(&call.object_args)
+            .map(|term| term_is_bound(term, bound)),
+    )
+}
+
+/// Whether an argument term denotes a known value under `bound`.
+///
+/// A blank node is a non-distinguished variable and is never bound; a quoted triple is
+/// bound only when every component is.
+fn term_is_bound(term: &TermPattern, bound: &DetHashSet<Variable>) -> bool {
+    match term {
+        TermPattern::NamedNode(_) | TermPattern::Literal(_) => true,
+        TermPattern::BlankNode(_) => false,
+        TermPattern::Variable(variable) => bound.contains(variable),
+        TermPattern::Triple(triple) => {
+            term_is_bound(&triple.subject, bound)
+                && match &triple.predicate {
+                    NamedNodePattern::NamedNode(_) => true,
+                    NamedNodePattern::Variable(variable) => bound.contains(variable),
+                }
+                && term_is_bound(&triple.object, bound)
+        }
+    }
+}
+
+/// The admission failure for a chain with no feasible total order, naming the stuck
+/// atoms, the positions they cannot fill, and the modes they declare.
+fn stuck(
+    remaining: &[Atom<'_>],
+    relations: &PropertyFunctionRegistry,
+    bound: &DetHashSet<Variable>,
+) -> PlanError {
+    let mut described: Vec<String> = Vec::new();
+    for atom in remaining {
+        let Some(call) = atom.call else {
+            continue;
+        };
+        let mode = invocation_mode(call, bound);
+        let free: Vec<String> = mode
+            .code()
+            .char_indices()
+            .filter(|&(_, code)| code == 'f')
+            .map(|(position, _)| position.to_string())
+            .collect();
+        // Best-effort: this is already an admission failure being reported, so a
+        // relation whose `modes` ALSO panics degrades the diagnostic to an empty
+        // declared-modes list rather than losing the admission failure itself.
+        let declared: Vec<String> = relations
+            .resolve(&call.iri)
+            .and_then(|relation| {
+                crate::property_fn::declaration_contained(&call.iri, "declared modes", || {
+                    relation
+                        .modes()
+                        .iter()
+                        .copied()
+                        .map(BindingPattern::code)
+                        .collect::<Vec<_>>()
+                })
+                .ok()
+            })
+            .unwrap_or_default();
+        described.push(format!(
+            "<{}> reachable only as `{}` (free position(s) {}), declaring [{}]",
+            call.iri,
+            mode.code(),
+            if free.is_empty() {
+                "none".to_owned()
+            } else {
+                free.join(", ")
+            },
+            declared.join(", ")
+        ));
+    }
+    PlanError::property_function(EvalError::function(format!(
+        "no feasible evaluation order exists for this group's property-function call(s): {}",
+        described.join("; ")
+    )))
+}
+
+/// Resolve a call's IRI, or report the admission failure that an unregistered IRI is.
+///
+/// An EMPTY registry is the same failure: the parser mints a call node only under a
+/// caller-configured namespace, so a call with nothing to resolve against is a host
+/// configuration that names a relation it never supplied — never a silently empty one.
+fn resolve<'r>(
+    call: &PropertyFunctionCall,
+    relations: &'r PropertyFunctionRegistry,
+) -> Result<&'r std::sync::Arc<dyn crate::property_fn::PropertyFunction>, PlanError> {
+    relations.resolve(&call.iri).ok_or_else(|| {
+        PlanError::property_function(EvalError::function(format!(
+            "no property function is registered for <{}>",
+            call.iri
+        )))
+    })
+}
+
+/// Resolve and admit a call under its actual lexical binding scope. `None` means
+/// its access mode is infeasible; a chain may first bind more variables.
+fn admitted_row_bound(
+    call: &PropertyFunctionCall,
+    relations: &PropertyFunctionRegistry,
+    bound: &DetHashSet<Variable>,
+) -> Result<Option<u64>, PlanError> {
+    let relation = resolve(call, relations)?;
+    let arity = crate::property_fn::declaration_contained(&call.iri, "arity", || relation.arity())
+        .map_err(PlanError::property_function)?;
+    check_arity(call, arity)?;
+    let mode = invocation_mode(call, bound);
+    let admitted = crate::property_fn::declaration_contained(&call.iri, "declared modes", || {
+        relation
+            .modes()
+            .iter()
+            .any(|declared| declared.subsumes(mode))
+    })
+    .map_err(PlanError::property_function)?;
+    if !admitted {
+        return Ok(None);
+    }
+    crate::property_fn::declaration_contained(&call.iri, "row bound", || {
+        relation.rows_per_invocation(mode)
+    })
+    .map(Some)
+    .map_err(PlanError::property_function)
+}
+
+/// Check a call site's argument counts against the relation's declaration.
+fn check_arity(call: &PropertyFunctionCall, declared: PfArity) -> Result<(), PlanError> {
+    let supplied = PfArity::new(call.subject_args.len(), call.object_args.len());
+    if declared == supplied {
+        return Ok(());
+    }
+    Err(PlanError::property_function(EvalError::function(format!(
+        "property function <{}> is declared with {declared} argument(s); the call site supplies \
+         {supplied}",
+        call.iri
+    ))))
+}
+
+// ---------------------------------------------------------------------------
+// Structural recursion
+// ---------------------------------------------------------------------------
+
+/// Rewrite every child of a non-chain node, threading the variables each child's left
+/// siblings certainly bind.
+fn map_children(
+    pattern: &GraphPattern,
+    relations: &PropertyFunctionRegistry,
+    agg_registry: &AggregateRegistry,
+    outer: &DetHashSet<Variable>,
+) -> Result<GraphPattern, PlanError> {
+    let recurse = |child: &GraphPattern, outer: &DetHashSet<Variable>| {
+        plan_pattern(child, relations, agg_registry, outer).map(Box::new)
+    };
+    Ok(match pattern {
+        GraphPattern::Bgp { .. }
+        | GraphPattern::Path { .. }
+        | GraphPattern::Values { .. }
+        | GraphPattern::PropertyFunction(_) => pattern.clone(),
+        // The right side of a join sees what the left side certainly binds; a `Lateral`
+        // makes that correlation explicit, and an ordinary `Join` is evaluated with the
+        // same left-to-right binding availability.
+        GraphPattern::Join { left, right } => {
+            let mut inner = outer.clone();
+            collect_certainly_bound(left, &mut inner);
+            GraphPattern::Join {
+                left: recurse(left, outer)?,
+                right: recurse(right, &inner)?,
+            }
+        }
+        GraphPattern::Lateral { left, right } => {
+            let mut inner = outer.clone();
+            collect_certainly_bound(left, &mut inner);
+            GraphPattern::Lateral {
+                left: recurse(left, outer)?,
+                right: recurse(right, &inner)?,
+            }
+        }
+        // `OPTIONAL`'s right side and `MINUS`'s right side are evaluated against the
+        // left, but their own bindings do NOT escape as certain, which
+        // `certainly_bound` accounts for; the correlation INTO them is still real.
+        GraphPattern::LeftJoin {
+            left,
+            right,
+            expression,
+        } => {
+            let mut inner = outer.clone();
+            collect_certainly_bound(left, &mut inner);
+            // The inline condition is evaluated only on candidate JOINED rows, so
+            // both sides' bindings are available to it.
+            let mut condition_scope = inner.clone();
+            collect_certainly_bound(right, &mut condition_scope);
+            GraphPattern::LeftJoin {
+                left: recurse(left, outer)?,
+                right: recurse(right, &inner)?,
+                expression: expression
+                    .as_ref()
+                    .map(|expr| plan_expression(expr, relations, agg_registry, &condition_scope))
+                    .transpose()?,
+            }
+        }
+        GraphPattern::Minus { left, right } => GraphPattern::Minus {
+            left: recurse(left, outer)?,
+            right: recurse(right, outer)?,
+        },
+        // A `UNION` branch cannot rely on its sibling.
+        GraphPattern::Union { left, right } => GraphPattern::Union {
+            left: recurse(left, outer)?,
+            right: recurse(right, outer)?,
+        },
+        // A `FILTER`'s expression is evaluated over the rows its inner pattern
+        // produced, so an `EXISTS` inside it sees everything that pattern certainly
+        // binds — which is exactly what makes a relation inside a correlated `EXISTS`
+        // invocable with the outer row's values.
+        GraphPattern::Filter { expr, inner } => {
+            let mut scope = outer.clone();
+            collect_certainly_bound(inner, &mut scope);
+            GraphPattern::Filter {
+                expr: plan_expression(expr, relations, agg_registry, &scope)?,
+                inner: recurse(inner, outer)?,
+            }
+        }
+        GraphPattern::Extend {
+            inner,
+            variable,
+            expression,
+        } => {
+            let mut scope = outer.clone();
+            collect_certainly_bound(inner, &mut scope);
+            GraphPattern::Extend {
+                inner: recurse(inner, outer)?,
+                variable: variable.clone(),
+                expression: plan_expression(expression, relations, agg_registry, &scope)?,
+            }
+        }
+        GraphPattern::Unfold {
+            inner,
+            expression,
+            element,
+            companion,
+        } => {
+            let mut scope = outer.clone();
+            collect_certainly_bound(inner, &mut scope);
+            GraphPattern::Unfold {
+                inner: recurse(inner, outer)?,
+                expression: plan_expression(expression, relations, agg_registry, &scope)?,
+                element: element.clone(),
+                companion: companion.clone(),
+            }
+        }
+        GraphPattern::Graph { name, inner } => GraphPattern::Graph {
+            name: name.clone(),
+            inner: recurse(inner, outer)?,
+        },
+        GraphPattern::OrderBy { inner, expression } => {
+            let mut scope = outer.clone();
+            collect_certainly_bound(inner, &mut scope);
+            GraphPattern::OrderBy {
+                inner: recurse(inner, outer)?,
+                expression: expression
+                    .iter()
+                    .map(|order| {
+                        Ok(match order {
+                            OrderExpression::Asc(expr) => OrderExpression::Asc(plan_expression(
+                                expr,
+                                relations,
+                                agg_registry,
+                                &scope,
+                            )?),
+                            OrderExpression::Desc(expr) => OrderExpression::Desc(plan_expression(
+                                expr,
+                                relations,
+                                agg_registry,
+                                &scope,
+                            )?),
+                        })
+                    })
+                    .collect::<Result<Vec<_>, PlanError>>()?,
+            }
+        }
+        // A sub-`SELECT` is its own scope: a variable bound outside it is not visible
+        // inside, so the correlation set is emptied on the way in.
+        GraphPattern::Project { inner, variables } => GraphPattern::Project {
+            inner: recurse(inner, &DetHashSet::default())?,
+            variables: variables.clone(),
+        },
+        GraphPattern::Distinct { inner } => GraphPattern::Distinct {
+            inner: recurse(inner, outer)?,
+        },
+        GraphPattern::Reduced { inner } => GraphPattern::Reduced {
+            inner: recurse(inner, outer)?,
+        },
+        GraphPattern::Slice {
+            inner,
+            start,
+            length,
+        } => GraphPattern::Slice {
+            inner: recurse(inner, outer)?,
+            start: *start,
+            length: *length,
+        },
+        GraphPattern::Group {
+            inner,
+            variables,
+            aggregates,
+        } => {
+            let mut scope = outer.clone();
+            collect_certainly_bound(inner, &mut scope);
+            GraphPattern::Group {
+                inner: recurse(inner, outer)?,
+                variables: variables.clone(),
+                aggregates: aggregates
+                    .iter()
+                    .map(|(variable, aggregate)| {
+                        Ok((
+                            variable.clone(),
+                            plan_aggregate(aggregate, relations, agg_registry, &scope)?,
+                        ))
+                    })
+                    .collect::<Result<Vec<_>, PlanError>>()?,
+            }
+        }
+        // A `SERVICE` body is forwarded to a remote endpoint rather than evaluated
+        // here, and `crate::remote` refuses to forward a call at all — so its body is
+        // left exactly as written.
+        GraphPattern::Service {
+            name,
+            inner,
+            silent,
+        } => GraphPattern::Service {
+            name: name.clone(),
+            inner: inner.clone(),
+            silent: *silent,
+        },
+    })
+}
+
+/// Rewrite the patterns embedded in an expression (an `EXISTS`, recursively).
+fn plan_expression(
+    expr: &Expression,
+    relations: &PropertyFunctionRegistry,
+    agg_registry: &AggregateRegistry,
+    outer: &DetHashSet<Variable>,
+) -> Result<Expression, PlanError> {
+    // Either hazard alone must still walk `expr` — see `plan_where_pattern`'s
+    // identical widening for the same reason: an `EXISTS` whose inner `GROUP BY`
+    // has a `Custom` aggregate but no property-function call must still reach
+    // that aggregate's admission below (through the `Expression::Exists` arm).
+    if !crate::property_fn_eval::expression_reaches_property_function(expr)
+        && !crate::property_fn_eval::expression_reaches_custom_aggregate(expr)
+    {
+        return Ok(expr.clone());
+    }
+    let sub =
+        |expr: &Expression| plan_expression(expr, relations, agg_registry, outer).map(Box::new);
+    Ok(match expr {
+        // A correlated `EXISTS` sees its enclosing group's bindings, so `outer` carries
+        // straight in: that is what lets a relation inside one be invoked bound.
+        Expression::Exists(pattern) => Expression::Exists(Box::new(plan_pattern(
+            pattern,
+            relations,
+            agg_registry,
+            outer,
+        )?)),
+        Expression::Or(a, b) => Expression::Or(sub(a)?, sub(b)?),
+        Expression::And(a, b) => Expression::And(sub(a)?, sub(b)?),
+        Expression::Equal(a, b) => Expression::Equal(sub(a)?, sub(b)?),
+        Expression::SameTerm(a, b) => Expression::SameTerm(sub(a)?, sub(b)?),
+        Expression::Greater(a, b) => Expression::Greater(sub(a)?, sub(b)?),
+        Expression::GreaterOrEqual(a, b) => Expression::GreaterOrEqual(sub(a)?, sub(b)?),
+        Expression::Less(a, b) => Expression::Less(sub(a)?, sub(b)?),
+        Expression::LessOrEqual(a, b) => Expression::LessOrEqual(sub(a)?, sub(b)?),
+        Expression::Add(a, b) => Expression::Add(sub(a)?, sub(b)?),
+        Expression::Subtract(a, b) => Expression::Subtract(sub(a)?, sub(b)?),
+        Expression::Multiply(a, b) => Expression::Multiply(sub(a)?, sub(b)?),
+        Expression::Divide(a, b) => Expression::Divide(sub(a)?, sub(b)?),
+        Expression::UnaryPlus(a) => Expression::UnaryPlus(sub(a)?),
+        Expression::UnaryMinus(a) => Expression::UnaryMinus(sub(a)?),
+        Expression::Not(a) => Expression::Not(sub(a)?),
+        Expression::If(c, t, e) => Expression::If(sub(c)?, sub(t)?, sub(e)?),
+        Expression::In(needle, haystack) => Expression::In(
+            sub(needle)?,
+            haystack
+                .iter()
+                .map(|item| plan_expression(item, relations, agg_registry, outer))
+                .collect::<Result<Vec<_>, PlanError>>()?,
+        ),
+        Expression::Coalesce(items) => Expression::Coalesce(
+            items
+                .iter()
+                .map(|item| plan_expression(item, relations, agg_registry, outer))
+                .collect::<Result<Vec<_>, PlanError>>()?,
+        ),
+        Expression::FunctionCall(function, args) => Expression::FunctionCall(
+            function.clone(),
+            args.iter()
+                .map(|arg| plan_expression(arg, relations, agg_registry, outer))
+                .collect::<Result<Vec<_>, PlanError>>()?,
+        ),
+        Expression::NamedNode(_)
+        | Expression::Literal(_)
+        | Expression::Variable(_)
+        | Expression::Bound(_) => expr.clone(),
+    })
+}
+
+/// Rewrite the expression an aggregate reduces over, and — for
+/// [`AggregateFunction::Custom`] — ADMIT the call at prepare time: refuse an
+/// unregistered IRI, a positional-argument count `agg_registry`'s registered
+/// entry does not declare, or an invalid `; NAME=value` scalarval clause (see
+/// [`validate_scalarvals`]), before any governor charge. The built-in-vs-custom
+/// admission asymmetry mirrors `crate::property_fn_plan`'s own for a relation: a
+/// built-in's arity is checked structurally by the parser (`SUM`/`AVG`/…
+/// accept exactly one expression), so only `Custom`'s host-declared arity and
+/// scalarvals need checking here.
+///
+/// # Errors
+///
+/// A [`PlanError`] tagged [`PlanSeam::Aggregate`] naming the IRI, for an unregistered
+/// `AggregateFunction::Custom` IRI, a supplied argument count its registered entry's
+/// declared [`crate::user_fn::Arity`] does not accept, or an invalid scalarval (see
+/// [`validate_scalarvals`]'s docs for the four ways one is refused). Also propagates
+/// [`plan_expression`]'s own errors from rewriting the argument list.
+fn plan_aggregate(
+    aggregate: &AggregateExpression,
+    relations: &PropertyFunctionRegistry,
+    agg_registry: &AggregateRegistry,
+    outer: &DetHashSet<Variable>,
+) -> Result<AggregateExpression, PlanError> {
+    if let AggregateFunction::Custom(iri) = aggregate.function() {
+        let iri_str = iri.as_str();
+        let Some(custom) = agg_registry.resolve(iri_str) else {
+            return Err(PlanError::aggregate(EvalError::function(format!(
+                "no custom aggregate is registered for <{iri_str}>"
+            ))));
+        };
+        let declared = crate::agg_fn::arity_contained(custom.as_ref(), iri_str)
+            .map_err(PlanError::aggregate)?;
+        let supplied = aggregate.args().len();
+        if !declared.accepts(supplied) {
+            return Err(PlanError::aggregate(EvalError::function(format!(
+                "custom aggregate <{iri_str}> is declared with {declared} argument(s); the call \
+                 site supplies {supplied}"
+            ))));
+        }
+        let declared_scalarvals = crate::agg_fn::scalarvals_contained(custom.as_ref(), iri_str)
+            .map_err(PlanError::aggregate)?;
+        validate_scalarvals(iri_str, aggregate.scalarvals(), &declared_scalarvals)
+            .map_err(PlanError::aggregate)?;
+    }
+    let args = aggregate
+        .args()
+        .iter()
+        .map(|e| plan_expression(e, relations, agg_registry, outer))
+        .collect::<Result<Vec<_>, PlanError>>()?;
+    // A `FOLD`'s own sort keys are per-row expressions read from the same
+    // solutions its arguments are, so they must be planned too: a property
+    // function or custom aggregate reachable from `FOLD(?v ORDER BY f(?w))`
+    // would otherwise skip this walk's prepare-time admission entirely.
+    let order_by = aggregate
+        .order_by()
+        .iter()
+        .map(|order| plan_order_expression(order, relations, agg_registry, outer))
+        .collect::<Result<Vec<_>, PlanError>>()?;
+    // `plan_expression` rewrites each argument in place and never changes the
+    // argument COUNT, and planning a sort key never removes one, so this can
+    // never turn a valid `aggregate` into an invalid one — the
+    // `AggregateExpression::new` call below cannot fail.
+    Ok(AggregateExpression::new(
+        aggregate.function().clone(),
+        args,
+        aggregate.scalarvals().to_vec(),
+        order_by,
+        aggregate.distinct,
+    )
+    .expect("plan_expression preserves argument count, so arity stays valid"))
+}
+
+/// [`plan_expression`] lifted to one [`OrderExpression`] sort key, preserving
+/// its `ASC`/`DESC` direction.
+fn plan_order_expression(
+    order: &OrderExpression,
+    relations: &PropertyFunctionRegistry,
+    agg_registry: &AggregateRegistry,
+    outer: &DetHashSet<Variable>,
+) -> Result<OrderExpression, PlanError> {
+    Ok(match order {
+        OrderExpression::Asc(expr) => {
+            OrderExpression::Asc(plan_expression(expr, relations, agg_registry, outer)?)
+        }
+        OrderExpression::Desc(expr) => {
+            OrderExpression::Desc(plan_expression(expr, relations, agg_registry, outer)?)
+        }
+    })
+}
+
+/// Validate a [`AggregateFunction::Custom`] call's `; NAME=value` scalarval
+/// clauses (`supplied`) against `<iri>`'s registered
+/// [`crate::agg_fn::CustomAggregate::scalarvals`] declaration (`declared`), at
+/// PREPARE time — called from [`plan_aggregate`], before any governor charge.
+///
+/// Four ways a call is refused, checked in this order:
+/// 1. **Duplicate name** — the same upper-cased `NAME` supplied twice.
+/// 2. **Unknown name** — a supplied name `declared` does not list.
+/// 3. **Wrong-typed value** — a supplied value whose datatype does not match
+///    its [`ScalarvalSpec::kind`] (e.g. a string where [`ScalarvalKind::Numeric`]
+///    is declared).
+/// 4. **Missing required name** — every declared name is required (see
+///    [`crate::agg_fn::CustomAggregate::scalarvals`]'s docs): a `declared` name
+///    with no matching entry in `supplied`.
+///
+/// # Errors
+///
+/// [`EvalError::Function`] naming `iri` and the offending scalarval, for any of
+/// the four cases above.
+fn validate_scalarvals(
+    iri: &str,
+    supplied: &[(String, Literal)],
+    declared: &[ScalarvalSpec],
+) -> Result<(), EvalError> {
+    let mut seen: DetHashSet<&str> = DetHashSet::default();
+    for (name, value) in supplied {
+        if !seen.insert(name.as_str()) {
+            return Err(EvalError::function(format!(
+                "custom aggregate <{iri}> was supplied the scalarval `{name}` more than once"
+            )));
+        }
+        let Some(spec) = declared.iter().find(|spec| spec.name == name) else {
+            return Err(EvalError::function(format!(
+                "custom aggregate <{iri}> does not accept a scalarval named `{name}`"
+            )));
+        };
+        if !scalarval_value_matches_kind(value, spec.kind) {
+            return Err(EvalError::function(format!(
+                "custom aggregate <{iri}>'s scalarval `{name}` must be {}, found datatype \
+                 <{}>",
+                spec.kind.label(),
+                value.datatype().as_str()
+            )));
+        }
+    }
+    for spec in declared {
+        if !supplied.iter().any(|(name, _)| name == spec.name) {
+            return Err(EvalError::function(format!(
+                "custom aggregate <{iri}> requires a scalarval named `{}`, which the call site \
+                 did not supply",
+                spec.name
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Whether `value`'s datatype matches `kind` — the per-literal check
+/// [`validate_scalarvals`] applies to each supplied scalarval. Goes through the
+/// SAME [`purrdf_xsd`] numeric-tower classification (`xsd_of` + `is_numeric_xsd`)
+/// the evaluator itself uses to classify a runtime `TermValue`, rather than a
+/// hand-rolled datatype-IRI string comparison, so a numeric scalarval's
+/// admission rule can never drift from what the numeric tower actually accepts
+/// elsewhere in this crate.
+fn scalarval_value_matches_kind(value: &Literal, kind: ScalarvalKind) -> bool {
+    match kind {
+        ScalarvalKind::Numeric => xsd_of(&literal_to_value(value))
+            .as_ref()
+            .is_some_and(is_numeric_xsd),
+        ScalarvalKind::String => {
+            value.language().is_none()
+                && value.datatype().as_str() == purrdf_sparql_algebra::ast::XSD_STRING
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Certainly-bound variables
+// ---------------------------------------------------------------------------
+
+/// Add to `out` every variable `pattern` binds in **every** solution it produces.
+///
+/// This is deliberately narrower than a scope walk. A variable that is merely *in
+/// scope* may still be unbound in a given row (`OPTIONAL`'s right side, a `UNION` branch
+/// that does not mention it, a `BIND` whose expression errored), and treating one of
+/// those as bound would let this pass admit an invocation the evaluator then cannot
+/// make. Erring the other way is harmless: at worst a feasible order is missed and the
+/// query is refused at prepare time with a message that names exactly what could not be
+/// bound.
+pub(crate) fn collect_certainly_bound(pattern: &GraphPattern, out: &mut DetHashSet<Variable>) {
+    match pattern {
+        GraphPattern::Bgp { patterns } => {
+            for triple in patterns {
+                collect_triple_vars(triple, out);
+            }
+        }
+        GraphPattern::Path {
+            subject,
+            path: _,
+            object,
+        } => {
+            collect_term_vars(subject, out);
+            collect_term_vars(object, out);
+        }
+        // Every flattened argument position of a call receives a value on every row it
+        // emits, so its variables are certainly bound by it.
+        GraphPattern::PropertyFunction(call) => {
+            for term in call.subject_args.iter().chain(&call.object_args) {
+                collect_term_vars(term, out);
+            }
+        }
+        GraphPattern::Join { left, right } | GraphPattern::Lateral { left, right } => {
+            collect_certainly_bound(left, out);
+            collect_certainly_bound(right, out);
+        }
+        // The right side may contribute nothing to a row.
+        GraphPattern::LeftJoin { left, .. } | GraphPattern::Minus { left, right: _ } => {
+            collect_certainly_bound(left, out);
+        }
+        // Only what BOTH branches bind is bound in every row.
+        GraphPattern::Union { left, right } => {
+            let mut l = DetHashSet::default();
+            let mut r = DetHashSet::default();
+            collect_certainly_bound(left, &mut l);
+            collect_certainly_bound(right, &mut r);
+            out.extend(l.intersection(&r).cloned());
+        }
+        GraphPattern::Filter { expr: _, inner }
+        | GraphPattern::OrderBy {
+            inner,
+            expression: _,
+        }
+        | GraphPattern::Distinct { inner }
+        | GraphPattern::Reduced { inner }
+        | GraphPattern::Slice { inner, .. }
+        // A `BIND`'s own variable is NOT certain: an expression that errors leaves it
+        // unbound (SPARQL 1.1 §18.6), so only the inner pattern's bindings carry.
+        // `UNFOLD`s own targets are NOT certainly bound: a SEP-0009 `null` element
+        // (or a null map value) yields the row with that variable unbound, so only
+        // what the inner pattern certainly binds escapes — the same rule `Extend`
+        // follows for a `BIND` whose expression can error.
+        | GraphPattern::Unfold { inner, .. }
+        | GraphPattern::Extend { inner, .. } => collect_certainly_bound(inner, out),
+        GraphPattern::Graph { name, inner } => {
+            if let NamedNodePattern::Variable(variable) = name {
+                out.insert(variable.clone());
+            }
+            collect_certainly_bound(inner, out);
+        }
+        // Only what the projection keeps escapes, and only if the inner pattern bound
+        // it certainly.
+        GraphPattern::Project { inner, variables } => {
+            let mut inner_bound = DetHashSet::default();
+            collect_certainly_bound(inner, &mut inner_bound);
+            out.extend(
+                variables
+                    .iter()
+                    .filter(|variable| inner_bound.contains(*variable))
+                    .cloned(),
+            );
+        }
+        // A grouping key is bound in every group row; an aggregate's output may not be
+        // (an empty group's MIN is unbound).
+        GraphPattern::Group {
+            inner: _,
+            variables,
+            aggregates: _,
+        } => out.extend(variables.iter().cloned()),
+        // A `VALUES` cell may be UNDEF, and a remote endpoint may omit a column, so
+        // neither promises anything.
+        GraphPattern::Values { .. } | GraphPattern::Service { .. } => {}
+    }
+}
+
+/// Add a triple pattern's variables (recursing through quoted triples).
+fn collect_triple_vars(triple: &TriplePattern, out: &mut DetHashSet<Variable>) {
+    collect_term_vars(&triple.subject, out);
+    if let NamedNodePattern::Variable(variable) = &triple.predicate {
+        out.insert(variable.clone());
+    }
+    collect_term_vars(&triple.object, out);
+}
+
+/// Add a term position's variables (recursing through quoted triples).
+fn collect_term_vars(term: &TermPattern, out: &mut DetHashSet<Variable>) {
+    match term {
+        TermPattern::Variable(variable) => {
+            out.insert(variable.clone());
+        }
+        TermPattern::Triple(triple) => collect_triple_vars(triple, out),
+        TermPattern::NamedNode(_) | TermPattern::BlankNode(_) | TermPattern::Literal(_) => {}
+    }
+}
+
+// ---------------------------------------------------------------------------
+// The registry fingerprint
+// ---------------------------------------------------------------------------
+
+/// A deterministic fingerprint of everything about `relations` that can change either
+/// the plan this module produces OR the answer/parallel-safety of the execution that
+/// runs it: the registry's own [`RegistryId`](crate::registry_id::RegistryId), followed
+/// by every registered IRI's arity, its declared volatility, and its declared modes with
+/// their row bounds, IRI-sorted.
+///
+/// # The instance id comes first, and is load-bearing
+///
+/// Declared metadata alone cannot tell two registries apart when they happen to agree on
+/// every declaration for a shared IRI while resolving it to two DIFFERENT
+/// [`PropertyFunction`](crate::property_fn::PropertyFunction) implementations — two
+/// relations can declare the identical arity, volatility, and modes while returning
+/// entirely different rows. The [`RegistryId`](crate::registry_id::RegistryId) each
+/// registry mints at construction ([`PropertyFunctionRegistry::instance_id`]) closes
+/// that hole: two registries can never share a fingerprint unless they are the SAME
+/// instance (or a [`Clone`] of it, which shares the identical
+/// `Arc<dyn PropertyFunction>` implementations — see that type's docs), regardless of
+/// how identical their declarations read.
+///
+/// This belongs in the plan cache's key. The rewrite above is a function of the query
+/// text AND the registry's declarations, so two differently-configured — or merely
+/// differently CONSTRUCTED — registries can order the same text differently, and a cache
+/// keyed on the text alone would hand the second host the first host's plan. Volatility
+/// belongs here for a reason the ORDERING pass never sees: it is not read while
+/// planning, but it IS read at evaluation time to decide whether a call may run on a
+/// fork-join worker (see [`Volatility`](crate::user_fn::Volatility)), so two registries
+/// that agree on every arity and mode but disagree about which relation is stable must
+/// still be treated as two distinct configurations — sharing a cache entry between them
+/// would be silent only until one relation actually depended on sequential evaluation.
+///
+/// Derived from [`PropertyFunctionRegistry::describe`], which is already IRI-sorted, so
+/// the content half of the fingerprint is a pure function of the registry's contents
+/// rather than of its construction order (the instance id half is, by construction, a
+/// pure function of WHICH construction). Also the identity a governed receipt carries
+/// (see `RelationIdentity` in `crate::governed`) — the same reason it belongs in the
+/// cache key applies to the receipt: two registries that produce different fingerprints
+/// can produce different answers, so a receipt that cannot tell them apart is not a
+/// receipt.
+///
+/// # Errors
+///
+/// [`EvalError::Function`] if a registered relation's declaration methods panic —
+/// [`PropertyFunctionRegistry::describe`]'s own failure, propagated unchanged. Never
+/// raised when `relations` is empty (which [`PropertyFunctionRegistry::EMPTY`] — the
+/// canonical "no registry" value — always is): that case returns before any
+/// relation's declaration is read at all.
+pub(crate) fn registry_fingerprint(
+    relations: &PropertyFunctionRegistry,
+) -> Result<String, EvalError> {
+    if relations.is_empty() {
+        return Ok(String::new());
+    }
+    let registry = relations;
+    let mut out = String::new();
+    out.push_str(&registry.instance_id().stable_encoding().to_string());
+    out.push('\u{5}');
+    for descriptor in registry.describe()? {
+        out.push_str(&descriptor.iri);
+        out.push('\u{2}');
+        out.push_str(&descriptor.subject_arity.to_string());
+        out.push(',');
+        out.push_str(&descriptor.object_arity.to_string());
+        out.push('\u{2}');
+        out.push_str(descriptor.volatility.label());
+        for mode in &descriptor.modes {
+            out.push('\u{3}');
+            out.push_str(&mode.code);
+            out.push(':');
+            out.push_str(&mode.rows_per_invocation.to_string());
+        }
+        out.push('\u{4}');
+    }
+    Ok(out)
+}
+
+#[cfg(test)]
+mod registry_fingerprint_tests {
+    use std::sync::Arc;
+
+    use super::registry_fingerprint;
+    use crate::property_fn::{MemoryRelation, PropertyFunctionRegistry};
+
+    const EX_REL: &str = "http://example.org/ns#rel";
+
+    /// [`PropertyFunctionRegistry::EMPTY`] (the canonical "no registry" value
+    /// [`crate::engine::QueryOptions::property_functions`]/[`crate::eval::EvalCtx::property_functions`]/[`crate::parallel::SafetyRegistries::relations`]
+    /// now carry in place of `Option::None`) and a freshly built, still-empty
+    /// [`PropertyFunctionRegistry::new`] are two DIFFERENT instances (different
+    /// underlying maps, different constructions) yet must fingerprint IDENTICALLY:
+    /// both resolve every IRI to `None`, so no plan's admitted behavior can ever
+    /// depend on which one it was prepared against — see
+    /// [`crate::registry_id::RegistryId::EMPTY`]'s docs for why sharing one fixed
+    /// instance id is the deliberately correct semantics here, not a weakening of
+    /// the plan-identity guard the test right below this one (over two
+    /// DIFFERENT, non-empty registries) continues to pin.
+    #[test]
+    fn empty_const_and_a_freshly_built_empty_registry_share_the_same_fingerprint() {
+        assert_eq!(
+            registry_fingerprint(&PropertyFunctionRegistry::EMPTY).expect("ok"),
+            ""
+        );
+        let fresh = PropertyFunctionRegistry::new();
+        assert_eq!(registry_fingerprint(&fresh).expect("ok"), "");
+    }
+
+    /// GAP (registry instance identity): two INDEPENDENTLY constructed registries
+    /// that register the SAME IRI to relations with byte-identical declared
+    /// metadata (arity, volatility, modes, row bounds) — [`MemoryRelation`]s
+    /// holding the SAME NUMBER of rows, so `describe()` reports identically, but
+    /// different actual row content — must still produce DIFFERENT fingerprints.
+    /// Declared metadata alone cannot prove the two registries answer the same
+    /// way; only the instance id can.
+    #[test]
+    fn two_independently_built_registries_with_identical_declarations_still_differ() {
+        let mut a = PropertyFunctionRegistry::new();
+        a.register(
+            EX_REL,
+            Arc::new(
+                MemoryRelation::new(
+                    1,
+                    1,
+                    vec![vec![
+                        purrdf_core::TermValue::iri("http://example.org/ns#one"),
+                        purrdf_core::TermValue::iri("http://example.org/ns#alpha"),
+                    ]],
+                )
+                .expect("one row, two values wide"),
+            ),
+        );
+        let mut b = PropertyFunctionRegistry::new();
+        b.register(
+            EX_REL,
+            Arc::new(
+                // Same row COUNT (so `describe()` — arity, volatility, modes, and
+                // the row-count-derived bound — is byte-identical to `a`'s), but a
+                // DIFFERENT row, so the two relations answer a query differently.
+                MemoryRelation::new(
+                    1,
+                    1,
+                    vec![vec![
+                        purrdf_core::TermValue::iri("http://example.org/ns#one"),
+                        purrdf_core::TermValue::iri("http://example.org/ns#beta"),
+                    ]],
+                )
+                .expect("one row, two values wide"),
+            ),
+        );
+
+        assert_eq!(a.describe().expect("ok"), b.describe().expect("ok"));
+        assert_ne!(
+            registry_fingerprint(&a).expect("ok"),
+            registry_fingerprint(&b).expect("ok"),
+            "two independently constructed registries must never share a fingerprint, \
+             even when every declaration they report is identical"
+        );
+    }
+
+    /// A [`Clone`] shares the source's `Arc<dyn PropertyFunction>` implementations,
+    /// so it must produce the SAME fingerprint as its source.
+    #[test]
+    fn a_clone_shares_its_source_registrys_fingerprint() {
+        let mut registry = PropertyFunctionRegistry::new();
+        registry.register(
+            EX_REL,
+            Arc::new(
+                MemoryRelation::new(
+                    1,
+                    1,
+                    vec![vec![
+                        purrdf_core::TermValue::iri("http://example.org/ns#one"),
+                        purrdf_core::TermValue::iri("http://example.org/ns#alpha"),
+                    ]],
+                )
+                .expect("one row, two values wide"),
+            ),
+        );
+        let cloned = registry.clone();
+        assert_eq!(
+            registry_fingerprint(&registry).expect("ok"),
+            registry_fingerprint(&cloned).expect("ok"),
+            "a clone shares the source's actual implementations, so it is the same \
+             registry instance for fingerprint purposes"
+        );
+    }
+}

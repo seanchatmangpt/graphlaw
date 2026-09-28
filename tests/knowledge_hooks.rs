@@ -8,7 +8,11 @@ use praxis_graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult};
 use praxis_graphlaw::sparql::NativeSparqlEngine;
 
 fn pack_file(p: &str) -> LawState {
-    let bytes = std::fs::read(format!("{}/packs/self-monitoring-pack/{p}", env!("CARGO_MANIFEST_DIR"))).unwrap();
+    let bytes = std::fs::read(format!(
+        "{}/packs/self-monitoring-pack/{p}",
+        env!("CARGO_MANIFEST_DIR")
+    ))
+    .unwrap();
     LawState::parse(&bytes, Dialect::Turtle, None).unwrap()
 }
 
@@ -46,9 +50,16 @@ fn broad_topic_session_derives_one_obligation_per_pair() {
     let state = pack_file("fixtures/session-real-broad-topic.ttl");
     assert_eq!(obligations(&state), 0);
     let m = pack().materialize(&state).unwrap();
-    assert_eq!(obligations(&m.state), 3, "the pack documents a 3-pair counterfactual");
+    assert_eq!(
+        obligations(&m.state),
+        3,
+        "the pack documents a 3-pair counterfactual"
+    );
     assert_eq!(m.firings.len(), 3);
-    assert!(m.firings.iter().all(|f| f.added >= 6), "type + two links + reason + 2 firing markers");
+    assert!(
+        m.firings.iter().all(|f| f.added >= 6),
+        "type + two links + reason + 2 firing markers"
+    );
 }
 
 #[test]
@@ -74,7 +85,9 @@ fn hooks_are_a_receipted_transition() {
 
 #[test]
 fn narrow_session_fires_fewer_than_broad() {
-    let narrow = pack().materialize(&pack_file("fixtures/session-real.ttl")).unwrap();
+    let narrow = pack()
+        .materialize(&pack_file("fixtures/session-real.ttl"))
+        .unwrap();
     assert!(obligations(&narrow.state) < 3);
 }
 
@@ -99,7 +112,12 @@ fn unsupported_or_incomplete_hooks_are_refused_not_skipped() {
     let no_action = hook_ttl(
         "ex:h a kh:Hook ; kh:kind \"sparql\" ; kh:query \"SELECT * WHERE {?s ?p ?o}\" ; kh:effect \"emit-delta\" .",
     );
-    assert!(HookPack::load(&no_action).unwrap_err().message.contains("declared"));
+    assert!(
+        HookPack::load(&no_action)
+            .unwrap_err()
+            .message
+            .contains("declared")
+    );
 
     let bad_query = hook_ttl(
         "ex:h a kh:Hook ; kh:kind \"sparql\" ; kh:query \"SELEKT nope\" ; kh:effect \"emit-delta\" ; kh:action ex:a .\n\
@@ -128,6 +146,10 @@ fn hooks_chain_by_priority_to_a_fixpoint() {
     )
     .unwrap();
     let m = pack.materialize(&data).unwrap();
-    assert_eq!(m.state.quad_count(), 3 + 2 * 2, "A, B, C plus two firing markers each");
+    assert_eq!(
+        m.state.quad_count(),
+        3 + 2 * 2,
+        "A, B, C plus two firing markers each"
+    );
     assert_eq!(m.firings.len(), 2);
 }

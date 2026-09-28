@@ -94,13 +94,27 @@ fn refuse(kind: RefusalKind, message: impl Into<String>) -> Refusal {
     }
 }
 
-fn select(state: &LawState, query: &str, subs: &[(String, TermValue)]) -> Result<Vec<Vec<Option<TermValue>>>, Refusal> {
+fn select(
+    state: &LawState,
+    query: &str,
+    subs: &[(String, TermValue)],
+) -> Result<Vec<Vec<Option<TermValue>>>, Refusal> {
     match NativeSparqlEngine::new()
-        .query(state.dataset(), SparqlRequest { query, base_iri: None, substitutions: subs })
+        .query(
+            state.dataset(),
+            SparqlRequest {
+                query,
+                base_iri: None,
+                substitutions: subs,
+            },
+        )
         .map_err(|e| Refusal::engine(Dialect::Sparql, e))?
     {
         SparqlResult::Solutions { rows, .. } => Ok(rows),
-        other => Err(refuse(RefusalKind::Unsupported, format!("expected SELECT solutions, got {other:?}"))),
+        other => Err(refuse(
+            RefusalKind::Unsupported,
+            format!("expected SELECT solutions, got {other:?}"),
+        )),
     }
 }
 
@@ -139,23 +153,38 @@ impl HookPack {
         )?;
         let mut hooks = Vec::new();
         for r in &rows {
-            let iri = lexical(&r[0]).ok_or_else(|| refuse(RefusalKind::Unsupported, "kh:Hook must be an IRI"))?;
+            let iri = lexical(&r[0])
+                .ok_or_else(|| refuse(RefusalKind::Unsupported, "kh:Hook must be an IRI"))?;
             let kind = lexical(&r[2]).unwrap_or_default();
             let effect = lexical(&r[4]).unwrap_or_default();
             let handler = lexical(&r[5]).unwrap_or_default();
             if kind != "sparql" {
-                return Err(refuse(RefusalKind::Unsupported, format!("{iri}: unsupported kh:kind {kind:?}")));
+                return Err(refuse(
+                    RefusalKind::Unsupported,
+                    format!("{iri}: unsupported kh:kind {kind:?}"),
+                ));
             }
             if effect != "emit-delta" {
-                return Err(refuse(RefusalKind::Unsupported, format!("{iri}: unsupported kh:effect {effect:?}")));
+                return Err(refuse(
+                    RefusalKind::Unsupported,
+                    format!("{iri}: unsupported kh:effect {effect:?}"),
+                ));
             }
             if handler != HANDLER_SPARQL_CONSTRUCT {
-                return Err(refuse(RefusalKind::Unsupported, format!("{iri}: unsupported kh:handler <{handler}>")));
+                return Err(refuse(
+                    RefusalKind::Unsupported,
+                    format!("{iri}: unsupported kh:handler <{handler}>"),
+                ));
             }
             let priority = match &r[7] {
-                Some(TermValue::Literal { lexical_form, .. }) => lexical_form
-                    .parse()
-                    .map_err(|_| refuse(RefusalKind::Unsupported, format!("{iri}: kh:priority is not an integer")))?,
+                Some(TermValue::Literal { lexical_form, .. }) => {
+                    lexical_form.parse().map_err(|_| {
+                        refuse(
+                            RefusalKind::Unsupported,
+                            format!("{iri}: kh:priority is not an integer"),
+                        )
+                    })?
+                }
                 _ => 0,
             };
             hooks.push(Hook {
@@ -180,8 +209,12 @@ impl HookPack {
         // Reject queries PurRDF cannot parse now, not at first firing.
         for h in &hooks {
             let parser = purrdf::sparql::SparqlParser::new();
-            parser.parse_query(&h.trigger).map_err(|e| Refusal::engine(Dialect::Sparql, format!("{}: trigger: {e:?}", h.iri)))?;
-            parser.parse_query(&h.construct).map_err(|e| Refusal::engine(Dialect::Sparql, format!("{}: action: {e:?}", h.iri)))?;
+            parser.parse_query(&h.trigger).map_err(|e| {
+                Refusal::engine(Dialect::Sparql, format!("{}: trigger: {e:?}", h.iri))
+            })?;
+            parser.parse_query(&h.construct).map_err(|e| {
+                Refusal::engine(Dialect::Sparql, format!("{}: action: {e:?}", h.iri))
+            })?;
         }
         Ok(HookPack { hooks })
     }
@@ -216,19 +249,29 @@ impl HookPack {
                     let digest = Sha256::digest(format!("{}\0{bound:?}", hook.iri).as_bytes());
                     let marker = format!(
                         "urn:graphlaw:hook-firing:{}",
-                        digest.iter().map(|b| format!("{b:02x}")).collect::<String>()
+                        digest
+                            .iter()
+                            .map(|b| format!("{b:02x}"))
+                            .collect::<String>()
                     );
                     if !fired.insert(marker.clone()) {
                         continue;
                     }
                     if firings.len() >= MAX_FIRINGS {
-                        return Err(refuse(RefusalKind::Unsupported, format!("hook pack exceeded {MAX_FIRINGS} firings")));
+                        return Err(refuse(
+                            RefusalKind::Unsupported,
+                            format!("hook pack exceeded {MAX_FIRINGS} firings"),
+                        ));
                     }
                     progressed = true;
                     let delta = match NativeSparqlEngine::new()
                         .query(
                             current.dataset(),
-                            SparqlRequest { query: &hook.construct, base_iri: None, substitutions: &bound },
+                            SparqlRequest {
+                                query: &hook.construct,
+                                base_iri: None,
+                                substitutions: &bound,
+                            },
                         )
                         .map_err(|e| Refusal::engine(Dialect::Sparql, e))?
                     {
@@ -252,22 +295,34 @@ impl HookPack {
                     );
                     b.push_quad(f, ty, class, None);
                     b.push_quad(f, hook_p, hook_o, None);
-                    let merged = b.freeze().map_err(|e| Refusal::engine(Dialect::NQuads, e))?;
+                    let merged = b
+                        .freeze()
+                        .map_err(|e| Refusal::engine(Dialect::NQuads, e))?;
                     let next = LawState::from_dataset(merged)?;
                     firings.push(Firing {
                         hook: hook.iri.clone(),
                         round,
-                        row: bound.iter().map(|(v, t)| (v.clone(), format!("{t:?}"))).collect(),
+                        row: bound
+                            .iter()
+                            .map(|(v, t)| (v.clone(), format!("{t:?}")))
+                            .collect(),
                         added: next.quad_count().saturating_sub(current.quad_count()),
                     });
                     current = next;
                 }
             }
             if !progressed {
-                return Ok(Materialized { state: current, firings, rounds: round });
+                return Ok(Materialized {
+                    state: current,
+                    firings,
+                    rounds: round,
+                });
             }
         }
-        Err(refuse(RefusalKind::Unsupported, format!("hook pack did not reach a fixpoint in {MAX_ROUNDS} rounds")))
+        Err(refuse(
+            RefusalKind::Unsupported,
+            format!("hook pack did not reach a fixpoint in {MAX_ROUNDS} rounds"),
+        ))
     }
 }
 
@@ -276,11 +331,18 @@ fn trigger_vars(state: &LawState, hook: &Hook) -> Result<Vec<String>, Refusal> {
     match NativeSparqlEngine::new()
         .query(
             state.dataset(),
-            SparqlRequest { query: &hook.trigger, base_iri: None, substitutions: &[] },
+            SparqlRequest {
+                query: &hook.trigger,
+                base_iri: None,
+                substitutions: &[],
+            },
         )
         .map_err(|e| Refusal::engine(Dialect::Sparql, e))?
     {
         SparqlResult::Solutions { variables, .. } => Ok(variables),
-        other => Err(refuse(RefusalKind::Unsupported, format!("{}: trigger must be SELECT, got {other:?}", hook.iri))),
+        other => Err(refuse(
+            RefusalKind::Unsupported,
+            format!("{}: trigger must be SELECT, got {other:?}", hook.iri),
+        )),
     }
 }

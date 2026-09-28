@@ -1,0 +1,51 @@
+[package]
+name = "eyeron"
+version = "0.7.7"
+edition = "2021"
+default-run = "eyeron"
+authors = ["Jos De Roo"]
+license = "MIT"
+description = "A native Rust Notation3 reasoner."
+repository = "https://github.com/eyereasoner/eyeron"
+
+[lib]
+name = "eyeron"
+path = "src/lib.rs"
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "w3c_rdf"
+path = "src/w3c_rdf.rs"
+test = false
+
+[[test]]
+name = "w3c_rdf"
+path = "tests/w3c_rdf.rs"
+harness = false
+
+[[test]]
+name = "proof_checking"
+path = "tests/proof_checking.rs"
+harness = false
+
+[dependencies]
+num-bigint = "0.5.1"
+num-traits = "0.2"
+regex = "1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+ureq = "3"
+serde_json = "1"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+
+[package.metadata.wasm-pack.profile.release]
+# Rust emits WebAssembly bulk-memory and nontrapping float-to-int instructions.
+# Tell wasm-opt/Binaryen to accept those features during release optimization.
+wasm-opt = ["-Oz", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]

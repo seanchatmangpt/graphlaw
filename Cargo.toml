@@ -12,6 +12,7 @@ categories = ["data-structures", "parser-implementations"]
 
 [workspace]
 members = [".", "wasm"]
+exclude = ["vendor/purrdf-sparql-eval", "vendor/eyeron"]
 
 # Size-optimised profile for the WebAssembly module (`--profile wasm`); kept
 # separate so native release builds and tests are unaffected.
@@ -56,4 +57,27 @@ all-features = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 wasmi = "1"
+wasmi_wasi = "1"
 serde_json = "1"
+
+# Carried patches (see vendor/README.md): give WASI the std clock/RNG path
+# instead of the browser-only `js_sys`/`wasm-bindgen` calls, which panic on any
+# wasm32 target that is not wasm32-unknown-unknown.
+[patch.crates-io]
+purrdf-sparql-eval = { path = "vendor/purrdf-sparql-eval" }
+
+[patch."https://github.com/eyereasoner/eyeron"]
+eyeron = { path = "vendor/eyeron" }
+
+# The wasm runtime used by tests/wasm_abi.rs is an interpreter; unoptimised it
+# is ~50x slower and makes the suite take minutes.
+[profile.dev.package.wasmi]
+opt-level = 3
+[profile.dev.package.wasmi_core]
+opt-level = 3
+[profile.dev.package.wasmi_ir]
+opt-level = 3
+[profile.dev.package.wasmi_collections]
+opt-level = 3
+[profile.dev.package.wasmi_wasi]
+opt-level = 3

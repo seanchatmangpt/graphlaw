@@ -29,6 +29,20 @@ GraphLaw's own code is the composition layer above the engines:
 - `tests/differential.rs` is a cross-engine oracle: N3 (Eyeron), Datalog and OWL-RL (PurRDF) must agree with each other and with an independent Warshall closure.
 - `ASSETS.sha256` pins every shipped asset by hash and sniffed dialect; `tests/corpus_conformance.rs` routes and parses all of them (`cargo test -- --ignored` adds the large vendored vocabularies).
 
+## WebAssembly module (for Elixir/Wasmex and other WASI hosts)
+
+```sh
+cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm   # -> target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
+```
+
+One self-contained WASI module (imports are `wasi_snapshot_preview1` only: clock, random, stdio; no JavaScript). Exports `gl_alloc`, `gl_free`, `gl_call` and memory; call `_initialize` once if the host does not. A request is UTF-8 JSON written into `gl_alloc`ed memory; `gl_call(ptr, len)` returns `(out_ptr << 32) | out_len` for a UTF-8 JSON response, which the host frees with `gl_free`. Ops: `capabilities`, `sniff`, `parse`, `convert`, `canonical`, `sparql`, `shacl`, `shex`, `n3`, `entail`, `datalog`, `hooks`, `law` (see `src/abi.rs`). All RDF dialects (Turtle, TriG, N-Triples, N-Quads, RDF/XML, JSON-LD, YAML-LD, TriX, HexTuples), N3, SPARQL, SHACL, ShEx (ShExC/ShExJ), RDF/RDFS/OWL-RL/D entailment, Datalog and knowledge hooks execute inside the module; `tests/wasm_abi.rs` drives all of them in a real wasm runtime. `wasm32-unknown-unknown` is not a supported module target: it needs a JavaScript host.
+
+`vendor/` carries two cfg-only upstream patches that give WASI the standard clock/RNG path; see `vendor/README.md`.
+
+## Knowledge hooks
+
+`hooks::HookPack` loads `kh:Hook` / `kh:Action` resources from any RDF pack (see `packs/self-monitoring-pack/hook.ttl`) and runs them to a fixpoint over a `LawState` (`Step::Hooks`). Triggers and actions are SPARQL executed by PurRDF; each firing is recorded in the state so re-running a saturated state changes nothing.
+
 ## Pack tooling (Rust, feature `pack-tools`)
 
 The self-monitoring pack's former Python scripts are Rust binaries that write RDF through PurRDF only:

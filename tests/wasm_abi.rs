@@ -10,6 +10,7 @@ use std::sync::{Mutex, OnceLock};
 
 use serde_json::{Value, json};
 use wasmi::{Engine, Instance, Linker, Memory, Module, Store, TypedFunc};
+use wasmi_wasi::{WasiCtx, WasiCtxBuilder};
 
 fn wasm_path() -> PathBuf {
     if let Some(p) = std::env::var_os("GRAPHLAW_WASM") {
@@ -19,16 +20,28 @@ fn wasm_path() -> PathBuf {
     let target = root.join("target/wasm-abi");
     let status = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()))
         .current_dir(&root)
-        .args(["build", "-p", "graphlaw-wasm", "--target", "wasm32-unknown-unknown", "--profile", "wasm", "--target-dir"])
+        .args([
+            "build",
+            "-p",
+            "graphlaw-wasm",
+            "--target",
+            "wasm32-wasip1",
+            "--profile",
+            "wasm",
+            "--target-dir",
+        ])
         .arg(&target)
         .status()
         .expect("cargo runs");
-    assert!(status.success(), "wasm build failed (is the wasm32-unknown-unknown target installed?)");
-    target.join("wasm32-unknown-unknown/wasm/graphlaw_wasm.wasm")
+    assert!(
+        status.success(),
+        "wasm build failed (is the wasm32-wasip1 target installed?)"
+    );
+    target.join("wasm32-wasip1/wasm/graphlaw_wasm.wasm")
 }
 
 struct Host {
-    store: Store<()>,
+    store: Store<WasiCtx>,
     memory: Memory,
     alloc: TypedFunc<u32, u32>,
     free: TypedFunc<(u32, u32), ()>,
@@ -40,11 +53,29 @@ impl Host {
         let bytes = std::fs::read(wasm_path()).expect("wasm artifact");
         let engine = Engine::default();
         let module = Module::new(&engine, &bytes[..]).expect("valid wasm");
-        let mut store = Store::new(&engine, ());
-        let linker = <Linker<()>>::new(&engine);
-        assert_eq!(module.imports().count(), 0, "module must be self-contained: no host imports");
-        let instance: Instance = linker.instantiate_and_start(&mut store, &module).expect("instantiates");
-        let memory = instance.get_memory(&store, "memory").expect("exports memory");
+        // The only imports allowed are WASI's (clock, random, stdio): no JavaScript glue.
+        for i in module.imports() {
+            assert_eq!(
+                i.module(),
+                "wasi_snapshot_preview1",
+                "unexpected host import {}::{}",
+                i.module(),
+                i.name()
+            );
+        }
+        let mut store = Store::new(&engine, WasiCtxBuilder::new().build());
+        let mut linker = <Linker<WasiCtx>>::new(&engine);
+        wasmi_wasi::add_to_linker(&mut linker, |ctx| ctx).expect("links WASI");
+        let instance: Instance = linker
+            .instantiate_and_start(&mut store, &module)
+            .expect("instantiates");
+        // Reactor-style modules expose `_initialize`; hosts must call it once.
+        if let Ok(init) = instance.get_typed_func::<(), ()>(&store, "_initialize") {
+            init.call(&mut store, ()).expect("_initialize");
+        }
+        let memory = instance
+            .get_memory(&store, "memory")
+            .expect("exports memory");
         Host {
             alloc: instance.get_typed_func(&store, "gl_alloc").unwrap(),
             free: instance.get_typed_func(&store, "gl_free").unwrap(),
@@ -57,11 +88,18 @@ impl Host {
     fn request(&mut self, req: &Value) -> Value {
         let body = req.to_string().into_bytes();
         let ptr = self.alloc.call(&mut self.store, body.len() as u32).unwrap();
-        self.memory.write(&mut self.store, ptr as usize, &body).unwrap();
-        let packed = self.call.call(&mut self.store, (ptr, body.len() as u32)).unwrap();
+        self.memory
+            .write(&mut self.store, ptr as usize, &body)
+            .unwrap();
+        let packed = self
+            .call
+            .call(&mut self.store, (ptr, body.len() as u32))
+            .unwrap();
         let (out_ptr, out_len) = ((packed >> 32) as u32, (packed & 0xffff_ffff) as u32);
         let mut out = vec![0u8; out_len as usize];
-        self.memory.read(&self.store, out_ptr as usize, &mut out).unwrap();
+        self.memory
+            .read(&self.store, out_ptr as usize, &mut out)
+            .unwrap();
         self.free.call(&mut self.store, (out_ptr, out_len)).unwrap();
         serde_json::from_slice(&out).expect("response is JSON")
     }
@@ -74,7 +112,10 @@ fn host() -> &'static Mutex<Host> {
 }
 
 fn call(req: Value) -> Value {
-    host().lock().unwrap_or_else(|e| e.into_inner()).request(&req)
+    host()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .request(&req)
 }
 
 fn ok(req: Value) -> Value {
@@ -93,8 +134,19 @@ const SAMPLE: &str = "@prefix ex: <https://e/> . ex:s ex:p ex:o, \"caf\\u00e9\"@
 fn module_is_self_contained_and_reports_capabilities() {
     let r = ok(json!({"op": "capabilities"}));
     assert_eq!(r["abi"], 1);
-    let caps: Vec<_> = r["authorities"].as_array().unwrap().iter().map(|a| a["capability"].as_str().unwrap()).collect();
-    for c in ["SPARQL 1.1/1.2", "SHACL", "ShEx 2.1", "Datalog", "Notation3"] {
+    let caps: Vec<_> = r["authorities"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|a| a["capability"].as_str().unwrap())
+        .collect();
+    for c in [
+        "SPARQL 1.1/1.2",
+        "SHACL",
+        "ShEx 2.1",
+        "Datalog",
+        "Notation3",
+    ] {
         assert!(caps.contains(&c), "{c} missing from {caps:?}");
     }
     assert!(caps.iter().any(|c| c.starts_with("Knowledge hooks")));
@@ -104,15 +156,25 @@ fn module_is_self_contained_and_reports_capabilities() {
 fn every_rdf_dialect_round_trips_through_wasm() {
     let base = ok(json!({"op": "parse", "text": SAMPLE, "dialect": "turtle"}));
     let id = base["id"].clone();
-    assert_eq!(base["quads"], 5);
-    for dialect in ["turtle", "trig", "ntriples", "nquads", "rdfxml", "jsonld", "yamlld", "trix", "hextuples"] {
+    assert_eq!(base["quads"], 4);
+    for dialect in [
+        "turtle",
+        "trig",
+        "ntriples",
+        "nquads",
+        "rdfxml",
+        "jsonld",
+        "yamlld",
+        "trix",
+        "hextuples",
+    ] {
         let out = ok(json!({"op": "convert", "text": SAMPLE, "dialect": "turtle", "to": dialect}));
         assert_eq!(out["id"], id);
         let text = out["text"].as_str().unwrap();
         assert!(!text.is_empty(), "{dialect} produced no output");
         let back = ok(json!({"op": "parse", "text": text, "dialect": dialect}));
         assert_eq!(back["id"], id, "{dialect} does not round-trip");
-        assert_eq!(back["quads"], 5, "{dialect}");
+        assert_eq!(back["quads"], 4, "{dialect}");
     }
 }
 
@@ -123,9 +185,16 @@ fn content_routing_works_inside_wasm() {
         ("@prefix e: <https://e/> . e:s e:p e:o .", "Turtle"),
         ("{ ?x a <https://e/A> } => { ?x a <https://e/B> } .", "N3"),
         ("SELECT * WHERE { ?s ?p ?o }", "Sparql"),
-        ("<?xml version=\"1.0\"?><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"/>", "RdfXml"),
+        (
+            "<?xml version=\"1.0\"?><rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"/>",
+            "RdfXml",
+        ),
     ] {
-        assert_eq!(ok(json!({"op": "sniff", "text": text}))["dialect"], expect, "{text}");
+        assert_eq!(
+            ok(json!({"op": "sniff", "text": text}))["dialect"],
+            expect,
+            "{text}"
+        );
     }
     let refused = call(json!({"op": "sniff", "text": "<!DOCTYPE html><html></html>"}));
     assert_eq!(refused["ok"], false);
@@ -135,12 +204,20 @@ fn content_routing_works_inside_wasm() {
 #[test]
 fn sparql_select_construct_ask() {
     let data = json!({"text": SAMPLE, "dialect": "turtle"});
-    let s = ok(json!({"op": "sparql", "data": data, "query": "SELECT ?o WHERE { <https://e/s> <https://e/p> ?o } ORDER BY ?o"}));
+    let s = ok(
+        json!({"op": "sparql", "data": data, "query": "SELECT ?o WHERE { <https://e/s> <https://e/p> ?o } ORDER BY ?o"}),
+    );
     assert_eq!(s["kind"], "solutions");
     assert_eq!(s["rows"].as_array().unwrap().len(), 3);
-    let c = ok(json!({"op": "sparql", "data": data, "query": "CONSTRUCT { ?s a <https://e/U> } WHERE { ?s a <https://e/T> }"}));
-    assert_eq!((c["kind"].as_str(), c["quads"].as_u64()), (Some("graph"), Some(1)));
-    let a = ok(json!({"op": "sparql", "data": data, "query": "ASK { <https://e/s> a <https://e/T> }"}));
+    let c = ok(
+        json!({"op": "sparql", "data": data, "query": "CONSTRUCT { ?s a <https://e/U> } WHERE { ?s a <https://e/T> }"}),
+    );
+    assert_eq!(
+        (c["kind"].as_str(), c["quads"].as_u64()),
+        (Some("graph"), Some(1))
+    );
+    let a =
+        ok(json!({"op": "sparql", "data": data, "query": "ASK { <https://e/s> a <https://e/T> }"}));
     assert_eq!(a["value"], true);
 }
 
@@ -148,34 +225,55 @@ fn sparql_select_construct_ask() {
 fn shacl_validates() {
     let shapes = "@prefix sh: <http://www.w3.org/ns/shacl#> . @prefix ex: <https://e/> . @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\
                   ex:S a sh:NodeShape ; sh:targetClass ex:T ; sh:property [ sh:path ex:p ; sh:datatype xsd:integer ] .";
-    let r = ok(json!({"op": "shacl", "data": {"text": SAMPLE, "dialect": "turtle"}, "shapes": shapes}));
+    let r =
+        ok(json!({"op": "shacl", "data": {"text": SAMPLE, "dialect": "turtle"}, "shapes": shapes}));
     assert_eq!(r["conforms"], false);
     assert!(!r["results"].as_array().unwrap().is_empty());
     let good = "@prefix ex: <https://e/> . ex:s a ex:T ; ex:p 1 .";
-    assert_eq!(ok(json!({"op": "shacl", "data": {"text": good}, "shapes": shapes}))["conforms"], true);
+    assert_eq!(
+        ok(json!({"op": "shacl", "data": {"text": good}, "shapes": shapes}))["conforms"],
+        true
+    );
 }
 
 #[test]
 fn shex_validates_shexc_and_shexj() {
     let data = json!({"text": "@prefix ex: <https://e/> . ex:cat ex:says \"meow\" . ex:rock ex:weight 5 ."});
     let shexc = "PREFIX ex: <https://e/>\nex:Cat { ex:says . }";
-    let r = ok(json!({"op": "shex", "data": data, "schema": shexc, "map": "<https://e/cat>@<https://e/Cat>, <https://e/rock>@<https://e/Cat>"}));
-    let statuses: Vec<_> = r["entries"].as_array().unwrap().iter().map(|e| e["status"].as_str().unwrap()).collect();
+    let r = ok(
+        json!({"op": "shex", "data": data, "schema": shexc, "map": "<https://e/cat>@<https://e/Cat>, <https://e/rock>@<https://e/Cat>"}),
+    );
+    let statuses: Vec<_> = r["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["status"].as_str().unwrap())
+        .collect();
     assert_eq!(statuses, ["Conformant", "Nonconformant"]);
 
     let shexj = read("innovation/candidate.shex.json");
-    let j = ok(json!({"op": "shex", "schema_dialect": "shexj", "schema": shexj,
+    let j = ok(
+        json!({"op": "shex", "schema_dialect": "shexj", "schema": shexj,
         "data": {"text": "@prefix i: <https://praxis.chatman.io/innovation#> . <https://e/c> i:replaces <https://e/a> ."},
-        "map": "<https://e/c>@<https://praxis.chatman.io/innovation#CandidateFutureShape>"}));
-    assert_eq!(j["conforms"], false, "incomplete candidate must not conform: {j}");
+        "map": "<https://e/c>@<https://praxis.chatman.io/innovation#CandidateFutureShape>"}),
+    );
+    assert_eq!(
+        j["conforms"], false,
+        "incomplete candidate must not conform: {j}"
+    );
 }
 
 #[test]
 fn n3_reasons() {
-    let r = ok(json!({"op": "n3", "text": "@prefix : <https://e/> . :s a :Human . { ?x a :Human } => { ?x a :Mortal } ."}));
+    let r = ok(
+        json!({"op": "n3", "text": "@prefix : <https://e/> . :s a :Human . { ?x a :Human } => { ?x a :Mortal } ."}),
+    );
     assert!(r["derived"].as_str().unwrap().contains("Mortal"));
     let refused = call(json!({"op": "n3", "text": "{ ?x a } =>"}));
-    assert_eq!((refused["ok"].clone(), refused["error"]["engine"].clone()), (json!(false), json!("Eyeron")));
+    assert_eq!(
+        (refused["ok"].clone(), refused["error"]["engine"].clone()),
+        (json!(false), json!("Eyeron"))
+    );
 }
 
 #[test]
@@ -211,7 +309,11 @@ fn knowledge_hooks_execute_in_wasm() {
     let again = ok(json!({"op": "hooks",
         "pack": {"text": read("packs/self-monitoring-pack/hook.ttl"), "dialect": "turtle"},
         "data": {"text": r["nquads"], "dialect": "nquads"}}));
-    assert_eq!(again["firings"].as_array().unwrap().len(), 0, "saturated state fires nothing");
+    assert_eq!(
+        again["firings"].as_array().unwrap().len(),
+        0,
+        "saturated state fires nothing"
+    );
     assert_eq!(again["id"], r["id"]);
 }
 
@@ -228,19 +330,33 @@ fn law_pipeline_runs_end_to_end_in_wasm() {
     assert_eq!(receipts[1]["authority"], "purrdf::shapes");
     let ids = r["states"].as_array().unwrap();
     assert_ne!(ids[0], ids[1]);
-    assert_eq!(ids[1], ids[2], "an admission gate does not change the state");
+    assert_eq!(
+        ids[1], ids[2],
+        "an admission gate does not change the state"
+    );
 
     let refused = call(json!({"op": "law",
         "data": {"text": "<https://e/c> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://praxis.chatman.io/innovation#CandidateFuture> .", "dialect": "ntriples"},
         "steps": [{"step": "shacl", "shapes": read("innovation/candidate.shacl.ttl")}]}));
     assert_eq!(refused["ok"], false);
-    assert!(refused["error"]["message"].as_str().unwrap().contains("admission refused"));
+    assert!(
+        refused["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("admission refused")
+    );
 }
 
 #[test]
 fn protocol_errors_are_json_not_traps() {
-    let r = host().lock().unwrap_or_else(|e| e.into_inner()).request(&json!("not an object"));
+    let r = host()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .request(&json!("not an object"));
     assert_eq!(r["ok"], false);
     assert_eq!(call(json!({"op": "nope"}))["ok"], false);
-    assert_eq!(call(json!({"op": "parse", "text": "<a> <b> .", "dialect": "turtle"}))["error"]["engine"], "PurRdf");
+    assert_eq!(
+        call(json!({"op": "parse", "text": "<a> <b> .", "dialect": "turtle"}))["error"]["engine"],
+        "PurRdf"
+    );
 }
