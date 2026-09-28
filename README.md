@@ -20,6 +20,15 @@ Executable standards semantics are delegated to two pinned authorities:
 
 GraphLaw itself owns the **composition boundary and semantic assets**: ontologies, packs, queries, and the decision about which upstream implementation has standing. It does not keep a fallback implementation.
 
+## Law-state layer
+
+GraphLaw's own code is the composition layer above the engines:
+
+- `dialect` routes a document to its owning engine by content (never by trusting an extension, never by trying engines in turn) and returns a typed `Refusal` naming the engine and dialect when it cannot.
+- `law::LawState` is an immutable dataset identified by `sha256:` of its RDFC-1.0 canonical form. `transition(&Step)` runs an upstream-owned step (SHACL admission, N3 derivation, RDFS/OWL-RL entailment) and returns the child state with a `Receipt` naming the authority and revision. A refused step yields no state.
+- `tests/differential.rs` is a cross-engine oracle: N3 (Eyeron), Datalog and OWL-RL (PurRDF) must agree with each other and with an independent Warshall closure.
+- `ASSETS.sha256` pins every shipped asset by hash and sniffed dialect; `tests/corpus_conformance.rs` routes and parses all of them (`cargo test -- --ignored` adds the large vendored vocabularies).
+
 ## Rust surface
 
 ```rust

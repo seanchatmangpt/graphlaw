@@ -13,6 +13,9 @@
 
 #![forbid(unsafe_code)]
 
+pub mod dialect;
+pub mod law;
+
 /// The complete PurRDF facade used as GraphLaw's RDF semantic authority.
 pub use purrdf;
 
@@ -59,8 +62,8 @@ pub mod n3 {
     pub use eyeron::*;
 }
 
-/// The canonical immutable GraphLaw law-state carrier.
-pub type LawState = purrdf::RdfDataset;
+/// The canonical immutable, content-addressed GraphLaw law state.
+pub use law::LawState;
 
 /// One externally-owned semantic capability.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -763,6 +763,7 @@ version = "26.9.28"
 dependencies = [
  "eyeron",
  "purrdf",
+ "sha2",
 ]
 
 [[package]]
