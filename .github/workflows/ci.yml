@@ -14,7 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly-2026-06-22
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-06-22
       - name: Resolve full workspace graph
         run: cargo metadata --format-version 1 --all-features --no-deps
       - name: Check all native targets
@@ -33,7 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly-2026-06-22
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-06-22
       - name: Check cognition-enabled GraphLaw
         run: cargo check -p praxis-graphlaw --lib --features cognition
 
@@ -42,8 +46,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly-2026-06-22
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: nightly-2026-06-22
           targets: wasm32-unknown-unknown
       - name: Compile WASM wrapper
         run: cargo check -p praxis-graphlaw-wasm --target wasm32-unknown-unknown
