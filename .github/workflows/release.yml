@@ -8,6 +8,9 @@ name: Release
 #      exact version is not already on the registry.
 # A run with nothing to release exits in seconds. All steps are idempotent.
 # To release: merge a change that bumps the version. Nothing else is required.
+# HOLD: while the repository variable RELEASE_HOLD is `true`, every step below
+# is skipped (nothing is tagged or published). Release = delete/unset the
+# variable, then re-run this workflow.
 
 on:
   push:
@@ -27,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      RELEASE_HOLD: ${{ vars.RELEASE_HOLD }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -55,6 +59,10 @@ jobs:
           ep=$(on_registry graphlaw-eyeron "$e")
           gp=$(on_registry graphlaw "$g")
           work=no
+          if [ "${RELEASE_HOLD:-}" = true ]; then
+            echo "RELEASE_HOLD is true: skipping tag and publish"
+            tag=yes; ep=yes; gp=yes
+          fi
           if [ "$tag" = no ] || [ "$ep" = no ] || [ "$gp" = no ]; then work=yes; fi
           {
             echo "graphlaw=$g"; echo "tag_exists=$tag"
