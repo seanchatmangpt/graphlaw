@@ -36,17 +36,16 @@ smallvec = { version = "1", features = ["serde"] }
 fixedbitset = "0.5"
 oxigraph = { version = "0.5.9", features = ["rdf-12"] }
 powl2-decompose = { path = "crates/powl2-decompose", version = "26.6.30" }
-bcinr-pddl = { version = "=26.6.26" }
-bcinr-powl = { version = "=26.6.25" }
+bcinr-pddl = { version = "=26.7.28" }
+bcinr-powl = { version = "=26.7.28" }
 thiserror = "2"
 # compat owns receipt identity; all chatman hashing routes through wasm4pm_compat::hash.
-# Exact registry version (not a local path): CalVer releases are not semver-compatible
-# merely because they share major 26. A caret range silently upgraded standalone GraphLaw
-# to 26.8.x and broke the extracted build. Exact pins preserve the admitted source graph
-# while still resolving to the SAME crate instance as bcinr-pddl's compatible dependency.
-# A path dependency here would create a second, incompatible copy of Pddl8GroundAtom/OCEL types.
-wasm4pm-compat = { version = "=26.6.29" }
-wasm4pm-cognition = { git = "https://github.com/seanchatmangpt/wasm4pm", rev = "9fc4f1ae3cc99cf65a5f014580db8e1ea3d08b55", package = "wasm4pm-cognition", optional = true }
+# Exact published identities reconstructed from Praxis's extraction-source Cargo.lock.
+# The original GraphLaw crate used sibling path dependencies whose package versions had
+# advanced beyond the stale lower bounds in this manifest. Standalone GraphLaw must pin
+# the actually-resolved CalVer releases rather than silently depend on Praxis topology.
+wasm4pm-compat = { version = "=26.8.7" }
+wasm4pm-cognition = { version = "=26.7.23", optional = true }
 
 [features]
 cognition = ["dep:wasm4pm-cognition"]
