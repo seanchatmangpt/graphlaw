@@ -10,45 +10,35 @@ permissions:
 
 jobs:
   native:
-    name: native workspace
+    name: library-backed native
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2026-06-22
-      - name: Resolve full workspace graph
-        run: cargo metadata --format-version 1 --all-features --no-deps
-      - name: Check all native targets
-        run: cargo check --workspace --all-targets
-      - name: Test POWL decomposition
-        run: cargo test -p powl2-decompose
-      - name: Test GraphLaw library
-        run: cargo test -p praxis-graphlaw --lib
-      - name: Test GraphLaw integration suites
-        run: cargo test -p praxis-graphlaw --tests
-      - name: Test WASM wrapper on host
-        run: cargo test -p praxis-graphlaw-wasm
-
-  cognition:
-    name: optional cognition feature
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2026-06-22
-      - name: Check cognition-enabled GraphLaw
-        run: cargo check -p praxis-graphlaw --lib --features cognition
+          toolchain: 1.96.0
+          components: rustfmt, clippy
+      - name: Resolve dependency graph
+        run: cargo metadata --format-version 1
+      - name: Format
+        run: cargo fmt --check
+      - name: Check
+        run: cargo check --all-targets
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Test backend authorities
+        run: cargo test --all-targets
+      - name: Docs
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps
 
   wasm:
-    name: wasm32 wrapper
+    name: library-backed wasm32
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2026-06-22
+          toolchain: 1.96.0
           targets: wasm32-unknown-unknown
-      - name: Compile WASM wrapper
-        run: cargo check -p praxis-graphlaw-wasm --target wasm32-unknown-unknown
+      - name: Compile facade for wasm32
+        run: cargo check --lib --target wasm32-unknown-unknown
