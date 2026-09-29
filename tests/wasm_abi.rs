@@ -89,6 +89,18 @@ impl Host {
         serde_json::from_slice(&self.request_bytes(req)).expect("response is JSON")
     }
 
+    /// `gl_call` on an arbitrary (ptr, len) pair; reads and frees the response.
+    fn raw_call(&mut self, ptr: u32, len: u32) -> Value {
+        let packed = self.call.call(&mut self.store, (ptr, len)).unwrap();
+        let (out_ptr, out_len) = ((packed >> 32) as u32, (packed & 0xffff_ffff) as u32);
+        let mut out = vec![0u8; out_len as usize];
+        self.memory
+            .read(&self.store, out_ptr as usize, &mut out)
+            .unwrap();
+        self.free.call(&mut self.store, (out_ptr, out_len)).unwrap();
+        serde_json::from_slice(&out).expect("response is JSON")
+    }
+
     fn request_bytes(&mut self, req: &Value) -> Vec<u8> {
         let body = req.to_string().into_bytes();
         let ptr = self.alloc.call(&mut self.store, body.len() as u32).unwrap();
@@ -535,4 +547,127 @@ fn wasm_lease_boundaries_and_refusal_precedence() {
         e.get("receipts").is_none() || e["receipts"].is_null(),
         "{e}"
     );
+}
+
+#[cfg(feature = "abi")]
+#[test]
+fn wasm_refusal_details_round_trip_and_equal_native() {
+    let at = |o: &str| format!("<urn:p:robot> <urn:p:at> <urn:p:{o}> .\n");
+    let shapes = "@prefix sh: <http://www.w3.org/ns/shacl#> . @prefix ex: <https://e/> .\n\
+        ex:S a sh:NodeShape ; sh:targetClass ex:T ; sh:property [ sh:path ex:name ; sh:minCount 1 ] .\n";
+    let two_bad = "<https://e/a> a <https://e/T> .\n<https://e/b> a <https://e/T> .\n";
+    let problem = json!({
+        "states": [{"id": "s0"}, {"id": "g", "facts": ["done"]}],
+        "initial_states": ["s0"], "goal": {"facts": ["done"]},
+        "transitions": [
+            {"action": "flip", "from": "s0", "to": "g", "probability_ppm": 500000},
+            {"action": "flip", "from": "s0", "to": "s0", "probability_ppm": 500000}]});
+    let skewed = json!({"policy": [{"state": "s0", "action": "flip", "outcomes": [
+        {"state": "g", "probability_ppm": 400000}, {"state": "s0", "probability_ppm": 500000}]}]});
+    let cases = [
+        (
+            "NotAdmitted",
+            json!({"op": "law",
+            "data": {"text": two_bad, "dialect": "turtle"},
+            "steps": [{"step": "shacl", "shapes": shapes}]}),
+        ),
+        (
+            "PlanRefused",
+            json!({"op": "law",
+            "data": {"text": at("a"), "dialect": "ntriples"},
+            "steps": [{"step": "plan", "plan": {"actions": [
+                {"name": "a-b", "pre": at("z"), "add": at("b"), "del": at("a")}], "goal": at("b")}}]}),
+        ),
+        (
+            "PolicyRefused",
+            json!({"op": "policy", "problem": problem, "policy": skewed}),
+        ),
+        (
+            "LeaseRefused",
+            lease_req("construct", json!(["derive:n3"]), 100, 1),
+        ),
+        (
+            "ReceiptRequired",
+            json!({"op": "law",
+            "data": {"text": at("a"), "dialect": "ntriples"},
+            "steps": [{"step": "require-receipt", "step_name": "derive:rdfs"}]}),
+        ),
+    ];
+    for (code, req) in cases {
+        let wasm = call(req.clone());
+        let native = graphlaw::abi::call_json(&req);
+        assert_eq!(wasm["ok"], false, "{code}: {wasm}");
+        assert_eq!(wasm["error"]["details"]["code"], code, "{wasm}");
+        assert_eq!(wasm, native, "{code}: wasm and native responses differ");
+    }
+    let nad = call(
+        json!({"op": "law", "data": {"text": two_bad, "dialect": "turtle"},
+        "steps": [{"step": "shacl", "shapes": shapes}]}),
+    );
+    let vs = nad["error"]["details"]["violations"].as_array().unwrap();
+    assert_eq!(vs.len(), 2, "{nad}");
+    assert!(
+        vs.iter()
+            .all(|v| v["focus"].is_string() && v["path"].is_string())
+    );
+}
+
+#[cfg(feature = "abi")]
+#[test]
+fn wasm_resource_limits_refuse_typed_and_never_trap() {
+    use graphlaw::abi::{MAX_JSON_DEPTH, MAX_PLAN_ACTIONS, MAX_REQUEST_BYTES};
+    let limit = |r: &Value, name: &str| {
+        assert_eq!(r["ok"], false, "{r}");
+        assert_eq!(r["error"]["kind"], "ResourceLimit", "{r}");
+        assert_eq!(r["error"]["details"]["code"], "ResourceLimit", "{r}");
+        assert_eq!(r["error"]["details"]["limit"], name, "{r}");
+    };
+    let mut guard = host().lock().unwrap_or_else(|e| e.into_inner());
+    let h = &mut *guard;
+
+    // gl_alloc above the cap returns null (0), including the 4 GiB extreme.
+    assert_eq!(h.alloc.call(&mut h.store, u32::MAX).unwrap(), 0);
+    let over = (MAX_REQUEST_BYTES + 1) as u32; // a 16 MiB + 1 request body
+    assert_eq!(h.alloc.call(&mut h.store, over).unwrap(), 0);
+    // gl_call on that missing buffer is a typed error, not a trap.
+    let r = h.raw_call(0, over);
+    assert_eq!(r["ok"], false, "{r}");
+    assert!(
+        r["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("buffer missing")
+    );
+    // a live buffer with an over-cap declared length is refused without being read
+    let live = h.alloc.call(&mut h.store, 8).unwrap();
+    assert_ne!(live, 0);
+    limit(&h.raw_call(live, over), "request_bytes");
+
+    // depth-100 JSON is refused before parsing
+    let mut deep = String::from(r#"{"op":"capabilities","x":"#);
+    deep.push_str(&"[".repeat(99));
+    deep.push_str(&"]".repeat(99));
+    deep.push('}');
+    let ptr = h.alloc.call(&mut h.store, deep.len() as u32).unwrap();
+    h.memory
+        .write(&mut h.store, ptr as usize, deep.as_bytes())
+        .unwrap();
+    let r = h.raw_call(ptr, deep.len() as u32);
+    limit(&r, "json_depth");
+    assert_eq!(r["error"]["details"]["max"], MAX_JSON_DEPTH);
+
+    // plan with MAX_PLAN_ACTIONS + 1 actions
+    let actions: Vec<Value> = (0..=MAX_PLAN_ACTIONS)
+        .map(|i| json!({"name": format!("a{i}"), "pre": "", "add": "", "del": ""}))
+        .collect();
+    let r = h.request(&json!({"op": "law",
+        "data": {"text": "<urn:p:r> <urn:p:at> <urn:p:a> .\n", "dialect": "ntriples"},
+        "steps": [{"step": "plan", "plan": {"actions": actions, "goal": ""}}]}));
+    limit(&r, "plan_actions");
+    assert_eq!(r["error"]["details"]["observed"], MAX_PLAN_ACTIONS + 1);
+
+    // just under the request cap still works (1 MiB body)
+    let pad = "x".repeat(1 << 20);
+    let r = h.request(&json!({"op": "capabilities", "pad": pad}));
+    assert_eq!(r["ok"], true);
 }

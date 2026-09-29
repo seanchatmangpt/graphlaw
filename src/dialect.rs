@@ -70,6 +70,8 @@ pub enum RefusalKind {
     EngineRejected,
     /// The document is valid but cannot be used in this operation.
     Unsupported,
+    /// The request exceeded a documented resource cap (see `abi::MAX_*`).
+    ResourceLimit,
 }
 
 /// A typed refusal naming the engine and dialect that refused.
