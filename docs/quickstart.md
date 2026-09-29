@@ -17,7 +17,7 @@ let admitted = plan.admit(&start)?;   // replays every action; refuses on the fi
 
 `Triple::iri` validates IRIs (refusing `<`, `>`, spaces, control characters) and `Triple::literal`
 escapes quotes, backslashes and newlines, so a literal can never inject a second triple. The
-struct-literal form (`Action { name, pre, add, del }` with N-Triples text) still works and yields the
+struct-literal form (`Action { name, pre, pre_not, add, del }` (add `..Default::default()` to leave `pre_not` empty; `Plan` likewise has `goal_not`) with N-Triples text) still works and yields the
 same plan digest.
 Admission replays the actions in order: every `pre` triple must hold, `del` is removed, then `add`
 is added, and the `goal` must hold at the end. Each action yields one receipt.

@@ -67,8 +67,10 @@ fn plan(to: &str) -> Plan {
             pre: t("a"),
             add: t(to),
             del: t("a"),
+            ..Default::default()
         }],
         goal: t(to),
+        ..Default::default()
     }
 }
 

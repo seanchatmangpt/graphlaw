@@ -9,6 +9,9 @@ v26.9.29 is intentionally held and unreleased.
 
 ### Changed
 
+- BREAKING (unreleased): `plan::Action` gains `pre_not`, `plan::Plan` gains `goal_not`, and
+  `LawError::PlanRefused` gains `violated_absent`; every in-repo struct literal (tests, examples)
+  was updated with `..Default::default()`. Digests of plans without negation are unchanged.
 - API stability: growable public enums (`Step`, `Dialect`, `Engine`, `RefusalKind`,
   `PolicyRefusalKind`, `LeaseReason`, `ReceiptReason`, `Ceiling`, `N3Error`, `LawError`,
   `StoreError`, `AttestError`) are `#[non_exhaustive]`; downstream matches need a wildcard arm.
@@ -20,6 +23,11 @@ v26.9.29 is intentionally held and unreleased.
 
 ### Added
 
+- Negative preconditions and goals: `Action::pre_not` / `Plan::goal_not` (triples that must be ABSENT,
+  PDDL `(not p)`, closed-world over ground atoms), `ActionBuilder::requires_not`,
+  `PlanBuilder::requires_not` / `goal_not`, ABI `pre_not` / `goal_not` fields, and
+  `details.violated_absent` on `PlanRefused`. Included in the plan digest only when non-empty.
+  `tests/plan_negation.rs`.
 - `plan::Triple` (validated IRIs, escaped literals), `plan::PlanBuilder` / `Plan::builder()`,
   `plan::ActionBuilder` / `Action::builder()` and `plan::TripleError`; `examples/quickstart_plan.rs`
   uses them. Struct-literal construction is unchanged.

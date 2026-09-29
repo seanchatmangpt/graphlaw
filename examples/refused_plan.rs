@@ -19,20 +19,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 pre: "<urn:d:door> <urn:p:is> <urn:v:closed> .".into(),
                 add: "<urn:d:door> <urn:p:is> <urn:v:locked> .".into(),
                 del: String::new(),
+                ..Default::default()
             },
             Action {
                 name: "paint".into(),
                 pre: "<urn:d:door> <urn:p:has> <urn:v:key> .".into(),
                 add: "<urn:d:door> <urn:p:is> <urn:v:red> .".into(),
                 del: String::new(),
+                ..Default::default()
             },
         ],
+        ..Default::default()
     };
     match plan.admit(&start) {
         Err(LawError::PlanRefused {
             index,
             action,
             missing,
+            ..
         }) => {
             println!("REFUSED at index {index}, action `{action}`");
             for m in missing {

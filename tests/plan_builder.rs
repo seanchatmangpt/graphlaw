@@ -41,14 +41,17 @@ fn builder_matches_hand_written_plan_and_digest() {
                 pre: format!("{DOOR} <urn:v:closed> ."),
                 add: format!("{DOOR} <urn:v:open> ."),
                 del: format!("{DOOR} <urn:v:closed> ."),
+                ..Default::default()
             },
             Action {
                 name: "lock".into(),
                 pre: format!("{DOOR} <urn:v:open> ."),
                 add: format!("{DOOR} <urn:v:locked> ."),
                 del: format!("{DOOR} <urn:v:open> ."),
+                ..Default::default()
             },
         ],
+        ..Default::default()
     };
     assert_eq!(built.digest(), by_hand.digest());
     assert_eq!(built.canonical_json(), by_hand.canonical_json());

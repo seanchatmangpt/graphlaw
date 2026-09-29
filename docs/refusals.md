@@ -8,7 +8,7 @@ whose `code` field is the stable discriminator.
 
 | code | Rust | `details` fields | What to do |
 |---|---|---|---|
-| `PlanRefused` | `LawError::PlanRefused` | `index`, `action`, `unmet` | Action `index` (or `<goal>` at one past the last) lacks the listed N-Quads lines. Fix the plan or the start state. |
+| `PlanRefused` | `LawError::PlanRefused` | `index`, `action`, `unmet`, `violated_absent` | Action `index` (or `<goal>` at one past the last) lacks the N-Quads lines in `unmet`, or has the forbidden lines in `violated_absent` (`pre_not` / `goal_not`, PDDL `(not p)`) present. Fix the plan or the start state. |
 | `ReceiptRequired` | `LawError::ReceiptRequired` | `step` | Run the step, then `receipt::record` its receipt into the state before the gate. |
 | `LeaseRefused` | `LawError::LeaseRefused` | `reason` (`expired`, `out_of_scope`, `ceiling`), `lease_id`, `step` | Issue a lease that is current, covers the step, and has a high enough ceiling. |
 | `NotAdmitted` | `LawError::NotAdmitted` | `violations[]`: `focus`, `path`, `component`, `message`, `severity` | Fix the data or the shapes; each entry is one SHACL result. |

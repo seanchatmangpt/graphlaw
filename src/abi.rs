@@ -14,7 +14,7 @@
 //! `require-signed-receipt` (`"step_name"`, `"trusted_keys"`: hex Ed25519 public keys;
 //! refuses unless that step's receipt carries a valid attestation by a trusted key)
 //! (`{"step":"plan","plan":{"actions":[{"name","pre","add","del"}],"goal"}}`,
-//! N-Triples strings; one receipt per action, refused at the first unmet precondition).
+//! N-Triples strings; optional `pre_not` per action and `goal_not` per plan must be ABSENT; one receipt per action, refused at the first unmet precondition).
 //!
 //! Leases: a `law` request may carry `"signed_lease": {"lease": {id, holder, ceiling,
 //! scope, expires_unix, issued_unix?}, "attestation": {key_id, payload_sha256,
@@ -196,18 +196,32 @@ fn law_err(e: LawError) -> Fail {
             index,
             action,
             missing,
-        } => (
-            Refusal {
-                kind: RefusalKind::EngineRejected,
-                dialect: Some(Dialect::NTriples),
-                engine: Some(Engine::PurRdf),
-                message: format!(
-                    "plan refused at step {index} (`{action}`): unmet {}",
-                    missing.join(" ")
-                ),
-            },
-            json!({"code": "PlanRefused", "index": index, "action": action, "unmet": missing}),
-        ),
+            violated_absent,
+        } => {
+            let mut message = format!(
+                "plan refused at step {index} (`{action}`): unmet {}",
+                missing.join(" ")
+            );
+            if !violated_absent.is_empty() {
+                message = format!(
+                    "plan refused at step {index} (`{action}`): forbidden triple(s) present {}",
+                    violated_absent.join(" ")
+                );
+                if !missing.is_empty() {
+                    message.push_str(&format!("; unmet {}", missing.join(" ")));
+                }
+            }
+            (
+                Refusal {
+                    kind: RefusalKind::EngineRejected,
+                    dialect: Some(Dialect::NTriples),
+                    engine: Some(Engine::PurRdf),
+                    message,
+                },
+                json!({"code": "PlanRefused", "index": index, "action": action,
+                       "unmet": missing, "violated_absent": violated_absent}),
+            )
+        }
         LawError::ReceiptRequired { step } => (
             Refusal {
                 kind: RefusalKind::EngineRejected,
@@ -682,6 +696,7 @@ fn plan_field(step: &Value) -> Res<crate::plan::Plan> {
             Ok(crate::plan::Action {
                 name: text(a, "name")?,
                 pre: text(a, "pre")?,
+                pre_not: text(a, "pre_not")?,
                 add: text(a, "add")?,
                 del: text(a, "del")?,
             })
@@ -690,6 +705,7 @@ fn plan_field(step: &Value) -> Res<crate::plan::Plan> {
     Ok(crate::plan::Plan {
         actions,
         goal: text(p, "goal")?,
+        goal_not: text(p, "goal_not")?,
     })
 }
 

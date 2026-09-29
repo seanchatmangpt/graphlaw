@@ -800,3 +800,42 @@ fn f_wasm_require_signed_receipt_step() {
         ("ReceiptRefused", "unattested")
     );
 }
+
+#[test]
+fn plan_negation_round_trips_in_wasm_and_matches_native() {
+    let at = |o: &str| format!("<urn:p:robot> <urn:p:at> <urn:p:{o}> .\n");
+    let occ = "<urn:c:b> <urn:p:occupied> <urn:v:yes> .\n";
+    let req = |start: &str| {
+        json!({"op": "law", "data": {"text": start, "dialect": "ntriples"},
+            "steps": [{"step": "plan", "plan": {
+                "actions": [{"name": "a-b", "pre": at("a"), "pre_not": occ,
+                             "add": at("b"), "del": at("a")}],
+                "goal": at("b"), "goal_not": at("a")}}]})
+    };
+    let blocked = req(&format!("{}{occ}", at("a")));
+    let r = call(blocked.clone());
+    assert_eq!(r["ok"], false, "{r}");
+    let d = &r["error"]["details"];
+    assert_eq!(d["code"], "PlanRefused");
+    assert_eq!(d["index"], 0);
+    assert!(
+        d["violated_absent"][0]
+            .as_str()
+            .unwrap()
+            .contains("urn:c:b")
+    );
+    assert_eq!(r, graphlaw::abi::call_json(&blocked));
+
+    let free = req(&at("a"));
+    let r = ok(free.clone());
+    assert_eq!(r["receipts"].as_array().unwrap().len(), 1);
+    assert_eq!(r, graphlaw::abi::call_json(&free));
+
+    // goal_not unmet in wasm
+    let mut g = free.clone();
+    g["steps"][0]["plan"]["goal_not"] = json!(at("b"));
+    let r = call(g.clone());
+    assert_eq!(r["ok"], false);
+    assert_eq!(r["error"]["details"]["action"], "<goal>");
+    assert_eq!(r, graphlaw::abi::call_json(&g));
+}

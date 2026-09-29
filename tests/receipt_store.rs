@@ -18,6 +18,7 @@ fn mv(name: &str, from: &str, to: &str) -> Action {
         pre: t(from),
         add: t(to),
         del: t(from),
+        ..Default::default()
     }
 }
 
@@ -30,6 +31,7 @@ fn receipts() -> Vec<graphlaw::law::Receipt> {
             mv("c-d", "c", "d"),
         ],
         goal: t("d"),
+        ..Default::default()
     };
     plan.admit(&s).unwrap().receipts
 }

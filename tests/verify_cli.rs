@@ -24,6 +24,7 @@ fn mv(name: &str, from: &str, to: &str) -> Action {
         pre: t(from),
         add: t(to),
         del: t(from),
+        ..Default::default()
     }
 }
 
@@ -35,6 +36,7 @@ fn plan() -> Plan {
             mv("c-d", "c", "d"),
         ],
         goal: t("d"),
+        ..Default::default()
     }
 }
 
