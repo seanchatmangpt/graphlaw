@@ -45,7 +45,7 @@ There is nothing to run. When a change that bumps the version in `Cargo.toml` re
 
 ## Plan admission
 
-A planner only proposes. `plan::Plan::admit(&LawState)` (also `Step::Plan`, and `{"step":"plan","plan":{"actions":[{"name","pre","add","del"}],"goal"}}` in the `law` op) replays a candidate plan: every `pre` triple (N-Triples, ground) must be present in the current state, `del` then `add` produce the child state, and `goal` must hold at the end. The first violated precondition, or an unmet goal, refuses the whole plan with `LawError::PlanRefused { index, action, missing }` and yields no state. Each applied action returns a `Receipt` (`step: "plan-action"`, authority `purrdf`), so an admitted plan is a chain of content-addressed states; replay is byte-identical. Blank nodes are refused. See `tests/plan_admission.rs`.
+A planner only proposes. `plan::Plan::admit(&LawState)` (also `Step::Plan`, and `{"step":"plan","plan":{"actions":[{"name","pre","pre_not"?,"add","del"}],"goal","goal_not"?}}` in the `law` op) replays a candidate plan: every `pre` triple (N-Triples, ground) must be present and every `pre_not` triple (PDDL `(not p)`, closed-world) must be absent in the current state (checked in that order), `del` then `add` produce the child state, and `goal` must hold and `goal_not` must be absent at the end. The first violated precondition, or an unmet goal, refuses the whole plan with `LawError::PlanRefused { index, action, missing, violated_absent }` and yields no state. Each applied action returns a `Receipt` (`step: "plan-action"`, authority `purrdf`), so an admitted plan is a chain of content-addressed states; replay is byte-identical. Blank nodes are refused. See `tests/plan_admission.rs`.
 
 Receipt feedback: `receipt::record(&state, &receipt)` writes a receipt into the state as RDF (`urn:graphlaw:receipt:<child>`), so it changes the state id and the next admission; `Step::RequireReceipt { step }` (ABI `{"step":"record-receipts"}` / `{"step":"require-receipt","step_name":"..."}`) refuses with `LawError::ReceiptRequired` unless that step's receipt is recorded. Plan-action receipts carry `plan_sha256` and `index`; `Admitted.plan_digest` is the same digest. See `tests/receipt_feedback.rs`.
 
@@ -129,7 +129,7 @@ should read `details`, never scrape `message`.
 | `details.code` | Fields | Source |
 |---|---|---|
 | `NotAdmitted` | `violations: [{focus, path, component, message, severity}]` (one entry per SHACL result) | `LawError::NotAdmitted { violations, results }` |
-| `PlanRefused` | `index`, `action`, `unmet: [N-Quads lines]` | `LawError::PlanRefused` |
+| `PlanRefused` | `index`, `action`, `unmet: [N-Quads lines]`, `violated_absent: [N-Quads lines]` (forbidden `pre_not`/`goal_not` triples that were present) | `LawError::PlanRefused` |
 | `PolicyRefused` | `policy_kind`, `state`, `action` | `policy::PolicyRefused` |
 | `LeaseRefused` | `reason` (`expired`/`out_of_scope`/`ceiling`), `lease_id`, `step` | `LawError::LeaseRefused` |
 | `ReceiptRequired` | `step` | `LawError::ReceiptRequired` |
@@ -151,7 +151,7 @@ oversized input.
 | `request_bytes` | `MAX_REQUEST_BYTES` | 16 MiB | Largest document a host should ship in one call |
 | `json_depth` | `MAX_JSON_DEPTH` | 64 | String-aware bracket scan; serde's own limit is 128 |
 | `plan_actions` | `MAX_PLAN_ACTIONS` | 1,000 | Each action is replayed and re-canonicalized |
-| `atoms_per_field` | `MAX_ATOMS_PER_FIELD` | 10,000 | Non-empty N-Triples lines in one `pre`/`add`/`del`/`goal` |
+| `atoms_per_field` | `MAX_ATOMS_PER_FIELD` | 10,000 | Non-empty N-Triples lines in one `pre`/`pre_not`/`add`/`del`/`goal`/`goal_not` |
 | `policy_entries` | `MAX_POLICY_ENTRIES` | 100,000 | FOND policy entries |
 | `n3_iterations` | `law::N3_MAX_ITERATIONS` | 4,000 | Eyeron `ReasonerOptions::max_iterations` (its default is 1,000,000; a runaway rule set costs superlinear time) |
 

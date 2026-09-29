@@ -21,6 +21,7 @@ fn mv(name: &str, from: &str, to: &str) -> Action {
         pre: t("robot", from),
         add: t("robot", to),
         del: t("robot", from),
+        ..Default::default()
     }
 }
 
@@ -32,6 +33,7 @@ fn plan() -> Plan {
             mv("c-d", "c", "d"),
         ],
         goal: t("robot", "d"),
+        ..Default::default()
     }
 }
 
@@ -66,6 +68,7 @@ fn falsifier_missing_precondition_in_middle_action_is_refused_at_that_step() {
             index,
             action,
             missing,
+            ..
         }) => {
             assert_eq!(index, 1);
             assert_eq!(action, "b-c");

@@ -2,7 +2,8 @@
 //!
 //! A planner (ferroplan, an LLM, a hand-written script) only *proposes*. A
 //! [`Plan`] is admitted by replaying its actions in order against the state:
-//! every precondition triple must be present in the current state, effects
+//! every precondition triple must be present (and every `pre_not` triple
+//! absent) in the current state, effects
 //! delete then add triples, and the goal triples must hold at the end. The
 //! first violated precondition (or an unmet goal) refuses the whole plan; no
 //! state is produced. Every applied action yields a child state and a
@@ -30,6 +31,7 @@ const CAPABILITY: &str = "RDF 1.2 / codecs / storage IR";
 /// let a = Action {
 ///     name: "open".into(),
 ///     pre: "<urn:d> <urn:p:is> <urn:v:closed> .".into(),
+///     pre_not: "<urn:d> <urn:p:is> <urn:v:locked> .".into(),
 ///     add: "<urn:d> <urn:p:is> <urn:v:open> .".into(),
 ///     del: "<urn:d> <urn:p:is> <urn:v:closed> .".into(),
 /// };
@@ -41,6 +43,9 @@ pub struct Action {
     pub name: String,
     /// Triples that must hold before the action.
     pub pre: String,
+    /// Triples that must be ABSENT before the action (PDDL `(not p)`);
+    /// closed-world over ground atoms. Checked after `pre`.
+    pub pre_not: String,
     /// Triples added by the action.
     pub add: String,
     /// Triples removed by the action (removed before `add` is applied).
@@ -72,6 +77,8 @@ pub struct Plan {
     pub actions: Vec<Action>,
     /// Triples that must hold after the last action.
     pub goal: String,
+    /// Triples that must be absent after the last action.
+    pub goal_not: String,
 }
 
 /// Why a [`Triple`] or a builder input was refused.
@@ -223,6 +230,7 @@ fn join(ts: &[Triple]) -> String {
 pub struct ActionBuilder {
     name: String,
     pre: Vec<Triple>,
+    pre_not: Vec<Triple>,
     add: Vec<Triple>,
     del: Vec<Triple>,
 }
@@ -239,6 +247,12 @@ impl ActionBuilder {
     /// Add a precondition triple.
     pub fn requires(mut self, t: Triple) -> Self {
         self.pre.push(t);
+        self
+    }
+
+    /// Add a triple that must be absent before the action (`(not p)`).
+    pub fn requires_not(mut self, t: Triple) -> Self {
+        self.pre_not.push(t);
         self
     }
 
@@ -259,6 +273,7 @@ impl ActionBuilder {
         Action {
             name: self.name,
             pre: join(&self.pre),
+            pre_not: join(&self.pre_not),
             add: join(&self.add),
             del: join(&self.del),
         }
@@ -293,6 +308,7 @@ pub struct PlanBuilder {
     done: Vec<Action>,
     current: Option<ActionBuilder>,
     goal: Vec<Triple>,
+    goal_not: Vec<Triple>,
     error: Option<TripleError>,
 }
 
@@ -328,6 +344,11 @@ impl PlanBuilder {
         self.with_current("requires", |a| a.requires(t))
     }
 
+    /// Add a must-be-absent triple to the current action.
+    pub fn requires_not(self, t: Triple) -> Self {
+        self.with_current("requires_not", |a| a.requires_not(t))
+    }
+
     /// Add an asserted triple to the current action.
     pub fn adds(self, t: Triple) -> Self {
         self.with_current("adds", |a| a.adds(t))
@@ -341,6 +362,12 @@ impl PlanBuilder {
     /// Add a goal triple.
     pub fn goal(mut self, t: Triple) -> Self {
         self.goal.push(t);
+        self
+    }
+
+    /// Add a triple that must be absent after the last action.
+    pub fn goal_not(mut self, t: Triple) -> Self {
+        self.goal_not.push(t);
         self
     }
 
@@ -359,6 +386,7 @@ impl PlanBuilder {
         Ok(Plan {
             actions: self.done,
             goal: join(&self.goal),
+            goal_not: join(&self.goal_not),
         })
     }
 }
@@ -436,6 +464,10 @@ fn missing(required: &BTreeSet<String>, have: &BTreeSet<String>) -> Vec<String> 
     required.difference(have).cloned().collect()
 }
 
+fn forbidden(absent: &BTreeSet<String>, have: &BTreeSet<String>) -> Vec<String> {
+    absent.intersection(have).cloned().collect()
+}
+
 fn rebuild(lines: &BTreeSet<String>) -> Result<LawState, LawError> {
     let doc = lines.iter().map(|l| format!("{l}\n")).collect::<String>();
     Ok(LawState::parse(doc.as_bytes(), Dialect::NQuads, None)?)
@@ -461,13 +493,21 @@ fn json_str(s: &str) -> String {
 impl Plan {
     /// Canonical JSON of the plan (actions in order, keys sorted, no
     /// whitespace): `{"actions":[{"add","del","name","pre"}],"goal"}`.
+    /// `pre_not` (per action) and `goal_not` are included, in sorted key
+    /// position, only when non-empty, so digests of positive-only plans are
+    /// unchanged.
     pub fn canonical_json(&self) -> String {
         let actions = self
             .actions
             .iter()
             .map(|a| {
+                let pre_not = if a.pre_not.is_empty() {
+                    String::new()
+                } else {
+                    format!(",\"pre_not\":{}", json_str(&a.pre_not))
+                };
                 format!(
-                    "{{\"add\":{},\"del\":{},\"name\":{},\"pre\":{}}}",
+                    "{{\"add\":{},\"del\":{},\"name\":{},\"pre\":{}{pre_not}}}",
                     json_str(&a.add),
                     json_str(&a.del),
                     json_str(&a.name),
@@ -476,8 +516,13 @@ impl Plan {
             })
             .collect::<Vec<_>>()
             .join(",");
+        let goal_not = if self.goal_not.is_empty() {
+            String::new()
+        } else {
+            format!(",\"goal_not\":{}", json_str(&self.goal_not))
+        };
         format!(
-            "{{\"actions\":[{actions}],\"goal\":{}}}",
+            "{{\"actions\":[{actions}],\"goal\":{}{goal_not}}}",
             json_str(&self.goal)
         )
     }
@@ -507,6 +552,16 @@ impl Plan {
                     index,
                     action: action.name.clone(),
                     missing: gap,
+                    violated_absent: Vec::new(),
+                });
+            }
+            let banned = forbidden(&atoms(&action.pre_not)?, &have);
+            if !banned.is_empty() {
+                return Err(LawError::PlanRefused {
+                    index,
+                    action: action.name.clone(),
+                    missing: Vec::new(),
+                    violated_absent: banned,
                 });
             }
             let del = atoms(&action.del)?;
@@ -532,6 +587,16 @@ impl Plan {
                 index: self.actions.len(),
                 action: "<goal>".to_string(),
                 missing: gap,
+                violated_absent: Vec::new(),
+            });
+        }
+        let banned = forbidden(&atoms(&self.goal_not)?, &have);
+        if !banned.is_empty() {
+            return Err(LawError::PlanRefused {
+                index: self.actions.len(),
+                action: "<goal>".to_string(),
+                missing: Vec::new(),
+                violated_absent: banned,
             });
         }
         Ok(Admitted {

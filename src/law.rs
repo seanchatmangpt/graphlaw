@@ -578,6 +578,9 @@ pub enum LawError {
         action: String,
         /// Canonical N-Quads lines that were required but absent.
         missing: Vec<String>,
+        /// Canonical N-Quads lines that were forbidden (`pre_not` /
+        /// `goal_not`) but present.
+        violated_absent: Vec<String>,
     },
     /// No recorded receipt for `step` exists in the state.
     ReceiptRequired {
@@ -615,11 +618,18 @@ impl std::fmt::Display for LawError {
                 index,
                 action,
                 missing,
-            } => write!(
-                f,
-                "plan refused at step {index} (`{action}`): {} unmet triple(s)",
-                missing.len()
-            ),
+                violated_absent,
+            } => {
+                write!(
+                    f,
+                    "plan refused at step {index} (`{action}`): {} unmet triple(s)",
+                    missing.len()
+                )?;
+                if !violated_absent.is_empty() {
+                    write!(f, ", {} forbidden triple(s) present", violated_absent.len())?;
+                }
+                Ok(())
+            }
             LawError::ReceiptRequired { step } => {
                 write!(f, "receipt required: no recorded receipt for step `{step}`")
             }

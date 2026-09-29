@@ -158,3 +158,29 @@ fn nonterminating_n3_rules_refuse_with_resource_limit_not_a_hang() {
         "text": "@prefix : <urn:n:> .\n:a :p :b .\n{ ?x :p ?y } => { ?y :q ?x } .\n"}));
     assert_eq!(ok["ok"], true, "{ok}");
 }
+
+#[test]
+fn pre_not_and_goal_not_count_toward_the_atoms_per_field_cap() {
+    let nt = |n: usize| {
+        (0..n)
+            .map(|i| format!("<urn:p:s> <urn:p:p> <urn:p:o{i}> .\n"))
+            .collect::<String>()
+    };
+    let goal_not = json!({"op": "law", "data": {"text": at("a"), "dialect": "ntriples"},
+        "steps": [{"step": "plan", "plan": {"actions": [], "goal_not": nt(MAX_ATOMS_PER_FIELD + 1)}}]});
+    assert_limit(
+        &call_json(&goal_not),
+        "atoms_per_field",
+        MAX_ATOMS_PER_FIELD + 1,
+        MAX_ATOMS_PER_FIELD,
+    );
+    let pre_not = json!({"op": "law", "data": {"text": at("a"), "dialect": "ntriples"},
+        "steps": [{"step": "plan", "plan": {"actions": [
+            {"name": "x", "pre_not": nt(MAX_ATOMS_PER_FIELD + 1)}], "goal": ""}}]});
+    assert_limit(
+        &call_json(&pre_not),
+        "atoms_per_field",
+        MAX_ATOMS_PER_FIELD + 1,
+        MAX_ATOMS_PER_FIELD,
+    );
+}
