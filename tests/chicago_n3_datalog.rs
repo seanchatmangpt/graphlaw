@@ -36,8 +36,8 @@ fn ok(req: Value) -> Value {
 fn canonical_n3(program: &str) -> String {
     let out = ok(json!({"op": "n3", "text": program}));
     let derived = out["derived"].as_str().expect("N3 result text");
-    let dataset =
-        graphlaw::rdf::parse_dataset(derived.as_bytes(), "text/turtle", None).expect("N3 result is RDF");
+    let dataset = graphlaw::rdf::parse_dataset(derived.as_bytes(), "text/turtle", None)
+        .expect("N3 result is RDF");
     graphlaw::rdf::try_canonicalize(dataset.as_ref())
         .expect("RDFC canonicalization")
         .nquads
@@ -46,8 +46,8 @@ fn canonical_n3(program: &str) -> String {
 fn n3_pairs(program: &str, predicate: &str) -> BTreeSet<(String, String)> {
     let out = ok(json!({"op": "n3", "text": program}));
     let derived = out["derived"].as_str().expect("N3 result text");
-    let dataset =
-        graphlaw::rdf::parse_dataset(derived.as_bytes(), "text/turtle", None).expect("N3 result is RDF");
+    let dataset = graphlaw::rdf::parse_dataset(derived.as_bytes(), "text/turtle", None)
+        .expect("N3 result is RDF");
     let bytes = graphlaw::rdf::serialize_dataset(
         dataset.as_ref(),
         "application/n-triples",
