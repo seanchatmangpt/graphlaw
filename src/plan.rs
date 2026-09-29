@@ -168,6 +168,7 @@ impl Plan {
         let mut state = start.clone();
         let mut have = state_lines(&state)?;
         let mut receipts = Vec::with_capacity(self.actions.len());
+        let plan_digest = self.digest();
         for (index, action) in self.actions.iter().enumerate() {
             let need = atoms(&action.pre)?;
             let gap = missing(&need, &have);
@@ -189,6 +190,8 @@ impl Plan {
                 authority: authority(),
                 added: child.quad_count().saturating_sub(state.quad_count()),
                 lease_id: None,
+                plan_sha256: Some(plan_digest.clone()),
+                subject_sha256: None,
             });
             state = child;
             have = next;
@@ -204,7 +207,7 @@ impl Plan {
         Ok(Admitted {
             state,
             receipts,
-            plan_digest: self.digest(),
+            plan_digest,
         })
     }
 }

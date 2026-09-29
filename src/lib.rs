@@ -42,6 +42,7 @@ compile_error!(
 
 #[cfg(feature = "abi")]
 pub mod abi;
+pub mod attest;
 pub mod dialect;
 pub mod hooks;
 pub mod law;

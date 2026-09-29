@@ -21,6 +21,7 @@ fn lease(ceiling: Ceiling, scope: &[&str], expires: u64) -> Lease {
         ceiling,
         scope: scope.iter().map(|s| s.to_string()).collect(),
         expires_unix: expires,
+        issued_unix: 0,
     }
 }
 
@@ -34,7 +35,9 @@ fn reason(r: Result<(LawState, graphlaw::law::Receipt), LawError>) -> LeaseReaso
 #[test]
 fn valid_lease_admits_and_receipt_carries_lease_id() {
     let l = lease(Ceiling::Construct, &["derive:rdfs"], 100);
-    let (child, r) = base().transition_leased(&l, &Step::EntailRdfs, 50).unwrap();
+    let (child, r) = base()
+        .transition_leased_unverified(&l, &Step::EntailRdfs, 50)
+        .unwrap();
     assert_eq!(r.lease_id.as_deref(), Some("lease-1"));
     assert!(child.quad_count() > base().quad_count());
     // The lease id is recorded as a triple and feeds back into the state.
@@ -62,7 +65,7 @@ fn unleased_transition_has_no_lease_id() {
 fn expired_lease_refused() {
     let l = lease(Ceiling::Construct, &["derive:rdfs"], 100);
     assert_eq!(
-        reason(base().transition_leased(&l, &Step::EntailRdfs, 100)),
+        reason(base().transition_leased_unverified(&l, &Step::EntailRdfs, 100)),
         LeaseReason::Expired
     );
 }
@@ -71,7 +74,7 @@ fn expired_lease_refused() {
 fn out_of_scope_step_refused() {
     let l = lease(Ceiling::Construct, &["derive:owl-rl"], 100);
     assert_eq!(
-        reason(base().transition_leased(&l, &Step::EntailRdfs, 1)),
+        reason(base().transition_leased_unverified(&l, &Step::EntailRdfs, 1)),
         LeaseReason::OutOfScope
     );
 }
@@ -80,14 +83,14 @@ fn out_of_scope_step_refused() {
 fn ceiling_below_required_refused() {
     let l = lease(Ceiling::Select, &["derive:rdfs"], 100);
     assert_eq!(
-        reason(base().transition_leased(&l, &Step::EntailRdfs, 1)),
+        reason(base().transition_leased_unverified(&l, &Step::EntailRdfs, 1)),
         LeaseReason::Ceiling
     );
     // An observe-only lease still runs a gate.
     let g = lease(Ceiling::Observe, &["admit:require-receipt"], 100);
     let gate = Step::RequireReceipt { step: "x" };
     assert!(matches!(
-        base().transition_leased(&g, &gate, 1),
+        base().transition_leased_unverified(&g, &gate, 1),
         Err(LawError::ReceiptRequired { .. })
     ));
 }
@@ -95,5 +98,9 @@ fn ceiling_below_required_refused() {
 #[test]
 fn refused_lease_yields_no_state() {
     let l = lease(Ceiling::Observe, &[], 100);
-    assert!(base().transition_leased(&l, &Step::EntailRdfs, 1).is_err());
+    assert!(
+        base()
+            .transition_leased_unverified(&l, &Step::EntailRdfs, 1)
+            .is_err()
+    );
 }

@@ -17,6 +17,7 @@ use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
+use crate::attest::{AttestError, Attestation, TrustedKeys, verify_receipt};
 use crate::law::Receipt;
 use crate::{BACKEND_AUTHORITIES, BackendAuthority};
 
@@ -35,6 +36,15 @@ pub enum StoreError {
         file: String,
         expected: String,
         actual: String,
+    },
+    /// A receipt has no `<digest>.sig` attestation file.
+    Unattested {
+        file: String,
+    },
+    /// A receipt's attestation is malformed, untrusted, or does not verify.
+    Attestation {
+        file: String,
+        error: AttestError,
     },
     /// The stored receipts do not form one linear parent -> child chain.
     BrokenChain {
@@ -56,6 +66,10 @@ impl fmt::Display for StoreError {
                 f,
                 "receipt file `{file}` tampered: address {expected}, content hashes to {actual}"
             ),
+            StoreError::Unattested { file } => write!(f, "receipt `{file}` has no attestation"),
+            StoreError::Attestation { file, error } => {
+                write!(f, "receipt `{file}` attestation refused: {error}")
+            }
             StoreError::BrokenChain { detail } => write!(f, "receipt chain broken: {detail}"),
         }
     }
@@ -103,7 +117,7 @@ fn esc(s: &str) -> String {
 /// Canonical serialization: fixed key order, no whitespace.
 fn encode(r: &Receipt) -> String {
     let lease = r.lease_id.as_deref().map_or("null".to_string(), esc);
-    format!(
+    let body = format!(
         "{{\"parent\":{},\"child\":{},\"step\":{},\"authority\":{},\"revision\":{},\"added\":{},\"lease_id\":{}}}",
         esc(&r.parent),
         esc(&r.child),
@@ -112,7 +126,19 @@ fn encode(r: &Receipt) -> String {
         esc(r.authority.revision),
         r.added,
         lease
-    )
+    );
+    // Optional bindings are emitted only when present, so receipts without them
+    // keep their historical bytes (and content addresses).
+    let mut body = body;
+    body.pop(); // closing brace
+    if let Some(p) = &r.plan_sha256 {
+        body.push_str(&format!(",\"plan_sha256\":{}", esc(p)));
+    }
+    if let Some(p) = &r.subject_sha256 {
+        body.push_str(&format!(",\"subject_sha256\":{}", esc(p)));
+    }
+    body.push('}');
+    body
 }
 
 /// Receipt digest: SHA-256 of the canonical serialization.
@@ -188,6 +214,7 @@ fn step_name(name: &str) -> Option<&'static str> {
         "derive:rdfs",
         "derive:owl-rl",
         "plan-action",
+        "admit:require-signed-receipt",
     ]
     .into_iter()
     .find(|s| *s == name)
@@ -224,6 +251,14 @@ fn decode(bytes: &[u8]) -> Option<Receipt> {
     } else {
         Some(c.string()?)
     };
+    let mut plan_sha256 = None;
+    if c.eat(",\"plan_sha256\":").is_some() {
+        plan_sha256 = Some(c.string()?);
+    }
+    let mut subject_sha256 = None;
+    if c.eat(",\"subject_sha256\":").is_some() {
+        subject_sha256 = Some(c.string()?);
+    }
     c.eat("}")?;
     if c.i != c.b.len() {
         return None;
@@ -235,6 +270,8 @@ fn decode(bytes: &[u8]) -> Option<Receipt> {
         authority: authority_of(&auth, &rev)?,
         added,
         lease_id,
+        plan_sha256,
+        subject_sha256,
     })
 }
 
@@ -276,6 +313,53 @@ impl ReceiptStore {
         fs::write(&tmp, body.as_bytes())?;
         fs::rename(&tmp, &dest)?;
         Ok(digest)
+    }
+
+    /// [`ReceiptStore::put`] plus the receipt's attestation, stored beside it as
+    /// `<digest>.sig` (canonical attestation JSON). Returns the receipt digest.
+    pub fn put_signed(
+        &self,
+        receipt: &Receipt,
+        subject_sha: &str,
+        attestation: &Attestation,
+    ) -> Result<String, StoreError> {
+        let digest = self.put(receipt, subject_sha)?;
+        let sd = self.subject_dir(subject_sha)?;
+        let dest = sd.join(format!("{digest}.sig"));
+        let tmp = sd.join(format!(".tmp-{digest}-sig-{}", std::process::id()));
+        fs::write(&tmp, attestation.to_json().as_bytes())?;
+        fs::rename(&tmp, &dest)?;
+        Ok(digest)
+    }
+
+    /// [`ReceiptStore::verify`], then require every receipt to carry a
+    /// `<digest>.sig` attestation that verifies against `trusted`. Returns the
+    /// receipts in chain order.
+    pub fn verify_attested(
+        &self,
+        subject_sha: &str,
+        trusted: &TrustedKeys,
+    ) -> Result<Vec<Receipt>, StoreError> {
+        let rs = self.verify(subject_sha)?;
+        let sd = self.subject_dir(subject_sha)?;
+        for r in &rs {
+            let digest = receipt_digest(r);
+            let file = format!("{digest}.sig");
+            let text = match fs::read_to_string(sd.join(&file)) {
+                Ok(t) => t,
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                    return Err(StoreError::Unattested { file });
+                }
+                Err(e) => return Err(e.into()),
+            };
+            let att = Attestation::from_json(&text).map_err(|error| StoreError::Attestation {
+                file: file.clone(),
+                error,
+            })?;
+            verify_receipt(r, &att, trusted)
+                .map_err(|error| StoreError::Attestation { file, error })?;
+        }
+        Ok(rs)
     }
 
     /// Digests of receipts stored for `subject` (sorted); empty when none.
