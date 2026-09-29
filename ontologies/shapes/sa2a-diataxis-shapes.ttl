@@ -1,0 +1,13 @@
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix sa2a: <https://seanchatmangpt.github.io/sa2a/diataxis#> .
+
+sa2a:ExecutableCapabilityShape a sh:NodeShape ;
+  sh:targetClass sa2a:Capability ;
+  sh:property [ sh:path sa2a:specifiedBy ; sh:minCount 1 ] ;
+  sh:property [ sh:path sa2a:constrainedBy ; sh:minCount 1 ] ;
+  sh:property [ sh:path sa2a:verifiedBy ; sh:minCount 1 ] ;
+  sh:property [ sh:path sa2a:repairedBy ; sh:minCount 1 ] .
+
+sa2a:ReceiptedCapabilityShape a sh:NodeShape ;
+  sh:targetSubjectsOf sa2a:evidencedBy ;
+  sh:property [ sh:path sa2a:evidencedBy ; sh:minCount 1 ] .
