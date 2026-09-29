@@ -137,7 +137,11 @@ fn run(a: Args) -> Result<ExitCode, String> {
                     AttestError::BadSignature => "BadSignature",
                     AttestError::UnknownKey => "UntrustedKey",
                     AttestError::Malformed(_) => "MalformedAttestation",
+                    // Non-exhaustive: an attestation error added later still refuses.
+                    _ => "BadSignature",
                 },
+                // Non-exhaustive: a store error added later still refuses.
+                _ => "ReceiptTampered",
             };
             return Ok(refused(code, e));
         }

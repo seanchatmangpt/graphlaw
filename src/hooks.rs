@@ -51,12 +51,15 @@ pub const MAX_FIRINGS: usize = 10_000;
 /// One `kh:Hook` with its resolved action.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Hook {
+    /// IRI identifying the hook.
     pub iri: String,
+    /// Human-readable hook name.
     pub name: String,
     /// Trigger `SELECT`.
     pub trigger: String,
     /// Action `CONSTRUCT`.
     pub construct: String,
+    /// Firing priority; lower values fire first.
     pub priority: i64,
 }
 
@@ -69,7 +72,9 @@ pub struct HookPack {
 /// One firing of one hook for one trigger row.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Firing {
+    /// IRI of the hook that fired.
     pub hook: String,
+    /// Fixpoint round in which the hook fired.
     pub round: usize,
     /// The trigger row, as `(variable, term)` in projection order.
     pub row: Vec<(String, String)>,
@@ -80,8 +85,11 @@ pub struct Firing {
 /// The fixpoint of a pack over a state.
 #[derive(Debug, Clone)]
 pub struct Materialized {
+    /// The state after all hooks reached fixpoint.
     pub state: LawState,
+    /// Every firing, in order.
     pub firings: Vec<Firing>,
+    /// Number of rounds executed.
     pub rounds: usize,
 }
 
@@ -219,6 +227,7 @@ impl HookPack {
         Ok(HookPack { hooks })
     }
 
+    /// The hooks of this pack, in priority order.
     pub fn hooks(&self) -> &[Hook] {
         &self.hooks
     }

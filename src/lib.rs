@@ -30,6 +30,7 @@
 //! ```
 
 #![forbid(unsafe_code)]
+#![deny(missing_docs)]
 
 #[cfg(all(target_os = "wasi", not(feature = "wasi-patched-deps")))]
 compile_error!(

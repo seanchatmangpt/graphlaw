@@ -10,12 +10,32 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 /// Why a policy was refused.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::policy::PolicyRefusalKind;
+///
+/// let k = PolicyRefusalKind::DeadEnd;
+/// let code = match k {
+///     PolicyRefusalKind::DeadEnd => "dead_end",
+///     _ => "other", // required: new kinds may be added
+/// };
+/// assert_eq!(code, "dead_end");
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum PolicyRefusalKind {
+    /// A reachable state lacks a policy entry.
     MissingEntry,
+    /// An outcome names a state the domain does not allow.
     InventedOutcome,
+    /// Outcome probabilities do not sum to one million ppm.
     BadMass,
+    /// A reachable non-goal state has no applicable action.
     DeadEnd,
+    /// The policy document is not well formed.
     Malformed,
 }
 
@@ -35,9 +55,13 @@ impl PolicyRefusalKind {
 /// Typed refusal.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PolicyRefused {
+    /// Machine-readable refusal class.
     pub kind: PolicyRefusalKind,
+    /// State the refusal concerns.
     pub state: String,
+    /// Action the refusal concerns.
     pub action: String,
+    /// Diagnostic text.
     pub message: String,
 }
 
@@ -53,11 +77,39 @@ impl PolicyRefused {
 }
 
 /// Admitted strong-cyclic policy summary.
+///
+/// ```
+/// use std::collections::{BTreeMap, BTreeSet};
+/// use graphlaw::policy::{admit_parsed, Entry, Outcome, Problem};
+///
+/// let facts = |f: &[&str]| f.iter().map(|s| s.to_string()).collect::<BTreeSet<_>>();
+/// let problem = Problem {
+///     states: BTreeMap::from([
+///         ("s0".to_string(), facts(&["start"])),
+///         ("s1".to_string(), facts(&["done"])),
+///     ]),
+///     initial: vec!["s0".into()],
+///     goal_facts: facts(&["done"]),
+///     unsafe_states: BTreeSet::new(),
+///     transitions: BTreeSet::from([("go".to_string(), "s0".to_string(), "s1".to_string())]),
+/// };
+/// let policy = [Entry {
+///     state: "s0".into(),
+///     action: "go".into(),
+///     outcomes: vec![Outcome { state: "s1".into(), probability_ppm: 1_000_000 }],
+/// }];
+/// let admitted = admit_parsed(&problem, &policy)?;
+/// assert_eq!(admitted.goal_states, vec!["s1".to_string()]);
+/// assert!(admitted.to_ntriples().contains("STRONG_CYCLIC"));
+/// # Ok::<(), graphlaw::policy::PolicyRefused>(())
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PolicyAdmitted {
+    /// Initial state names.
     pub initial_states: Vec<String>,
     /// Reachable states in sorted order.
     pub reachable: Vec<String>,
+    /// Goal state names.
     pub goal_states: Vec<String>,
     /// (state, action) for every reachable non-goal state.
     pub entries: Vec<(String, String)>,
@@ -112,24 +164,33 @@ impl PolicyAdmitted {
 /// One outcome of a policy entry.
 #[derive(Clone, Debug)]
 pub struct Outcome {
+    /// State reached by the outcome.
     pub state: String,
+    /// Probability in parts per million.
     pub probability_ppm: u64,
 }
 
 /// One policy entry.
 #[derive(Clone, Debug)]
 pub struct Entry {
+    /// State the entry applies to.
     pub state: String,
+    /// Action chosen in the state.
     pub action: String,
+    /// Possible outcomes of the action.
     pub outcomes: Vec<Outcome>,
 }
 
 /// Parsed problem: state facts, initial states, goal facts, real transitions.
 #[derive(Clone, Debug, Default)]
 pub struct Problem {
+    /// Facts holding in each named state.
     pub states: BTreeMap<String, BTreeSet<String>>,
+    /// Initial state names.
     pub initial: Vec<String>,
+    /// Facts that define the goal.
     pub goal_facts: BTreeSet<String>,
+    /// States that must never be reached.
     pub unsafe_states: BTreeSet<String>,
     /// (action, from, to)
     pub transitions: BTreeSet<(String, String, String)>,

@@ -87,6 +87,13 @@ assert!(derived.contains("Mortal"));
 
 The complete upstream surfaces are intentionally re-exported. Consumers can use the authoritative library API directly rather than a lossy GraphLaw copy.
 
+## API stability and supply chain
+
+Growable enums are `#[non_exhaustive]` and every public item is documented (`#![deny(missing_docs)]`);
+see [`docs/api-stability.md`](docs/api-stability.md) for the stability, deprecation, MSRV and
+`ABI_VERSION` contracts. Build plans with `Plan::builder()` and `Triple` instead of hand-written
+N-Triples. CI runs `cargo-semver-checks`, `cargo-deny` (`deny.toml`) and `cargo-audit`.
+
 ## Production rule
 
 **No standards algorithm is reimplemented in GraphLaw.** If an admitted upstream library lacks a required standard feature, GraphLaw either refuses that feature or contributes the capability upstream. It does not create another local parser, reasoner, validator, query engine, or fixpoint implementation.
