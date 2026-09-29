@@ -1,5 +1,4 @@
 # sha256  bytes  dialect  path   (regenerate: UPDATE_ASSET_MANIFEST=1)
-4e71a4c0de9ac5b9182c74896c37595421a96e9d9b4d8daffaff57a503677b87  3973  -  innovation/README.md
 1026f227aaab3459a738325cf0c9e0d4b09726870110dd12c7c99e78218bb803  4963  N3  innovation/blue-ocean-triz.n3
 d253221dfc64547b4d6a0d128bdbd3e384618a7a4d9d87ee8cc892894a699c79  1123  Turtle  innovation/candidate.shacl.ttl
 6b9313e525fd443f9633e3c729a8fe25d95a2b48e1461e763adc1050aebaaaec  1431  ShExJ  innovation/candidate.shex.json
@@ -7,6 +6,7 @@ d253221dfc64547b4d6a0d128bdbd3e384618a7a4d9d87ee8cc892894a699c79  1123  Turtle  
 2523739418fa2bfe4eaf2f36f7ff6d2834dfc8520fd84e6e2ff44a30713e8bbb  1443  Turtle  innovation/industry-fixture.n3
 ec6930bf3c7b119bbb1e0f2093f1ea6dd037328cff18a9900a5a805a4e863e55  3600  Turtle  innovation/ontology.ttl
 e16d4895c63d7af103826c56af62c8363690a94cc61edaa753d11aa458115671  122  Sparql  innovation/opportunities.rq
+4e71a4c0de9ac5b9182c74896c37595421a96e9d9b4d8daffaff57a503677b87  3973  -  innovation/README.md
 2cf16dfa7421e5deb41e2e8ee5575e91913f443a758214b07a9682c9d6025310  52789  Turtle  ontologies/bibliographic/bibo.ttl
 a05c919b7d2d45dbb2a217ff546375613e7647e6eebd5df8f17ff12466761dc1  91757  RdfXml  ontologies/bibliographic/mads.rdf
 52d981958f2c13fb6a39fdd987989f732d340d824373fa00a9022a5bf0164568  31501  Turtle  ontologies/catalog.ttl
@@ -54,15 +54,15 @@ f8ecc8ffe5a1f989baf2fee24a37973af03ce6c3105d46aea9de93df7a8e6167  42060  RdfXml 
 c9f2a13c633ecb5c7f24221e3eac02f92c7cd978ea828a8f3a851a3b6e87af1c  8487  RdfXml  ontologies/industry/financial/fibo-derivatives.rdf
 6831ddc717abf1083b76a145f8312c407e86b3f6834765d8786da6d0d86b5470  5768  RdfXml  ontologies/industry/financial/fibo-instruments.rdf
 f8ecc8ffe5a1f989baf2fee24a37973af03ce6c3105d46aea9de93df7a8e6167  42060  RdfXml  ontologies/industry/financial/fibo-loan.rdf
+c6f5995d4ebe5ea029aa43cffa7ee50145169bcf91b333da97129e1e2a1129d3  29069  RdfXml  ontologies/industry/financial/fibo-master/AboutFIBODev.rdf
+ecffef330f3a9f11b598e9a4fcf6bae3a0a2a325249394ab140d91714ed6c2b2  32562  RdfXml  ontologies/industry/financial/fibo-master/AboutFIBOProd-IncludingReferenceData.rdf
+f2e50327076aaea4d0424541c4fc9ec727667ec1b5beed529b6868d860da5514  17137  RdfXml  ontologies/industry/financial/fibo-master/AboutFIBOProd-TBoxOnly.rdf
+0f5366da3043c4bc2965f9daa10184b33281a1cc1c6780afe5eeba04c77c611c  23518  RdfXml  ontologies/industry/financial/fibo-master/AboutFIBOProd.rdf
 85f298cf4eab8addb87017a8faaeb1d74ebcfaaadc09de00c8c0079bb9b3b6c3  19780  Turtle  ontologies/industry/financial/fibo-master/ACTUS/ACTUS-examples.ttl
 f46bf8887d4b9d7d38f1254537d53b7b760d6176a5a1b150feff65b880696bd3  169314  RdfXml  ontologies/industry/financial/fibo-master/ACTUS/ACTUSContractTerms.rdf
 1bd8304fcad8b0b91beb5b8539d8eb63ade9cb628cf8ff632ebec011e3856f3e  78907  RdfXml  ontologies/industry/financial/fibo-master/ACTUS/ACTUSTaxonomy.rdf
 98a548bd68e5cecb850eecdd6ea81589edb16b618bb5e7693260ccba689f5025  19827  RdfXml  ontologies/industry/financial/fibo-master/ACTUS/ACTUSTermApplicabilityMapping.rdf
 56e4272ddafa0ab07d048de62cb68896a301ad9f17abd64520553e02a2defc64  6850  RdfXml  ontologies/industry/financial/fibo-master/ACTUS/MetadataACTUS.rdf
-c6f5995d4ebe5ea029aa43cffa7ee50145169bcf91b333da97129e1e2a1129d3  29069  RdfXml  ontologies/industry/financial/fibo-master/AboutFIBODev.rdf
-ecffef330f3a9f11b598e9a4fcf6bae3a0a2a325249394ab140d91714ed6c2b2  32562  RdfXml  ontologies/industry/financial/fibo-master/AboutFIBOProd-IncludingReferenceData.rdf
-f2e50327076aaea4d0424541c4fc9ec727667ec1b5beed529b6868d860da5514  17137  RdfXml  ontologies/industry/financial/fibo-master/AboutFIBOProd-TBoxOnly.rdf
-0f5366da3043c4bc2965f9daa10184b33281a1cc1c6780afe5eeba04c77c611c  23518  RdfXml  ontologies/industry/financial/fibo-master/AboutFIBOProd.rdf
 4c18e172246f832a696337a8c6666c607258f6080645554167dcb966a8b60a88  7336  RdfXml  ontologies/industry/financial/fibo-master/BE/AllBE-Europe.rdf
 57a27c01fc20a4dc2e94ffe326dcf0f54073b00c4dab5651caa438c09c777d4e  4763  RdfXml  ontologies/industry/financial/fibo-master/BE/AllBE-ExampleIndividuals.rdf
 d95234a22ca912641aeaaba6bb61f39bf28cf6a9e1011d6ed4023f5dc96bc68d  7260  RdfXml  ontologies/industry/financial/fibo-master/BE/AllBE-NorthAmerica.rdf
@@ -79,8 +79,8 @@ e2453d9d72988491cc453a5592cf358464567bd9ca6edcec837999a72b9dec74  18519  RdfXml 
 17245c50968da9f9748631084acf16edd156b2ec022ee5dff2a9c8f079aa27a4  36947  RdfXml  ontologies/industry/financial/fibo-master/BE/GovernmentEntities/AsianJurisdiction/SoutheasternAsiaGovernmentEntitiesAndJurisdictions.rdf
 c1d99ead3fcce194efa803fe905b0c307156eb993c76e69e7ecc2b0ee5d5a801  29961  RdfXml  ontologies/industry/financial/fibo-master/BE/GovernmentEntities/AsianJurisdiction/SouthernAsiaGovernmentEntitiesAndJurisdictions.rdf
 bfabf8518a2b7b37c779b367f33eddeef91e306bf8315685c038a8cd6a7ec7d5  54421  RdfXml  ontologies/industry/financial/fibo-master/BE/GovernmentEntities/AsianJurisdiction/WesternAsiaGovernmentEntitiesAndJurisdictions.rdf
-d08575410e2f41a99d536dd4fd2a92b757479aae7f45a80673a064ed3405545b  38135  RdfXml  ontologies/industry/financial/fibo-master/BE/GovernmentEntities/EuropeanJurisdiction/EUGovernmentEntitiesAndJurisdictions.rdf
 b776fb9a4f40d2f336b57c9dc92052deb4a2fb4406df12df83add1fd92288212  36451  RdfXml  ontologies/industry/financial/fibo-master/BE/GovernmentEntities/EuropeanJurisdiction/EasternEuropeGovernmentEntitiesAndJurisdictions.rdf
+d08575410e2f41a99d536dd4fd2a92b757479aae7f45a80673a064ed3405545b  38135  RdfXml  ontologies/industry/financial/fibo-master/BE/GovernmentEntities/EuropeanJurisdiction/EUGovernmentEntitiesAndJurisdictions.rdf
 74424da363b1e2dfd55a4c298afe1aacfe44562631045eee3d032b4413ccb03a  37203  RdfXml  ontologies/industry/financial/fibo-master/BE/GovernmentEntities/EuropeanJurisdiction/NorthernEuropeGovernmentEntitiesAndJurisdictions.rdf
 7a4c20885359c82f0afd53c6eb507d4a4e745313daa2135c6b1db14eaedf223e  51763  RdfXml  ontologies/industry/financial/fibo-master/BE/GovernmentEntities/EuropeanJurisdiction/SouthernEuropeGovernmentEntitiesAndJurisdictions.rdf
 cb0c839d0dee9c981e57d2a2c92098cde2b66f4a048552645b4aacc3c2a032ff  28015  RdfXml  ontologies/industry/financial/fibo-master/BE/GovernmentEntities/EuropeanJurisdiction/UKGovernmentEntitiesAndJurisdictions.rdf
@@ -95,8 +95,8 @@ ad8a9e87d5933eb828f3fcecf9453fe7906088bb62630a7a60fd02aa2f2c0ab4  13683  RdfXml 
 d799f92fc2925aaff4480c7e93b52b6d8fa2eead05df3fdc9c1c1b043d743338  204209  RdfXml  ontologies/industry/financial/fibo-master/BE/GovernmentEntities/NorthAmericanJurisdiction/USGovernmentEntitiesAndJurisdictions.rdf
 262c6160536d95fe978bf193a695d92e62b5407de04cbb8acf4ef6bace8258b4  32556  RdfXml  ontologies/industry/financial/fibo-master/BE/LegalEntities/CorporateBodies.rdf
 68d5fd0dc3da28a318be0cb41c42d3b9a907df0699019679b1f5bd736b9cb7c2  22679  RdfXml  ontologies/industry/financial/fibo-master/BE/LegalEntities/FormalBusinessOrganizations.rdf
-cf0a0ec54788411da374ff46314965130bed978614ea983f00ae2b235a647a98  43798  RdfXml  ontologies/industry/financial/fibo-master/BE/LegalEntities/LEIEntities.rdf
 dceaff4d2c8fe5444fe544cac076afc39ae69082fb2e547b53945124ea98824b  26086  RdfXml  ontologies/industry/financial/fibo-master/BE/LegalEntities/LegalPersons.rdf
+cf0a0ec54788411da374ff46314965130bed978614ea983f00ae2b235a647a98  43798  RdfXml  ontologies/industry/financial/fibo-master/BE/LegalEntities/LEIEntities.rdf
 b0bd81e866ebcb5b93ff7e521a218a149f6615aa1c5b4025d345da0f33d39ee1  4636  RdfXml  ontologies/industry/financial/fibo-master/BE/LegalEntities/MetadataBELegalEntities.rdf
 ba1328cad547e41a8e0aeff8f9e1c1a1ab877c82b903e4866f8206acffe71551  26446  RdfXml  ontologies/industry/financial/fibo-master/BE/LegalEntities/NorthAmericanEntities/USExampleEntities.rdf
 4351def46deb9757dc395822d8513964739ff893bc4e451b685c53c8d4d7355e  15926  RdfXml  ontologies/industry/financial/fibo-master/BE/LegalEntities/NorthAmericanEntities/USExampleExecutives.rdf
@@ -159,6 +159,10 @@ a44cb6f37246f5a396adcd7f464a63dd5ff42f81f05da0a8a6e90b0ae27559cc  27834  RdfXml 
 edb27be38582d74e834a0cdb71e920eea9a4e540c08784502a95af7c9a1e4e54  22952  RdfXml  ontologies/industry/financial/fibo-master/DER/SecurityBasedDerivatives/EquitySwaps.rdf
 cf4edf008038e68ca606160ea92d0cd69156719e5f6f5112e1af74aced3b31a2  4623  RdfXml  ontologies/industry/financial/fibo-master/DER/SecurityBasedDerivatives/MetadataDERSecurityBasedDerivatives.rdf
 dc4895ab37d1ab1ac3f4473a36beea930c7e5896f149a49c58c8010664964a27  24037  RdfXml  ontologies/industry/financial/fibo-master/DER/SecurityBasedDerivatives/SecurityBasedDerivatives.rdf
+72afd928cba7ed7375938a0453cbb80d218a9c69340e86d83f17c2a1b92303c3  16922  RdfXml  ontologies/industry/financial/fibo-master/etc/testing/data/fnd/Organizations/TestFormalOrganizations.rdf
+f1977e919b2691756075cb48971a9164d25fd945e590a822c14f0005cc74afd1  7532  RdfXml  ontologies/industry/financial/fibo-master/etc/testing/data/fnd/OwnershipAndControl/TestControl.rdf
+25cd71ba3c7bf0b18ff3ecdb77543558473526cbf1198bec28532ccb53bee592  6948  RdfXml  ontologies/industry/financial/fibo-master/etc/testing/data/fnd/OwnershipAndControl/TestOwnership.rdf
+96ea5967501ae36d434dbe55c5861f1acb6282fe3c2bb8fcbf1ed7500ecec767  1320  Turtle  ontologies/industry/financial/fibo-master/etc/vocabulary/scaffolding.ttl
 110ec4843185674d6ae56c336258a293a36811ee7f821c5e5e4f1e4a1725a3c0  5953  RdfXml  ontologies/industry/financial/fibo-master/FBC/AllFBC-Europe.rdf
 ea29ce975f9578d030a63e042322df16a7e4dc920bd28981fcea5f4b630844f1  5221  RdfXml  ontologies/industry/financial/fibo-master/FBC/AllFBC-EuropeAndNorthAmerica.rdf
 83f3dbb7538e445e4e99ec9ac862eab52c27512f0d4996e108ee44332e4f9ace  5741  RdfXml  ontologies/industry/financial/fibo-master/FBC/AllFBC-ExampleIndividuals.rdf
@@ -349,10 +353,6 @@ c8424ce3eb21f724a033391b912bed0516aa0227f65f484730de409efcd268f3  55489  RdfXml 
 3128ded103984e44ab25057cd8d1e0f27f3d5ad0a4eaa244e9ba7f458b8a3100  26062  RdfXml  ontologies/industry/financial/fibo-master/SEC/Securities/SecuritiesListings.rdf
 faac52fbe0c80f2a40f42d1fdad4d50cda185697e9065d2f48078373109b48e9  19740  RdfXml  ontologies/industry/financial/fibo-master/SEC/Securities/SecuritiesRestrictions.rdf
 91263f7bde7ddd166e60451de1bad7c2712c2081ca201f12afc86c335a20a151  11363  RdfXml  ontologies/industry/financial/fibo-master/SEC/Securities/SecurityAssets.rdf
-72afd928cba7ed7375938a0453cbb80d218a9c69340e86d83f17c2a1b92303c3  16922  RdfXml  ontologies/industry/financial/fibo-master/etc/testing/data/fnd/Organizations/TestFormalOrganizations.rdf
-f1977e919b2691756075cb48971a9164d25fd945e590a822c14f0005cc74afd1  7532  RdfXml  ontologies/industry/financial/fibo-master/etc/testing/data/fnd/OwnershipAndControl/TestControl.rdf
-25cd71ba3c7bf0b18ff3ecdb77543558473526cbf1198bec28532ccb53bee592  6948  RdfXml  ontologies/industry/financial/fibo-master/etc/testing/data/fnd/OwnershipAndControl/TestOwnership.rdf
-96ea5967501ae36d434dbe55c5861f1acb6282fe3c2bb8fcbf1ed7500ecec767  1320  Turtle  ontologies/industry/financial/fibo-master/etc/vocabulary/scaffolding.ttl
 3194368cdd3ba44ddd31c54ed9cdd386a8e39665b493361f51f25a92a87f114e  41894  RdfXml  ontologies/industry/financial/fibo-risk.rdf
 4eeecc843408390fc16d69a291cb2ba5454fb124eaedef24a9618f6dd40c1f9e  186700  RdfXml  ontologies/industry/financial/goodrelations-ontology.rdf
 e79633b8d0564816cee8a99f5c9acf9a0e6fc7257c7209acd684ecad53a89dd6  28966  RdfXml  ontologies/industry/financial/skos-ontology.rdf
@@ -430,6 +430,7 @@ b07b3e95a64e44437ab0cef0d319edfb813de11348bd329743aec1b83c90c163  17655  Turtle 
 ef9604cae91f5160b349ea058a83f64eb0ab7ad506d8e17e5d50ba0491db5467  16518  Turtle  ontologies/project/performance-spectrum.ttl
 d91902180a240e96ebfabe8a516ec8703928fe6d3dac2ebe8fa25590f047a733  18506  Turtle  ontologies/project/petri-net.ttl
 16fa611ce492db75d60e45e34bf92af464ebb5b747882ae8f7a6b8e62e806637  18172  Turtle  ontologies/project/process-tree.ttl
+9e014e1dcf8d15e0a07afd5ba1bc3ab7ebb7682011c6bb05f5ca1ca6dfec58c1  865  Turtle  ontologies/project/sa2a-diataxis.ttl
 84d611652bddf264f8295766bf96170cdab7f181ef52b341e597750a068fbaed  248255  RdfXml  ontologies/provenance/dcat.rdf
 d1624d3bbf364f6fc1d43b9a188bbb9e67639b1a7d46a5cb7ea3f5d47d02b62f  200345  Turtle  ontologies/provenance/dcat.ttl
 71b766a12e7136be22e9e45906df75639cecb56524840561d9c5b32f0a943fb3  135294  RdfXml  ontologies/provenance/owl-time.rdf
@@ -443,6 +444,7 @@ e79633b8d0564816cee8a99f5c9acf9a0e6fc7257c7209acd684ecad53a89dd6  28966  RdfXml 
 0ab3b9ea9da97ae0c2232f0121071b5dcbe943d1314a195c21db4e9360b78d85  1553866  RdfXml  ontologies/schema-org/schema_all_https.rdf
 7784da44bfa147e7c5e3f6eb710cb6e314077e885f3ff28cf954a8c734ee2086  1111367  Turtle  ontologies/schema-org/schemaorg-all-https.ttl
 735e3d5fdd71ee01341fb92ad66772a2d363467413028bd158fd13c2d8477ecd  18901  Turtle  ontologies/shapes/process-conformance.shacl.ttl
+4fecb305325594ac86a902fc73674c9520bcd6917205c441dffc235723a5846b  588  Turtle  ontologies/shapes/sa2a-diataxis-shapes.ttl
 250d6274cadc8fa5359d5dbc28bc943f1de01adb7ffc3369681216b583122e4a  12614  Turtle  ontologies/shapes/shacl-shacl.ttl
 b75905fa124cb5077077c51c08cac4b0bd488082d33c516f5aaf3bc0fd59257a  79745  RdfXml  ontologies/shapes/shacl.rdf
 0e5d8aea0eab98a072d4a02faaee1ee914ec99eab2ca473429726faed4a13f69  52899  Turtle  ontologies/shapes/shacl.ttl
@@ -458,3 +460,4 @@ e79633b8d0564816cee8a99f5c9acf9a0e6fc7257c7209acd684ecad53a89dd6  28966  RdfXml 
 3cb6df4852fbbb3ecf04b61de021fd6597718d6617e3a940f0f7bec75db612bf  10477  Turtle  packs/self-monitoring-pack/hook.ttl
 1c1abcf3c67f47f4d07e3dbbeb46906821e136fd7d155cbf6fbce2c30fc80e45  17477  Turtle  packs/self-monitoring-pack/ontology.ttl
 42421f4d400b0b88bb39beddef9f4eb9dce55a3fbe655ecd1ba0e9a6b785c498  5124  Sparql  queries/render_model_projection.rq
+851a34dc0a0dd3574a2944923e2be80b40621676a2c721edeac5bdf131737a03  642  Sparql  queries/sa2a-diataxis-violations.rq
