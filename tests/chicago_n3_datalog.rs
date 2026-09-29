@@ -66,8 +66,8 @@ fn n3_pairs(program: &str, predicate: &str) -> BTreeSet<(String, String)> {
             let object = terms.next()?;
             (pred == target).then(|| {
                 (
-                    subject.trim_matches(['<', '>']).to_string(),
-                    object.trim_matches(['<', '>']).to_string(),
+                    subject.trim_matches(|c| c == '<' || c == '>').to_string(),
+                    object.trim_matches(|c| c == '<' || c == '>').to_string(),
                 )
             })
         })
