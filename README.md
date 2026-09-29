@@ -111,3 +111,42 @@ a triple. The JSON ABI `law` op accepts `"lease"` plus `"now_unix"`; receipts th
 `<dir>/<subject>/<sha256>.json` (canonical JSON, atomic write, no git dependency).
 `verify(subject)` re-hashes every file, requires canonical form, and requires one linear
 `parent -> child` chain; a tampered or missing file is refused with a typed `StoreError`.
+
+## Refusal details
+
+Every refusal from the `law` and `policy` ops keeps `error.{kind,engine,dialect,message}`
+unchanged and adds `error.details`, a machine-readable object keyed by `code`. Clients
+should read `details`, never scrape `message`.
+
+| `details.code` | Fields | Source |
+|---|---|---|
+| `NotAdmitted` | `violations: [{focus, path, component, message, severity}]` (one entry per SHACL result) | `LawError::NotAdmitted { violations, results }` |
+| `PlanRefused` | `index`, `action`, `unmet: [N-Quads lines]` | `LawError::PlanRefused` |
+| `PolicyRefused` | `policy_kind`, `state`, `action` | `policy::PolicyRefused` |
+| `LeaseRefused` | `reason` (`expired`/`out_of_scope`/`ceiling`), `lease_id`, `step` | `LawError::LeaseRefused` |
+| `ReceiptRequired` | `step` | `LawError::ReceiptRequired` |
+| `Refused` | `kind` (upstream engine or routing refusal inside a step) | `LawError::Refused` |
+| `ResourceLimit` | `limit`, `observed`, `max` (see below) | `abi` caps |
+
+In Rust, `NotAdmitted.violations` is the count and `results: Vec<law::Violation>` the report;
+`violations == results.len()`.
+
+## Resource limits
+
+Caps are pub consts in `graphlaw::abi` (and `law::N3_MAX_ITERATIONS`), checked before
+parsing or heavy work. Over-limit input returns `kind: "ResourceLimit"` with
+`details: {code: "ResourceLimit", limit, observed, max}`; it never panics or allocates the
+oversized input.
+
+| `limit` | Const | Value | Rationale |
+|---|---|---|---|
+| `request_bytes` | `MAX_REQUEST_BYTES` | 16 MiB | Largest document a host should ship in one call |
+| `json_depth` | `MAX_JSON_DEPTH` | 64 | String-aware bracket scan; serde's own limit is 128 |
+| `plan_actions` | `MAX_PLAN_ACTIONS` | 1,000 | Each action is replayed and re-canonicalized |
+| `atoms_per_field` | `MAX_ATOMS_PER_FIELD` | 10,000 | Non-empty N-Triples lines in one `pre`/`add`/`del`/`goal` |
+| `policy_entries` | `MAX_POLICY_ENTRIES` | 100,000 | FOND policy entries |
+| `n3_iterations` | `law::N3_MAX_ITERATIONS` | 4,000 | Eyeron `ReasonerOptions::max_iterations` (its default is 1,000,000; a runaway rule set costs superlinear time) |
+
+WebAssembly: `gl_alloc(len)` returns null (0) when `len > MAX_REQUEST_BYTES`. `gl_call` on a
+null buffer returns a typed JSON error (no trap), and `gl_call` with `len > MAX_REQUEST_BYTES`
+returns a `request_bytes` `ResourceLimit` refusal without reading the buffer.

@@ -159,11 +159,66 @@ impl Lease {
     }
 }
 
+/// Fixpoint-step cap for N3 derivation (Eyeron `ReasonerOptions::max_iterations`;
+/// Eyeron's own default is 1,000,000). Exceeding it is a `ResourceLimit` refusal.
+pub const N3_MAX_ITERATIONS: usize = 4_000;
+
+/// Why bounded N3 reasoning did not return a derivation.
+#[derive(Debug, Clone)]
+pub enum N3Error {
+    /// A reasoner safety limit was hit after `observed` fixpoint steps.
+    Limit { observed: usize, summary: String },
+    /// Parse error, semantic error, or other Eyeron refusal.
+    Refused(Refusal),
+}
+
+/// Forward-reason `input` with GraphLaw's resource limits; returns the N3 text
+/// of newly derived triples (same contract as `eyeron::reason`).
+pub fn reason_n3_bounded(input: &str) -> Result<String, N3Error> {
+    let refuse = |e: eyeron::EyeronError| N3Error::Refused(Refusal::engine(Dialect::N3, e));
+    let doc = if eyeron::is_rdf_message_log(input) {
+        eyeron::parse_rdf_message_log(input, None)
+    } else {
+        eyeron::parse_n3(input, None)
+    }
+    .map_err(refuse)?;
+    let options = eyeron::ReasonerOptions {
+        include_explicit: false,
+        max_iterations: N3_MAX_ITERATIONS,
+        ..eyeron::ReasonerOptions::default()
+    };
+    let result = eyeron::reason_document(&doc, &options);
+    if let Some(summary) = result.incomplete_summary() {
+        if !result.limits_reached.is_empty() {
+            return Err(N3Error::Limit {
+                observed: result.statistics.iterations,
+                summary,
+            });
+        }
+        return Err(refuse(eyeron::EyeronError::new(summary)));
+    }
+    Ok(eyeron::result_to_string(&doc.prefixes, &result.derived))
+}
+
+/// One SHACL validation result retained on a refusal (machine-readable).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Violation {
+    pub focus: String,
+    pub path: Option<String>,
+    pub component: String,
+    pub message: String,
+    pub severity: String,
+}
+
 /// A transition was refused; no child state exists.
 #[derive(Debug, Clone)]
 pub enum LawError {
-    /// The SHACL gate found violations.
-    NotAdmitted { violations: usize },
+    /// The SHACL gate found violations. `violations == results.len()`;
+    /// `results` carries the machine-readable SHACL report entries.
+    NotAdmitted {
+        violations: usize,
+        results: Vec<Violation>,
+    },
     /// A candidate plan failed replay: `action` (index `index`, or `<goal>`
     /// one past the last action) is missing the listed N-Quads lines.
     PlanRefused {
@@ -186,7 +241,7 @@ pub enum LawError {
 impl std::fmt::Display for LawError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LawError::NotAdmitted { violations } => {
+            LawError::NotAdmitted { violations, .. } => {
                 write!(f, "SHACL admission refused: {violations} violation(s)")
             }
             LawError::PlanRefused {
@@ -316,6 +371,17 @@ impl LawState {
                 if !report.conforms {
                     return Err(LawError::NotAdmitted {
                         violations: report.results.len(),
+                        results: report
+                            .results
+                            .iter()
+                            .map(|r| Violation {
+                                focus: r.focus_node.to_string(),
+                                path: r.result_path.as_ref().map(ToString::to_string),
+                                component: r.source_constraint_component.to_string(),
+                                message: r.message.clone().unwrap_or_default(),
+                                severity: format!("{:?}", r.severity),
+                            })
+                            .collect(),
                     });
                 }
                 self.clone()
@@ -345,7 +411,17 @@ impl LawState {
                     ));
                 }
                 let doc = format!("{base}\n{rules}");
-                let derived = eyeron::reason(&doc).map_err(|e| Refusal::engine(Dialect::N3, e))?;
+                let derived = reason_n3_bounded(&doc).map_err(|e| match e {
+                    N3Error::Refused(r) => r,
+                    N3Error::Limit { observed, summary } => Refusal {
+                        kind: RefusalKind::ResourceLimit,
+                        dialect: Some(Dialect::N3),
+                        engine: Some(Dialect::N3.engine()),
+                        message: format!(
+                            "resource limit `n3_iterations` exceeded: {observed} > {N3_MAX_ITERATIONS} ({summary})"
+                        ),
+                    },
+                })?;
                 let derived_ds = purrdf::parse_dataset(derived.as_bytes(), "text/turtle", None)
                     .map_err(|e| Refusal::engine(Dialect::Turtle, e))?;
                 let derived_nq = String::from_utf8(

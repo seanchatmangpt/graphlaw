@@ -134,7 +134,7 @@ fn shacl_gate_refuses_incomplete_candidate_without_creating_state() {
     match bad.transition(&Step::AdmitShacl {
         shapes_ttl: &shapes,
     }) {
-        Err(LawError::NotAdmitted { violations }) => assert!(violations >= 8, "{violations}"),
+        Err(LawError::NotAdmitted { violations, .. }) => assert!(violations >= 8, "{violations}"),
         other => panic!("expected refusal, got {other:?}"),
     }
 }
