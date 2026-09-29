@@ -123,7 +123,8 @@ fn lease_refusal_carries_reason_lease_id_step() {
             "data": {"text": "<urn:a:x> <urn:a:p> <urn:a:y> .\n", "dialect": "ntriples"},
             "lease": {"id": "L9", "holder": "h", "ceiling": "construct", "scope": scope,
                       "expires_unix": 100},
-            "now_unix": now, "steps": [{"step": "rdfs"}]})
+            "now_unix": now, "unverified_lease": true,
+            "steps": [{"step": "rdfs"}]})
     };
     for (r, reason) in [
         (req(json!(["derive:rdfs"]), 100), "expired"),

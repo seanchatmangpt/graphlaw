@@ -11,17 +11,31 @@
 //! `law` steps: `shacl`, `n3`, `rdfs`, `owl-rl`, `hooks`, and `plan`,
 //! `record-receipts` (writes receipts produced so far into the state) and
 //! `require-receipt` (`"step_name"`; refuses unless that step's receipt is recorded)
+//! `require-signed-receipt` (`"step_name"`, `"trusted_keys"`: hex Ed25519 public keys;
+//! refuses unless that step's receipt carries a valid attestation by a trusted key)
 //! (`{"step":"plan","plan":{"actions":[{"name","pre","add","del"}],"goal"}}`,
 //! N-Triples strings; one receipt per action, refused at the first unmet precondition).
+//!
+//! Leases: a `law` request may carry `"signed_lease": {"lease": {id, holder, ceiling,
+//! scope, expires_unix, issued_unix?}, "attestation": {key_id, payload_sha256,
+//! signature}}` plus `"trusted_keys"` (hex) and optional `"max_skew_secs"` (default 60).
+//! The signature is verified offline and expiry is judged by the module's own clock;
+//! any `now_unix` in the request is ignored. An unsigned `"lease"` is refused
+//! (`UnverifiedLeaseRefused`) unless the request sets `"unverified_lease": true`, which
+//! also needs the caller's `now_unix` and proves nothing about who issued the lease.
 //! A *data spec* is `{"text": "...", "dialect"?: "turtle", "hint"?: "ttl", "base"?: "..."}`;
 //! without `dialect` the router sniffs the content.
 
 use purrdf::{RdfDataset, SparqlEngine, SparqlRequest, SparqlResult, TermValue};
 use serde_json::{Value, json};
 
+use crate::attest::{Attestation, TrustedKeys};
 use crate::dialect::{Dialect, Engine, Refusal, RefusalKind, check, sniff};
 use crate::hooks::HookPack;
-use crate::law::{Ceiling, LawError, LawState, Lease, LeaseReason, Step};
+use crate::law::{
+    Ceiling, DEFAULT_MAX_SKEW_SECS, LawError, LawState, Lease, Receipt, SignedLease, Step,
+    SystemClock,
+};
 
 /// ABI revision; bumped on any incompatible request/response change.
 pub const ABI_VERSION: u32 = 1;
@@ -203,6 +217,15 @@ fn law_err(e: LawError) -> Fail {
             },
             json!({"code": "ReceiptRequired", "step": step}),
         ),
+        LawError::ReceiptRefused { step, reason } => (
+            Refusal {
+                kind: RefusalKind::EngineRejected,
+                dialect: None,
+                engine: None,
+                message: format!("receipt for step `{step}` refused: {}", reason.as_str()),
+            },
+            json!({"code": "ReceiptRefused", "step": step, "reason": reason.as_str()}),
+        ),
         e @ LawError::LeaseRefused { .. } => {
             let d = match &e {
                 LawError::LeaseRefused {
@@ -211,11 +234,7 @@ fn law_err(e: LawError) -> Fail {
                     reason,
                 } => json!({
                     "code": "LeaseRefused",
-                    "reason": match reason {
-                        LeaseReason::Expired => "expired",
-                        LeaseReason::OutOfScope => "out_of_scope",
-                        LeaseReason::Ceiling => "ceiling",
-                    },
+                    "reason": reason.as_str(),
                     "lease_id": lease_id,
                     "step": step,
                 }),
@@ -674,10 +693,7 @@ fn plan_field(step: &Value) -> Res<crate::plan::Plan> {
     })
 }
 
-fn lease_of(v: &Value) -> Res<Option<(Lease, u64)>> {
-    let Some(l) = v.get("lease") else {
-        return Ok(None);
-    };
+fn lease_obj(l: &Value) -> Res<Lease> {
     let ceiling = Ceiling::parse(str_field(l, "ceiling")?)
         .ok_or_else(|| bad("lease `ceiling` must be observe|select|construct"))?;
     let scope = l
@@ -695,20 +711,149 @@ fn lease_of(v: &Value) -> Res<Option<(Lease, u64)>> {
         .get("expires_unix")
         .and_then(Value::as_u64)
         .ok_or_else(|| bad("lease `expires_unix` must be an unsigned integer"))?;
-    let now = v
-        .get("now_unix")
-        .and_then(Value::as_u64)
-        .ok_or_else(|| bad("a `lease` requires integer `now_unix`"))?;
-    Ok(Some((
-        Lease {
-            id: str_field(l, "id")?.to_string(),
-            holder: str_field(l, "holder")?.to_string(),
-            ceiling,
-            scope,
-            expires_unix,
-        },
-        now,
-    )))
+    let issued_unix = match l.get("issued_unix") {
+        None | Some(Value::Null) => 0,
+        Some(n) => n
+            .as_u64()
+            .ok_or_else(|| bad("lease `issued_unix` must be an unsigned integer"))?,
+    };
+    Ok(Lease {
+        id: str_field(l, "id")?.to_string(),
+        holder: str_field(l, "holder")?.to_string(),
+        ceiling,
+        scope,
+        expires_unix,
+        issued_unix,
+    })
+}
+
+/// How a `law` request's steps are authorized.
+enum LeaseAuth {
+    /// No lease: steps run unleased.
+    None,
+    /// `"lease"` + `"now_unix"` + `"unverified_lease": true`: unsigned lease,
+    /// caller-chosen time. Proves nothing about authority.
+    Unverified(Lease, u64),
+    /// `"signed_lease"` + `"trusted_keys"`: Ed25519-verified, expiry judged by
+    /// the module's own clock (the request cannot supply a time).
+    Signed {
+        signed: SignedLease,
+        trusted: TrustedKeys,
+        max_skew_secs: u64,
+    },
+}
+
+impl LeaseAuth {
+    fn id(&self) -> Option<String> {
+        match self {
+            LeaseAuth::None => None,
+            LeaseAuth::Unverified(l, _) => Some(l.id.clone()),
+            LeaseAuth::Signed { signed, .. } => Some(signed.lease.id.clone()),
+        }
+    }
+
+    fn authorize(&self, step: &str, required: Ceiling) -> Result<(), LawError> {
+        match self {
+            LeaseAuth::None => Ok(()),
+            LeaseAuth::Unverified(l, now) => l.authorize(step, required, *now),
+            LeaseAuth::Signed {
+                signed,
+                trusted,
+                max_skew_secs,
+            } => signed.authorize(step, required, trusted, &SystemClock, *max_skew_secs),
+        }
+    }
+
+    fn transition(
+        &self,
+        state: &LawState,
+        step: &Step<'_>,
+    ) -> Result<(LawState, Receipt), LawError> {
+        match self {
+            LeaseAuth::None => state.transition(step),
+            LeaseAuth::Unverified(l, now) => state.transition_leased_unverified(l, step, *now),
+            LeaseAuth::Signed {
+                signed,
+                trusted,
+                max_skew_secs,
+            } => state.transition_authorized(signed, trusted, &SystemClock, *max_skew_secs, step),
+        }
+    }
+}
+
+fn trusted_keys_of(v: &Value) -> Res<TrustedKeys> {
+    let arr = v
+        .get("trusted_keys")
+        .and_then(Value::as_array)
+        .ok_or_else(|| bad("`trusted_keys` must be an array of hex Ed25519 public keys"))?;
+    let hexes = arr
+        .iter()
+        .map(|k| {
+            k.as_str()
+                .ok_or_else(|| bad("`trusted_keys` entries are hex strings"))
+        })
+        .collect::<Res<Vec<_>>>()?;
+    TrustedKeys::from_hex(hexes).map_err(|e| bad(format!("`trusted_keys`: {e}")))
+}
+
+fn lease_auth_of(v: &Value) -> Res<LeaseAuth> {
+    match (v.get("signed_lease"), v.get("lease")) {
+        (None, None) => Ok(LeaseAuth::None),
+        (Some(_), Some(_)) => Err(bad("give `signed_lease` or `lease`, not both")),
+        (Some(sl), None) => {
+            let a = sl
+                .get("attestation")
+                .ok_or_else(|| bad("`signed_lease` needs an `attestation`"))?;
+            let attestation = Attestation::from_json(
+                &json!({
+                    "key_id": str_field(a, "key_id")?,
+                    "payload_sha256": str_field(a, "payload_sha256")?,
+                    "signature": str_field(a, "signature")?,
+                })
+                .to_string(),
+            )
+            .map_err(|e| bad(format!("`attestation`: {e}")))?;
+            let max_skew_secs = match v.get("max_skew_secs") {
+                None | Some(Value::Null) => DEFAULT_MAX_SKEW_SECS,
+                Some(n) => n
+                    .as_u64()
+                    .ok_or_else(|| bad("`max_skew_secs` must be an unsigned integer"))?,
+            };
+            Ok(LeaseAuth::Signed {
+                signed: SignedLease {
+                    lease: lease_obj(
+                        sl.get("lease")
+                            .ok_or_else(|| bad("`signed_lease` needs a `lease`"))?,
+                    )?,
+                    attestation,
+                },
+                trusted: trusted_keys_of(v)?,
+                max_skew_secs,
+            })
+        }
+        (None, Some(l)) => {
+            if v.get("unverified_lease") != Some(&Value::Bool(true)) {
+                return Err(Fail {
+                    refusal: bad_refusal(
+                        "an unsigned `lease` is refused: supply `signed_lease` + `trusted_keys`, \
+                         or set `\"unverified_lease\": true` to accept a lease no one signed",
+                    ),
+                    details: Some(json!({"code": "UnverifiedLeaseRefused"})),
+                });
+            }
+            let now = v
+                .get("now_unix")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| bad("an unverified `lease` requires integer `now_unix`"))?;
+            Ok(LeaseAuth::Unverified(lease_obj(l)?, now))
+        }
+    }
+}
+
+/// Parse a plan document (`{"actions":[{name,pre,add,del}],"goal"}`) with the
+/// ABI's size limits. Used by the `graphlaw-verify` binary.
+pub fn plan_from_json(plan: &Value) -> Result<crate::plan::Plan, String> {
+    plan_field(&json!({ "plan": plan })).map_err(|f| f.refusal.message)
 }
 
 /// `{"op":"policy","problem":<PlanningProblem JSON|string>,"policy":<UniversalPlan|entries JSON|string>}`:
@@ -763,8 +908,8 @@ fn op_policy(v: &Value) -> Res<Value> {
 }
 
 fn op_law(v: &Value) -> Res<Value> {
-    let lease = lease_of(v)?;
-    let lease_id = lease.as_ref().map(|(l, _)| l.id.clone());
+    let lease = lease_auth_of(v)?;
+    let lease_id = lease.id();
     let mut state = state_field(v, "data")?;
     let mut ids = vec![state.id().to_string()];
     let mut receipts = Vec::new();
@@ -777,10 +922,9 @@ fn op_law(v: &Value) -> Res<Value> {
     {
         if str_field(step, "step")? == "plan" {
             let plan = plan_field(step)?;
-            if let Some((l, now)) = &lease {
-                l.authorize("admit:plan", Ceiling::Select, *now)
-                    .map_err(law_err)?;
-            }
+            lease
+                .authorize("admit:plan", Ceiling::Select)
+                .map_err(law_err)?;
             let admitted = plan.admit(&state).map_err(law_err)?;
             for (index, r) in admitted.receipts.iter().enumerate() {
                 let mut rj = json!({
@@ -812,6 +956,7 @@ fn op_law(v: &Value) -> Res<Value> {
         let shapes;
         let rules;
         let step_name;
+        let step_trusted;
         let step_ref = match str_field(step, "step")? {
             "shacl" => {
                 shapes = str_field(step, "shapes")?.to_string();
@@ -829,17 +974,21 @@ fn op_law(v: &Value) -> Res<Value> {
                 step_name = str_field(step, "step_name")?.to_string();
                 Step::RequireReceipt { step: &step_name }
             }
+            "require-signed-receipt" => {
+                step_name = str_field(step, "step_name")?.to_string();
+                step_trusted = trusted_keys_of(step)?;
+                Step::RequireSignedReceipt {
+                    step: &step_name,
+                    trusted: &step_trusted,
+                }
+            }
             "hooks" => {
                 pack = HookPack::load(&state_field(step, "pack")?)?;
                 Step::Hooks { pack: &pack }
             }
             other => return Err(bad(format!("unknown step `{other}`"))),
         };
-        let (child, r) = match &lease {
-            Some((l, now)) => state.transition_leased(l, &step_ref, *now),
-            None => state.transition(&step_ref),
-        }
-        .map_err(law_err)?;
+        let (child, r) = lease.transition(&state, &step_ref).map_err(law_err)?;
         let mut rj = json!({
             "step": r.step, "parent": r.parent, "child": r.child, "added": r.added,
             "authority": r.authority.authority, "revision": r.authority.revision,

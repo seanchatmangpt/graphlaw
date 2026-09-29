@@ -654,6 +654,7 @@ dependencies = [
 name = "graphlaw"
 version = "26.9.29"
 dependencies = [
+ "ed25519-dalek",
  "graphlaw-eyeron",
  "purrdf",
  "regex",

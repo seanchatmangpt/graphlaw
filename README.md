@@ -97,8 +97,9 @@ See `MIGRATION.md` for the old-to-new surface map.
 
 ## Authority leases
 
-A `Lease { id, holder, ceiling, scope, expires_unix }` grants a holder authority to run
-named steps until it expires. `LawState::transition_leased(&lease, &step, now_unix)` refuses
+A `Lease { id, holder, ceiling, scope, expires_unix, issued_unix }` grants a holder authority to run
+named steps until it expires. The unsigned path `LawState::transition_leased_unverified(&lease, &step, now_unix)`
+(unverified: anyone can build a lease and pick the time; see "Signed receipts and leases") refuses
 with `LawError::LeaseRefused { reason: Expired | OutOfScope | Ceiling }`. Required ceilings:
 `Observe` for gates (`admit:shacl`, `admit:require-receipt`), `Select` for `admit:plan`,
 `Construct` for `derive:*`. The receipt carries `lease_id`, and `receipt::record` writes it as
@@ -150,3 +151,68 @@ oversized input.
 WebAssembly: `gl_alloc(len)` returns null (0) when `len > MAX_REQUEST_BYTES`. `gl_call` on a
 null buffer returns a typed JSON error (no trap), and `gl_call` with `len > MAX_REQUEST_BYTES`
 returns a `request_bytes` `ResourceLimit` refusal without reading the buffer.
+
+## Signed receipts and leases
+
+`attest` adds Ed25519 (`ed25519-dalek =2.2.0`, BSD-3-Clause, deterministic signing, no RNG)
+attestations. An `Attestation { payload_sha256, key_id, signature }` (hex) signs a canonical
+payload (sorted keys, no whitespace). `key_id` is the SHA-256 of the public key. Verification
+needs only the payload, the attestation and a caller-provided `TrustedKeys` set: offline.
+
+- Receipts: `attest::sign_receipt(&key, &receipt)` signs `{added, authority, child, lease_id,
+  parent, plan_sha256, revision, step, subject_sha256}`. `receipt.with_subject(digest)` binds a
+  caller-provided digest of an external subject (a git commit, an artifact) before signing.
+  `receipt::record_signed` records the receipt plus attestation triples in a state;
+  `Step::RequireSignedReceipt` / `receipt::require_signed(state, step, &trusted)` (ABI step
+  `require-signed-receipt` with `trusted_keys`) refuse with `LawError::ReceiptRefused
+  { reason: Unattested | BadSignature | UntrustedKey }`. `receipt::require` /
+  `Step::RequireReceipt` prove *presence only*: hand-written triples satisfy them.
+- Leases: `attest::sign_lease(&issuer_key, lease)` gives a `SignedLease`.
+  `LawState::transition_authorized(&signed, &trusted, &clock, max_skew_secs, &step)` refuses
+  with `LeaseReason::BadSignature | UntrustedKey | ClockSkew | Expired | OutOfScope | Ceiling`.
+- ABI: `law` with a lease requires `"signed_lease"` + `"trusted_keys"` (hex public keys).
+  An unsigned `"lease"` is refused (`UnverifiedLeaseRefused`) unless the request sets
+  `"unverified_lease": true`, which also needs the caller's `now_unix`.
+- Store: `ReceiptStore::put_signed` writes `<digest>.sig` beside `<digest>.json`;
+  `verify_attested(subject, &trusted)` requires every receipt to carry a valid attestation.
+
+Key custody, key distribution and revocation are outside the library: a verifier is only as
+good as the `TrustedKeys` it is given.
+
+## Trusted clock
+
+Lease expiry is judged by a `law::Clock` (`fn now_unix(&self) -> u64`) that the *verifier*
+supplies: `SystemClock` (host wall clock; a clock before the epoch reads `u64::MAX`, so every
+lease is expired) or `FixedClock(t)` for tests and audits pinned to an instant. A signed-lease
+request has no time field: in the ABI `now_unix` is ignored and the module uses its own clock.
+Expiry is strict (`now >= expires_unix` refuses). `max_skew_secs` (ABI default 60) bounds how
+far the issuer's `issued_unix` may lead the verifier's clock (`ClockSkew`); it never extends
+an expiry.
+
+## Verifying without trusting the operator
+
+```text
+graphlaw-verify --start state.nt --plan plan.json --receipts ./receipts \
+    [--subject <key>] --trusted-key <hex-public-key> [--trusted-key ...]
+```
+
+Build with `--features abi`. The command replays `Plan::admit` from the start state, checks
+the receipt store holds exactly the replayed chain (parent/child ids, step, authority, added,
+plan digest), and verifies each receipt's attestation against the trusted keys. It prints
+`ADMITTED` (exit 0) or `REFUSED: <code>: <detail>` (exit 1; codes `PlanRefused`,
+`ReceiptTampered`, `ChainBroken`, `Unattested`, `BadSignature`, `UntrustedKey`,
+`MalformedAttestation`, `ReceiptMismatch`). Usage and I/O errors, including no
+`--trusted-key`, exit 2. It opens no sockets. `--subject` may be omitted when the store root
+holds one subject directory.
+
+### Receipt fields and the portfolio R
+
+Informal mapping only; GraphLaw does not claim conformance to any external receipt schema.
+
+| portfolio R field | GraphLaw field |
+|---|---|
+| identity | `parent`, `child` (state ids), `subject_sha256` (external subject digest) |
+| authority | `authority`, `revision` (upstream engine), `lease_id`, attestation `key_id` |
+| consequence | `step`, `added` |
+| replay | `plan_sha256`, `graphlaw-verify` replay from the start state |
+| standing | not stored: derived by the verifier (ADMITTED/REFUSED) from the receipts |

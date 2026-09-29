@@ -434,6 +434,7 @@ fn lease_req(ceiling: &str, scope: Value, expires: u64, now: u64) -> Value {
         "data": {"text": "<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .\n<urn:a:x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <urn:a:C> .\n", "dialect": "ntriples"},
         "lease": {"id": "L1", "holder": "h", "ceiling": ceiling, "scope": scope, "expires_unix": expires},
         "now_unix": now,
+        "unverified_lease": true,
         "steps": [{"step": "rdfs"}]})
 }
 
@@ -670,4 +671,132 @@ fn wasm_resource_limits_refuse_typed_and_never_trap() {
     let pad = "x".repeat(1 << 20);
     let r = h.request(&json!({"op": "capabilities", "pad": pad}));
     assert_eq!(r["ok"], true);
+}
+
+// ---- signed leases and receipts through the compiled module ----------------
+
+fn issuer() -> graphlaw::attest::SigningKey {
+    graphlaw::attest::SigningKey::from_seed([3; 32])
+}
+
+fn signed_lease_json(
+    key: &graphlaw::attest::SigningKey,
+    expires: u64,
+    tamper_expires: Option<u64>,
+) -> Value {
+    use graphlaw::law::{Ceiling, Lease};
+    let signed = graphlaw::attest::sign_lease(
+        key,
+        Lease {
+            id: "L1".into(),
+            holder: "h".into(),
+            ceiling: Ceiling::Construct,
+            scope: vec!["derive:rdfs".into()],
+            expires_unix: expires,
+            issued_unix: 0,
+        },
+    );
+    json!({
+        "lease": {"id": "L1", "holder": "h", "ceiling": "construct", "scope": ["derive:rdfs"],
+                  "expires_unix": tamper_expires.unwrap_or(expires), "issued_unix": 0},
+        "attestation": {"key_id": signed.attestation.key_id,
+                        "payload_sha256": signed.attestation.payload_sha256,
+                        "signature": signed.attestation.signature},
+    })
+}
+
+fn signed_req(signed_lease: Value, trusted: &graphlaw::attest::SigningKey, now: u64) -> Value {
+    json!({"op": "law",
+        "data": {"text": "<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .\n<urn:a:x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <urn:a:C> .\n", "dialect": "ntriples"},
+        "signed_lease": signed_lease,
+        "trusted_keys": [trusted.verifying_key().to_hex()],
+        "now_unix": now,
+        "steps": [{"step": "rdfs"}]})
+}
+
+fn refusal_of(r: &Value) -> (&str, &str) {
+    assert_eq!(r["ok"], false, "{r}");
+    (
+        r["error"]["details"]["code"].as_str().unwrap_or(""),
+        r["error"]["details"]["reason"].as_str().unwrap_or(""),
+    )
+}
+
+#[test]
+fn f_wasm_signed_lease_with_trusted_keys_works_and_expiry_uses_the_module_clock() {
+    let k = issuer();
+    // far-future expiry, request `now_unix` deliberately absurd: ignored
+    let good = signed_req(signed_lease_json(&k, 4_000_000_000, None), &k, u64::MAX);
+    let r = ok(good.clone());
+    assert_eq!(r["receipts"][0]["lease_id"], "L1");
+    assert_eq!(r, graphlaw::abi::call_json(&good));
+
+    // expired per the module's own clock; `now_unix: 0` cannot revive it
+    let expired = signed_req(signed_lease_json(&k, 100, None), &k, 0);
+    assert_eq!(refusal_of(&call(expired)), ("LeaseRefused", "expired"));
+
+    // untrusted signer
+    let other = graphlaw::attest::SigningKey::from_seed([4; 32]);
+    let forged = signed_req(signed_lease_json(&other, 4_000_000_000, None), &k, 0);
+    assert_eq!(refusal_of(&call(forged)), ("LeaseRefused", "untrusted_key"));
+
+    // lease edited after signing (expiry stretched)
+    let stretched = signed_req(signed_lease_json(&k, 100, Some(4_000_000_000)), &k, 0);
+    assert_eq!(
+        refusal_of(&call(stretched)),
+        ("LeaseRefused", "bad_signature")
+    );
+}
+
+#[test]
+fn f_wasm_unsigned_lease_is_refused_unless_explicitly_unverified() {
+    let mut req = lease_req("construct", json!(["derive:rdfs"]), 100, 50);
+    req.as_object_mut().unwrap().remove("unverified_lease");
+    let e = call(req.clone());
+    assert_eq!(refusal_of(&e).0, "UnverifiedLeaseRefused", "{e}");
+    assert_eq!(e, graphlaw::abi::call_json(&req));
+    req["unverified_lease"] = json!(true);
+    assert_eq!(ok(req)["receipts"][0]["lease_id"], "L1");
+}
+
+#[test]
+fn f_wasm_require_signed_receipt_step() {
+    use graphlaw::attest::{SigningKey, sign_receipt};
+    use graphlaw::dialect::Dialect;
+    use graphlaw::law::{LawState, Step};
+    let base = LawState::parse(
+        b"<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .\n",
+        Dialect::NTriples,
+        None,
+    )
+    .unwrap();
+    let (child, r) = base.transition(&Step::EntailRdfs).unwrap();
+    let k = SigningKey::from_seed([1; 32]);
+    let nq = |s: &LawState| {
+        String::from_utf8(
+            graphlaw::purrdf::serialize_dataset(
+                s.dataset().as_ref(),
+                "application/n-quads",
+                graphlaw::purrdf::SerializeGraph::Dataset,
+            )
+            .unwrap(),
+        )
+        .unwrap()
+    };
+    let signed = nq(&graphlaw::receipt::record_signed(&child, &r, &sign_receipt(&k, &r)).unwrap());
+    let unsigned = nq(&graphlaw::receipt::record(&child, &r).unwrap());
+    let req = |data: &str, key: &SigningKey| {
+        json!({"op": "law", "data": {"text": data, "dialect": "nquads"},
+            "steps": [{"step": "require-signed-receipt", "step_name": "derive:rdfs",
+                       "trusted_keys": [key.verifying_key().to_hex()]}]})
+    };
+    ok(req(&signed, &k));
+    assert_eq!(
+        refusal_of(&call(req(&signed, &SigningKey::from_seed([2; 32])))),
+        ("ReceiptRefused", "untrusted_key")
+    );
+    assert_eq!(
+        refusal_of(&call(req(&unsigned, &k))),
+        ("ReceiptRefused", "unattested")
+    );
 }
