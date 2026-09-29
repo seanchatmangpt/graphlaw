@@ -488,3 +488,51 @@ fn fond_policy_admission_runs_in_wasm() {
     let empty = call(json!({"op": "policy", "problem": problem, "policy": {"policy": []}}));
     assert_eq!(empty["ok"], false);
 }
+
+#[test]
+fn wasm_lease_boundaries_and_refusal_precedence() {
+    // expiry boundary: now = expires-1 admitted, now = expires refused
+    ok(lease_req("construct", json!(["derive:rdfs"]), 100, 99));
+    let e = call(lease_req("construct", json!(["derive:rdfs"]), 100, 100));
+    assert_eq!(e["ok"], false);
+    let msg = e["error"]["message"].as_str().unwrap();
+    assert!(
+        msg.contains("expired") && msg.contains("L1") && msg.contains("derive:rdfs"),
+        "{e}"
+    );
+    // far past expiry still expired
+    let e = call(lease_req("construct", json!(["derive:rdfs"]), 100, 5000));
+    assert!(
+        e["error"]["message"].as_str().unwrap().contains("expired"),
+        "{e}"
+    );
+    // precedence: expired outranks out_of_scope and ceiling
+    let e = call(lease_req("observe", json!(["derive:n3"]), 10, 10));
+    let m = e["error"]["message"].as_str().unwrap();
+    assert!(
+        m.contains("expired") && !m.contains("out_of_scope") && !m.contains("ceiling"),
+        "{e}"
+    );
+    // precedence: out_of_scope outranks ceiling
+    let e = call(lease_req("observe", json!(["derive:n3"]), 100, 1));
+    let m = e["error"]["message"].as_str().unwrap();
+    assert!(m.contains("out_of_scope") && !m.contains("ceiling"), "{e}");
+    // empty scope is out_of_scope, not admitted
+    let e = call(lease_req("construct", json!([]), 100, 1));
+    assert!(
+        e["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("out_of_scope"),
+        "{e}"
+    );
+    // ceiling: observe is below construct-required step
+    let e = call(lease_req("observe", json!(["derive:rdfs"]), 100, 1));
+    let m = e["error"]["message"].as_str().unwrap();
+    assert!(m.contains("ceiling") && m.contains("L1"), "{e}");
+    // refused steps produce no receipts / state
+    assert!(
+        e.get("receipts").is_none() || e["receipts"].is_null(),
+        "{e}"
+    );
+}
