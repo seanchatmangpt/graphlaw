@@ -1,0 +1,11 @@
+@prefix sa2a: <https://graphlaw.dev/ns/sa2a#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://graphlaw.dev/sa2a/evidence/source/absolute-source> a sa2a:EvidenceContract ;
+  sa2a:family "source" ;
+  sa2a:constraint "absolute-source" ;
+  sa2a:authority "NONE" ;
+  sa2a:consequence "EVIDENCE_ONLY" ;
+  sa2a:canonicalization "RDFC-1.0" ;
+  sa2a:expectedRefusal "NONE" ;
+  sa2a:portable true .
