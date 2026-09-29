@@ -21,7 +21,22 @@ use sha2::{Digest, Sha256};
 use crate::law::{Lease, Receipt, SignedLease};
 
 /// Why an attestation was refused.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::attest::AttestError;
+///
+/// let e = AttestError::UnknownKey;
+/// let trusted_later = match e {
+///     AttestError::UnknownKey => true,
+///     _ => false, // required: new variants may be added
+/// };
+/// assert!(trusted_later);
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum AttestError {
     /// The signature does not verify, or the payload no longer matches the
     /// digest the attestation was issued over.
@@ -78,10 +93,12 @@ impl fmt::Debug for SigningKey {
 }
 
 impl SigningKey {
+    /// Build a signing key from a caller-supplied 32-byte seed (no RNG is used).
     pub fn from_seed(seed: [u8; 32]) -> Self {
         SigningKey(DalekSigning::from_bytes(&seed))
     }
 
+    /// Build a signing key from a 64-character hex seed.
     pub fn from_seed_hex(hex: &str) -> Result<Self, AttestError> {
         let bytes = hex_decode(hex).ok_or_else(|| malformed("seed is not hex"))?;
         let seed: [u8; 32] = bytes
@@ -90,6 +107,7 @@ impl SigningKey {
         Ok(Self::from_seed(seed))
     }
 
+    /// The public half of this signing key.
     pub fn verifying_key(&self) -> VerifyingKey {
         VerifyingKey(self.0.verifying_key())
     }
@@ -100,12 +118,14 @@ impl SigningKey {
 pub struct VerifyingKey(DalekVerifying);
 
 impl VerifyingKey {
+    /// Parse a verifying key from its 32 raw bytes.
     pub fn from_bytes(bytes: &[u8; 32]) -> Result<Self, AttestError> {
         DalekVerifying::from_bytes(bytes)
             .map(VerifyingKey)
             .map_err(|_| malformed("not a valid Ed25519 public key"))
     }
 
+    /// Parse a verifying key from 64 hex characters.
     pub fn from_hex(hex: &str) -> Result<Self, AttestError> {
         let bytes = hex_decode(hex).ok_or_else(|| malformed("public key is not hex"))?;
         let arr: [u8; 32] = bytes
@@ -114,6 +134,7 @@ impl VerifyingKey {
         Self::from_bytes(&arr)
     }
 
+    /// Lower-case hex of the 32 raw key bytes.
     pub fn to_hex(&self) -> String {
         hex_encode(self.0.as_bytes())
     }
@@ -129,10 +150,12 @@ impl VerifyingKey {
 pub struct TrustedKeys(BTreeMap<String, VerifyingKey>);
 
 impl TrustedKeys {
+    /// An empty trust set.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Trust `key`.
     pub fn insert(&mut self, key: VerifyingKey) {
         self.0.insert(key.key_id(), key);
     }
@@ -150,24 +173,47 @@ impl TrustedKeys {
         Ok(t)
     }
 
+    /// Look up a trusted key by its key id.
     pub fn get(&self, key_id: &str) -> Option<&VerifyingKey> {
         self.0.get(key_id)
     }
 
+    /// True when no key is trusted.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// Number of trusted keys.
     pub fn len(&self) -> usize {
         self.0.len()
     }
 }
 
 /// Detached signature over a canonical payload.
+///
+/// ```
+/// use graphlaw::{attest::{sign_receipt, verify_receipt, SigningKey, TrustedKeys}, dialect::Dialect, law::{LawState, Step}};
+///
+/// let key = SigningKey::from_seed([9; 32]);
+/// let mut trusted = TrustedKeys::new();
+/// trusted.insert(key.verifying_key());
+/// let s = LawState::parse(b"<urn:a> <urn:p> <urn:b> .\n", Dialect::NTriples, None)?;
+/// let (_c, receipt) = s.transition(&Step::EntailRdfs)?;
+/// let att = sign_receipt(&key, &receipt);
+/// assert!(verify_receipt(&receipt, &att, &trusted).is_ok());
+/// // Any change to the receipt breaks the signature.
+/// let mut forged = receipt.clone();
+/// forged.added += 1;
+/// assert!(verify_receipt(&forged, &att, &trusted).is_err());
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Attestation {
+    /// Lowercase hex SHA-256 of the canonical payload.
     pub payload_sha256: String,
+    /// Identifier of the signing key.
     pub key_id: String,
+    /// Lowercase hex Ed25519 signature over the payload bytes.
     pub signature: String,
 }
 
@@ -277,14 +323,23 @@ fn opt(s: Option<&str>) -> String {
 /// be rebuilt from a stored [`Receipt`] or from triples inside a state).
 #[derive(Debug, Clone, Copy)]
 pub struct ReceiptFields<'a> {
+    /// Parent state id.
     pub parent: &'a str,
+    /// Child state id.
     pub child: &'a str,
+    /// Step name.
     pub step: &'a str,
+    /// Backend authority capability.
     pub authority: &'a str,
+    /// Backend authority revision.
     pub revision: &'a str,
+    /// Quads added by the step.
     pub added: u64,
+    /// Lease id, when the step ran under a lease.
     pub lease_id: Option<&'a str>,
+    /// Plan digest, for plan steps.
     pub plan_sha256: Option<&'a str>,
+    /// Subject digest, when the receipt is bound to a subject.
     pub subject_sha256: Option<&'a str>,
 }
 

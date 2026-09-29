@@ -14,6 +14,17 @@ use crate::dialect::{Dialect, Refusal, RefusalKind, parse_rdf};
 use crate::{BACKEND_AUTHORITIES, BackendAuthority};
 
 /// An immutable, content-addressed RDF dataset.
+///
+/// ```
+/// use graphlaw::{dialect::Dialect, law::LawState};
+///
+/// let s = LawState::parse(b"<urn:a> <urn:p> <urn:b> .\n", Dialect::NTriples, None)?;
+/// assert_eq!(s.quad_count(), 1);
+/// // Same statements, same id, regardless of order or formatting.
+/// let t = LawState::parse(b"<urn:a>   <urn:p> <urn:b> .", Dialect::NTriples, None)?;
+/// assert_eq!(s.id(), t.id());
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Debug, Clone)]
 pub struct LawState {
     dataset: Arc<purrdf::RdfDataset>,
@@ -21,24 +32,56 @@ pub struct LawState {
 }
 
 /// One operation applied to a state.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::law::Step;
+///
+/// let s = Step::EntailRdfs;
+/// let derives = match s {
+///     Step::EntailRdfs | Step::EntailOwlRl => true,
+///     _ => false, // required: new steps may be added
+/// };
+/// assert!(derives);
+/// ```
 #[derive(Debug, Clone, Copy)]
+#[non_exhaustive]
 pub enum Step<'a> {
     /// SHACL admission gate (Turtle shapes graph). Never changes the state.
-    AdmitShacl { shapes_ttl: &'a str },
+    AdmitShacl {
+        /// Turtle text of the SHACL shapes graph to admit against.
+        shapes_ttl: &'a str,
+    },
     /// Forward-chain Notation3 rules with Eyeron; derived triples are added.
-    DeriveN3 { rules: &'a str },
+    DeriveN3 {
+        /// Notation3 rules text.
+        rules: &'a str,
+    },
     /// Run a knowledge-hook pack to a fixpoint.
-    Hooks { pack: &'a crate::hooks::HookPack },
+    Hooks {
+        /// The hook pack to run to fixpoint.
+        pack: &'a crate::hooks::HookPack,
+    },
     /// Replay a candidate plan; refused at the first violated precondition.
-    Plan { plan: &'a crate::plan::Plan },
+    Plan {
+        /// The candidate plan to replay.
+        plan: &'a crate::plan::Plan,
+    },
     /// Admission gate: a receipt for `step` must be recorded in the state
     /// (see [`crate::receipt::record`]). Never changes the state.
-    RequireReceipt { step: &'a str },
+    RequireReceipt {
+        /// Name of the step whose receipt must be recorded.
+        step: &'a str,
+    },
     /// Admission gate: a receipt for `step` must be recorded **with a valid
     /// attestation by a trusted key** (see [`crate::receipt::record_signed`]).
     /// Never changes the state.
     RequireSignedReceipt {
+        /// Name of the step whose receipt must carry a valid attestation.
         step: &'a str,
+        /// Keys whose attestations are accepted.
         trusted: &'a crate::attest::TrustedKeys,
     },
     /// RDFS entailment closure.
@@ -89,11 +132,28 @@ impl Step<'_> {
 }
 
 /// Evidence that a step ran, and under which upstream authority.
+///
+/// ```
+/// use graphlaw::{dialect::Dialect, law::{LawState, Step}};
+///
+/// let s = LawState::parse(b"<urn:a> <urn:p> <urn:b> .\n", Dialect::NTriples, None)?;
+/// let (child, receipt) = s.transition(&Step::EntailRdfs)?;
+/// assert_eq!(receipt.parent, s.id());
+/// assert_eq!(receipt.child, child.id());
+/// assert_eq!(receipt.step, "derive:rdfs");
+/// let bound = receipt.with_subject("sha256:abc");
+/// assert_eq!(bound.subject_sha256.as_deref(), Some("sha256:abc"));
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Receipt {
+    /// Id of the parent state.
     pub parent: String,
+    /// Id of the child state.
     pub child: String,
+    /// Step name (for example `derive:rdfs`).
     pub step: &'static str,
+    /// The backend authority that executed the step.
     pub authority: BackendAuthority,
     /// Quads added by the step (0 for an admission gate).
     pub added: usize,
@@ -115,7 +175,22 @@ impl Receipt {
 }
 
 /// Authority ceiling, ordered `Observe < Select < Construct`.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::law::Ceiling;
+///
+/// let c = Ceiling::Select;
+/// let mutates = match c {
+///     Ceiling::Construct => true,
+///     _ => false, // required: new ceilings may be added
+/// };
+/// assert!(!mutates);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[non_exhaustive]
 pub enum Ceiling {
     /// Read-only gates that never change the state (`admit:shacl`, `admit:require-receipt`).
     Observe,
@@ -126,6 +201,7 @@ pub enum Ceiling {
 }
 
 impl Ceiling {
+    /// Lower-case name of the ceiling.
     pub fn name(self) -> &'static str {
         match self {
             Ceiling::Observe => "observe",
@@ -134,6 +210,7 @@ impl Ceiling {
         }
     }
 
+    /// Parse a ceiling from its lower-case name.
     pub fn parse(s: &str) -> Option<Self> {
         match s {
             "observe" => Some(Ceiling::Observe),
@@ -145,10 +222,29 @@ impl Ceiling {
 }
 
 /// A time-boxed grant of authority: who may run which steps, up to which ceiling.
+///
+/// ```
+/// use graphlaw::law::{Ceiling, Lease};
+///
+/// let lease = Lease {
+///     id: "lease-1".into(),
+///     holder: "agent".into(),
+///     ceiling: Ceiling::Construct,
+///     scope: vec!["derive:rdfs".into()],
+///     expires_unix: 2_000,
+///     issued_unix: 1_000,
+/// };
+/// assert!(lease.authorize("derive:rdfs", Ceiling::Construct, 1_500).is_ok());
+/// assert!(lease.authorize("derive:rdfs", Ceiling::Construct, 2_000).is_err()); // expired
+/// assert!(lease.authorize("derive:owl-rl", Ceiling::Construct, 1_500).is_err()); // out of scope
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Lease {
+    /// Lease identifier.
     pub id: String,
+    /// Identity of the lease holder.
     pub holder: String,
+    /// Highest authority the lease grants.
     pub ceiling: Ceiling,
     /// Step names (`Step::name`, e.g. `derive:rdfs`) the lease covers.
     pub scope: Vec<String>,
@@ -162,7 +258,20 @@ pub struct Lease {
 
 /// Source of trusted time. Expiry is judged against the *verifier's* clock,
 /// never against a timestamp the requester supplies.
+///
+/// ```
+/// use graphlaw::law::{Clock, FixedClock};
+///
+/// struct Frozen;
+/// impl Clock for Frozen {
+///     fn now_unix(&self) -> u64 {
+///         42
+///     }
+/// }
+/// assert_eq!(Frozen.now_unix(), FixedClock(42).now_unix());
+/// ```
 pub trait Clock {
+    /// Current time in whole seconds since the Unix epoch.
     fn now_unix(&self) -> u64;
 }
 
@@ -193,9 +302,33 @@ impl Clock for FixedClock {
 pub const DEFAULT_MAX_SKEW_SECS: u64 = 60;
 
 /// A [`Lease`] plus an Ed25519 attestation by the issuing authority key.
+///
+/// ```
+/// use graphlaw::attest::{sign_lease, SigningKey, TrustedKeys};
+/// use graphlaw::law::{Ceiling, FixedClock, Lease};
+///
+/// let key = SigningKey::from_seed([7; 32]);
+/// let mut trusted = TrustedKeys::new();
+/// trusted.insert(key.verifying_key());
+/// let signed = sign_lease(&key, Lease {
+///     id: "l".into(),
+///     holder: "h".into(),
+///     ceiling: Ceiling::Construct,
+///     scope: vec!["derive:rdfs".into()],
+///     expires_unix: 2_000,
+///     issued_unix: 1_000,
+/// });
+/// let clock = FixedClock(1_500);
+/// assert!(signed.authorize("derive:rdfs", Ceiling::Construct, &trusted, &clock, 60).is_ok());
+/// // A verifier that trusts no key refuses.
+/// let none = TrustedKeys::new();
+/// assert!(signed.authorize("derive:rdfs", Ceiling::Construct, &none, &clock, 60).is_err());
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignedLease {
+    /// The lease being attested.
     pub lease: Lease,
+    /// The signature over the lease.
     pub attestation: crate::attest::Attestation,
 }
 
@@ -230,10 +363,28 @@ impl SignedLease {
 }
 
 /// Why a lease refused a step.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::law::LeaseReason;
+///
+/// let r = LeaseReason::Expired;
+/// let renew = match r {
+///     LeaseReason::Expired => true,
+///     _ => false, // required: new reasons may be added
+/// };
+/// assert!(renew);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum LeaseReason {
+    /// The lease has expired.
     Expired,
+    /// The step is outside the lease scope.
     OutOfScope,
+    /// The step needs more authority than the lease ceiling.
     Ceiling,
     /// The lease signature does not verify (or the lease was altered).
     BadSignature,
@@ -284,10 +435,30 @@ impl Lease {
 pub const N3_MAX_ITERATIONS: usize = 4_000;
 
 /// Why bounded N3 reasoning did not return a derivation.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::law::N3Error;
+///
+/// let e = N3Error::Limit { observed: 4, summary: "iterations".into() };
+/// let limited = match e {
+///     N3Error::Limit { observed, .. } => observed > 0,
+///     _ => false, // required: new variants may be added
+/// };
+/// assert!(limited);
+/// ```
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum N3Error {
     /// A reasoner safety limit was hit after `observed` fixpoint steps.
-    Limit { observed: usize, summary: String },
+    Limit {
+        /// Fixpoint steps completed when the limit was hit.
+        observed: usize,
+        /// Human-readable description of the limit that was hit.
+        summary: String,
+    },
     /// Parse error, semantic error, or other Eyeron refusal.
     Refused(Refusal),
 }
@@ -323,15 +494,35 @@ pub fn reason_n3_bounded(input: &str) -> Result<String, N3Error> {
 /// One SHACL validation result retained on a refusal (machine-readable).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Violation {
+    /// Focus node of the violation.
     pub focus: String,
+    /// Property path, when the constraint has one.
     pub path: Option<String>,
+    /// Constraint component IRI.
     pub component: String,
+    /// Result message.
     pub message: String,
+    /// Severity IRI.
     pub severity: String,
 }
 
 /// Why a recorded receipt was not accepted by `require_signed`.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::law::ReceiptReason;
+///
+/// let r = ReceiptReason::Unattested;
+/// let code = match r {
+///     ReceiptReason::Unattested => "unattested",
+///     _ => "other", // required: new reasons may be added
+/// };
+/// assert_eq!(code, "unattested");
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ReceiptReason {
     /// The receipt has no attestation triples.
     Unattested,
@@ -342,6 +533,7 @@ pub enum ReceiptReason {
 }
 
 impl ReceiptReason {
+    /// Stable lower-case name of the reason.
     pub fn as_str(self) -> &'static str {
         match self {
             ReceiptReason::Unattested => "unattested",
@@ -352,30 +544,61 @@ impl ReceiptReason {
 }
 
 /// A transition was refused; no child state exists.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::law::LawError;
+///
+/// let e = LawError::ReceiptRequired { step: "derive:rdfs".into() };
+/// let code = match &e {
+///     LawError::ReceiptRequired { step } => step.as_str(),
+///     _ => "other", // required: new variants may be added
+/// };
+/// assert_eq!(code, "derive:rdfs");
+/// ```
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum LawError {
     /// The SHACL gate found violations. `violations == results.len()`;
     /// `results` carries the machine-readable SHACL report entries.
     NotAdmitted {
+        /// Number of violations found.
         violations: usize,
+        /// The individual SHACL results.
         results: Vec<Violation>,
     },
     /// A candidate plan failed replay: `action` (index `index`, or `<goal>`
     /// one past the last action) is missing the listed N-Quads lines.
     PlanRefused {
+        /// Index of the failing action.
         index: usize,
+        /// Name of the failing action, or `<goal>`.
         action: String,
+        /// Canonical N-Quads lines that were required but absent.
         missing: Vec<String>,
     },
     /// No recorded receipt for `step` exists in the state.
-    ReceiptRequired { step: String },
+    ReceiptRequired {
+        /// The step that has no recorded receipt.
+        step: String,
+    },
     /// A receipt for `step` is recorded but carries no valid attestation by a
     /// trusted key.
-    ReceiptRefused { step: String, reason: ReceiptReason },
+    ReceiptRefused {
+        /// The step whose receipt was refused.
+        step: String,
+        /// Why the recorded receipt was not accepted.
+        reason: ReceiptReason,
+    },
     /// The lease does not authorize the step.
     LeaseRefused {
+        /// Id of the refusing lease.
         lease_id: String,
+        /// Name of the refused step.
         step: String,
+        /// Why the lease refused the step.
         reason: LeaseReason,
     },
     /// An upstream engine or routing refused the input.
@@ -471,10 +694,12 @@ impl LawState {
         &self.id
     }
 
+    /// The underlying immutable PurRDF dataset.
     pub fn dataset(&self) -> &Arc<purrdf::RdfDataset> {
         &self.dataset
     }
 
+    /// Number of quads in the state.
     pub fn quad_count(&self) -> usize {
         self.dataset.quad_count()
     }

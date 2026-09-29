@@ -54,3 +54,43 @@ jobs:
           targets: wasm32-unknown-unknown
       - name: Compile facade for wasm32
         run: cargo check --lib --target wasm32-unknown-unknown
+
+  semver:
+    name: semver (cargo-semver-checks)
+    runs-on: ubuntu-latest
+    # continue-on-error while v26.9.29 is unreleased: it intentionally breaks the
+    # public API against the latest crates.io baseline (26.9.28), so a failure here
+    # is informational until the release lands. Remove this line after v26.9.29 ships.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          package: graphlaw
+
+  deny:
+    name: cargo-deny (advisories licenses bans sources)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories licenses bans sources
+
+  audit:
+    name: cargo-audit (RustSec)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.96.0
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Audit Cargo.lock
+        run: cargo audit

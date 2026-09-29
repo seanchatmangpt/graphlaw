@@ -13,6 +13,7 @@
 //!
 //! A response is always JSON: `{"ok":true,...}` or `{"ok":false,"error":{...}}`.
 #![allow(unsafe_code)]
+#![deny(missing_docs)]
 
 /// Reserve `len` bytes of linear memory for the host. Returns null (0) when
 /// `len` exceeds `graphlaw::abi::MAX_REQUEST_BYTES`; a following `gl_call` on

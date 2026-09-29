@@ -5,14 +5,20 @@ The runnable source is `examples/quickstart_plan.rs`.
 
 ## The core
 
-Only two calls do the work; the rest of the example builds the data:
+Build the plan with typed builders (no hand-written N-Triples), then admit it:
 
 ```rust
-let start = LawState::parse(b"<urn:d:door> <urn:p:is> <urn:v:closed> .\n", Dialect::NTriples, None)?;
+let is = |v| Triple::iri("urn:d:door", "urn:p:is", v);
+let plan = Plan::builder()
+    .action("open").requires(is("urn:v:closed")?).adds(is("urn:v:open")?).deletes(is("urn:v:closed")?)
+    .goal(is("urn:v:open")?).build()?;
 let admitted = plan.admit(&start)?;   // replays every action; refuses on the first unmet precondition
 ```
 
-A `Plan` is a list of `Action { name, pre, add, del }` (each field N-Triples text) plus a `goal`.
+`Triple::iri` validates IRIs (refusing `<`, `>`, spaces, control characters) and `Triple::literal`
+escapes quotes, backslashes and newlines, so a literal can never inject a second triple. The
+struct-literal form (`Action { name, pre, add, del }` with N-Triples text) still works and yields the
+same plan digest.
 Admission replays the actions in order: every `pre` triple must hold, `del` is removed, then `add`
 is added, and the `goal` must hold at the end. Each action yields one receipt.
 

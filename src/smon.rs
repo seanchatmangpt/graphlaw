@@ -14,8 +14,11 @@ use purrdf::{RdfDataset, RdfDatasetBuilder, RdfLiteral, TermValue};
 use regex::Regex;
 use serde_json::Value;
 
+/// Namespace of the self-monitoring pack vocabulary.
 pub const SMON: &str = "http://seanchatmangpt.github.io/packs/self-monitoring#";
+/// Namespace of the dogfood-lifecycle pack vocabulary.
 pub const DFL: &str = "http://seanchatmangpt.github.io/packs/dogfood-lifecycle#";
+/// Dublin Core terms namespace.
 pub const DCTERMS: &str = "http://purl.org/dc/terms/";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const XSD_INTEGER: &str = "http://www.w3.org/2001/XMLSchema#integer";
@@ -173,11 +176,17 @@ pub fn extract_topic(text: &str) -> String {
 /// One extracted conversational turn.
 #[derive(Debug, Clone)]
 pub struct Turn {
+    /// Sequence number of the turn.
     pub seq: usize,
+    /// Speaker role.
     pub role: &'static str,
+    /// Turn text.
     pub text: String,
+    /// Turn kind.
     pub kind: &'static str,
+    /// Evidence references cited by the turn.
     pub evidence: Vec<String>,
+    /// Topic label.
     pub topic: String,
 }
 
@@ -326,11 +335,13 @@ pub fn build_dataset(
     b.freeze().map_err(|e| format!("{e:?}"))
 }
 
+/// Serialize a dataset as Turtle bytes.
 pub fn to_turtle(ds: &RdfDataset) -> Result<Vec<u8>, ToolError> {
     purrdf::serialize_dataset(ds, "text/turtle", purrdf::SerializeGraph::Dataset)
         .map_err(|e| format!("{e:?}"))
 }
 
+/// Write a dataset to `out` as Turtle.
 pub fn write_turtle(ds: &RdfDataset, out: &Path) -> Result<(), ToolError> {
     if let Some(dir) = out.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
@@ -338,6 +349,7 @@ pub fn write_turtle(ds: &RdfDataset, out: &Path) -> Result<(), ToolError> {
     std::fs::write(out, to_turtle(ds)?).map_err(|e| e.to_string())
 }
 
+/// Read a Turtle file into a dataset.
 pub fn read_turtle(path: &Path) -> Result<Arc<RdfDataset>, ToolError> {
     let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     purrdf::parse_dataset(&bytes, "text/turtle", None)
@@ -347,8 +359,11 @@ pub fn read_turtle(path: &Path) -> Result<Arc<RdfDataset>, ToolError> {
 /// What the broadening experiment changed, for the audit trail.
 #[derive(Debug, Default)]
 pub struct Broadened {
+    /// Audit lines describing each change.
     pub audit: Vec<String>,
+    /// Number of first-pass rewrites.
     pub rewrite1: usize,
+    /// Number of second-pass rewrites.
     pub rewrite2: usize,
 }
 
@@ -467,10 +482,12 @@ pub fn broaden(
 pub struct Args(Vec<String>);
 
 impl Args {
+    /// Parse the process arguments.
     pub fn from_env() -> Self {
         Args(std::env::args().skip(1).collect())
     }
 
+    /// The value following `flag`, if present.
     pub fn value(&self, flag: &str) -> Option<&str> {
         self.0
             .iter()
@@ -479,11 +496,13 @@ impl Args {
             .map(String::as_str)
     }
 
+    /// The value following `flag`, or an error when absent.
     pub fn required(&self, flag: &str) -> Result<&str, ToolError> {
         self.value(flag)
             .ok_or_else(|| format!("missing required {flag}"))
     }
 
+    /// True when `flag` is present.
     pub fn switch(&self, flag: &str) -> bool {
         self.0.iter().any(|a| a == flag)
     }

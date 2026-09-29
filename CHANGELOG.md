@@ -9,10 +9,24 @@ v26.9.29 is intentionally held and unreleased.
 
 ### Changed
 
+- API stability: growable public enums (`Step`, `Dialect`, `Engine`, `RefusalKind`,
+  `PolicyRefusalKind`, `LeaseReason`, `ReceiptReason`, `Ceiling`, `N3Error`, `LawError`,
+  `StoreError`, `AttestError`) are `#[non_exhaustive]`; downstream matches need a wildcard arm.
+- `#![deny(missing_docs)]` on `graphlaw` and `graphlaw-wasm`; every public item is documented and
+  the core types have runnable doctests.
+
 - Unsigned lease transitions are now `transition_leased_unverified`; the ABI `law` op with a
   `lease` requires `signed_lease` and `trusted_keys` unless `unverified_lease: true` is set.
 
 ### Added
+
+- `plan::Triple` (validated IRIs, escaped literals), `plan::PlanBuilder` / `Plan::builder()`,
+  `plan::ActionBuilder` / `Action::builder()` and `plan::TripleError`; `examples/quickstart_plan.rs`
+  uses them. Struct-literal construction is unchanged.
+- `docs/api-stability.md` (stability, deprecation, MSRV and `ABI_VERSION` policy),
+  `tests/api_stability.rs`, `tests/plan_builder.rs`.
+- CI jobs `semver` (cargo-semver-checks, informational while unreleased), `deny` (`deny.toml`) and
+  `audit` (cargo-audit).
 
 - Independent plan admission: `plan::Plan::admit` replays actions and refuses on the first unmet
   precondition or goal, with a receipt per action and a canonical plan digest.

@@ -22,32 +22,56 @@ use crate::law::Receipt;
 use crate::{BACKEND_AUTHORITIES, BackendAuthority};
 
 /// Typed store refusal.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::receipt_store::StoreError;
+///
+/// let e = StoreError::Io("disk full".into());
+/// let transient = match e {
+///     StoreError::Io(_) => true,
+///     _ => false, // required: new variants may be added
+/// };
+/// assert!(transient);
+/// ```
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum StoreError {
+    /// An I/O error, rendered as text.
     Io(String),
     /// Subject key is empty or contains path separators / dots-only segments.
     InvalidSubject(String),
     /// A stored file is not a canonical receipt document.
     Malformed {
+        /// File the error concerns.
         file: String,
     },
     /// A stored file's bytes do not hash to its content address.
     DigestMismatch {
+        /// File whose bytes are wrong.
         file: String,
+        /// Digest the file name promises.
         expected: String,
+        /// Digest the bytes actually have.
         actual: String,
     },
     /// A receipt has no `<digest>.sig` attestation file.
     Unattested {
+        /// File without attestation.
         file: String,
     },
     /// A receipt's attestation is malformed, untrusted, or does not verify.
     Attestation {
+        /// File whose attestation was refused.
         file: String,
+        /// Why the attestation was refused.
         error: AttestError,
     },
     /// The stored receipts do not form one linear parent -> child chain.
     BrokenChain {
+        /// Description of where the chain breaks.
         detail: String,
     },
 }
@@ -84,6 +108,19 @@ impl From<std::io::Error> for StoreError {
 }
 
 /// A directory of receipts keyed by subject.
+///
+/// ```
+/// use graphlaw::{dialect::Dialect, law::{LawState, Step}, receipt_store::ReceiptStore};
+///
+/// let dir = std::env::temp_dir().join(format!("graphlaw-doc-store-{}", std::process::id()));
+/// let store = ReceiptStore::open(&dir)?;
+/// let s = LawState::parse(b"<urn:a> <urn:p> <urn:b> .\n", Dialect::NTriples, None)?;
+/// let (_child, receipt) = s.transition(&Step::EntailRdfs)?;
+/// store.put(&receipt, "subject1")?;
+/// assert_eq!(store.verify("subject1")?, vec![receipt]);
+/// std::fs::remove_dir_all(&dir)?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 #[derive(Debug, Clone)]
 pub struct ReceiptStore {
     dir: PathBuf,
