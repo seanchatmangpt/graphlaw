@@ -70,7 +70,7 @@ all-features = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 wasmi = "1"
-wasmi_wasi = "1"
+wasmi_wasi = "2"
 serde_json = "1"
 
 # Carried patch (see vendor/README.md): gives WASI the std clock/RNG path instead
