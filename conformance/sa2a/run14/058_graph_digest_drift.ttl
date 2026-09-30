@@ -1,0 +1,2 @@
+@prefix sa2a: <https://chatmangpt.com/sa2a#> .
+<urn:run14:058> a sa2a:SemanticEvidenceCourt ; sa2a:dimension "graphDigest" ; sa2a:observedState "DRIFT" ; sa2a:expectedDecision "REFUSE" ; sa2a:authority "NONE" ; sa2a:consequence "EVIDENCE_ONLY" ; sa2a:canonicalization "RDFC-1.0" .
