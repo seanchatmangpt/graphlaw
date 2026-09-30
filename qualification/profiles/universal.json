@@ -1,0 +1,1 @@
+{"profile":"chicago.universal.v1","inherits":[],"courts":["exact_subject","real_collaborator","anti_vacuity","independent_observer","temporal_order","identity_mutation","differential","bounded_autonomy","crash_reconcile","replay"],"standing_ceiling":"QUALIFIED","pass":"AttemptObserved && !ViolationObserved","missing_attempt":"UNKNOWN"}
