@@ -1,0 +1,1 @@
+{"law":"collaborator_identity","dimension":"collaborator_digest","relation":"eq","falsifier":{"mutation":"substitute_collaborator","expect":"REFUSED"},"permanent_negative_knowledge":true}
