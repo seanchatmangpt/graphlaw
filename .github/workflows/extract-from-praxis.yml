@@ -139,6 +139,12 @@ jobs:
           )
           readme.write_text(s)
 
+          # Never admit local/compiler build products into the canonical source tree.
+          ignore = Path(".gitignore")
+          existing = ignore.read_text() if ignore.exists() else ""
+          if "target/" not in existing.splitlines():
+              ignore.write_text(existing + ("\n" if existing and not existing.endswith("\n") else "") + "target/\n")
+
           Path("EXTRACTION.md").write_text("""# GraphLaw extraction receipt
 
           GraphLaw was extracted from `seanchatmangpt/praxis` at exact source
@@ -218,6 +224,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Verification manufactures compiler output; it is evidence, not source.
+          rm -rf target
           git config user.name "graphlaw-extractor[bot]"
           git config user.email "graphlaw-extractor[bot]@users.noreply.github.com"
           git add -A
