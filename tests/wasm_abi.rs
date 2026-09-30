@@ -839,3 +839,32 @@ fn plan_negation_round_trips_in_wasm_and_matches_native() {
     assert_eq!(r["error"]["details"]["action"], "<goal>");
     assert_eq!(r, graphlaw::abi::call_json(&g));
 }
+
+
+#[test]
+fn sa2a_run12_portability_corpus_executes_through_real_wasi() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("conformance/sa2a/portable/run12");
+    let mut files: Vec<_> = std::fs::read_dir(&root)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().and_then(|x| x.to_str()) == Some("ttl"))
+        .collect();
+    files.sort();
+    assert_eq!(files.len(), 50, "run12 must stay a 50-vector portable court");
+    for path in files {
+        let text = std::fs::read_to_string(&path).unwrap();
+        let parsed = ok(json!({"op": "parse", "text": text, "dialect": "turtle"}));
+        assert!(parsed["quads"].as_u64().unwrap_or(0) > 0, "{} parsed empty", path.display());
+        let first = ok(json!({"op": "canonical", "data": {"text": text, "dialect": "turtle"}}));
+        let second = ok(json!({"op": "canonical", "data": {"text": text, "dialect": "turtle"}}));
+        assert_eq!(first["id"], second["id"], "{} canonical identity drifted", path.display());
+        if text.contains("sa2a:expected \\\"ADMIT\\\"") {
+            assert!(text.contains("sa2a:authority \\\"NONE\\\""), "{} authority widened", path.display());
+            assert!(text.contains("sa2a:consequence \\\"EVIDENCE_ONLY\\\""), "{} consequence widened", path.display());
+            assert!(text.contains("sa2a:canonicalization \\\"RDFC-1.0\\\""), "{} canonicalization widened", path.display());
+        } else {
+            assert!(text.contains("sa2a:expected \\\"REFUSE\\\""), "{} missing disposition", path.display());
+            assert!(text.contains("sa2a:violation"), "{} refusal lacks typed violation", path.display());
+        }
+    }
+}
