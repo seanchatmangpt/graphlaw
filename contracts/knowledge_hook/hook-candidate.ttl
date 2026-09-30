@@ -1,0 +1,7 @@
+@prefix gl: <https://graphlaw.dev/ns#> .
+@prefix kh: <https://graphlaw.dev/knowledge-hook#> .
+kh:HookCandidate a gl:ProjectionContract ;
+  gl:authorityCeiling gl:None ;
+  gl:requiresExactSubject true ;
+  gl:requiresSourceDigest true ;
+  gl:projectsTo gl:SA2AIntent .
