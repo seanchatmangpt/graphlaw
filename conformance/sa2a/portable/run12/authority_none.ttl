@@ -7,4 +7,4 @@ ex:authority_none a sa2a:PortableConformanceVector ;
   sa2a:authority "NONE" ;
   sa2a:consequence "EVIDENCE_ONLY" ;
   sa2a:canonicalization "RDFC-1.0" ;
-  sa2a:expectedDecision "ADMIT" .
+  sa2a:expected "ADMIT" .
