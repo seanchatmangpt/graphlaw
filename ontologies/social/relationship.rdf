@@ -1,17 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:foaf="http://xmlns.com/foaf/0.1/" xmlns:wot="http://xmlns.com/wot/0.1/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dct="http://purl.org/dc/terms/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:vann="http://purl.org/vocab/vann/" xmlns:skos="http://www.w3.org/2004/02/skos/core#" xmlns:ov="http://open.vocab.org/terms/">
+<!DOCTYPE rdf:RDF [
+    <!ENTITY rel  "http://purl.org/vocab/relationship/" >
+    <!ENTITY vocabid  "http://purl.org/vocab/relationship/rel-vocab-20050810" >
+]>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:foaf="http://xmlns.com/foaf/0.1/" xmlns:wot="http://xmlns.com/wot/0.1/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dct="http://purl.org/dc/terms/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:vann="http://purl.org/vocab/vann/"
+  xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+  xmlns:ov="http://open.vocab.org/terms/"
+>
   <owl:Ontology rdf:about="http://purl.org/vocab/relationship/">
     <dc:creator><foaf:Person rdf:about="http://iandavis.com/id/me"><foaf:name>Ian Davis</foaf:name></foaf:Person></dc:creator>
     <dc:creator><foaf:Person><foaf:name>Eric Vitiello Jr</foaf:name></foaf:Person></dc:creator>
     <dc:title>RELATIONSHIP: A vocabulary for describing relationships between people</dc:title>
     <dc:description>A vocabulary for describing relationships between people</dc:description>
-    <dc:identifier>http://purl.org/vocab/relationship/rel-vocab-20050810</dc:identifier>
-    <dct:isVersionOf rdf:resource="http://purl.org/vocab/relationship/"/>
+    <dc:identifier>&vocabid;</dc:identifier>
+    <dct:isVersionOf rdf:resource="&rel;"/>
     <dct:replaces rdf:resource="http://purl.org/vocab/relationship/rel-vocab-20090515"/>
     <vann:preferredNamespaceUri>http://purl.org/vocab/relationship</vann:preferredNamespaceUri>
     <vann:preferredNamespacePrefix>rel</vann:preferredNamespacePrefix>
-    <vann:example rdf:resource="http://purl.org/vocab/relationship/examples/1"/>
-    <vann:example rdf:resource="http://purl.org/vocab/relationship/examples/2"/>
+    <vann:example rdf:resource="http://purl.org/vocab/relationship/examples/1" />
+    <vann:example rdf:resource="http://purl.org/vocab/relationship/examples/2" />
     <dct:issued>2004-02-11</dct:issued>
     <skos:changeNote rdf:value="Added isDefinedBy properties and updated documentation" dc:date="2005-08-10" dc:creator="Ian Davis"/>
     <skos:historyNote rdf:value="Typed vocabulary as owl:Ontology" dc:date="2009-05-15" dc:creator="Ian Davis"/>
@@ -285,7 +292,7 @@
     <skos:historyNote rdf:value="Asserted that this property is a sub-property of owl:differentFrom, indicating that this is a relationship between different individuals" dc:date="2010-02-09" dc:creator="Ian Davis"/>
   </rdf:Property>
   <owl:SymmetricProperty rdf:about="http://purl.org/vocab/relationship/livesWith">
-    <rdfs:isDefinedBy rdf:resource="http://purl.org/vocab/relationship/"/>
+    <rdfs:isDefinedBy rdf:resource="&rel;"/>
     <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#TransitiveProperty"/>
     <rdfs:subPropertyOf rdf:resource="http://xmlns.com/foaf/0.1/knows"/>
     <rdfs:label xml:lang="en">Lives With</rdfs:label>

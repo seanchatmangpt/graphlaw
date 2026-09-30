@@ -1,5 +1,20 @@
 <?xml version="1.0"?>
-<rdf:RDF xmlns="http://www.w3.org/2006/vcard/ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:xsd="http://www.w3.org/2001/XMLSchema#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xml:base="http://www.w3.org/2006/vcard/ns">
+
+
+<!DOCTYPE rdf:RDF [
+    <!ENTITY owl "http://www.w3.org/2002/07/owl#" >
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+]>
+
+
+<rdf:RDF xmlns="http://www.w3.org/2006/vcard/ns#"
+     xml:base="http://www.w3.org/2006/vcard/ns"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
     <owl:Ontology rdf:about="http://www.w3.org/2006/vcard/ns">
         <rdfs:label xml:lang="en">Ontology for vCard</rdfs:label>
          <owl:versionInfo xml:lang="en">Final</owl:versionInfo>
@@ -34,7 +49,7 @@
 
     <owl:ObjectProperty rdf:about="http://www.w3.org/2006/vcard/ns#agent">
         <rdfs:label xml:lang="en">agent</rdfs:label>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This object property has been deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:ObjectProperty>
@@ -294,7 +309,7 @@
 
     <owl:ObjectProperty rdf:about="http://www.w3.org/2006/vcard/ns#hasNickname">
         <rdfs:label xml:lang="en">has nickname</rdfs:label>
-        <rdfs:seeAlso rdf:resource="http://www.w3.org/2006/vcard/ns#nickname"/>
+        <rdfs:seeAlso rdf:resource="http://www.w3.org/2006/vcard/ns#nickname" />
         <rdfs:comment xml:lang="en">Used to support property parameters for the nickname data property</rdfs:comment>
          <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:ObjectProperty>
@@ -569,7 +584,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#additional-name">
         <rdfs:label xml:lang="en">additional name</rdfs:label>
         <rdfs:comment xml:lang="en">The additional name associated with the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -583,8 +598,8 @@
         <rdfs:range>
            <rdfs:Datatype>
               <owl:unionOf rdf:parseType="Collection">
-                  <rdf:Description rdf:about="http://www.w3.org/2001/XMLSchema#dateTime"/>
-                  <rdf:Description rdf:about="http://www.w3.org/2001/XMLSchema#gYear"/>
+                  <rdf:Description rdf:about="&xsd;dateTime"/>
+                  <rdf:Description rdf:about="&xsd;gYear"/>
               </owl:unionOf>
           </rdfs:Datatype>
         </rdfs:range>
@@ -601,9 +616,9 @@
         <rdfs:range>
           <rdfs:Datatype>
               <owl:unionOf rdf:parseType="Collection">
-                  <rdf:Description rdf:about="http://www.w3.org/2001/XMLSchema#dateTime"/>
-                  <rdf:Description rdf:about="http://www.w3.org/2001/XMLSchema#dateTimeStamp"/>
-                  <rdf:Description rdf:about="http://www.w3.org/2001/XMLSchema#gYear"/>
+                  <rdf:Description rdf:about="&xsd;dateTime"/>
+                  <rdf:Description rdf:about="&xsd;dateTimeStamp"/>
+                  <rdf:Description rdf:about="&xsd;gYear"/>
               </owl:unionOf>
          </rdfs:Datatype>
         </rdfs:range>
@@ -617,7 +632,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#category">
         <rdfs:label xml:lang="en">category</rdfs:label>
         <rdfs:comment xml:lang="en">The category information about the object, also known as tags</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -627,7 +642,7 @@
 
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#class">
         <rdfs:label xml:lang="en">class</rdfs:label>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This data property has been deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
@@ -639,7 +654,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#country-name">
         <rdfs:label xml:lang="en">country name</rdfs:label>
         <rdfs:comment xml:lang="en">The country name associated with the address of the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -649,7 +664,7 @@
 
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#extended-address">
         <rdfs:label xml:lang="en">extended address</rdfs:label>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This data property has been deprecated</rdfs:comment>
          <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
@@ -661,7 +676,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#family-name">
         <rdfs:label xml:lang="en">family name</rdfs:label>
         <rdfs:comment xml:lang="en">The family name associated with the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -672,7 +687,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#fn">
         <rdfs:label xml:lang="en">formatted name</rdfs:label>
         <rdfs:comment xml:lang="en">The formatted text corresponding to the name of the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -683,7 +698,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#given-name">
         <rdfs:label xml:lang="en">given name</rdfs:label>
         <rdfs:comment xml:lang="en">The given name associated with the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -694,7 +709,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#honorific-prefix">
         <rdfs:label xml:lang="en">honorific prefix</rdfs:label>
         <rdfs:comment xml:lang="en">The honorific prefix of the name associated with the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -705,7 +720,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#honorific-suffix">
         <rdfs:label xml:lang="en">honorific suffix</rdfs:label>
         <rdfs:comment xml:lang="en">The honorific suffix of the name associated with the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -715,7 +730,7 @@
 
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#label">
         <rdfs:label xml:lang="en">label</rdfs:label>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This data property has been deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
@@ -736,7 +751,7 @@
 
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#latitude">
         <rdfs:label xml:lang="en">latitude</rdfs:label>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This data property has been deprecated. See hasGeo</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
@@ -748,7 +763,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#locality">
         <rdfs:label xml:lang="en">locality</rdfs:label>
         <rdfs:comment xml:lang="en">The locality (e.g. city or town) associated with the address of the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -758,7 +773,7 @@
 
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#longitude">
         <rdfs:label xml:lang="en">longitude</rdfs:label>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This data property has been deprecated. See hasGeo</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
@@ -769,7 +784,7 @@
 
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#mailer">
         <rdfs:label xml:lang="en">mailer</rdfs:label>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This data property has been deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
@@ -781,7 +796,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#nickname">
         <rdfs:label xml:lang="en">nickname</rdfs:label>
         <rdfs:comment xml:lang="en">The nick name associated with the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -792,7 +807,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#note">
         <rdfs:label xml:lang="en">note</rdfs:label>
         <rdfs:comment xml:lang="en">A note associated with the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -803,7 +818,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#organization-name">
         <rdfs:label xml:lang="en">organization name</rdfs:label>
         <rdfs:comment xml:lang="en">To specify the organizational name associated with the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -814,7 +829,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#organization-unit">
         <rdfs:label xml:lang="en">organizational unit name</rdfs:label>
         <rdfs:comment xml:lang="en">To specify the organizational unit name associated with the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2006/vcard/ns#organization-name"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
@@ -825,7 +840,7 @@
 
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#post-office-box">
         <rdfs:label xml:lang="en">post office box</rdfs:label>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This data property has been deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
@@ -837,7 +852,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#postal-code">
         <rdfs:label xml:lang="en">postal code</rdfs:label>
         <rdfs:comment xml:lang="en">The postal code associated with the address of the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -848,7 +863,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#prodid">
         <rdfs:label xml:lang="en">product id</rdfs:label>
         <rdfs:comment xml:lang="en">To specify the identifier for the product that created the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -859,7 +874,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#region">
         <rdfs:label xml:lang="en">region</rdfs:label>
         <rdfs:comment xml:lang="en">The region (e.g. state or province) associated with the address of the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -870,7 +885,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#rev">
         <rdfs:label xml:lang="en">revision</rdfs:label>
         <rdfs:comment xml:lang="en">To specify revision information about the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#dateTime"/>
+        <rdfs:range rdf:resource="&xsd;dateTime"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -881,7 +896,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#role">
         <rdfs:label xml:lang="en">role</rdfs:label>
         <rdfs:comment xml:lang="en">To specify the function or part played in a particular situation by the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -892,7 +907,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#sort-string">
         <rdfs:label xml:lang="en">sort as</rdfs:label>
         <rdfs:comment xml:lang="en">To specify the string to be used for national-language-specific sorting. Used as a property parameter only.</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -903,7 +918,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#street-address">
         <rdfs:label xml:lang="en">street address</rdfs:label>
         <rdfs:comment xml:lang="en">The street address associated with the address of the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -914,7 +929,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#title">
         <rdfs:label xml:lang="en">title</rdfs:label>
         <rdfs:comment xml:lang="en">To specify the position or job of the object</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -925,7 +940,7 @@
     <owl:DatatypeProperty rdf:about="http://www.w3.org/2006/vcard/ns#tz">
         <rdfs:label xml:lang="en">time zone</rdfs:label>
         <rdfs:comment xml:lang="en">To indicate time zone information that is specific to the object. May also be used as a property parameter.</rdfs:comment>
-        <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:DatatypeProperty>
     
@@ -973,11 +988,11 @@
                         <owl:intersectionOf rdf:parseType="Collection">
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#country-name"/>
-                                <owl:someValuesFrom rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+                                <owl:someValuesFrom rdf:resource="&xsd;string"/>
                             </owl:Restriction>
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#country-name"/>
-                                <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+                                <owl:maxCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxCardinality>
                             </owl:Restriction>
                         </owl:intersectionOf>
                     </owl:Class>
@@ -985,11 +1000,11 @@
                         <owl:intersectionOf rdf:parseType="Collection">
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#locality"/>
-                                <owl:someValuesFrom rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+                                <owl:someValuesFrom rdf:resource="&xsd;string"/>
                             </owl:Restriction>
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#locality"/>
-                                <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+                                <owl:maxCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxCardinality>
                             </owl:Restriction>
                         </owl:intersectionOf>
                     </owl:Class>
@@ -997,11 +1012,11 @@
                         <owl:intersectionOf rdf:parseType="Collection">
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#postal-code"/>
-                                <owl:someValuesFrom rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+                                <owl:someValuesFrom rdf:resource="&xsd;string"/>
                             </owl:Restriction>
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#postal-code"/>
-                                <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+                                <owl:maxCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxCardinality>
                             </owl:Restriction>
                         </owl:intersectionOf>
                     </owl:Class>
@@ -1009,11 +1024,11 @@
                         <owl:intersectionOf rdf:parseType="Collection">
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#region"/>
-                                <owl:someValuesFrom rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+                                <owl:someValuesFrom rdf:resource="&xsd;string"/>
                             </owl:Restriction>
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#region"/>
-                                <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+                                <owl:maxCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxCardinality>
                             </owl:Restriction>
                         </owl:intersectionOf>
                     </owl:Class>
@@ -1021,11 +1036,11 @@
                         <owl:intersectionOf rdf:parseType="Collection">
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#street-address"/>
-                                <owl:someValuesFrom rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+                                <owl:someValuesFrom rdf:resource="&xsd;string"/>
                             </owl:Restriction>
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#street-address"/>
-                                <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+                                <owl:maxCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxCardinality>
                             </owl:Restriction>
                         </owl:intersectionOf>
                     </owl:Class>
@@ -1053,7 +1068,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#BBS">
         <rdfs:label xml:lang="en">BBS</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#TelephoneType"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1065,7 +1080,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Car">
         <rdfs:label xml:lang="en">Car</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#TelephoneType"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1158,7 +1173,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Dom">
         <rdfs:label xml:lang="en">Dom</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#Type"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1170,7 +1185,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Email">
         <rdfs:label xml:lang="en">Email</rdfs:label>
         <rdfs:comment xml:lang="en">To specify the electronic mail address for communication with the object the vCard represents. Use the hasEmail object property.</rdfs:comment>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
     
@@ -1240,7 +1255,7 @@
                     <owl:Restriction>
                         <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#hasMember"/>
                         <owl:onClass rdf:resource="http://www.w3.org/2006/vcard/ns#Kind"/>
-                        <owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minQualifiedCardinality>
+                        <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
                     </owl:Restriction>
                 </owl:intersectionOf>
             </owl:Class>
@@ -1260,7 +1275,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Home">
         <rdfs:label xml:lang="en">Home</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#Type"/>
-        <rdfs:comment xml:lang="en">This implies that the property is related to an individual's personal life</rdfs:comment>
+        <rdfs:comment xml:lang="en">This implies that the property is related to an individual&apos;s personal life</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
     
@@ -1271,7 +1286,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#ISDN">
         <rdfs:label xml:lang="en">ISDN</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#Type"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1296,7 +1311,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Internet">
         <rdfs:label xml:lang="en">Internet</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#Type"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1308,7 +1323,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Intl">
         <rdfs:label xml:lang="en">Intl</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#Type"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1333,8 +1348,8 @@
         <owl:equivalentClass>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#fn"/>
-                <owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:minQualifiedCardinality>
-                <owl:onDataRange rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
             </owl:Restriction>
         </owl:equivalentClass>
         <rdfs:comment xml:lang="en">The parent class for all objects</rdfs:comment>
@@ -1348,7 +1363,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Label">
         <rdfs:label xml:lang="en">Label</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#Type"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1402,7 +1417,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Modem">
         <rdfs:label xml:lang="en">Modem</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#TelephoneType"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1414,7 +1429,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Msg">
         <rdfs:label xml:lang="en">Msg</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#TelephoneType"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1442,11 +1457,11 @@
                         <owl:intersectionOf rdf:parseType="Collection">
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#additional-name"/>
-                                <owl:someValuesFrom rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+                                <owl:someValuesFrom rdf:resource="&xsd;string"/>
                             </owl:Restriction>
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#additional-name"/>
-                                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:minCardinality>
+                                <owl:minCardinality rdf:datatype="&xsd;nonNegativeInteger">0</owl:minCardinality>
                             </owl:Restriction>
                         </owl:intersectionOf>
                     </owl:Class>
@@ -1454,11 +1469,11 @@
                         <owl:intersectionOf rdf:parseType="Collection">
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#family-name"/>
-                                <owl:someValuesFrom rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+                                <owl:someValuesFrom rdf:resource="&xsd;string"/>
                             </owl:Restriction>
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#family-name"/>
-                                <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+                                <owl:maxCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxCardinality>
                             </owl:Restriction>
                         </owl:intersectionOf>
                     </owl:Class>
@@ -1466,11 +1481,11 @@
                         <owl:intersectionOf rdf:parseType="Collection">
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#given-name"/>
-                                <owl:someValuesFrom rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+                                <owl:someValuesFrom rdf:resource="&xsd;string"/>
                             </owl:Restriction>
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#given-name"/>
-                                <owl:maxCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:maxCardinality>
+                                <owl:maxCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:maxCardinality>
                             </owl:Restriction>
                         </owl:intersectionOf>
                     </owl:Class>
@@ -1478,11 +1493,11 @@
                         <owl:intersectionOf rdf:parseType="Collection">
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#honorific-prefix"/>
-                                <owl:someValuesFrom rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+                                <owl:someValuesFrom rdf:resource="&xsd;string"/>
                             </owl:Restriction>
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#honorific-prefix"/>
-                                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:minCardinality>
+                                <owl:minCardinality rdf:datatype="&xsd;nonNegativeInteger">0</owl:minCardinality>
                             </owl:Restriction>
                         </owl:intersectionOf>
                     </owl:Class>
@@ -1490,11 +1505,11 @@
                         <owl:intersectionOf rdf:parseType="Collection">
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#honorific-suffix"/>
-                                <owl:someValuesFrom rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+                                <owl:someValuesFrom rdf:resource="&xsd;string"/>
                             </owl:Restriction>
                             <owl:Restriction>
                                 <owl:onProperty rdf:resource="http://www.w3.org/2006/vcard/ns#honorific-suffix"/>
-                                <owl:minCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:minCardinality>
+                                <owl:minCardinality rdf:datatype="&xsd;nonNegativeInteger">0</owl:minCardinality>
                             </owl:Restriction>
                         </owl:intersectionOf>
                     </owl:Class>
@@ -1554,7 +1569,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#PCS">
         <rdfs:label xml:lang="en">PCS</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#TelephoneType"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1576,7 +1591,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Parcel">
         <rdfs:label xml:lang="en">Parcel</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#Type"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1598,7 +1613,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Postal">
         <rdfs:label xml:lang="en">Postal</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#Type"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1610,7 +1625,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Pref">
         <rdfs:label xml:lang="en">Pref</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#Type"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1661,7 +1676,7 @@
 
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Tel">
         <rdfs:label xml:lang="en">Tel</rdfs:label>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated. Use the hasTelephone object property.</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
@@ -1755,7 +1770,7 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#Work">
         <rdfs:label xml:lang="en">Work</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#Type"/>
-        <rdfs:comment xml:lang="en">This implies that the property is related to an individual's work place</rdfs:comment>
+        <rdfs:comment xml:lang="en">This implies that the property is related to an individual&apos;s work place</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
     
@@ -1766,9 +1781,13 @@
     <owl:Class rdf:about="http://www.w3.org/2006/vcard/ns#X400">
         <rdfs:label xml:lang="en">X400</rdfs:label>
         <rdfs:subClassOf rdf:resource="http://www.w3.org/2006/vcard/ns#Type"/>
-        <owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
+        <owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
         <rdfs:comment xml:lang="en">This class is deprecated</rdfs:comment>
         <rdfs:isDefinedBy rdf:resource="http://www.w3.org/2006/vcard/ns"/>
     </owl:Class>
 </rdf:RDF>
+
+
+
 <!-- Generated by the OWL API (version 3.4.2) http://owlapi.sourceforge.net -->
+

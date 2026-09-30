@@ -1,1 +1,0 @@
-{"law":"replay_identity","dimension":"replay_digest","relation":"eq","falsifier":{"mutation":"alter_replay_digest","expect":"REFUSED"},"permanent_negative_knowledge":true}

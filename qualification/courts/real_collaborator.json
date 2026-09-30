@@ -1,8 +1,0 @@
-{
-  "court": "real_collaborator",
-  "attack_required": true,
-  "law": "collaborator_identity",
-  "require": ["repo", "sha", "load_bearing_role"],
-  "missing_collaborator": "UNKNOWN",
-  "identity_drift": "REFUSED"
-}

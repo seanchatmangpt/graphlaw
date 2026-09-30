@@ -1,3 +1,0 @@
-@prefix sa2a: <https://seanchatmangpt.github.io/sa2a#> .
-@prefix ex: <urn:graphlaw:sa2a:> .
-ex:shape_digest a sa2a:Evidence ; sa2a:authority "NONE" ; sa2a:consequence "EVIDENCE_ONLY" ; sa2a:canonicalization "RDFC-1.0" ; sa2a:vectorName "shape_digest" .

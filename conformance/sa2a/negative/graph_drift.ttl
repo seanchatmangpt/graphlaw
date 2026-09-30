@@ -1,3 +1,0 @@
-@prefix sa2a: <https://seanchatmangpt.github.io/sa2a#> .
-@prefix ex: <urn:graphlaw:sa2a:negative:> .
-ex:graph_drift a sa2a:NegativeEvidenceVector ; sa2a:expectedDecision "REFUSE" ; sa2a:authority "NONE" ; sa2a:consequence "EVIDENCE_ONLY" ; sa2a:caseName "graph_drift" .

@@ -1,8 +1,0 @@
-{
-  "court": "crash_reconcile",
-  "attack_required": true,
-  "law": "crash_reconciliation",
-  "pass_requires": ["durable_evidence", "independent_observer", "reconciled_outcome"],
-  "unreconciled_outcome": "UNKNOWN",
-  "retry_is_not_evidence": true
-}

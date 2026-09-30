@@ -3,44 +3,47 @@
   "type": "Schema",
   "shapes": [
     {
-      "type": "Shape",
+      "type": "ShapeDecl",
       "id": "https://praxis.chatman.io/innovation#CandidateFutureShape",
-      "expression": {
-        "type": "EachOf",
-        "expressions": [
-          {
-            "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#replaces"
-          },
-          {
-            "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#serves"
-          },
-          {
-            "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#buyerValue"
-          },
-          {
-            "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#deliveryMechanism"
-          },
-          {
-            "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#economicExchange"
-          },
-          {
-            "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#humanMediation"
-          },
-          {
-            "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#agentMediation"
-          },
-          {
-            "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#planningFrontier"
-          }
-        ]
+      "shapeExpr": {
+        "type": "Shape",
+        "expression": {
+          "type": "EachOf",
+          "expressions": [
+            {
+              "type": "TripleConstraint",
+              "predicate": "https://praxis.chatman.io/innovation#replaces"
+            },
+            {
+              "type": "TripleConstraint",
+              "predicate": "https://praxis.chatman.io/innovation#serves"
+            },
+            {
+              "type": "TripleConstraint",
+              "predicate": "https://praxis.chatman.io/innovation#buyerValue"
+            },
+            {
+              "type": "TripleConstraint",
+              "predicate": "https://praxis.chatman.io/innovation#deliveryMechanism"
+            },
+            {
+              "type": "TripleConstraint",
+              "predicate": "https://praxis.chatman.io/innovation#economicExchange"
+            },
+            {
+              "type": "TripleConstraint",
+              "predicate": "https://praxis.chatman.io/innovation#humanMediation"
+            },
+            {
+              "type": "TripleConstraint",
+              "predicate": "https://praxis.chatman.io/innovation#agentMediation"
+            },
+            {
+              "type": "TripleConstraint",
+              "predicate": "https://praxis.chatman.io/innovation#planningFrontier"
+            }
+          ]
+        }
       }
     }
   ]

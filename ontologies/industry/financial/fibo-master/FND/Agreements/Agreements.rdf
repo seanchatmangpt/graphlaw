@@ -1,5 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rdf:RDF xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/" xmlns:cmns-pts="https://www.omg.org/spec/Commons/PartiesAndSituations/" xmlns:cmns-rlcmp="https://www.omg.org/spec/Commons/RolesAndCompositions/" xmlns:dct="http://purl.org/dc/terms/" xmlns:fibo-fnd-agr-agr="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/" xmlns:fibo-fnd-rel-rel="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/" xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:skos="http://www.w3.org/2004/02/skos/core#" xmlns:xsd="http://www.w3.org/2001/XMLSchema#" xml:base="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+<!DOCTYPE rdf:RDF [
+	<!ENTITY cmns-av "https://www.omg.org/spec/Commons/AnnotationVocabulary/">
+	<!ENTITY cmns-pts "https://www.omg.org/spec/Commons/PartiesAndSituations/">
+	<!ENTITY cmns-rlcmp "https://www.omg.org/spec/Commons/RolesAndCompositions/">
+	<!ENTITY dct "http://purl.org/dc/terms/">
+	<!ENTITY fibo-fnd-agr-agr "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
+	<!ENTITY fibo-fnd-rel-rel "https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/">
+	<!ENTITY fibo-fnd-utl-av "https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/">
+	<!ENTITY owl "http://www.w3.org/2002/07/owl#">
+	<!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+	<!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">
+	<!ENTITY skos "http://www.w3.org/2004/02/skos/core#">
+	<!ENTITY xsd "http://www.w3.org/2001/XMLSchema#">
+]>
+<rdf:RDF xml:base="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/"
+	xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/"
+	xmlns:cmns-pts="https://www.omg.org/spec/Commons/PartiesAndSituations/"
+	xmlns:cmns-rlcmp="https://www.omg.org/spec/Commons/RolesAndCompositions/"
+	xmlns:dct="http://purl.org/dc/terms/"
+	xmlns:fibo-fnd-agr-agr="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/"
+	xmlns:fibo-fnd-rel-rel="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/"
+	xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"
+	xmlns:owl="http://www.w3.org/2002/07/owl#"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+	xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
 	
 	<owl:Ontology rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/">
 		<rdfs:label>Agreements Ontology</rdfs:label>
@@ -7,11 +33,11 @@
 		<dct:license>Copyright (c) 2013-2025 EDM Council, Inc.
 Copyright (c) 2013-2025 Object Management Group, Inc.
 		
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &apos;Software&apos;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		
 		See https://opensource.org/licenses/MIT.</dct:license>
 		<owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/"/>
@@ -31,28 +57,28 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20141101/Agreements/Agreement.rdf version of the ontology was modified per the issue resolutions identified in the FIBO FND 1.1 RTF report and in https://spec.edmcouncil.org/fibo/ontology/FND/1.1/AboutFND-1.1/.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20160201/Agreements/Agreement.rdf version of the ontology was modified per FIBO 2.0 RFC to add general concepts including obligor, obligee, and beneficiary in support of other FIBO domain areas.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20180801/Agreements/Agreement.rdf version of the ontology was modified to eliminate duplication of concepts in LCC.</skos:changeNote>
-		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20200301/Agreements/Agreement.rdf version of the ontology was modified to use the Commons Ontology Library (Commons) Annotation Vocabulary rather than the OMG's Specification Metadata vocabulary, clean up definitions to conform with ISO 704, add a missing restriction to mutual commitment, and eliminate an unnecessary reference to LCC.</skos:changeNote>
+		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20200301/Agreements/Agreement.rdf version of the ontology was modified to use the Commons Ontology Library (Commons) Annotation Vocabulary rather than the OMG&apos;s Specification Metadata vocabulary, clean up definitions to conform with ISO 704, add a missing restriction to mutual commitment, and eliminate an unnecessary reference to LCC.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20230101/Agreements/Agreement.rdf version of the ontology was modified to replace content that is now available in the OMG Commons Ontology Library (Commons) v1.1 (FND-380).</skos:changeNote>
-		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20240101/Agreements/Agreement.rdf version of the ontology was modified to add bilateral and multilateral agreement definitions (DER-55), and to eliminate certain constructs that are redundant and will never be materialized to reduce the number of nodes required for various contract-related searches, such as 'mutual agreement' (FND-391).</skos:changeNote>
-		<fibo-fnd-utl-av:hasMaturityLevel rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/Release"/>
+		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/FND/20240101/Agreements/Agreement.rdf version of the ontology was modified to add bilateral and multilateral agreement definitions (DER-55), and to eliminate certain constructs that are redundant and will never be materialized to reduce the number of nodes required for various contract-related searches, such as &apos;mutual agreement&apos; (FND-391).</skos:changeNote>
+		<fibo-fnd-utl-av:hasMaturityLevel rdf:resource="&fibo-fnd-utl-av;Release"/>
 		<cmns-av:copyright>Copyright (c) 2013-2025 EDM Council, Inc.</cmns-av:copyright>
 		<cmns-av:copyright>Copyright (c) 2013-2025 Object Management Group, Inc.</cmns-av:copyright>
 	</owl:Ontology>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement">
-		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/Situation"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;Agreement">
+		<rdfs:subClassOf rdf:resource="&cmns-pts;Situation"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/confers"/>
-				<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Commitment"/>
-				<owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:minQualifiedCardinality>
+				<owl:onProperty rdf:resource="&fibo-fnd-rel-rel;confers"/>
+				<owl:onClass rdf:resource="&fibo-fnd-agr-agr;Commitment"/>
+				<owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">0</owl:minQualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"/>
-				<owl:onClass rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"/>
-				<owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">2</owl:minQualifiedCardinality>
+				<owl:onProperty rdf:resource="&cmns-pts;hasPartyRole"/>
+				<owl:onClass rdf:resource="&cmns-pts;PartyRole"/>
+				<owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">2</owl:minQualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label xml:lang="en">agreement</rdfs:label>
@@ -60,16 +86,16 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:explanatoryNote>All agreements are time bound, whether implicit or explicitly stated, and thus an agreement reflects a state of affairs that holds for some period of time.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Beneficiary">
-		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;Beneficiary">
+		<rdfs:subClassOf rdf:resource="&cmns-pts;PartyRole"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/isPlayedBy"/>
+				<owl:onProperty rdf:resource="&cmns-rlcmp;isPlayedBy"/>
 				<owl:someValuesFrom>
 					<owl:Restriction>
-						<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/isAPartyTo"/>
-						<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement"/>
-						<owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:minQualifiedCardinality>
+						<owl:onProperty rdf:resource="&cmns-pts;isAPartyTo"/>
+						<owl:onClass rdf:resource="&fibo-fnd-agr-agr;Agreement"/>
+						<owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">0</owl:minQualifiedCardinality>
 					</owl:Restriction>
 				</owl:someValuesFrom>
 			</owl:Restriction>
@@ -78,13 +104,13 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<skos:definition>party that receives some benefit or advantage or profits from something</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/BilateralAgreement">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;BilateralAgreement">
+		<rdfs:subClassOf rdf:resource="&fibo-fnd-agr-agr;Agreement"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"/>
-				<owl:onClass rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"/>
-				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">2</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="&cmns-pts;hasPartyRole"/>
+				<owl:onClass rdf:resource="&cmns-pts;PartyRole"/>
+				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">2</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label xml:lang="en">bilateral agreement</rdfs:label>
@@ -92,12 +118,12 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:synonym xml:lang="en">mutual agreement</cmns-av:synonym>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Commitment">
-		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/Situation"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;Commitment">
+		<rdfs:subClassOf rdf:resource="&cmns-pts;Situation"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"/>
-				<owl:someValuesFrom rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"/>
+				<owl:onProperty rdf:resource="&cmns-pts;hasPartyRole"/>
+				<owl:someValuesFrom rdf:resource="&cmns-pts;PartyRole"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label xml:lang="en">commitment</rdfs:label>
@@ -105,53 +131,53 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:explanatoryNote>Such a promise often results a corresponding right or obligation with respect to another party to the commitment. Thus, obligations and rights are considered as reciprocal aspects of a commitment.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/CommitmentAtLarge">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/UnilateralCommitment"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;CommitmentAtLarge">
+		<rdfs:subClassOf rdf:resource="&fibo-fnd-agr-agr;UnilateralCommitment"/>
 		<rdfs:label>commitment at large</rdfs:label>
 		<skos:definition>commitment made by some party without direct involvement from the potential beneficiaries of that commitment</skos:definition>
 		<skos:scopeNote>A commitment at large forms the basis for negotiable securities including transferable contracts and potentially other kinds of agreements such as software licenses.</skos:scopeNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/IndividualUnilateralCommitment">
-		<owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
-		<owl:equivalentClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/UnilateralCommitment"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;IndividualUnilateralCommitment">
+		<owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
+		<owl:equivalentClass rdf:resource="&fibo-fnd-agr-agr;UnilateralCommitment"/>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/MultilateralAgreement">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;MultilateralAgreement">
+		<rdfs:subClassOf rdf:resource="&fibo-fnd-agr-agr;Agreement"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"/>
-				<owl:onClass rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"/>
-				<owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">3</owl:minQualifiedCardinality>
+				<owl:onProperty rdf:resource="&cmns-pts;hasPartyRole"/>
+				<owl:onClass rdf:resource="&cmns-pts;PartyRole"/>
+				<owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">3</owl:minQualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label xml:lang="en">multilateral agreement</rdfs:label>
-		<owl:disjointWith rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/BilateralAgreement"/>
+		<owl:disjointWith rdf:resource="&fibo-fnd-agr-agr;BilateralAgreement"/>
 		<skos:definition>agreements that involve or include multiple parties</skos:definition>
 		<cmns-av:explanatoryNote>Multilateral agreements are characterized by the participation and commitment of multiple countries or parties to achieve a common objective or address a shared issue.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/MutualAgreement">
-		<owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
-		<owl:equivalentClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;MutualAgreement">
+		<owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
+		<owl:equivalentClass rdf:resource="&fibo-fnd-agr-agr;Agreement"/>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/MutualCommitment">
-		<owl:deprecated rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">true</owl:deprecated>
-		<owl:equivalentClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Commitment"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;MutualCommitment">
+		<owl:deprecated rdf:datatype="&xsd;boolean">true</owl:deprecated>
+		<owl:equivalentClass rdf:resource="&fibo-fnd-agr-agr;Commitment"/>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Obligee">
-		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;Obligee">
+		<rdfs:subClassOf rdf:resource="&cmns-pts;PartyRole"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/isPlayedBy"/>
+				<owl:onProperty rdf:resource="&cmns-rlcmp;isPlayedBy"/>
 				<owl:someValuesFrom>
 					<owl:Restriction>
-						<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/isAPartyTo"/>
-						<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement"/>
-						<owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:minQualifiedCardinality>
+						<owl:onProperty rdf:resource="&cmns-pts;isAPartyTo"/>
+						<owl:onClass rdf:resource="&fibo-fnd-agr-agr;Agreement"/>
+						<owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">0</owl:minQualifiedCardinality>
 					</owl:Restriction>
 				</owl:someValuesFrom>
 			</owl:Restriction>
@@ -160,22 +186,22 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<skos:definition>party to whom some commitment or obligation is owed, either legally or per the terms of an agreement</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Obligor">
-		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;Obligor">
+		<rdfs:subClassOf rdf:resource="&cmns-pts;PartyRole"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/hasObligation"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Commitment"/>
+				<owl:onProperty rdf:resource="&fibo-fnd-agr-agr;hasObligation"/>
+				<owl:someValuesFrom rdf:resource="&fibo-fnd-agr-agr;Commitment"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RolesAndCompositions/isPlayedBy"/>
+				<owl:onProperty rdf:resource="&cmns-rlcmp;isPlayedBy"/>
 				<owl:someValuesFrom>
 					<owl:Restriction>
-						<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/isAPartyTo"/>
-						<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement"/>
-						<owl:minQualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">0</owl:minQualifiedCardinality>
+						<owl:onProperty rdf:resource="&cmns-pts;isAPartyTo"/>
+						<owl:onClass rdf:resource="&fibo-fnd-agr-agr;Agreement"/>
+						<owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">0</owl:minQualifiedCardinality>
 					</owl:Restriction>
 				</owl:someValuesFrom>
 			</owl:Restriction>
@@ -186,24 +212,24 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:synonym>obligator</cmns-av:synonym>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/UnilateralCommitment">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Commitment"/>
+	<owl:Class rdf:about="&fibo-fnd-agr-agr;UnilateralCommitment">
+		<rdfs:subClassOf rdf:resource="&fibo-fnd-agr-agr;Commitment"/>
 		<rdfs:label>unilateral commitment</rdfs:label>
 		<skos:definition>commitment (promise or obligation) made by one party without requiring a reciprocal promise from another party</skos:definition>
 		<skos:example>Unilateral commitments include some promotional offers, contests, and rewards, where the offering party sets conditions without requiring upfront agreement from others.</skos:example>
 	</owl:Class>
 	
-	<owl:ObjectProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/hasObligation">
+	<owl:ObjectProperty rdf:about="&fibo-fnd-agr-agr;hasObligation">
 		<rdfs:label>has obligation</rdfs:label>
-		<rdfs:domain rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Obligor"/>
-		<owl:inverseOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/isObligationOf"/>
+		<rdfs:domain rdf:resource="&fibo-fnd-agr-agr;Obligor"/>
+		<owl:inverseOf rdf:resource="&fibo-fnd-agr-agr;isObligationOf"/>
 		<skos:definition>identifies a duty or obligation that a given party has taken on</skos:definition>
 	</owl:ObjectProperty>
 	
-	<owl:ObjectProperty rdf:about="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/isObligationOf">
-		<rdfs:subPropertyOf rdf:resource="https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"/>
+	<owl:ObjectProperty rdf:about="&fibo-fnd-agr-agr;isObligationOf">
+		<rdfs:subPropertyOf rdf:resource="&cmns-pts;hasPartyRole"/>
 		<rdfs:label>is obligation of</rdfs:label>
-		<rdfs:range rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Obligor"/>
+		<rdfs:range rdf:resource="&fibo-fnd-agr-agr;Obligor"/>
 		<skos:definition>identifies a party that has a given obligation</skos:definition>
 	</owl:ObjectProperty>
 

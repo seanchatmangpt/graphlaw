@@ -1,3 +1,0 @@
-@prefix sa2a: <https://seanchatmangpt.github.io/sa2a#> .
-@prefix ex: <urn:graphlaw:sa2a:positive:> .
-ex:planner_powerless_accept a sa2a:PositiveEvidenceVector ; sa2a:expectedDecision "ADMIT" ; sa2a:authority "NONE" ; sa2a:consequence "EVIDENCE_ONLY" ; sa2a:canonicalization "RDFC-1.0" ; sa2a:caseName "planner_powerless_accept" .

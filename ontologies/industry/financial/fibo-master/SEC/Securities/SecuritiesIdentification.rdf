@@ -1,5 +1,59 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rdf:RDF xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/" xmlns:cmns-cls="https://www.omg.org/spec/Commons/Classifiers/" xmlns:cmns-col="https://www.omg.org/spec/Commons/Collections/" xmlns:cmns-cxtdsg="https://www.omg.org/spec/Commons/ContextualDesignators/" xmlns:cmns-cxtid="https://www.omg.org/spec/Commons/ContextualIdentifiers/" xmlns:cmns-dsg="https://www.omg.org/spec/Commons/Designators/" xmlns:cmns-id="https://www.omg.org/spec/Commons/Identifiers/" xmlns:cmns-loc="https://www.omg.org/spec/Commons/Locations/" xmlns:cmns-org="https://www.omg.org/spec/Commons/Organizations/" xmlns:cmns-ra="https://www.omg.org/spec/Commons/RegistrationAuthorities/" xmlns:dct="http://purl.org/dc/terms/" xmlns:fibo-be-fct-fct="https://spec.edmcouncil.org/fibo/ontology/BE/FunctionalEntities/FunctionalEntities/" xmlns:fibo-fbc-fct-mkt="https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/Markets/" xmlns:fibo-fbc-fi-fi="https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/" xmlns:fibo-fbc-pas-fpas="https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/FinancialProductsAndServices/" xmlns:fibo-fnd-arr-id="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/IdentifiersAndIndices/" xmlns:fibo-fnd-rel-rel="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/" xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/" xmlns:fibo-sec-sec-id="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/" xmlns:fibo-sec-sec-lst="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesListings/" xmlns:lcc-cr="https://www.omg.org/spec/LCC/Countries/CountryRepresentation/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:skos="http://www.w3.org/2004/02/skos/core#" xmlns:xsd="http://www.w3.org/2001/XMLSchema#" xml:base="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/">
+<!DOCTYPE rdf:RDF [
+	<!ENTITY cmns-av "https://www.omg.org/spec/Commons/AnnotationVocabulary/">
+	<!ENTITY cmns-cls "https://www.omg.org/spec/Commons/Classifiers/">
+	<!ENTITY cmns-col "https://www.omg.org/spec/Commons/Collections/">
+	<!ENTITY cmns-cxtdsg "https://www.omg.org/spec/Commons/ContextualDesignators/">
+	<!ENTITY cmns-cxtid "https://www.omg.org/spec/Commons/ContextualIdentifiers/">
+	<!ENTITY cmns-dsg "https://www.omg.org/spec/Commons/Designators/">
+	<!ENTITY cmns-id "https://www.omg.org/spec/Commons/Identifiers/">
+	<!ENTITY cmns-loc "https://www.omg.org/spec/Commons/Locations/">
+	<!ENTITY cmns-org "https://www.omg.org/spec/Commons/Organizations/">
+	<!ENTITY cmns-ra "https://www.omg.org/spec/Commons/RegistrationAuthorities/">
+	<!ENTITY dct "http://purl.org/dc/terms/">
+	<!ENTITY fibo-be-fct-fct "https://spec.edmcouncil.org/fibo/ontology/BE/FunctionalEntities/FunctionalEntities/">
+	<!ENTITY fibo-fbc-fct-mkt "https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/Markets/">
+	<!ENTITY fibo-fbc-fi-fi "https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/">
+	<!ENTITY fibo-fbc-pas-fpas "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/FinancialProductsAndServices/">
+	<!ENTITY fibo-fnd-arr-id "https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/IdentifiersAndIndices/">
+	<!ENTITY fibo-fnd-rel-rel "https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/">
+	<!ENTITY fibo-fnd-utl-av "https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/">
+	<!ENTITY fibo-sec-sec-id "https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/">
+	<!ENTITY fibo-sec-sec-lst "https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesListings/">
+	<!ENTITY lcc-cr "https://www.omg.org/spec/LCC/Countries/CountryRepresentation/">
+	<!ENTITY owl "http://www.w3.org/2002/07/owl#">
+	<!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+	<!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">
+	<!ENTITY skos "http://www.w3.org/2004/02/skos/core#">
+	<!ENTITY xsd "http://www.w3.org/2001/XMLSchema#">
+]>
+<rdf:RDF xml:base="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/"
+	xmlns:cmns-av="https://www.omg.org/spec/Commons/AnnotationVocabulary/"
+	xmlns:cmns-cls="https://www.omg.org/spec/Commons/Classifiers/"
+	xmlns:cmns-col="https://www.omg.org/spec/Commons/Collections/"
+	xmlns:cmns-cxtdsg="https://www.omg.org/spec/Commons/ContextualDesignators/"
+	xmlns:cmns-cxtid="https://www.omg.org/spec/Commons/ContextualIdentifiers/"
+	xmlns:cmns-dsg="https://www.omg.org/spec/Commons/Designators/"
+	xmlns:cmns-id="https://www.omg.org/spec/Commons/Identifiers/"
+	xmlns:cmns-loc="https://www.omg.org/spec/Commons/Locations/"
+	xmlns:cmns-org="https://www.omg.org/spec/Commons/Organizations/"
+	xmlns:cmns-ra="https://www.omg.org/spec/Commons/RegistrationAuthorities/"
+	xmlns:dct="http://purl.org/dc/terms/"
+	xmlns:fibo-be-fct-fct="https://spec.edmcouncil.org/fibo/ontology/BE/FunctionalEntities/FunctionalEntities/"
+	xmlns:fibo-fbc-fct-mkt="https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/Markets/"
+	xmlns:fibo-fbc-fi-fi="https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/"
+	xmlns:fibo-fbc-pas-fpas="https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/FinancialProductsAndServices/"
+	xmlns:fibo-fnd-arr-id="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/IdentifiersAndIndices/"
+	xmlns:fibo-fnd-rel-rel="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/"
+	xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"
+	xmlns:fibo-sec-sec-id="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/"
+	xmlns:fibo-sec-sec-lst="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesListings/"
+	xmlns:lcc-cr="https://www.omg.org/spec/LCC/Countries/CountryRepresentation/"
+	xmlns:owl="http://www.w3.org/2002/07/owl#"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+	xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
 	
 	<owl:Ontology rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/">
 		<rdfs:label>Securities Identification Ontology</rdfs:label>
@@ -7,11 +61,11 @@
 		<dct:license>Copyright (c) 2016-2025 EDM Council, Inc.
 Copyright (c) 2018-2025 Object Management Group, Inc.
 		
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the 'Software'), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &apos;Software&apos;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
 The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+THE SOFTWARE IS PROVIDED &apos;AS IS&apos;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 		
 		See https://opensource.org/licenses/MIT.</dct:license>
 		<owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/FunctionalEntities/FunctionalEntities/"/>
@@ -42,42 +96,42 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/SEC/20200401/Securities/SecuritiesIdentification/ version of this ontology was modified to make a ticker symbol reassignable and address circular or ambiguous definitions.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/SEC/20200901/Securities/SecuritiesIdentification.rdf version of this ontology was revised to eliminate confusion between listed security and listing (which caused reasoning issues).</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/SEC/20201201/Securities/SecuritiesIdentification.rdf version of this ontology was revised to leverage the notion of a composite identifier and address text formatting hygiene issues.</skos:changeNote>
-		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/SEC/20220801/Securities/SecuritiesIdentification.rdf version of the ontology was modified to use the Commons Ontology Library (Commons) Annotation Vocabulary rather than the OMG's Specification Metadata vocabulary.</skos:changeNote>
-		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/SEC/20230201/Securities/SecuritiesIdentification.rdf version of this ontology was modified to use the Commons Ontology Library (Commons) rather than the OMG's Languages, Countries and Codes (LCC), eliminating redundancies in FIBO as appropriate.</skos:changeNote>
+		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/SEC/20220801/Securities/SecuritiesIdentification.rdf version of the ontology was modified to use the Commons Ontology Library (Commons) Annotation Vocabulary rather than the OMG&apos;s Specification Metadata vocabulary.</skos:changeNote>
+		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/SEC/20230201/Securities/SecuritiesIdentification.rdf version of this ontology was modified to use the Commons Ontology Library (Commons) rather than the OMG&apos;s Languages, Countries and Codes (LCC), eliminating redundancies in FIBO as appropriate.</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/SEC/20230301/Securities/SecuritiesIdentification.rdf version of this ontology was modified to clarify the definition of ticker symbol (SEC-196).</skos:changeNote>
 		<skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/SEC/20240401/Securities/SecuritiesIdentification.rdf version of the ontology was modified to replace additional content that is now available in the OMG Commons Ontology Library (Commons) v1.2 (FND-389).</skos:changeNote>
-		<fibo-fnd-utl-av:hasMaturityLevel rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/Release"/>
+		<fibo-fnd-utl-av:hasMaturityLevel rdf:resource="&fibo-fnd-utl-av;Release"/>
 		<cmns-av:copyright>Copyright (c) 2016-2025 EDM Council, Inc.</cmns-av:copyright>
 		<cmns-av:copyright>Copyright (c) 2018-2025 Object Management Group, Inc.</cmns-av:copyright>
 	</owl:Ontology>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/FinancialInstrumentIdentificationScheme">
-		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/Identifiers/IdentificationScheme"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;FinancialInstrumentIdentificationScheme">
+		<rdfs:subClassOf rdf:resource="&cmns-id;IdentificationScheme"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Collections/hasMember"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/FinancialInstrumentIdentifier"/>
+				<owl:onProperty rdf:resource="&cmns-col;hasMember"/>
+				<owl:someValuesFrom rdf:resource="&fibo-fbc-fi-fi;FinancialInstrumentIdentifier"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>financial instrument identification scheme</rdfs:label>
 		<skos:definition>formal definition of the structure and application of a particular set of financial instrument identifiers</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/InternationalSecuritiesIdentificationNumber">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentifier"/>
-		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/ContextualIdentifiers/StructuredIdentifier"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;InternationalSecuritiesIdentificationNumber">
+		<rdfs:subClassOf rdf:resource="&fibo-sec-sec-id;SecurityIdentifier"/>
+		<rdfs:subClassOf rdf:resource="&cmns-cxtid;StructuredIdentifier"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Collections/comprises"/>
-				<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecuritiesIdentifyingNumber"/>
-				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="&cmns-col;comprises"/>
+				<owl:onClass rdf:resource="&fibo-sec-sec-id;NationalSecuritiesIdentifyingNumber"/>
+				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Collections/comprises"/>
-				<owl:onClass rdf:resource="https://www.omg.org/spec/LCC/Countries/CountryRepresentation/Alpha2Code"/>
-				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="&cmns-col;comprises"/>
+				<owl:onClass rdf:resource="&lcc-cr;Alpha2Code"/>
+				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>international securities identification number</rdfs:label>
@@ -87,12 +141,12 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:explanatoryNote>ISINs consist of two alphabetic characters, which are the ISO 3166-1 alpha-2 code for the issuing country, nine alpha-numeric characters (the National Securities Identifying Number, or NSIN, which identifies the security, padded as necessary with leading zeros), and one numerical check digit. The ISIN is specified as a class of identifiers because although there is a scheme associated with the structure of an ISIN, there are many country-specific variations issued by national numbering agencies.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/InternationalSecuritiesIdentificationNumberingScheme">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentificationScheme"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;InternationalSecuritiesIdentificationNumberingScheme">
+		<rdfs:subClassOf rdf:resource="&fibo-sec-sec-id;SecurityIdentificationScheme"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Designators/defines"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/InternationalSecuritiesIdentificationNumber"/>
+				<owl:onProperty rdf:resource="&cmns-dsg;defines"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;InternationalSecuritiesIdentificationNumber"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>international securities identification numbering scheme</rdfs:label>
@@ -101,60 +155,60 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:abbreviation>ISIN scheme</cmns-av:abbreviation>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/ListedSecurityIdentifier">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentifier"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;ListedSecurityIdentifier">
+		<rdfs:subClassOf rdf:resource="&fibo-sec-sec-id;SecurityIdentifier"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Designators/isDefinedIn"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentificationScheme"/>
+				<owl:onProperty rdf:resource="&cmns-dsg;isDefinedIn"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;SecurityIdentificationScheme"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Identifiers/identifies"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesListings/ListedSecurity"/>
+				<owl:onProperty rdf:resource="&cmns-id;identifies"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-lst;ListedSecurity"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RegistrationAuthorities/isRegisteredBy"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/Markets/Exchange"/>
+				<owl:onProperty rdf:resource="&cmns-ra;isRegisteredBy"/>
+				<owl:someValuesFrom rdf:resource="&fibo-fbc-fct-mkt;Exchange"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RegistrationAuthorities/isRegisteredIn"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityRegistry"/>
+				<owl:onProperty rdf:resource="&cmns-ra;isRegisteredIn"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;SecurityRegistry"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>listed security identifier</rdfs:label>
 		<skos:definition>security identifier issued in the public domain and referred to in listings and other relevant publications</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalNumberingAgency">
-		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/RegistrationAuthorities/RegistrationAuthority"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;NationalNumberingAgency">
+		<rdfs:subClassOf rdf:resource="&cmns-ra;RegistrationAuthority"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/issues"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecuritiesIdentifyingNumber"/>
+				<owl:onProperty rdf:resource="&fibo-fnd-rel-rel;issues"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;NationalSecuritiesIdentifyingNumber"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Locations/hasCoverageArea"/>
-				<owl:someValuesFrom rdf:resource="https://www.omg.org/spec/Commons/Locations/GeopoliticalEntity"/>
+				<owl:onProperty rdf:resource="&cmns-loc;hasCoverageArea"/>
+				<owl:someValuesFrom rdf:resource="&cmns-loc;GeopoliticalEntity"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Organizations/manages"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecuritiesIdentifyingNumberRegistry"/>
+				<owl:onProperty rdf:resource="&cmns-org;manages"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;NationalSecuritiesIdentifyingNumberRegistry"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RegistrationAuthorities/registers"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecuritiesIdentifyingNumber"/>
+				<owl:onProperty rdf:resource="&cmns-ra;registers"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;NationalSecuritiesIdentifyingNumber"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>national numbering agency</rdfs:label>
@@ -162,18 +216,18 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:abbreviation>NNA</cmns-av:abbreviation>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecuritiesIdentifyingNumber">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentifier"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;NationalSecuritiesIdentifyingNumber">
+		<rdfs:subClassOf rdf:resource="&fibo-sec-sec-id;SecurityIdentifier"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Designators/isDefinedIn"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecurityIdentificationScheme"/>
+				<owl:onProperty rdf:resource="&cmns-dsg;isDefinedIn"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;NationalSecurityIdentificationScheme"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/RegistrationAuthorities/isRegisteredBy"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalNumberingAgency"/>
+				<owl:onProperty rdf:resource="&cmns-ra;isRegisteredBy"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;NationalNumberingAgency"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>National Securities Identifying Number</rdfs:label>
@@ -181,25 +235,25 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:abbreviation>NSIN</cmns-av:abbreviation>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecuritiesIdentifyingNumberRegistry">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityRegistry"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;NationalSecuritiesIdentifyingNumberRegistry">
+		<rdfs:subClassOf rdf:resource="&fibo-sec-sec-id;SecurityRegistry"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Classifiers/isCharacterizedBy"/>
-				<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecurityIdentificationScheme"/>
-				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="&cmns-cls;isCharacterizedBy"/>
+				<owl:onClass rdf:resource="&fibo-sec-sec-id;NationalSecurityIdentificationScheme"/>
+				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Collections/comprises"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecuritiesIdentifyingNumberRegistryEntry"/>
+				<owl:onProperty rdf:resource="&cmns-col;comprises"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;NationalSecuritiesIdentifyingNumberRegistryEntry"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Organizations/isManagedBy"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalNumberingAgency"/>
+				<owl:onProperty rdf:resource="&cmns-org;isManagedBy"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;NationalNumberingAgency"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>National Securities Identifying Number registry</rdfs:label>
@@ -207,30 +261,30 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:abbreviation>NSIN registry</cmns-av:abbreviation>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecuritiesIdentifyingNumberRegistryEntry">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityRegistryEntry"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;NationalSecuritiesIdentifyingNumberRegistryEntry">
+		<rdfs:subClassOf rdf:resource="&fibo-sec-sec-id;SecurityRegistryEntry"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Collections/comprises"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecuritiesIdentifyingNumber"/>
+				<owl:onProperty rdf:resource="&cmns-col;comprises"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;NationalSecuritiesIdentifyingNumber"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>national numbering agency registry entry</rdfs:label>
 		<skos:definition>entry in a National Securities Identifying Number registry</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecurityIdentificationScheme">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentificationScheme"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;NationalSecurityIdentificationScheme">
+		<rdfs:subClassOf rdf:resource="&fibo-sec-sec-id;SecurityIdentificationScheme"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/ContextualDesignators/appliesTo"/>
-				<owl:someValuesFrom rdf:resource="https://www.omg.org/spec/Commons/Locations/GeopoliticalEntity"/>
+				<owl:onProperty rdf:resource="&cmns-cxtdsg;appliesTo"/>
+				<owl:someValuesFrom rdf:resource="&cmns-loc;GeopoliticalEntity"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Designators/defines"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/NationalSecuritiesIdentifyingNumber"/>
+				<owl:onProperty rdf:resource="&cmns-dsg;defines"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;NationalSecuritiesIdentifyingNumber"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>national security identification scheme</rdfs:label>
@@ -238,12 +292,12 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:explanatoryNote>generally incorporated into the ISIN scheme as well</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/ProprietarySecurityIdentificationScheme">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentificationScheme"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;ProprietarySecurityIdentificationScheme">
+		<rdfs:subClassOf rdf:resource="&fibo-sec-sec-id;SecurityIdentificationScheme"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Designators/defines"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/ProprietarySecurityIdentifier"/>
+				<owl:onProperty rdf:resource="&cmns-dsg;defines"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;ProprietarySecurityIdentifier"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>proprietary security identification scheme</rdfs:label>
@@ -251,68 +305,68 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:explanatoryNote>Proprietary schemes may be unique to an exchange or data provider, for example.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/ProprietarySecurityIdentifier">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentifier"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;ProprietarySecurityIdentifier">
+		<rdfs:subClassOf rdf:resource="&fibo-sec-sec-id;SecurityIdentifier"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Designators/isDefinedIn"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/ProprietarySecurityIdentificationScheme"/>
+				<owl:onProperty rdf:resource="&cmns-dsg;isDefinedIn"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;ProprietarySecurityIdentificationScheme"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>proprietary security identifier</rdfs:label>
 		<skos:definition>identifier supplied by a commercial entity</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentificationScheme">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/FinancialInstrumentIdentificationScheme"/>
-		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/RegistrationAuthorities/RegistrationScheme"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;SecurityIdentificationScheme">
+		<rdfs:subClassOf rdf:resource="&fibo-sec-sec-id;FinancialInstrumentIdentificationScheme"/>
+		<rdfs:subClassOf rdf:resource="&cmns-ra;RegistrationScheme"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Designators/defines"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentifier"/>
+				<owl:onProperty rdf:resource="&cmns-dsg;defines"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;SecurityIdentifier"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>security identification scheme</rdfs:label>
 		<skos:definition>formal definition of the structure and application of a particular set of securities identifiers</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentifier">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/FinancialInstrumentIdentifier"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;SecurityIdentifier">
+		<rdfs:subClassOf rdf:resource="&fibo-fbc-fi-fi;FinancialInstrumentIdentifier"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Designators/isDefinedIn"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentificationScheme"/>
+				<owl:onProperty rdf:resource="&cmns-dsg;isDefinedIn"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;SecurityIdentificationScheme"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Identifiers/identifies"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/Security"/>
+				<owl:onProperty rdf:resource="&cmns-id;identifies"/>
+				<owl:someValuesFrom rdf:resource="&fibo-fbc-fi-fi;Security"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>security identifier</rdfs:label>
 		<skos:definition>any publicly available identifier that is used to identify a security</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityRegistry">
-		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/RegistrationAuthorities/Registry"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;SecurityRegistry">
+		<rdfs:subClassOf rdf:resource="&cmns-ra;Registry"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Classifiers/isCharacterizedBy"/>
-				<owl:onClass rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentificationScheme"/>
-				<owl:qualifiedCardinality rdf:datatype="http://www.w3.org/2001/XMLSchema#nonNegativeInteger">1</owl:qualifiedCardinality>
+				<owl:onProperty rdf:resource="&cmns-cls;isCharacterizedBy"/>
+				<owl:onClass rdf:resource="&fibo-sec-sec-id;SecurityIdentificationScheme"/>
+				<owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Collections/comprises"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityRegistryEntry"/>
+				<owl:onProperty rdf:resource="&cmns-col;comprises"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;SecurityRegistryEntry"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Organizations/isManagedBy"/>
-				<owl:someValuesFrom rdf:resource="https://www.omg.org/spec/Commons/RegistrationAuthorities/RegistrationAuthority"/>
+				<owl:onProperty rdf:resource="&cmns-org;isManagedBy"/>
+				<owl:someValuesFrom rdf:resource="&cmns-ra;RegistrationAuthority"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>security registry</rdfs:label>
@@ -320,35 +374,35 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<cmns-av:explanatoryNote>Securities registries may be managed by an exchange, clearing house, custodian, bank, or other financial services provider.</cmns-av:explanatoryNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityRegistryEntry">
-		<rdfs:subClassOf rdf:resource="https://www.omg.org/spec/Commons/RegistrationAuthorities/RegistryEntry"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;SecurityRegistryEntry">
+		<rdfs:subClassOf rdf:resource="&cmns-ra;RegistryEntry"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Collections/comprises"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityIdentifier"/>
+				<owl:onProperty rdf:resource="&cmns-col;comprises"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-id;SecurityIdentifier"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/ContextualDesignators/appliesTo"/>
-				<owl:someValuesFrom rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesListings/RegisteredSecurity"/>
+				<owl:onProperty rdf:resource="&cmns-cxtdsg;appliesTo"/>
+				<owl:someValuesFrom rdf:resource="&fibo-sec-sec-lst;RegisteredSecurity"/>
 			</owl:Restriction>
 		</rdfs:subClassOf>
 		<rdfs:label>security registry entry</rdfs:label>
 		<skos:definition>record for a security in a securities registry</skos:definition>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/TickerSymbol">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/IdentifiersAndIndices/ReassignableIdentifier"/>
+	<owl:Class rdf:about="&fibo-sec-sec-id;TickerSymbol">
+		<rdfs:subClassOf rdf:resource="&fibo-fnd-arr-id;ReassignableIdentifier"/>
 		<rdfs:subClassOf>
 			<owl:Restriction>
-				<owl:onProperty rdf:resource="https://www.omg.org/spec/Commons/Identifiers/identifies"/>
+				<owl:onProperty rdf:resource="&cmns-id;identifies"/>
 				<owl:someValuesFrom>
 					<owl:Class>
 						<owl:unionOf rdf:parseType="Collection">
-							<rdf:Description rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesListings/ListedSecurity">
+							<rdf:Description rdf:about="&fibo-sec-sec-lst;ListedSecurity">
 							</rdf:Description>
-							<rdf:Description rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesListings/Listing">
+							<rdf:Description rdf:about="&fibo-sec-sec-lst;Listing">
 							</rdf:Description>
 						</owl:unionOf>
 					</owl:Class>
@@ -359,12 +413,12 @@ THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 		<rdfs:seeAlso rdf:resource="https://www.investopedia.com/terms/t/tickersymbol.asp"/>
 		<rdfs:seeAlso rdf:resource="https://www.omg.org/spec/FIGI"/>
 		<skos:definition>reassignable identifier of relatively short character string length that is unique within an exchange for a particular financial instrument or listing for that instrument</skos:definition>
-		<cmns-av:explanatoryNote>Every listed security has at least one unique ticker symbol, facilitating the vast array of trade orders that flow through the financial markets every day. However, in some countries this relationship may be indirect, through the listing, rather than direct, as is the case in the United States. In the US, the relationship between a ticker symbol and the listed security is one-to-one. This is not, however, the case in Singapore, where there may be unique ticker symbols for the same security based on the lot size. Some well-known ticker symbols are commonly used by multiple exchanges for the same instrument, such as 'IBM', though exchanges attempt to coordinate to limit duplication.</cmns-av:explanatoryNote>
+		<cmns-av:explanatoryNote>Every listed security has at least one unique ticker symbol, facilitating the vast array of trade orders that flow through the financial markets every day. However, in some countries this relationship may be indirect, through the listing, rather than direct, as is the case in the United States. In the US, the relationship between a ticker symbol and the listed security is one-to-one. This is not, however, the case in Singapore, where there may be unique ticker symbols for the same security based on the lot size. Some well-known ticker symbols are commonly used by multiple exchanges for the same instrument, such as &apos;IBM&apos;, though exchanges attempt to coordinate to limit duplication.</cmns-av:explanatoryNote>
 		<cmns-av:usageNote>Ticker symbols are reusable, assigned to a given instrument by an exchange for some period of time.</cmns-av:usageNote>
 	</owl:Class>
 	
-	<owl:Class rdf:about="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesListings/Listing">
-		<rdfs:subClassOf rdf:resource="https://spec.edmcouncil.org/fibo/ontology/SEC/Securities/SecuritiesIdentification/SecurityRegistryEntry"/>
+	<owl:Class rdf:about="&fibo-sec-sec-lst;Listing">
+		<rdfs:subClassOf rdf:resource="&fibo-sec-sec-id;SecurityRegistryEntry"/>
 	</owl:Class>
 
 </rdf:RDF>

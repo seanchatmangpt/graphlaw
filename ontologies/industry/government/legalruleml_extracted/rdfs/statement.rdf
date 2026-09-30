@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rdf:RDF xmlns:lrmlmm="http://docs.oasis-open.org/legalruleml/ns/v1.0/metamodel#" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:rulemm="http://docs.oasis-open.org/legalruleml/ns/v1.0/rule-metamodel#" xmlns:xs="http://www.w3.org/2001/XMLSchema" xml:base="http://docs.oasis-open.org/legalruleml/ns/v1.0/metamodel">
+ <!DOCTYPE RDF [
+   <!ENTITY owl "http://www.w3.org/2002/07/owl">  
+   <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns">  
+   <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema">  
+   <!ENTITY xs "http://www.w3.org/2001/XMLSchema">  
+   <!ENTITY rulemm "http://docs.oasis-open.org/legalruleml/ns/v1.0/rule-metamodel">  
+   <!ENTITY lrmlmm "http://docs.oasis-open.org/legalruleml/ns/v1.0/metamodel">  
+  
+ ]>
+<rdf:RDF 
+  xmlns:lrmlmm="&lrmlmm;#" 
+  xmlns:owl="&owl;#" 
+  xmlns:rdf="&rdf;#" 
+  xmlns:rdfs="&rdfs;#" 
+  xmlns:rulemm="&rulemm;#"
+  xmlns:xs="&xs;" 
+  xml:base="&lrmlmm;">
 <!--  <owl:Ontology rdf:about="&lrmlmm;/modules/statement.rdfs" dc:title="The LegalRuleML MetaModel Statement vocabulary"/> -->
 
   <rdfs:Class rdf:about="#ConstitutiveStatement">

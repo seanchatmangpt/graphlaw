@@ -1,7 +1,0 @@
-{
-  "court": "bounded_autonomy",
-  "attack_required": true,
-  "law": "bounded_autonomy",
-  "mutate": "autonomy_steps",
-  "expected_on_limit_exceeded": "REFUSED"
-}

@@ -1,1 +1,0 @@
-{"court":"anti_vacuity","attack_required":true,"pass_when":{"attempt_observed":true,"violation_observed":false},"unknown_when":{"attempt_observed":false}}

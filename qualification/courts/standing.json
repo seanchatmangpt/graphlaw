@@ -1,1 +1,0 @@
-{"court":"standing","states":["UNQUALIFIED","OBSERVED","ATTACKED","QUALIFIED","REFUSED","UNKNOWN"],"pass_requires":["attempt_observed","no_violation_observed","independent_observation","postconditions_satisfied"]}
