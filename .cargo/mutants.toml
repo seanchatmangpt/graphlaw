@@ -1,0 +1,42 @@
+# Native mutation court over the ABI registry surface (lane G6).
+#
+# Only the registry table and the ABI dispatch are mutated. The killing suite is
+# restricted to native, wasm-free integration courts so a mutant is never
+# "killed" by a missing GRAPHLAW_WASM and never survives for lack of one.
+# Run through scripts/mutation_court.sh (in-place: no copies, no worktrees).
+
+examine_globs = ["src/registry.rs", "src/abi.rs"]
+
+test_tool = "cargo"
+
+# The registry and dispatch are behind the `abi` feature.
+additional_cargo_args = ["--features", "abi"]
+
+# Native courts only. Each `--test` names an integration test target in tests/.
+additional_cargo_test_args = [
+  "--test", "registry_dispatch",
+  "--test", "capabilities_digest",
+  "--test", "registry_artifacts",
+  "--test", "refusal_details",
+  "--test", "resource_limits",
+  "--test", "policy_admission",
+  "--test", "knowledge_hooks",
+  "--test", "law_state",
+]
+
+# Rebuilding purrdf/eyeron after each mutation is slow: scale the baseline
+# test time generously and never go below a floor that covers a cold relink.
+timeout_multiplier = 6.0
+minimum_test_timeout = 300.0
+
+# Non-semantic mutants: formatting/diagnostic surface carries no behavior that a
+# court can observe, so mutating it only produces unkillable noise.
+exclude_re = [
+  "impl (std::fmt::)?(Debug|Display) for",
+  "<impl (std::fmt::)?(Debug|Display) for",
+  "fmt::Formatter",
+  "replace <impl Debug",
+  "replace <impl Display",
+  "\\bfmt\\b.*-> (std::fmt::)?Result",
+  "\\b(log|trace|debug|eprintln|println|tracing)\\b",
+]

@@ -35,9 +35,13 @@ GraphLaw's own code is the composition layer above the engines:
 cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm   # -> target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
 ```
 
-One self-contained WASI module (imports are `wasi_snapshot_preview1` only: clock, random, stdio; no JavaScript). Exports `gl_alloc`, `gl_free`, `gl_call` and memory; call `_initialize` once if the host does not. A request is UTF-8 JSON written into `gl_alloc`ed memory; `gl_call(ptr, len)` returns `(out_ptr << 32) | out_len` for a UTF-8 JSON response, which the host frees with `gl_free`. Ops: `capabilities`, `sniff`, `parse`, `convert`, `canonical`, `sparql`, `shacl`, `shex`, `n3`, `entail`, `datalog`, `hooks`, `law` (see `src/abi.rs`). All RDF dialects (Turtle, TriG, N-Triples, N-Quads, RDF/XML, JSON-LD, YAML-LD, TriX, HexTuples), N3, SPARQL, SHACL, ShEx (ShExC/ShExJ), RDF/RDFS/OWL-RL/D entailment, Datalog and knowledge hooks execute inside the module; `tests/wasm_abi.rs` drives all of them in a real wasm runtime. `wasm32-unknown-unknown` is not a supported module target: it needs a JavaScript host.
+One self-contained WASI module (imports are `wasi_snapshot_preview1` only: clock, random, stdio; no JavaScript). Exports `gl_alloc`, `gl_free`, `gl_call` and memory; call `_initialize` once if the host does not. A request is UTF-8 JSON written into `gl_alloc`ed memory; `gl_call(ptr, len)` returns `(out_ptr << 32) | out_len` for a UTF-8 JSON response, which the host frees with `gl_free`. Fourteen ops: `capabilities`, `sniff`, `parse`, `convert`, `canonical`, `sparql`, `shacl`, `shex`, `n3`, `entail`, `datalog`, `hooks`, `law`, `policy` (see `src/abi.rs`, [`docs/abi-reference.md`](docs/abi-reference.md) and [`docs/refusals.md`](docs/refusals.md)). All RDF dialects (Turtle, TriG, N-Triples, N-Quads, RDF/XML, JSON-LD, YAML-LD, TriX, HexTuples), N3, SPARQL, SHACL, ShEx (ShExC/ShExJ), RDF/RDFS/OWL-RL/D entailment, Datalog and knowledge hooks execute inside the module; `tests/wasm_abi.rs` drives all of them in a real wasm runtime. `wasm32-unknown-unknown` is not a supported module target: it needs a JavaScript host.
 
 `vendor/` carries two cfg-only upstream patches that give WASI the standard clock/RNG path; see `vendor/README.md`.
+
+### Capability registry
+
+The public op surface is also published as a machine-readable registry (`registry/capability-registry.json`, its Turtle projection `registry/capability-registry.ttl`, and `registry/op-examples.json`), emitted from `src/registry.rs` by the `graphlaw-registry` binary and carried as release assets with `.sha256` files. From v26.9.29 the `capabilities` op reports `registry_schema`, `registry_sha256` and `surface_sha256`. See [`docs/capability-registry.md`](docs/capability-registry.md) for the files, the digest rule and decoder compatibility rules.
 
 ### Releasing (automatic)
 

@@ -1,0 +1,34 @@
+name: Mutation court
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: native mutation court (registry + ABI dispatch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.96.0
+          components: rustfmt, clippy
+      - name: Install cargo-mutants
+        run: cargo install cargo-mutants --version 27.1.0 --locked
+      - name: Run the court
+        env:
+          CARGO_TARGET_DIR: target-mutants
+        run: scripts/mutation_court.sh --check
+      - name: Upload mutants.out
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mutants-out
+          path: mutants.out
+          if-no-files-found: warn

@@ -3,7 +3,8 @@ name: Release
 # Fully automatic. On every push to main, release whatever version Cargo.toml
 # declares if that version is not released yet:
 #   1. build and test the WASI module and the whole workspace,
-#   2. tag vX.Y.Z and create the GitHub release with graphlaw.wasm (+ checksum),
+#   2. tag vX.Y.Z and create the GitHub release with graphlaw.wasm, the capability
+#      registry (capability-registry.json/.ttl) and op-examples.json, each with a .sha256,
 #   3. publish graphlaw-eyeron then graphlaw to crates.io, each only if that
 #      exact version is not already on the registry.
 # A run with nothing to release exits in seconds. All steps are idempotent.
@@ -32,10 +33,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_HOLD: ${{ vars.RELEASE_HOLD }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: main
-      - uses: dtolnay/rust-toolchain@master
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.96.0
           targets: wasm32-wasip1
@@ -74,8 +75,8 @@ jobs:
         if: steps.plan.outputs.work == 'yes'
         run: |
           set -euo pipefail
-          cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
-          GRAPHLAW_WASM="$PWD/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm" cargo test --all-targets --all-features
+          cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+          GRAPHLAW_WASM="$PWD/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm" cargo test --locked --all-targets --all-features
           cargo package -p graphlaw-eyeron -p graphlaw
 
       - name: Tag and create the GitHub release
@@ -84,8 +85,15 @@ jobs:
           set -euo pipefail
           mkdir dist
           cp target/wasm32-wasip1/wasm/graphlaw_wasm.wasm dist/graphlaw.wasm
-          (cd dist && sha256sum graphlaw.wasm > graphlaw.wasm.sha256)
-          gh release create "v${{ steps.plan.outputs.graphlaw }}" dist/graphlaw.wasm dist/graphlaw.wasm.sha256 \
+          for f in capability-registry.json capability-registry.ttl op-examples.json; do
+            cp "registry/$f" "dist/$f"
+          done
+          (cd dist && for f in graphlaw.wasm capability-registry.json capability-registry.ttl op-examples.json; do sha256sum "$f" > "$f.sha256"; done)
+          gh release create "v${{ steps.plan.outputs.graphlaw }}" \
+            dist/graphlaw.wasm dist/graphlaw.wasm.sha256 \
+            dist/capability-registry.json dist/capability-registry.json.sha256 \
+            dist/capability-registry.ttl dist/capability-registry.ttl.sha256 \
+            dist/op-examples.json dist/op-examples.json.sha256 \
             --target "$(git rev-parse HEAD)" --generate-notes --title "graphlaw v${{ steps.plan.outputs.graphlaw }}"
 
       - name: Publish graphlaw-eyeron

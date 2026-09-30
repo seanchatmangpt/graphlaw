@@ -65,6 +65,11 @@ name = "graphlaw-verify"
 path = "src/bin/graphlaw_verify.rs"
 required-features = ["abi"]
 
+[[bin]]
+name = "graphlaw-registry"
+path = "src/bin/graphlaw_registry.rs"
+required-features = ["abi"]
+
 [package.metadata.docs.rs]
 all-features = true
 

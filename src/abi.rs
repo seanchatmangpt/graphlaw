@@ -6,15 +6,19 @@
 //! `{"ok": true, ...}` or `{"ok": false, "error": {kind, engine, dialect,
 //! message}}`. Every op delegates to PurRDF or Eyeron; nothing here parses RDF.
 //!
-//! Ops: `capabilities`, `sniff`, `parse`, `convert`, `canonical`, `sparql`,
-//! `shacl`, `shex`, `n3`, `entail`, `datalog`, `hooks`, `law`.
+//! Ops (14, in registry order; the machine-readable surface is [`crate::registry`]):
+//! `capabilities`, `sniff`, `parse`, `convert`, `canonical`, `sparql`, `shacl`, `shex`,
+//! `n3`, `entail`, `datalog`, `hooks`, `law`, `policy`.
+//! `policy` admits a FOND policy as strong-cyclic against a planning problem.
 //! `law` steps: `shacl`, `n3`, `rdfs`, `owl-rl`, `hooks`, and `plan`,
 //! `record-receipts` (writes receipts produced so far into the state) and
 //! `require-receipt` (`"step_name"`; refuses unless that step's receipt is recorded)
 //! `require-signed-receipt` (`"step_name"`, `"trusted_keys"`: hex Ed25519 public keys;
 //! refuses unless that step's receipt carries a valid attestation by a trusted key)
-//! (`{"step":"plan","plan":{"actions":[{"name","pre","add","del"}],"goal"}}`,
-//! N-Triples strings; optional `pre_not` per action and `goal_not` per plan must be ABSENT; one receipt per action, refused at the first unmet precondition).
+//! (`{"step":"plan","plan":{"actions":[{"name","pre","pre_not"?,"add","del"}],"goal","goal_not"?}}`,
+//! N-Triples strings; `pre_not` per action and `goal_not` per plan list atoms that must be
+//! ABSENT; one receipt per action, refused at the first unmet precondition or present
+//! forbidden atom).
 //!
 //! Leases: a `law` request may carry `"signed_lease": {"lease": {id, holder, ceiling,
 //! scope, expires_unix, issued_unix?}, "attestation": {key_id, payload_sha256,
@@ -423,10 +427,12 @@ fn capabilities() -> Value {
         "authorities": crate::BACKEND_AUTHORITIES.iter().map(|a| json!({
             "capability": a.capability, "authority": a.authority, "revision": a.revision,
         })).collect::<Vec<_>>(),
-        "rdf_dialects": ["turtle", "trig", "ntriples", "nquads", "rdfxml", "jsonld", "yamlld", "trix", "hextuples"],
-        "other_dialects": ["n3", "sparql", "shexc", "shexj"],
-        "ops": ["capabilities", "sniff", "parse", "convert", "canonical", "sparql", "shacl", "shex",
-                "n3", "entail", "datalog", "hooks", "law", "policy"],
+        "rdf_dialects": crate::registry::rdf_dialect_names(),
+        "other_dialects": crate::registry::other_dialect_names(),
+        "ops": crate::registry::op_names(),
+        "registry_schema": crate::registry::REGISTRY_SCHEMA,
+        "registry_sha256": crate::registry::registry_sha256(),
+        "surface_sha256": crate::registry::surface_sha256(),
     })
 }
 
@@ -511,8 +517,9 @@ fn op_shex(v: &Value) -> Res<Value> {
     let text = str_field(v, "schema")?;
     let base = opt_str(v, "base");
     let (dialect, schema) = match opt_str(v, "schema_dialect").unwrap_or("shexc") {
+        "shexc" => (Dialect::ShExC, crate::shex::parse_shexc(text, base)),
         "shexj" => (Dialect::ShExJ, crate::shex::parse_shexj(text, base)),
-        _ => (Dialect::ShExC, crate::shex::parse_shexc(text, base)),
+        other => return Err(bad(format!("unknown schema_dialect `{other}`"))),
     };
     let schema = schema.map_err(|e| Refusal::engine(dialect, e))?;
     crate::shex::check_structure(&schema).map_err(|e| Refusal::engine(dialect, e))?;

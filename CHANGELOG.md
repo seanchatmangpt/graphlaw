@@ -18,11 +18,41 @@ v26.9.29 is intentionally held and unreleased.
 - `#![deny(missing_docs)]` on `graphlaw` and `graphlaw-wasm`; every public item is documented and
   the core types have runnable doctests.
 
+- Documentation fixes accompanying the registry (op reference, refusal codes and limits now agree
+  with the emitted registry).
+- CI and release workflows: every action reference is pinned to a commit SHA and cargo build/test
+  steps use `--locked`.
+
 - Unsigned lease transitions are now `transition_leased_unverified`; the ABI `law` op with a
   `lease` requires `signed_lease` and `trusted_keys` unless `unverified_lease: true` is set.
 
 ### Added
 
+- Capability registry (`graphlaw.capability-registry/1`): the Rust table in `src/registry.rs`
+  (feature `abi`) is the single source of truth for the 14 ABI ops, their request and response
+  fields, dialects, regimes, law steps, refusal codes, limits and authorities. It is emitted to
+  `registry/capability-registry.json` (canonical, sorted keys), `registry/capability-registry.ttl`
+  (deterministic Turtle projection), with `registry/capability-registry.schema.json` and
+  `registry/capability-registry.shapes.ttl` (SHACL, validated by GraphLaw's own `shacl` op in
+  tests). The `graphlaw-registry` binary supports `--write`, `--check`, `--print-json`,
+  `--print-ttl` and `--print-digests`; CI runs `--check`.
+- `capabilities` op additive response fields `registry_schema`, `registry_sha256` and
+  `surface_sha256`. Existing fields keep their names and values; `ops`, `rdf_dialects` and
+  `other_dialects` in `abi.rs` are now built from the registry rather than a second literal.
+  `ABI_VERSION` stays `1`; the change is additive only.
+- Op-examples corpus `registry/op-examples.json` (`graphlaw.op-examples/1`, with schema): every op
+  has an ok example listed before its refused examples, and every op except `capabilities` has at
+  least one refused example. Examples are not part of the registry digest.
+- Registry-vs-dispatch court: tests parse the `"<op>" =>` arms of `abi::dispatch` and require them
+  to equal the registry op list and order, with the `unknown op` fallthrough intact.
+- Native mutation court over the registry and dispatch surface.
+- Per-op differential tests (each op against the registry and op-examples) and forward-compat
+  tests (unknown request and response fields are tolerated, unknown refusal codes remain
+  refusals).
+- Release assets: `capability-registry.json`, `capability-registry.ttl` and `op-examples.json`,
+  each with a `.sha256`, are attached next to `graphlaw.wasm` (release remains held by
+  `RELEASE_HOLD`).
+- `docs/api-stability.md`: registry additive-field rule and `surface_sha256` compatibility rule.
 - Negative preconditions and goals: `Action::pre_not` / `Plan::goal_not` (triples that must be ABSENT,
   PDDL `(not p)`, closed-world over ground atoms), `ActionBuilder::requires_not`,
   `PlanBuilder::requires_not` / `goal_not`, ABI `pre_not` / `goal_not` fields, and

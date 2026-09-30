@@ -13,8 +13,8 @@ jobs:
     name: library-backed native
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.96.0
           components: rustfmt, clippy
@@ -28,13 +28,15 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
       - name: Build WASI module
-        run: cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+        run: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+      - name: Capability registry is current (graphlaw-registry --check)
+        run: cargo run --locked --features abi --bin graphlaw-registry -- --check
       - name: Test backend authorities
         env:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
-        run: cargo test --all-targets --all-features
+        run: cargo test --locked --all-targets --all-features
       - name: Upload WASI module
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: graphlaw-wasm
           path: target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
@@ -47,8 +49,8 @@ jobs:
     name: library-backed wasm32
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.96.0
           targets: wasm32-unknown-unknown
@@ -63,11 +65,11 @@ jobs:
     # is informational until the release lands. Remove this line after v26.9.29 ships.
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.96.0
-      - uses: obi1kenobi/cargo-semver-checks-action@v2
+      - uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v2
         with:
           package: graphlaw
 
@@ -75,8 +77,8 @@ jobs:
     name: cargo-deny (advisories licenses bans sources)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
         with:
           command: check advisories licenses bans sources
 
@@ -86,8 +88,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.96.0
       - name: Install cargo-audit

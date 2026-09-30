@@ -1,2 +1,7 @@
 /docs/jira/
 target/
+
+# native mutation court
+mutants.out*/
+target-lane*/
+target-mutants/

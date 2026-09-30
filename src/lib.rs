@@ -51,6 +51,8 @@ pub mod plan;
 pub mod policy;
 pub mod receipt;
 pub mod receipt_store;
+#[cfg(feature = "abi")]
+pub mod registry;
 #[cfg(feature = "pack-tools")]
 pub mod smon;
 

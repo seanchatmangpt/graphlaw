@@ -179,17 +179,20 @@ impl std::fmt::Display for Refusal {
 
 impl std::error::Error for Refusal {}
 
+/// True for a `PREFIX`/`BASE` (SPARQL style) or `@prefix`/`@base` (Turtle style) header line.
+fn is_directive_line(line: &str) -> bool {
+    let up = line.to_ascii_uppercase();
+    up.starts_with("PREFIX ")
+        || up.starts_with("BASE ")
+        || line.starts_with("@prefix")
+        || line.starts_with("@base")
+}
+
 /// Drop comments, `PREFIX`/`BASE` headers and blank lines.
 fn body_lines(text: &str) -> impl Iterator<Item = &str> {
-    text.lines().map(str::trim).filter(|l| {
-        let up = l.to_ascii_uppercase();
-        !(l.is_empty()
-            || l.starts_with('#')
-            || up.starts_with("PREFIX ")
-            || up.starts_with("BASE ")
-            || l.starts_with("@prefix")
-            || l.starts_with("@base"))
-    })
+    text.lines()
+        .map(str::trim)
+        .filter(|l| !(l.is_empty() || l.starts_with('#') || is_directive_line(l)))
 }
 
 /// The document with comments, string literals and IRI references blanked, so
@@ -392,7 +395,12 @@ pub fn sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> {
             "brace-delimited blocks are TriG or ShExC; supply a `trig` or `shex` hint",
         ));
     }
-    let line_based = !body.is_empty() && body.iter().all(|l| line_terms(l).is_some());
+    // N-Triples/N-Quads have no directives: a document that declares prefixes or a base
+    // is Turtle even when every statement is written with absolute IRIs (the shape
+    // `convert ... to turtle` emits).
+    let has_directive = skel.lines().map(str::trim).any(is_directive_line);
+    let line_based =
+        !has_directive && !body.is_empty() && body.iter().all(|l| line_terms(l).is_some());
     if line_based {
         return Ok(match line_terms(body[0]) {
             Some(4) => Dialect::NQuads,

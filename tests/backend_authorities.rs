@@ -115,7 +115,16 @@ ex:PersonShape a sh:NodeShape ;
     let report =
         graphlaw::shacl::engine::validate_graphs(data, shapes, None).expect("SHACL evaluates");
     assert!(!report.conforms);
-    assert!(!report.results.is_empty());
+    assert_eq!(report.results.len(), 1, "{:?}", report.results);
+    let r = &report.results[0];
+    assert_eq!(r.focus_node.to_string(), "<https://example.org/alice>");
+    assert!(
+        r.source_constraint_component
+            .to_string()
+            .contains("DatatypeConstraintComponent"),
+        "component: {}",
+        r.source_constraint_component
+    );
 }
 
 #[test]

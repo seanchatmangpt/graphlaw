@@ -40,7 +40,7 @@ a CHANGELOG line ("MSRV: 1.96 -> 1.9x"). CI builds on the pinned toolchain in
 
 ## ABI_VERSION contract
 
-`graphlaw::abi::ABI_VERSION` (currently `1`) is reported in every `info` response as `abi` and
+`graphlaw::abi::ABI_VERSION` (currently `1`) is reported in every `capabilities` response as `abi` and
 `abi_version`.
 
 - It is bumped on any incompatible request or response change (removed or retyped field, changed
@@ -50,9 +50,30 @@ a CHANGELOG line ("MSRV: 1.96 -> 1.9x"). CI builds on the pinned toolchain in
 - A host must check `abi_version` equals the value it was written against and refuse to run
   otherwise. The wasm module and the crate are released together, so their `ABI_VERSION` match.
 
+### Capability registry and surface digest
+
+`registry/capability-registry.json` (schema `graphlaw.capability-registry/1`) is emitted from
+`src/registry.rs` and described by the `capabilities` response fields `registry_schema`,
+`registry_sha256` and `surface_sha256`.
+
+- **Additive-field rule**: registry fields, ops, dialects, refusal codes, limits and enum
+  values may be added without bumping `ABI_VERSION` or the schema id. Removing or retyping a
+  registry field, or changing the meaning of an existing name, is an ABI break and bumps
+  `ABI_VERSION`. `enum` lists are informational; hosts must not reject values outside them.
+- **Surface digest**: `surface_sha256` is SHA-256 over the canonical JSON (sorted keys, compact) of
+  `{abi_version, ops, other_dialects, rdf_dialects}` with ops and dialects in registry order. It
+  changes only when the public op or dialect surface changes.
+- **Older engines**: engines older than v26.9.29 do not report `registry_schema`,
+  `registry_sha256` or `surface_sha256`. Consumers must tolerate their absence: compute
+  `surface_sha256` host-side from the live `capabilities` response and treat `registry_sha256`
+  as unknown.
+- **Emission**: the JSON and Turtle files are generated; `graphlaw-registry --check` fails when the
+  committed files differ from the Rust table.
+
 ## Checks
 
 - `cargo semver-checks` runs in CI (informational while v26.9.29 is unreleased and expected to
   differ from 26.9.28).
 - `#![deny(missing_docs)]` and `cargo doc -D warnings` keep every public item documented.
+- `graphlaw-registry --check` keeps the committed registry files equal to the Rust table.
 - `cargo deny check` and `cargo audit` gate the dependency tree (`deny.toml`).
