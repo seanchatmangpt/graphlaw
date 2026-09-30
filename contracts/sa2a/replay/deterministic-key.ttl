@@ -1,0 +1,13 @@
+@prefix sa2a: <https://graphlaw.dev/sa2a#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+
+<https://graphlaw.dev/sa2a/replay/deterministic-key> a sa2a:ReplayEvidence ;
+  sa2a:contractVersion "v26.9.29" ;
+  sa2a:canonicalization "RDFC-1.0" ;
+  sa2a:authority "NONE" ;
+  sa2a:consequence "EVIDENCE_ONLY" ;
+  sa2a:requiresExactSubject true ;
+  sa2a:requiresSourceDigest true ;
+  sa2a:requiresReplayIdentity true ;
+  sa2a:rule "Replay keys are deterministic over canonical subject, source, graph, and contract version." ;
+  prov:wasAttributedTo <https://graphlaw.dev/sa2a/factory-b> .
