@@ -1,0 +1,10 @@
+{
+  "law": "crash_reconciliation",
+  "dimension": "reconciled",
+  "relation": "eq_true_after_crash",
+  "falsifier": {
+    "mutation": "drop_reconciliation_evidence",
+    "expect": "UNKNOWN"
+  },
+  "permanent_negative_knowledge": true
+}

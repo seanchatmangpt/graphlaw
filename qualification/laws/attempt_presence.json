@@ -1,0 +1,1 @@
+{"law":"attempt_presence","dimension":"attempt_observed","relation":"eq_true","falsifier":{"mutation":"omit_attempt","expect":"UNKNOWN"},"permanent_negative_knowledge":true}

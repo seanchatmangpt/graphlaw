@@ -1,0 +1,1 @@
+{"objectTypes":["subject","collaborator","law","attempt","observer","receipt"],"eventTypes":["attempt_started","mutation_applied","observer_sampled","violation_observed","attempt_completed","reconciled"],"ordering":["attempt_started<mutation_applied","mutation_applied<observer_sampled","observer_sampled<attempt_completed"]}

@@ -1,0 +1,1 @@
+{"law":"exact_subject","dimension":"subject_digest","relation":"eq","falsifier":{"mutation":"replace_with_distinct_digest","expect":"REFUSED"},"permanent_negative_knowledge":true}

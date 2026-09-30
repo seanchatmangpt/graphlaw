@@ -95,21 +95,10 @@ fn datalog_request(facts: Vec<Value>, reverse_rules: bool) -> Value {
 }
 
 fn edge_facts() -> Vec<Value> {
-    [
-        ("a", "b"),
-        ("b", "c"),
-        ("c", "b"),
-        ("c", "d"),
-    ]
-    .into_iter()
-    .map(|(s, o)| {
-        json!([
-            format!("{NS}{s}"),
-            format!("{NS}edge"),
-            format!("{NS}{o}")
-        ])
-    })
-    .collect()
+    [("a", "b"), ("b", "c"), ("c", "b"), ("c", "d")]
+        .into_iter()
+        .map(|(s, o)| json!([format!("{NS}{s}"), format!("{NS}edge"), format!("{NS}{o}")]))
+        .collect()
 }
 
 fn datalog_reachable(out: &Value) -> BTreeSet<(String, String)> {
@@ -170,8 +159,8 @@ fn w3c_n3_implication_and_chaining_fire() {
     );
     let closure = canonical_n3(&program);
     assert!(
-        closure.contains(&format!("<{NS}weather>")) &&
-        closure.contains(&format!("<{NS}ObservableWeather>")),
+        closure.contains(&format!("<{NS}weather>"))
+            && closure.contains(&format!("<{NS}ObservableWeather>")),
         "{closure}"
     );
 }
