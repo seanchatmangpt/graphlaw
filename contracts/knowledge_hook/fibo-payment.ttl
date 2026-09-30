@@ -1,0 +1,5 @@
+@prefix gl: <https://graphlaw.dev/ns#> .
+@prefix kh: <https://graphlaw.dev/knowledge-hook#> .
+kh:FiboPaymentExecution a gl:SemanticCapability ;
+  gl:authorityCeiling gl:None ;
+  gl:projection kh:HookCandidate .
