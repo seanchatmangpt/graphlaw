@@ -13,9 +13,18 @@ fn castle_intake_preserves_graphlaw_semantic_ownership() {
 #[test]
 fn castle_intake_has_three_exact_non_sovereign_donors() {
     let donors = [
-        ("seanchatmangpt/unrdf", "0550d9630da94b170c931f17a1580ea90091cbb4"),
-        ("seanchatmangpt/praxis", "c78783b4ea3124fc9d1179a9e47d43c522b529f2"),
-        ("seanchatmangpt/mfw", "c5a10b00bc8cbc27052840c0b9b51607c2ff85b1"),
+        (
+            "seanchatmangpt/unrdf",
+            "0550d9630da94b170c931f17a1580ea90091cbb4",
+        ),
+        (
+            "seanchatmangpt/praxis",
+            "c78783b4ea3124fc9d1179a9e47d43c522b529f2",
+        ),
+        (
+            "seanchatmangpt/mfw",
+            "c5a10b00bc8cbc27052840c0b9b51607c2ff85b1",
+        ),
     ];
 
     for (repo, sha) in donors {
