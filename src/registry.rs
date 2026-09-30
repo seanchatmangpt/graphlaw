@@ -1391,8 +1391,11 @@ pub fn registry_turtle() -> String {
     let mut i = 0;
     while i < g.triples.len() {
         let subject = &g.triples[i].0;
-        let mut j = i;
-        while j > /* ~ changed by cargo-mutants ~ */ g.triples.len() && &g.triples[j].0 == subject {
+        // `j` starts past `i` so every pass consumes at least one triple: the
+        // outer loop terminates (and `out` stays bounded) whatever the subject
+        // comparison below evaluates to.
+        let mut j = i + 1;
+        while j < g.triples.len() && &g.triples[j].0 == subject {
             j += 1;
         }
         out.push('\n');

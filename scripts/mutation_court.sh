@@ -75,9 +75,33 @@ if [ "$MODE" = list ]; then
   exit $?
 fi
 
+# A previous run killed mid-mutant (OOM/SIGKILL skips the trap) leaves edits behind.
+MARK="changed by ""cargo-mutants"
+if grep -rn --include='*.rs' "$MARK" src >&2; then
+  echo "mutation_court: leaked mutant edits in src/ (above); fix them before running" >&2
+  exit 5
+fi
+
+# A mutant can loop while allocating; nothing else bounds memory (macOS ignores
+# ulimit -v). Watchdog: TERM cargo-mutants when any test process from this target
+# dir exceeds MUTANTS_MAX_RSS_MB, so the EXIT trap above still restores the sources.
+MAX_RSS_KB=$(( ${MUTANTS_MAX_RSS_MB:-4096} * 1024 ))
 set +e
-"$MUTANTS_BIN" mutants --in-place --no-shuffle --output "$OUTPUT_DIR" "${EXTRA[@]}"
+"$MUTANTS_BIN" mutants --in-place --no-shuffle --output "$OUTPUT_DIR" "${EXTRA[@]}" &
+MPID=$!
+(
+  while kill -0 "$MPID" 2>/dev/null; do
+    ps -axo rss=,command= | awk -v max="$MAX_RSS_KB" -v dir="$CARGO_TARGET_DIR/debug/deps" \
+      'index($0, dir) && $1 > max { found = 1 } END { exit !found }' \
+      && { echo "mutation_court: RSS cap exceeded; terminating cargo-mutants" >&2
+           kill -TERM "$MPID" 2>/dev/null; break; }
+    sleep 2
+  done
+) &
+WPID=$!
+wait "$MPID"
 RC=$?
+kill "$WPID" 2>/dev/null
 set -e
 
 OUT="$OUTPUT_DIR/mutants.out"
