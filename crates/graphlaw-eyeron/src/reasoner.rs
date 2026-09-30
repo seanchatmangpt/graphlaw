@@ -50,6 +50,16 @@ const DEFAULT_MAX_MATCH_STEPS: usize = 200_000;
 /// larger than any fact real rule sets build and small enough that rejecting
 /// one costs nothing.
 const DEFAULT_MAX_TERM_BYTES: usize = 16 * 1024 * 1024;
+const DEFAULT_MAX_TOTAL_BYTES: usize = 512 * 1024 * 1024;
+const DEFAULT_MAX_CLOSURE_FACTS: usize = 5_000_000;
+const DEFAULT_MAX_TOTAL_STEPS: usize = 500_000_000;
+/// Cap on search nodes visited, and on solutions kept, by one `log:includes` or
+/// `list:append` evaluation: both enumerate a cartesian space with no other bound.
+const MAX_BUILTIN_SEARCH_NODES: usize = 1_000_000;
+const MAX_BUILTIN_SOLUTIONS: usize = 10_000;
+const MAX_TABLED_BACKWARD_GOALS: usize = 100_000;
+/// Longest integer lexical form parsed to an exact `BigInt` (parsing is quadratic).
+const MAX_EXACT_LITERAL_CHARS: usize = 10_000;
 // Multi-premise agenda matching is a win for small state-machine examples,
 // but on generated rule sets such as deep-taxonomy-100000 it makes every
 // broad subject/predicate fact probe unrelated multi-premise checks.  Keep
@@ -65,6 +75,9 @@ struct SearchBudget {
     max_backward_depth: usize,
     max_backward_solutions_per_goal: usize,
     max_term_bytes: usize,
+    max_total_bytes: usize,
+    max_closure_facts: usize,
+    max_total_steps: usize,
     limits_reached: BTreeSet<ReasonerLimit>,
     errors: Vec<ReasonerError>,
     error_seen: HashSet<ReasonerError>,
@@ -85,6 +98,9 @@ impl SearchBudget {
             max_backward_depth: options.max_backward_depth,
             max_backward_solutions_per_goal: options.max_backward_solutions_per_goal,
             max_term_bytes: options.max_term_bytes,
+            max_total_bytes: options.max_total_bytes,
+            max_closure_facts: options.max_closure_facts,
+            max_total_steps: options.max_total_steps,
             limits_reached: BTreeSet::new(),
             errors: Vec::new(),
             error_seen: HashSet::new(),
@@ -102,6 +118,9 @@ impl SearchBudget {
             max_backward_depth: max_depth,
             max_backward_solutions_per_goal: DEFAULT_MAX_BACKWARD_SOLUTIONS_PER_GOAL,
             max_term_bytes: DEFAULT_MAX_TERM_BYTES,
+            max_total_bytes: DEFAULT_MAX_TOTAL_BYTES,
+            max_closure_facts: DEFAULT_MAX_CLOSURE_FACTS,
+            max_total_steps: DEFAULT_MAX_TOTAL_STEPS,
             limits_reached: BTreeSet::new(),
             errors: Vec::new(),
             error_seen: HashSet::new(),
@@ -124,12 +143,20 @@ impl SearchBudget {
     }
 
     fn nested_options(&self) -> ReasonerOptions {
+        // A nested run gets what is left, not a fresh budget: nesting `log:conclusion`
+        // up to the term-depth cap would otherwise multiply the cost by the depth.
+        // Iterations halve per level, so the whole tree stays within one budget.
+        let used = self.steps.saturating_add(self.nested_match_steps);
+        let remaining_steps = self.max_total_steps.saturating_sub(used);
         ReasonerOptions {
-            max_iterations: self.max_iterations,
-            max_match_steps: self.max_steps,
+            max_iterations: (self.max_iterations / 2).max(1),
+            max_match_steps: self.max_steps.saturating_sub(self.steps).max(1),
             max_backward_depth: self.max_backward_depth,
             max_backward_solutions_per_goal: self.max_backward_solutions_per_goal,
             max_term_bytes: self.max_term_bytes,
+            max_total_bytes: self.max_total_bytes,
+            max_closure_facts: self.max_closure_facts,
+            max_total_steps: remaining_steps.max(1),
             trace: false,
             proof: false,
             // `eval_log_conclusion` (the only caller) reads only
@@ -153,13 +180,35 @@ impl SearchBudget {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct RunReport {
     limits_reached: BTreeSet<ReasonerLimit>,
     errors: Vec<ReasonerError>,
     error_seen: HashSet<ReasonerError>,
     match_steps: usize,
     completed_backward_goals: HashMap<String, Vec<Triple>>,
+    /// Cumulative bytes of facts derived so far, against `max_total_bytes`.
+    derived_bytes: usize,
+    max_total_bytes: usize,
+    max_closure_facts: usize,
+    /// Set once a run-wide size cap is hit: the fixpoint loop stops there.
+    exhausted: bool,
+}
+
+impl Default for RunReport {
+    fn default() -> Self {
+        Self {
+            limits_reached: BTreeSet::new(),
+            errors: Vec::new(),
+            error_seen: HashSet::new(),
+            match_steps: 0,
+            completed_backward_goals: HashMap::new(),
+            derived_bytes: 0,
+            max_total_bytes: usize::MAX,
+            max_closure_facts: usize::MAX,
+            exhausted: false,
+        }
+    }
 }
 
 impl RunReport {
@@ -179,6 +228,19 @@ impl RunReport {
 
     fn hit_limit(&mut self, limit: ReasonerLimit) {
         self.limits_reached.insert(limit);
+    }
+
+    /// Whether the whole run is out of budget, recording which limit it hit.
+    fn out_of_budget(&mut self, options: &ReasonerOptions, iteration: usize) -> bool {
+        if iteration >= options.max_iterations {
+            self.hit_limit(ReasonerLimit::Iterations);
+            return true;
+        }
+        if self.match_steps >= options.max_total_steps {
+            self.hit_limit(ReasonerLimit::MatchSteps);
+            return true;
+        }
+        self.exhausted
     }
 }
 
@@ -709,6 +771,8 @@ pub enum ReasonerLimit {
     BackwardSolutionsPerGoal,
     TermSize,
     TermDepth,
+    ClosureSize,
+    ClosureFacts,
 }
 
 impl std::fmt::Display for ReasonerLimit {
@@ -720,6 +784,8 @@ impl std::fmt::Display for ReasonerLimit {
             Self::BackwardSolutionsPerGoal => "backward-solution limit",
             Self::TermSize => "term-size limit",
             Self::TermDepth => "term-nesting limit",
+            Self::ClosureSize => "closure-size limit",
+            Self::ClosureFacts => "closure-fact limit",
         };
         write!(f, "{}", label)
     }
@@ -781,6 +847,13 @@ pub struct ReasonerOptions {
     pub max_backward_solutions_per_goal: usize,
     /// Maximum term text, in bytes, that one derived fact may carry.
     pub max_term_bytes: usize,
+    /// Maximum cumulative bytes of derived facts across the whole run.
+    pub max_total_bytes: usize,
+    /// Maximum number of derived facts across the whole run.
+    pub max_closure_facts: usize,
+    /// Maximum matcher steps summed over the whole run (`max_match_steps`
+    /// bounds each premise search on its own).
+    pub max_total_steps: usize,
     pub trace: bool,
     pub proof: bool,
     /// Whether `ReasonerResult.explicit`/`.explicit_sources` should be
@@ -814,6 +887,9 @@ impl Default for ReasonerOptions {
             max_backward_depth: DEFAULT_MAX_BACKWARD_DEPTH,
             max_backward_solutions_per_goal: DEFAULT_MAX_BACKWARD_SOLUTIONS_PER_GOAL,
             max_term_bytes: DEFAULT_MAX_TERM_BYTES,
+            max_total_bytes: DEFAULT_MAX_TOTAL_BYTES,
+            max_closure_facts: DEFAULT_MAX_CLOSURE_FACTS,
+            max_total_steps: DEFAULT_MAX_TOTAL_STEPS,
             trace: false,
             proof: false,
             include_explicit: true,
@@ -1087,16 +1163,24 @@ fn reason_with_plan(
     let mut derived = Vec::<Triple>::new();
     let mut proofs = Vec::<DerivedFact>::new();
     let mut iteration = 0usize;
-    let mut report = RunReport::default();
+    let mut report = RunReport {
+        max_total_bytes: options.max_total_bytes,
+        max_closure_facts: options.max_closure_facts,
+        ..RunReport::default()
+    };
     let mut closure_saturated = false;
     let mut fuse = None;
     // Per rule, the (closure length, rule count, saturated) the rule was last
     // matched against, for the loop below.
     let mut last_slow_run = vec![None::<(usize, usize, bool)>; active_rules.len()];
+    // The (closure length, rule count) the fuses were last matched against.
+    // The closure and the rule set only grow, and fuse matching does not read
+    // the saturation flag, so an unchanged pair cannot fire a fuse that
+    // did not fire the last time.
+    let mut last_fuse_check = None::<(usize, usize)>;
 
     'fixpoint: loop {
-        if iteration >= options.max_iterations {
-            report.hit_limit(ReasonerLimit::Iterations);
+        if report.out_of_budget(options, iteration) {
             break;
         }
         iteration += 1;
@@ -1114,8 +1198,7 @@ fn reason_with_plan(
             // non-terminating rule such as
             // `{ :a :v ?x . (?x 1) math:sum ?z } => { :a :v ?z }` never
             // reaches the check above and runs until the allocator stops it.
-            if iteration >= options.max_iterations {
-                report.hit_limit(ReasonerLimit::Iterations);
+            if report.out_of_budget(options, iteration) {
                 break 'fixpoint;
             }
             iteration += 1;
@@ -1295,10 +1378,15 @@ fn reason_with_plan(
             agenda_cursor = 0;
         }
 
-        if let Some(fired) = fired_fuse(&active_rules, &closure, &fact_index, options, &mut report)
-        {
-            fuse = Some(fired);
-            break;
+        let fuse_state = (closure.len(), active_rules.len());
+        if last_fuse_check != Some(fuse_state) {
+            last_fuse_check = Some(fuse_state);
+            if let Some(fired) =
+                fired_fuse(&active_rules, &closure, &fact_index, options, &mut report)
+            {
+                fuse = Some(fired);
+                break;
+            }
         }
 
         if closure.len() == before {
@@ -1575,17 +1663,18 @@ impl TermOverflow {
     }
 }
 
-/// Whether `triple` is too large to keep, measured without ever walking
-/// further than the first breach: both checks short-circuit, so an oversized
-/// term costs no more to reject than a small one costs to accept.
-fn triple_overflow(triple: &Triple, max_bytes: usize) -> Option<TermOverflow> {
+/// Bytes in `triple`, and whether it is too large to keep. Measured without
+/// ever walking further than the first breach: both checks short-circuit, so an
+/// oversized term costs no more to reject than a small one costs to accept.
+/// The byte count is exact unless the triple overflowed.
+fn triple_footprint(triple: &Triple, max_bytes: usize) -> (usize, Option<TermOverflow>) {
     let mut walk = TermWalk {
         bytes: 0,
         max_bytes,
         overflow: None,
     };
     walk.triple(triple, 0);
-    walk.overflow
+    (walk.bytes, walk.overflow)
 }
 
 struct TermWalk {
@@ -1661,13 +1750,27 @@ fn insert_materialized_triple(
     }
     // Reject the fact rather than the run: a rule that grows a term without
     // bound would otherwise be stopped by the allocator, not by a limit.
-    if let Some(overflow) = triple_overflow(&t, max_term_bytes) {
+    let (bytes, overflow) = triple_footprint(&t, max_term_bytes);
+    if let Some(overflow) = overflow {
         report.hit_limit(overflow.limit());
         return false;
     }
     if seen.contains(closure, &t) {
         return false;
     }
+    // Run-wide caps: per-fact limits alone let many modest facts (or facts that
+    // grow a character per firing) add up to more than the process can hold.
+    if derived.len() >= report.max_closure_facts {
+        report.hit_limit(ReasonerLimit::ClosureFacts);
+        report.exhausted = true;
+        return false;
+    }
+    if report.derived_bytes.saturating_add(bytes) > report.max_total_bytes {
+        report.hit_limit(ReasonerLimit::ClosureSize);
+        report.exhausted = true;
+        return false;
+    }
+    report.derived_bytes += bytes;
 
     let mut rules_changed = false;
     // Reaching here means `t` was not in the closure, and every explicit fact
@@ -2932,6 +3035,11 @@ fn solve_backward_goal(
             answers.push(answer);
         }
         if cacheable {
+            // Keys embed the closure size, so a growing closure mints new keys
+            // forever; drop the table rather than let it grow without bound.
+            if budget.completed_backward_goals.len() >= MAX_TABLED_BACKWARD_GOALS {
+                budget.completed_backward_goals.clear();
+            }
             budget.completed_backward_goals.insert(table_key, answers);
         }
     }
@@ -4229,9 +4337,10 @@ fn eval_log_conclusion(
         return Vec::new();
     }
 
+    let mut present: HashSet<Triple> = input.iter().cloned().collect();
     let mut closure = input;
     for t in result.derived {
-        if !closure.contains(&t) {
+        if present.insert(t.clone()) {
             closure.push(t);
         }
     }
@@ -4337,6 +4446,7 @@ fn match_formula_subset(
         pattern: &[Triple],
         idx: usize,
         bindings: Bindings,
+        nodes: &mut usize,
         out: &mut Vec<Bindings>,
     ) {
         if idx == pattern.len() {
@@ -4344,16 +4454,21 @@ fn match_formula_subset(
             return;
         }
         for fact in scope {
+            *nodes += 1;
+            if *nodes > MAX_BUILTIN_SEARCH_NODES || out.len() >= MAX_BUILTIN_SOLUTIONS {
+                return;
+            }
             let mut local = bindings.clone();
             // Use formula unification rather than ordinary fact matching so
             // variables and blank nodes on either side of log:includes can be
             // alpha-matched and exported as bindings.
             if unify_triple_formula(&pattern[idx], fact, &mut local) {
-                go(scope, pattern, idx + 1, local, out);
+                go(scope, pattern, idx + 1, local, nodes, out);
             }
         }
     }
-    go(scope, pattern, 0, bindings.clone(), out);
+    let mut nodes = 0usize;
+    go(scope, pattern, 0, bindings.clone(), &mut nodes, out);
 }
 
 fn eval_log_not_includes(
@@ -5141,7 +5256,17 @@ fn eval_list_append(
         return Vec::new();
     };
     let mut out = Vec::<Bindings>::new();
-    match_list_append_parts(&parts, &result_items, 0, 0, bindings, facts, &mut out);
+    let mut nodes = 0usize;
+    match_list_append_parts(
+        &parts,
+        &result_items,
+        0,
+        0,
+        bindings,
+        facts,
+        &mut nodes,
+        &mut out,
+    );
     out
 }
 
@@ -5152,8 +5277,13 @@ fn match_list_append_parts(
     result_index: usize,
     bindings: &Bindings,
     facts: &[Triple],
+    nodes: &mut usize,
     out: &mut Vec<Bindings>,
 ) {
+    *nodes += 1;
+    if *nodes > MAX_BUILTIN_SEARCH_NODES || out.len() >= MAX_BUILTIN_SOLUTIONS {
+        return;
+    }
     if part_index == parts.len() {
         if result_index == result_items.len() {
             let solution = canonicalize_bindings(bindings);
@@ -5194,6 +5324,7 @@ fn match_list_append_parts(
                 result_index + len,
                 &next,
                 facts,
+                nodes,
                 out,
             );
         }
@@ -5229,6 +5360,7 @@ fn match_list_append_parts(
             result_index + len,
             &next,
             facts,
+            nodes,
             out,
         );
     }
@@ -5841,6 +5973,12 @@ fn eval_math_operator(
     match pred {
         MATH_PRODUCT => eval_numeric_list(left, right, bindings, facts, |items| {
             if let Some(exact) = all_exact(&items) {
+                // The product's size is the sum of its operands' sizes; refuse
+                // before multiplying rather than after stringifying the result.
+                let bits: u64 = exact.iter().map(|n| n.bits()).sum();
+                if bits > MAX_EXACT_POWER_BITS {
+                    return None;
+                }
                 return Some(integer_literal(
                     exact
                         .into_iter()
@@ -6664,6 +6802,8 @@ fn bind_string_result(right: &Term, text: String, bindings: &Bindings) -> Vec<Bi
     }
 }
 
+const MAX_FORMAT_PRECISION: usize = 1_000;
+
 fn simple_format(fmt: &str, args: &[String]) -> Option<String> {
     let mut out = String::new();
     let mut chars = fmt.chars().peekable();
@@ -6709,7 +6849,11 @@ fn simple_format(fmt: &str, args: &[String]) -> Option<String> {
                     break;
                 }
             }
+            // `{:.*}` allocates `precision` digits: an unchecked 999999999 is a 1 GB string.
             precision = p.parse::<usize>().ok();
+            if precision.is_some_and(|n| n > MAX_FORMAT_PRECISION) {
+                return None;
+            }
         }
         let spec = chars.next()?;
         let arg = args.get(arg_index)?.clone();
@@ -7131,7 +7275,7 @@ fn numeric_literal_value(lit: &Literal) -> Option<Numeric> {
             if !is_numeric {
                 return None;
             }
-            let exact = if is_integer {
+            let exact = if is_integer && lit.value.len() <= MAX_EXACT_LITERAL_CHARS {
                 lit.value.parse::<BigInt>().ok()
             } else {
                 None

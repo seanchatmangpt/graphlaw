@@ -184,3 +184,17 @@ fn pre_not_and_goal_not_count_toward_the_atoms_per_field_cap() {
         MAX_ATOMS_PER_FIELD,
     );
 }
+
+#[test]
+fn string_doubling_n3_rule_refuses_with_resource_limit_before_exhausting_memory() {
+    // Each firing doubles the literal: per-fact and run-wide byte caps must stop it
+    // long before the allocator would.
+    let req = json!({"op": "n3", "text": concat!(
+        "@prefix : <urn:n:> .\n",
+        "@prefix string: <http://www.w3.org/2000/10/swap/string#> .\n",
+        ":a :s \"yy\" .\n",
+        "{ :a :s ?x . (?x ?x) string:concatenation ?y } => { :a :s ?y } .\n")});
+    let r = call_json(&req);
+    assert_eq!(r["ok"], false, "{r}");
+    assert_eq!(r["error"]["kind"], "ResourceLimit", "{r}");
+}

@@ -23,6 +23,12 @@ use crate::{BACKEND_AUTHORITIES, BackendAuthority};
 /// Capability the replay is executed under: RDF parsing/serialization/identity.
 const CAPABILITY: &str = "RDF 1.2 / codecs / storage IR";
 
+/// Most N-Triples atoms (non-empty lines) summed over every field of one plan.
+/// `MAX_ATOMS_PER_FIELD` bounds a single field; this bounds their sum, since
+/// up to `MAX_PLAN_ACTIONS` actions of five fields each would otherwise multiply
+/// it.
+pub const MAX_PLAN_TOTAL_ATOMS: usize = 100_000;
+
 /// One ground action: preconditions and effects as N-Triples text.
 ///
 /// ```
@@ -425,6 +431,34 @@ fn refuse(message: impl Into<String>) -> LawError {
     })
 }
 
+fn atom_lines(nt: &str) -> usize {
+    nt.lines().filter(|l| !l.trim().is_empty()).count()
+}
+
+fn check_total_atoms(plan: &Plan) -> Result<(), LawError> {
+    let total = plan
+        .actions
+        .iter()
+        .fold(0usize, |n, a| {
+            [&a.pre, &a.pre_not, &a.add, &a.del]
+                .into_iter()
+                .fold(n, |n, f| n.saturating_add(atom_lines(f)))
+        })
+        .saturating_add(atom_lines(&plan.goal))
+        .saturating_add(atom_lines(&plan.goal_not));
+    if total > MAX_PLAN_TOTAL_ATOMS {
+        return Err(LawError::Refused(Refusal {
+            kind: RefusalKind::ResourceLimit,
+            dialect: Some(Dialect::NTriples),
+            engine: Some(Dialect::NTriples.engine()),
+            message: format!(
+                "resource limit `plan_total_atoms` exceeded: {total} > {MAX_PLAN_TOTAL_ATOMS}"
+            ),
+        }));
+    }
+    Ok(())
+}
+
 fn serialize_lines(ds: &purrdf::RdfDataset) -> Result<BTreeSet<String>, Refusal> {
     let bytes =
         purrdf::serialize_dataset(ds, "application/n-quads", purrdf::SerializeGraph::Dataset)
@@ -540,6 +574,7 @@ impl Plan {
     /// Replay the plan over `start`. Refuses at the first violated
     /// precondition, or after the last action if the goal does not hold.
     pub fn admit(&self, start: &LawState) -> Result<Admitted, LawError> {
+        check_total_atoms(self)?;
         let mut state = start.clone();
         let mut have = state_lines(&state)?;
         let mut receipts = Vec::with_capacity(self.actions.len());

@@ -6,11 +6,15 @@
 use std::collections::BTreeSet;
 use std::sync::OnceLock;
 
+/// Search-node budget; a hard puzzle (or adversarial input) cannot run the
+/// backtracking search unboundedly.
+const MAX_SEARCH_NODES: u32 = 1_000_000;
+
 /// Solves a 9x9 Sudoku puzzle given as an 81-character string. Returns
 /// `Ok(solution)` (an 81-character string of `1`-`9`) if solvable, `Ok(String::new())`
 /// if the puzzle has no solution, or `Err(message)` if the input is
 /// malformed: wrong length, a character that is not a digit or `.`, or
-/// conflicting givens.
+/// conflicting givens, or the search exceeded its node budget.
 pub fn solve_sudoku_string(puzzle: &str) -> Result<String, String> {
     let text = puzzle.trim();
     if text.chars().count() != 81 || !text.chars().all(|c| c == '.' || c.is_ascii_digit()) {
@@ -31,14 +35,25 @@ pub fn solve_sudoku_string(puzzle: &str) -> Result<String, String> {
             return Err("sudoku puzzle has conflicting givens".to_string());
         }
     }
-    Ok(if solve_sudoku_cells(&mut cells, peers) {
+    let mut nodes = 0u32;
+    Ok(if solve_sudoku_cells(&mut cells, peers, &mut nodes)? {
         cells.iter().map(|&v| char::from(b'0' + v)).collect()
     } else {
         String::new()
     })
 }
 
-fn solve_sudoku_cells(cells: &mut [u8; 81], peers: &'static [Vec<usize>; 81]) -> bool {
+fn solve_sudoku_cells(
+    cells: &mut [u8; 81],
+    peers: &'static [Vec<usize>; 81],
+    nodes: &mut u32,
+) -> Result<bool, String> {
+    *nodes += 1;
+    if *nodes > MAX_SEARCH_NODES {
+        return Err(format!(
+            "sudoku search exceeded the {MAX_SEARCH_NODES} node budget"
+        ));
+    }
     let mut best_index = None;
     let mut best_candidates = Vec::new();
     for (i, &value) in cells.iter().enumerate() {
@@ -47,7 +62,7 @@ fn solve_sudoku_cells(cells: &mut [u8; 81], peers: &'static [Vec<usize>; 81]) ->
         }
         let candidates = sudoku_candidates(cells, &peers[i]);
         if candidates.is_empty() {
-            return false;
+            return Ok(false);
         }
         if best_index.is_none() || candidates.len() < best_candidates.len() {
             best_index = Some(i);
@@ -57,15 +72,15 @@ fn solve_sudoku_cells(cells: &mut [u8; 81], peers: &'static [Vec<usize>; 81]) ->
             }
         }
     }
-    let Some(index) = best_index else { return true };
+    let Some(index) = best_index else { return Ok(true) };
     for value in best_candidates {
         cells[index] = value;
-        if solve_sudoku_cells(cells, peers) {
-            return true;
+        if solve_sudoku_cells(cells, peers, nodes)? {
+            return Ok(true);
         }
         cells[index] = 0;
     }
-    false
+    Ok(false)
 }
 
 fn sudoku_candidates(cells: &[u8; 81], peers: &[usize]) -> Vec<u8> {

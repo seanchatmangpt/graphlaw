@@ -296,16 +296,22 @@ pub fn admit_parsed(problem: &Problem, policy: &[Entry]) -> Result<PolicyAdmitte
     }
 
     // (c) backward closure from goal states over the policy graph.
+    // Worklist over reverse edges: each state is visited once, O(S + E), where
+    // repeated full sweeps were O(S^2) on a long chain.
     let mut good: BTreeSet<String> = seen.iter().filter(|s| is_goal(s)).cloned().collect();
-    loop {
-        let before = good.len();
-        for (s, ns) in &succ {
-            if !good.contains(s) && ns.iter().any(|n| good.contains(n)) {
-                good.insert(s.clone());
-            }
+    let mut preds: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for (s, ns) in &succ {
+        for n in ns {
+            preds.entry(n.as_str()).or_default().push(s.as_str());
         }
-        if good.len() == before {
-            break;
+    }
+    let mut work: Vec<String> = good.iter().cloned().collect();
+    while let Some(n) = work.pop() {
+        for p in preds.get(n.as_str()).into_iter().flatten() {
+            if !good.contains(*p) {
+                good.insert((*p).to_string());
+                work.push((*p).to_string());
+            }
         }
     }
     if let Some(s) = seen.iter().find(|s| !good.contains(*s)) {

@@ -433,6 +433,14 @@ impl Lease {
 /// Fixpoint-step cap for N3 derivation (Eyeron `ReasonerOptions::max_iterations`;
 /// Eyeron's own default is 1,000,000). Exceeding it is a `ResourceLimit` refusal.
 pub const N3_MAX_ITERATIONS: usize = 4_000;
+/// Largest single derived term, in bytes.
+pub const N3_MAX_TERM_BYTES: usize = 64 * 1024;
+/// Cumulative bytes of derived facts in one N3 run.
+pub const N3_MAX_TOTAL_BYTES: usize = 64 * 1024 * 1024;
+/// Derived facts in one N3 run.
+pub const N3_MAX_DERIVED_FACTS: usize = 200_000;
+/// Matcher steps summed over one N3 run.
+pub const N3_MAX_TOTAL_STEPS: usize = 50_000_000;
 
 /// Why bounded N3 reasoning did not return a derivation.
 ///
@@ -476,6 +484,12 @@ pub fn reason_n3_bounded(input: &str) -> Result<String, N3Error> {
     let options = eyeron::ReasonerOptions {
         include_explicit: false,
         max_iterations: N3_MAX_ITERATIONS,
+        // Run-wide caps sized for the ABI (16 MiB request, 4 GiB wasm linear memory):
+        // the library defaults are far larger than a request can justify.
+        max_term_bytes: N3_MAX_TERM_BYTES,
+        max_total_bytes: N3_MAX_TOTAL_BYTES,
+        max_closure_facts: N3_MAX_DERIVED_FACTS,
+        max_total_steps: N3_MAX_TOTAL_STEPS,
         ..eyeron::ReasonerOptions::default()
     };
     let result = eyeron::reason_document(&doc, &options);
