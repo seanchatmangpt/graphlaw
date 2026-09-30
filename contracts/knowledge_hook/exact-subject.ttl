@@ -2,7 +2,7 @@
 @prefix kh: <https://graphlaw.dev/knowledge-hook#> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
 
-kh:HookCandidate a sa2a:CapabilityEvidence ;
+kh:ExactSubject a sa2a:CapabilityEvidence ;
   sa2a:contractVersion "v26.9.29" ;
   sa2a:canonicalization "RDFC-1.0" ;
   sa2a:authority "NONE" ;
@@ -10,5 +10,5 @@ kh:HookCandidate a sa2a:CapabilityEvidence ;
   sa2a:requiresExactSubject true ;
   sa2a:requiresSourceDigest true ;
   sa2a:requiresReplayIdentity true ;
-  sa2a:rule "A Knowledge Hook is a powerless semantic projection into SA2A intent. It neither authorizes nor performs DO." ;
+  sa2a:rule "Hook candidates MUST preserve exact subject identity from semantic observation through SA2A projection." ;
   prov:wasAttributedTo <https://graphlaw.dev/reference/factory-c> .

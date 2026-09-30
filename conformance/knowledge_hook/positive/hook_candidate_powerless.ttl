@@ -1,0 +1,10 @@
+@prefix kh: <https://graphlaw.dev/knowledge-hook#> .
+@prefix sa2a: <https://graphlaw.dev/sa2a#> .
+
+kh:HookCandidatePowerless a sa2a:PortableVector ;
+  sa2a:exactSubject "urn:payment:customer:42" ;
+  sa2a:sourceDigest "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ;
+  sa2a:replayIdentity "replay:payment:42" ;
+  sa2a:authority "NONE" ;
+  sa2a:consequence "EVIDENCE_ONLY" ;
+  sa2a:expected "ADMIT" .
