@@ -436,9 +436,9 @@ pub const N3_MAX_ITERATIONS: usize = 4_000;
 /// Largest single derived term, in bytes.
 pub const N3_MAX_TERM_BYTES: usize = 64 * 1024;
 /// Cumulative bytes of derived facts in one N3 run.
-pub const N3_MAX_TOTAL_BYTES: usize = 64 * 1024 * 1024;
+pub const N3_MAX_TOTAL_BYTES: usize = 256 * 1024 * 1024;
 /// Derived facts in one N3 run.
-pub const N3_MAX_DERIVED_FACTS: usize = 200_000;
+pub const N3_MAX_DERIVED_FACTS: usize = 500_000;
 /// Matcher steps summed over one N3 run.
 pub const N3_MAX_TOTAL_STEPS: usize = 50_000_000;
 
@@ -450,7 +450,12 @@ pub const N3_MAX_TOTAL_STEPS: usize = 50_000_000;
 /// ```
 /// use graphlaw::law::N3Error;
 ///
-/// let e = N3Error::Limit { observed: 4, summary: "iterations".into() };
+/// let e = N3Error::Limit {
+///     limit: "n3_iterations",
+///     observed: 4,
+///     max: 4_000,
+///     summary: "iterations".into(),
+/// };
 /// let limited = match e {
 ///     N3Error::Limit { observed, .. } => observed > 0,
 ///     _ => false, // required: new variants may be added
@@ -462,8 +467,12 @@ pub const N3_MAX_TOTAL_STEPS: usize = 50_000_000;
 pub enum N3Error {
     /// A reasoner safety limit was hit after `observed` fixpoint steps.
     Limit {
-        /// Fixpoint steps completed when the limit was hit.
+        /// Machine name of the limit that was hit (`n3_iterations`, `n3_derived_facts`, ...).
+        limit: &'static str,
+        /// What was measured against the limit (fixpoint steps, or derived facts).
         observed: usize,
+        /// The configured ceiling for `limit`.
+        max: usize,
         /// Human-readable description of the limit that was hit.
         summary: String,
     },
@@ -495,8 +504,34 @@ pub fn reason_n3_bounded(input: &str) -> Result<String, N3Error> {
     let result = eyeron::reason_document(&doc, &options);
     if let Some(summary) = result.incomplete_summary() {
         if !result.limits_reached.is_empty() {
+            // Report the most fundamental limit hit (enum order: iterations first).
+            let (limit, observed, max) = match result.limits_reached.first() {
+                Some(eyeron::ReasonerLimit::MatchSteps) => (
+                    "n3_match_steps",
+                    result.statistics.match_steps,
+                    N3_MAX_TOTAL_STEPS,
+                ),
+                Some(eyeron::ReasonerLimit::TermSize) => {
+                    ("n3_term_bytes", N3_MAX_TERM_BYTES + 1, N3_MAX_TERM_BYTES)
+                }
+                Some(eyeron::ReasonerLimit::ClosureSize) => {
+                    ("n3_total_bytes", N3_MAX_TOTAL_BYTES + 1, N3_MAX_TOTAL_BYTES)
+                }
+                Some(eyeron::ReasonerLimit::ClosureFacts) => (
+                    "n3_derived_facts",
+                    result.derived.len(),
+                    N3_MAX_DERIVED_FACTS,
+                ),
+                _ => (
+                    "n3_iterations",
+                    result.statistics.iterations,
+                    N3_MAX_ITERATIONS,
+                ),
+            };
             return Err(N3Error::Limit {
-                observed: result.statistics.iterations,
+                limit,
+                observed,
+                max,
                 summary,
             });
         }
@@ -835,12 +870,17 @@ impl LawState {
                 let doc = format!("{base}\n{rules}");
                 let derived = reason_n3_bounded(&doc).map_err(|e| match e {
                     N3Error::Refused(r) => r,
-                    N3Error::Limit { observed, summary } => Refusal {
+                    N3Error::Limit {
+                        limit,
+                        observed,
+                        max,
+                        summary,
+                    } => Refusal {
                         kind: RefusalKind::ResourceLimit,
                         dialect: Some(Dialect::N3),
                         engine: Some(Dialect::N3.engine()),
                         message: format!(
-                            "resource limit `n3_iterations` exceeded: {observed} > {N3_MAX_ITERATIONS} ({summary})"
+                            "resource limit `{limit}` exceeded: {observed} > {max} ({summary})"
                         ),
                     },
                 })?;

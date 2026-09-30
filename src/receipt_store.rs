@@ -473,13 +473,16 @@ fn chain(rs: Vec<Receipt>) -> Result<Vec<Receipt>, StoreError> {
         return Err(broken("no unique root receipt"));
     };
     let mut order = vec![*root];
+    let mut visited = vec![false; rs.len()];
+    visited[*root] = true;
     while let Some(next) = by_parent
         .get(rs[*order.last().expect("non-empty")].child.as_str())
         .map(|v| v[0])
     {
-        if order.contains(&next) {
+        if visited[next] {
             return Err(broken("cycle"));
         }
+        visited[next] = true;
         order.push(next);
     }
     if order.len() != rs.len() {

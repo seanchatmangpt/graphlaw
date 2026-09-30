@@ -72,7 +72,9 @@ fn solve_sudoku_cells(
             }
         }
     }
-    let Some(index) = best_index else { return Ok(true) };
+    let Some(index) = best_index else {
+        return Ok(true);
+    };
     for value in best_candidates {
         cells[index] = value;
         if solve_sudoku_cells(cells, peers, nodes)? {

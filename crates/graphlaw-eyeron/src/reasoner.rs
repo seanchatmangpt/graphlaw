@@ -58,8 +58,14 @@ const DEFAULT_MAX_TOTAL_STEPS: usize = 500_000_000;
 const MAX_BUILTIN_SEARCH_NODES: usize = 1_000_000;
 const MAX_BUILTIN_SOLUTIONS: usize = 10_000;
 const MAX_TABLED_BACKWARD_GOALS: usize = 100_000;
+/// Fixed cost charged per derived fact on top of its term text: the fact is held in the
+/// closure, the derived list and the dedup/index structures.
+const PER_FACT_OVERHEAD_BYTES: usize = 256;
 /// Longest integer lexical form parsed to an exact `BigInt` (parsing is quadratic).
-const MAX_EXACT_LITERAL_CHARS: usize = 10_000;
+const MAX_EXACT_LITERAL_CHARS: usize = 100_000;
+/// Largest exact `math:product` result, in bits (about `MAX_EXACT_LITERAL_CHARS` digits), so a
+/// product never yields a literal the next operation would re-parse inexactly.
+const MAX_EXACT_PRODUCT_BITS: u64 = 330_000;
 // Multi-premise agenda matching is a win for small state-machine examples,
 // but on generated rule sets such as deep-taxonomy-100000 it makes every
 // broad subject/predicate fact probe unrelated multi-premise checks.  Keep
@@ -143,14 +149,13 @@ impl SearchBudget {
     }
 
     fn nested_options(&self) -> ReasonerOptions {
-        // A nested run gets what is left, not a fresh budget: nesting `log:conclusion`
-        // up to the term-depth cap would otherwise multiply the cost by the depth.
-        // Iterations halve per level, so the whole tree stays within one budget.
+        // Per-search and per-iteration caps are unchanged; cost across nesting levels is
+        // bounded by the run-wide step budget, of which a nested run gets what is left.
         let used = self.steps.saturating_add(self.nested_match_steps);
         let remaining_steps = self.max_total_steps.saturating_sub(used);
         ReasonerOptions {
-            max_iterations: (self.max_iterations / 2).max(1),
-            max_match_steps: self.max_steps.saturating_sub(self.steps).max(1),
+            max_iterations: self.max_iterations,
+            max_match_steps: self.max_steps,
             max_backward_depth: self.max_backward_depth,
             max_backward_solutions_per_goal: self.max_backward_solutions_per_goal,
             max_term_bytes: self.max_term_bytes,
@@ -763,7 +768,10 @@ impl AgendaIndex {
 }
 
 /// A safety limit that prevented the reasoner from proving a complete fixpoint.
+///
+/// Variants are added as new limits are introduced; downstream `match` needs a wildcard arm.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[non_exhaustive]
 pub enum ReasonerLimit {
     Iterations,
     MatchSteps,
@@ -1316,6 +1324,10 @@ fn reason_with_plan(
             }
         }
 
+        if report.exhausted {
+            break 'fixpoint;
+        }
+
         // General path for multi-premise rules, builtins, backward-rule
         // dependencies, blank-node heads, and other rules whose firing cannot
         // be represented safely by the agenda above.
@@ -1326,6 +1338,9 @@ fn reason_with_plan(
         for idx in 0..rule_count_at_start {
             if agenda_index.indexed.contains(&idx) {
                 continue;
+            }
+            if report.exhausted {
+                break;
             }
             let rule = active_rules[idx].clone();
             if !rule.is_forward || rule.is_fuse {
@@ -1765,12 +1780,24 @@ fn insert_materialized_triple(
         report.exhausted = true;
         return false;
     }
-    if report.derived_bytes.saturating_add(bytes) > report.max_total_bytes {
+    // Proof mode keeps resolved premises and bindings per derived fact; count them too.
+    let proof_bytes = proof.as_ref().map_or(0, |p| {
+        p.premises
+            .iter()
+            .map(|t| triple_footprint(t, usize::MAX).0)
+            .fold(0usize, usize::saturating_add)
+    });
+    let bytes = bytes.saturating_add(proof_bytes);
+    if report
+        .derived_bytes
+        .saturating_add(bytes + PER_FACT_OVERHEAD_BYTES)
+        > report.max_total_bytes
+    {
         report.hit_limit(ReasonerLimit::ClosureSize);
         report.exhausted = true;
         return false;
     }
-    report.derived_bytes += bytes;
+    report.derived_bytes += bytes + PER_FACT_OVERHEAD_BYTES;
 
     let mut rules_changed = false;
     // Reaching here means `t` was not in the closure, and every explicit fact
@@ -3911,7 +3938,7 @@ fn eval_builtin(
             &premise.s, &premise.o, bindings, facts,
         )),
         Term::Iri(ref iri) if iri == LOG_INCLUDES => Some(eval_log_includes(
-            &premise.s, &premise.o, bindings, facts, rules,
+            &premise.s, &premise.o, bindings, facts, rules, budget,
         )),
         Term::Iri(ref iri) if iri == LOG_NOT_INCLUDES => Some(eval_log_not_includes(
             premise,
@@ -3970,9 +3997,9 @@ fn eval_builtin(
         Term::Iri(ref iri) if iri == RDF_REST || iri == LIST_REST => {
             Some(eval_rdf_rest(&premise.s, &premise.o, bindings, facts))
         }
-        Term::Iri(ref iri) if iri == LIST_APPEND => {
-            Some(eval_list_append(&premise.s, &premise.o, bindings, facts))
-        }
+        Term::Iri(ref iri) if iri == LIST_APPEND => Some(eval_list_append(
+            &premise.s, &premise.o, bindings, facts, budget,
+        )),
         Term::Iri(ref iri) if iri == LIST_ITERATE => {
             Some(eval_list_iterate(&premise.s, &premise.o, bindings, facts))
         }
@@ -4407,6 +4434,7 @@ fn eval_log_includes(
     bindings: &Bindings,
     facts: &[Triple],
     rules: &[Rule],
+    budget: &mut SearchBudget,
 ) -> Vec<Bindings> {
     let subject_resolved = resolve(subject, bindings);
     let scope = match subject_resolved {
@@ -4431,7 +4459,10 @@ fn eval_log_includes(
         return Vec::new();
     };
     let mut out = Vec::new();
-    match_formula_subset(&scope, &pattern, bindings, &mut out);
+    if match_formula_subset(&scope, &pattern, bindings, &mut out) {
+        // The search was cut short: say so rather than return a silently partial answer.
+        budget.hit_limit(ReasonerLimit::MatchSteps);
+    }
     out.into_iter().map(canonicalize_owned).collect()
 }
 
@@ -4440,7 +4471,7 @@ fn match_formula_subset(
     pattern: &[Triple],
     bindings: &Bindings,
     out: &mut Vec<Bindings>,
-) {
+) -> bool {
     fn go(
         scope: &[Triple],
         pattern: &[Triple],
@@ -4469,6 +4500,8 @@ fn match_formula_subset(
     }
     let mut nodes = 0usize;
     go(scope, pattern, 0, bindings.clone(), &mut nodes, out);
+    // True when a cap truncated the enumeration.
+    nodes > MAX_BUILTIN_SEARCH_NODES || out.len() >= MAX_BUILTIN_SOLUTIONS
 }
 
 fn eval_log_not_includes(
@@ -5221,6 +5254,7 @@ fn eval_list_append(
     right: &Term,
     bindings: &Bindings,
     facts: &[Triple],
+    budget: &mut SearchBudget,
 ) -> Vec<Bindings> {
     let Some(parts) = rdf_or_native_list(left, bindings, facts) else {
         return Vec::new();
@@ -5267,6 +5301,9 @@ fn eval_list_append(
         &mut nodes,
         &mut out,
     );
+    if nodes > MAX_BUILTIN_SEARCH_NODES || out.len() >= MAX_BUILTIN_SOLUTIONS {
+        budget.hit_limit(ReasonerLimit::MatchSteps);
+    }
     out
 }
 
@@ -5975,8 +6012,11 @@ fn eval_math_operator(
             if let Some(exact) = all_exact(&items) {
                 // The product's size is the sum of its operands' sizes; refuse
                 // before multiplying rather than after stringifying the result.
+                if exact.iter().any(|n| n.bits() == 0) {
+                    return Some(integer_literal(BigInt::from(0)));
+                }
                 let bits: u64 = exact.iter().map(|n| n.bits()).sum();
-                if bits > MAX_EXACT_POWER_BITS {
+                if bits > MAX_EXACT_PRODUCT_BITS {
                     return None;
                 }
                 return Some(integer_literal(

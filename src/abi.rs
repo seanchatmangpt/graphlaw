@@ -185,12 +185,30 @@ fn refusal_json(f: &Fail) -> Value {
     o
 }
 
+/// `(name, observed, max)` from a `resource limit `name` exceeded: a > b` message.
+fn parse_limit_message(message: &str) -> Option<(String, usize, usize)> {
+    let rest = message.strip_prefix("resource limit `")?;
+    let (name, rest) = rest.split_once("` exceeded: ")?;
+    let mut nums = rest.split_whitespace();
+    let observed = nums.next()?.parse().ok()?;
+    if nums.next()? != ">" {
+        return None;
+    }
+    let max = nums.next()?.parse().ok()?;
+    Some((name.to_string(), observed, max))
+}
+
 fn law_err(e: LawError) -> Fail {
     let (refusal, details) = match e {
         LawError::Refused(r) => {
             let d = if r.kind == RefusalKind::ResourceLimit {
-                json!({"code": "ResourceLimit", "limit": "n3_iterations",
-                       "max": crate::law::N3_MAX_ITERATIONS})
+                // The refusal message is `resource limit `<name>` exceeded: <observed> > <max> ...`.
+                match parse_limit_message(&r.message) {
+                    Some((name, observed, max)) => json!({"code": "ResourceLimit", "limit": name,
+                           "observed": observed, "max": max}),
+                    None => json!({"code": "ResourceLimit", "limit": "n3_iterations",
+                           "max": crate::law::N3_MAX_ITERATIONS}),
+                }
             } else {
                 json!({"code": "Refused", "kind": format!("{:?}", r.kind)})
             };
@@ -404,9 +422,12 @@ fn dispatch(v: &Value) -> Res<Value> {
             let out =
                 crate::law::reason_n3_bounded(str_field(v, "text")?).map_err(|e| match e {
                     crate::law::N3Error::Refused(r) => Fail::from(r),
-                    crate::law::N3Error::Limit { observed, .. } => {
-                        limit("n3_iterations", observed, crate::law::N3_MAX_ITERATIONS)
-                    }
+                    crate::law::N3Error::Limit {
+                        limit: name,
+                        observed,
+                        max,
+                        ..
+                    } => limit(name, observed, max),
                 })?;
             Ok(json!({"derived": out}))
         }

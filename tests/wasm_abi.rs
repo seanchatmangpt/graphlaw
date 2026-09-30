@@ -673,6 +673,43 @@ fn wasm_resource_limits_refuse_typed_and_never_trap() {
     assert_eq!(r["ok"], true);
 }
 
+#[cfg(feature = "abi")]
+#[test]
+fn wasm_outstanding_allocation_cap_refuses_then_recovers_after_free() {
+    use graphlaw::abi::MAX_REQUEST_BYTES;
+    let mut guard = host().lock().unwrap_or_else(|e| e.into_inner());
+    let h = &mut *guard;
+    // Allocate without freeing until the module refuses (256 MiB outstanding cap, 16 MiB each).
+    let mut held = Vec::new();
+    let refused = loop {
+        let p = h
+            .alloc
+            .call(&mut h.store, MAX_REQUEST_BYTES as u32)
+            .unwrap();
+        if p == 0 {
+            break true;
+        }
+        held.push(p);
+        if held.len() > 32 {
+            break false;
+        }
+    };
+    assert!(
+        refused,
+        "gl_alloc never refused after {} x 16 MiB",
+        held.len()
+    );
+    for p in held {
+        h.free
+            .call(&mut h.store, (p, MAX_REQUEST_BYTES as u32))
+            .unwrap();
+    }
+    // Everything freed: allocation works again.
+    let p = h.alloc.call(&mut h.store, 1 << 20).unwrap();
+    assert_ne!(p, 0);
+    h.free.call(&mut h.store, (p, 1 << 20)).unwrap();
+}
+
 // ---- signed leases and receipts through the compiled module ----------------
 
 fn issuer() -> graphlaw::attest::SigningKey {

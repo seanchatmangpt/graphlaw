@@ -92,21 +92,31 @@ debug = "line-tables-only"
 
 # The wasm runtime used by tests/wasm_abi.rs is an interpreter; unoptimised it
 # is ~50x slower and makes the suite take minutes.
+# debug-assertions must also be off: wasmi 2's default dispatch is tail-call
+# threaded and relies on LLVM sibling-call optimisation. With the dev profile's
+# debug assertions on, the handlers are not tail-called, every wasm instruction
+# adds a native frame, and any non-trivial guest call overflows the test
+# thread's 2 MiB stack ("fatal runtime error: stack overflow").
 [profile.dev.package.wasmi]
 opt-level = 3
 overflow-checks = false
+debug-assertions = false
 [profile.dev.package.wasmi_core]
 opt-level = 3
 overflow-checks = false
+debug-assertions = false
 [profile.dev.package.wasmi_ir]
 opt-level = 3
 overflow-checks = false
+debug-assertions = false
 [profile.dev.package.wasmi_collections]
 opt-level = 3
 overflow-checks = false
+debug-assertions = false
 [profile.dev.package.wasmi_wasi]
 opt-level = 3
 overflow-checks = false
+debug-assertions = false
 
 [[bin]]
 name = "sa2a-portability-verify"
