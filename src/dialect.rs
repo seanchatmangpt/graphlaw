@@ -9,27 +9,72 @@ use std::sync::Arc;
 use crate::LawState;
 
 /// A syntax GraphLaw can hand to an upstream engine.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::dialect::Dialect;
+///
+/// let d = Dialect::Turtle;
+/// let name = match d {
+///     Dialect::Turtle => "turtle",
+///     _ => "other", // required: new dialects may be added
+/// };
+/// assert_eq!(name, "turtle");
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum Dialect {
+    /// Turtle.
     Turtle,
+    /// TriG.
     TriG,
+    /// N-Triples.
     NTriples,
+    /// N-Quads.
     NQuads,
+    /// RDF/XML.
     RdfXml,
+    /// JSON-LD.
     JsonLd,
+    /// YAML-LD.
     YamlLd,
+    /// TriX.
     TriX,
+    /// HexTuples.
     HexTuples,
+    /// Notation3 (owned by Eyeron).
     N3,
+    /// ShEx compact syntax.
     ShExC,
+    /// ShEx JSON syntax.
     ShExJ,
+    /// SPARQL query or update text.
     Sparql,
 }
 
 /// The upstream crate that owns a dialect.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::dialect::{Dialect, Engine};
+///
+/// let e = Dialect::N3.engine();
+/// let owner = match e {
+///     Engine::Eyeron => "eyeron",
+///     _ => "other", // required: new engines may be added
+/// };
+/// assert_eq!(owner, "eyeron");
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Engine {
+    /// PurRDF owns the dialect.
     PurRdf,
+    /// Eyeron owns the dialect.
     Eyeron,
 }
 
@@ -60,7 +105,22 @@ impl Dialect {
 }
 
 /// Why a document was refused.
+///
+/// This enum is `#[non_exhaustive]`: variants may be added in a minor release, so
+/// downstream `match` expressions need a wildcard arm.
+///
+/// ```
+/// use graphlaw::dialect::RefusalKind;
+///
+/// let k = RefusalKind::ResourceLimit;
+/// let retryable = match k {
+///     RefusalKind::ResourceLimit => false,
+///     _ => true, // required: new kinds may be added
+/// };
+/// assert!(!retryable);
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum RefusalKind {
     /// Empty input, an HTML page, or an HTTP error body.
     NotSemanticContent,
@@ -70,14 +130,20 @@ pub enum RefusalKind {
     EngineRejected,
     /// The document is valid but cannot be used in this operation.
     Unsupported,
+    /// The request exceeded a documented resource cap (see `abi::MAX_*`).
+    ResourceLimit,
 }
 
 /// A typed refusal naming the engine and dialect that refused.
 #[derive(Debug, Clone)]
 pub struct Refusal {
+    /// Machine-readable refusal class.
     pub kind: RefusalKind,
+    /// Dialect that was refused, when known.
     pub dialect: Option<Dialect>,
+    /// Engine that refused, when known.
     pub engine: Option<Engine>,
+    /// Diagnostic text from the refusing engine or router.
     pub message: String,
 }
 

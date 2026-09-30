@@ -1,0 +1,2 @@
+@prefix sa2a: <https://graphlaw.dev/ns/sa2a#> .
+<https://graphlaw.dev/sa2a/evidence/identity/canonical-id> a sa2a:EvidenceContract ; sa2a:family "identity" ; sa2a:constraint "canonical-id" ; sa2a:authority "NONE" ; sa2a:consequence "EVIDENCE_ONLY" ; sa2a:canonicalization "RDFC-1.0" ; sa2a:expectedRefusal "NONE" ; sa2a:portable true .

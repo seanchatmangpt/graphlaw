@@ -1,13 +1,13 @@
 [package]
 name = "graphlaw"
-version = "26.9.28"
+version = "26.9.29"
 edition = "2024"
 rust-version = "1.96"
 authors = ["Sean Chatman"]
 license = "MIT"
 description = "GraphLaw: library-backed RDF law-state composition over PurRDF and Eyeron"
 readme = "README.md"
-include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE", "/MIGRATION.md"]
+include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE", "/MIGRATION.md", "/CHANGELOG.md", "/SECURITY.md", "/CONTRIBUTING.md", "/docs/**", "/examples/**"]
 repository = "https://github.com/seanchatmangpt/graphlaw"
 keywords = ["rdf", "n3", "datalog", "shacl", "shex"]
 categories = ["data-structures", "parser-implementations"]
@@ -33,6 +33,9 @@ path = "src/lib.rs"
 [dependencies]
 purrdf = "=2.0.2"
 sha2 = "0.10"
+# Ed25519 receipt/lease attestations (BSD-3-Clause). Exact pin per GOALS.md invariant 3;
+# already resolved in Cargo.lock via purrdf. No RNG: keys come from caller-supplied seeds.
+ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["std"] }
 regex = { version = "1", optional = true }
 serde_json = { version = "1", optional = true }
 eyeron = { package = "graphlaw-eyeron", version = "0.7.7", path = "crates/graphlaw-eyeron" }
@@ -56,6 +59,11 @@ required-features = ["pack-tools"]
 name = "smon-broaden-topic"
 path = "src/bin/smon_broaden_topic.rs"
 required-features = ["pack-tools"]
+
+[[bin]]
+name = "graphlaw-verify"
+path = "src/bin/graphlaw_verify.rs"
+required-features = ["abi"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -89,3 +97,8 @@ opt-level = 3
 opt-level = 3
 [profile.dev.package.wasmi_wasi]
 opt-level = 3
+
+[[bin]]
+name = "sa2a-portability-verify"
+path = "src/bin/sa2a_portability_verify.rs"
+required-features = ["abi"]

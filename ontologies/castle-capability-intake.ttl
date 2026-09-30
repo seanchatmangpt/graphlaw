@@ -1,0 +1,50 @@
+@prefix eco: <https://ggen.dev/ecosystem#> .
+@prefix gl: <https://graphlaw.dev/ontology/castle-intake#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+# CASTLE semantic-law intake.
+# Source: seanchatmangpt/ggen-ecosystem@50fdfa20c84205a80c6eb94e916cffbedc4b816e
+#
+# GraphLaw remains the sole semantic-law owner. Donor repositories contribute
+# kernels, historical semantics, or formal projections only. They do not become
+# parallel reasoners and cannot acquire actuation authority.
+
+gl:intake
+    a eco:CapabilityProjection ;
+    dcterms:title "CASTLE projected capability intake — GraphLaw" ;
+    eco:projectionSource "seanchatmangpt/ggen-ecosystem@50fdfa20c84205a80c6eb94e916cffbedc4b816e" ;
+    eco:ownerRepository "seanchatmangpt/graphlaw" ;
+    eco:ownerCapability "SEMANTIC_LAW_DERIVATION" ;
+    eco:projectionStanding "CANDIDATE" ;
+    eco:authorityCeiling "CONSTRUCT" ;
+    eco:forbidsCapability "RUNTIME_EXISTENCE", "CONSEQUENTIAL_ADMISSIBILITY" .
+
+gl:unrdf
+    a eco:ProjectedCapability ;
+    eco:sourceRepository "seanchatmangpt/unrdf" ;
+    eco:sourceSha "0550d9630da94b170c931f17a1580ea90091cbb4" ;
+    eco:capability "RDF_KERNEL_COMPATIBILITY" ;
+    eco:disposition "WRAP" ;
+    eco:runtimePlacement "SEMANTIC_KERNEL_BEHIND_OWNER" ;
+    eco:projectionTarget gl:intake ;
+    eco:falsifier "UNRDF becomes a second semantic-law owner beside GraphLaw." .
+
+gl:praxis
+    a eco:ProjectedCapability ;
+    eco:sourceRepository "seanchatmangpt/praxis" ;
+    eco:sourceSha "c78783b4ea3124fc9d1179a9e47d43c522b529f2" ;
+    eco:capability "HISTORICAL_SEMANTIC_SOURCE" ;
+    eco:disposition "ABSORB" ;
+    eco:runtimePlacement "HISTORICAL_SOURCE_ONLY" ;
+    eco:projectionTarget gl:intake ;
+    eco:falsifier "Praxis remains a second semantic implementation after GraphLaw extraction." .
+
+gl:mfw
+    a eco:ProjectedCapability ;
+    eco:sourceRepository "seanchatmangpt/mfw" ;
+    eco:sourceSha "c5a10b00bc8cbc27052840c0b9b51607c2ff85b1" ;
+    eco:capability "FORMAL_THEORY_PROJECTION" ;
+    eco:disposition "CANDIDATE_WRAP" ;
+    eco:runtimePlacement "FORMAL_KNOWLEDGE_EDGE" ;
+    eco:projectionTarget gl:intake ;
+    eco:falsifier "Lean/OMDoc projection is treated as GraphLaw law or proof without exact translation receipts." .

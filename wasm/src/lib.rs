@@ -13,10 +13,16 @@
 //!
 //! A response is always JSON: `{"ok":true,...}` or `{"ok":false,"error":{...}}`.
 #![allow(unsafe_code)]
+#![deny(missing_docs)]
 
-/// Reserve `len` bytes of linear memory for the host.
+/// Reserve `len` bytes of linear memory for the host. Returns null (0) when
+/// `len` exceeds `graphlaw::abi::MAX_REQUEST_BYTES`; a following `gl_call` on
+/// that null buffer yields a typed error response, never a trap.
 #[unsafe(no_mangle)]
 pub extern "C" fn gl_alloc(len: u32) -> *mut u8 {
+    if len as usize > graphlaw::abi::MAX_REQUEST_BYTES {
+        return std::ptr::null_mut();
+    }
     let mut buf = Vec::<u8>::with_capacity(len.max(1) as usize);
     let ptr = buf.as_mut_ptr();
     std::mem::forget(buf);
@@ -40,9 +46,21 @@ pub unsafe extern "C" fn gl_free(ptr: *mut u8, len: u32) {
 /// `ptr`/`len` must describe a buffer from `gl_alloc` filled by the host.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn gl_call(ptr: *mut u8, len: u32) -> u64 {
-    let request = unsafe { Vec::from_raw_parts(ptr, len as usize, len.max(1) as usize) };
-    let response = graphlaw::abi::call(&request);
-    drop(request);
+    let response = if ptr.is_null() {
+        graphlaw::abi::missing_buffer_response()
+    } else if len as usize > graphlaw::abi::MAX_REQUEST_BYTES {
+        // Not a buffer this module could have handed out; do not reconstruct it.
+        graphlaw::abi::limit_response(
+            "request_bytes",
+            len as usize,
+            graphlaw::abi::MAX_REQUEST_BYTES,
+        )
+    } else {
+        let request = unsafe { Vec::from_raw_parts(ptr, len as usize, len.max(1) as usize) };
+        let response = graphlaw::abi::call(&request);
+        drop(request);
+        response
+    };
     let out_len = response.len() as u64;
     let mut response = response.into_boxed_slice().into_vec();
     // Capacity must equal length so gl_free can reconstruct the allocation.

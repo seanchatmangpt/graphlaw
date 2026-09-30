@@ -18,3 +18,15 @@ reads the clock.
 Eyeron is vendored as a real workspace crate in `crates/graphlaw-eyeron` (see its `UPSTREAM.md`).
 
 Tests, examples and benches were dropped from the copy. Delete this directory (and its `[patch]` entry in the root `Cargo.toml`) as soon as upstream carries the same gate.
+
+## Upstreaming status
+
+Artifacts live in `vendor/upstream/`. Nothing has been submitted to any remote.
+
+| Crate | Patch | Notes | Status |
+| --- | --- | --- | --- |
+| `purrdf-sparql-eval` 2.0.2 | `upstream/purrdf-sparql-eval.patch` | `upstream/purrdf-sparql-eval.md` (problem, change, verification, draft PR) | READY_UNSUBMITTED |
+
+The patch is the cfg-only diff against the pristine crates.io 2.0.2 tree (the vendored copy
+additionally drops tests/examples/benches, which are not part of the patch). It applies
+with `patch --dry-run -p1` on the pristine tree.

@@ -30,6 +30,7 @@
 //! ```
 
 #![forbid(unsafe_code)]
+#![deny(missing_docs)]
 
 #[cfg(all(target_os = "wasi", not(feature = "wasi-patched-deps")))]
 compile_error!(
@@ -42,9 +43,15 @@ compile_error!(
 
 #[cfg(feature = "abi")]
 pub mod abi;
+pub mod attest;
+pub mod capability_intake;
 pub mod dialect;
 pub mod hooks;
 pub mod law;
+pub mod plan;
+pub mod policy;
+pub mod receipt;
+pub mod receipt_store;
 #[cfg(feature = "pack-tools")]
 pub mod smon;
 
