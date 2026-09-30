@@ -1,0 +1,10 @@
+{
+  "law": "bounded_autonomy",
+  "dimension": "autonomy_steps",
+  "relation": "lte_autonomy_limit",
+  "falsifier": {
+    "mutation": "set_above_limit",
+    "expect": "REFUSED"
+  },
+  "permanent_negative_knowledge": true
+}
