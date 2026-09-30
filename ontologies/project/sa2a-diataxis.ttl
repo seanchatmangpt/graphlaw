@@ -1,0 +1,14 @@
+@prefix sa2a: <https://seanchatmangpt.github.io/sa2a/diataxis#> .
+@prefix gl: <https://seanchatmangpt.github.io/graphlaw#> .
+
+<urn:graphlaw:sa2a-diataxis-admission> a sa2a:Capability ;
+  sa2a:specifiedBy <https://github.com/seanchatmangpt/engineering-standards/tree/main/semantic/sa2a-diataxis> ;
+  sa2a:constrainedBy <urn:graphlaw:law:constructible-before-actuation> ;
+  sa2a:verifiedBy <urn:graphlaw:gate:sa2a-diataxis> ;
+  sa2a:repairedBy <urn:graphlaw:repair:remove-unlawful-edge> .
+
+<urn:graphlaw:law:constructible-before-actuation> a sa2a:ExplanationLaw ;
+  sa2a:falsifier "An actuation edge is reachable although no lawful construction edge exists for the same admitted subject." .
+
+<urn:graphlaw:repair:remove-unlawful-edge> a sa2a:RepairRoute ;
+  sa2a:nextEdge "Recompute the lawful graph without the refused edge; do not stop unrelated reachable work." .
