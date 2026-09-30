@@ -870,25 +870,28 @@ fn sa2a_run12_portability_corpus_executes_through_real_wasi() {
             "{} canonical identity drifted",
             path.display()
         );
-        if text.contains("sa2a:expected \\\"ADMIT\\\"") {
+        let admits = text.contains("sa2a:expected \"ADMIT\"")
+            || text.contains("sa2a:expectedDecision \"ADMIT\"");
+        if admits {
             assert!(
-                text.contains("sa2a:authority \\\"NONE\\\""),
+                text.contains("sa2a:authority \"NONE\""),
                 "{} authority widened",
                 path.display()
             );
             assert!(
-                text.contains("sa2a:consequence \\\"EVIDENCE_ONLY\\\""),
+                text.contains("sa2a:consequence \"EVIDENCE_ONLY\""),
                 "{} consequence widened",
                 path.display()
             );
             assert!(
-                text.contains("sa2a:canonicalization \\\"RDFC-1.0\\\""),
+                text.contains("sa2a:canonicalization \"RDFC-1.0\""),
                 "{} canonicalization widened",
                 path.display()
             );
         } else {
             assert!(
-                text.contains("sa2a:expected \\\"REFUSE\\\""),
+                text.contains("sa2a:expected \"REFUSE\"")
+                    || text.contains("sa2a:expectedDecision \"REFUSE\""),
                 "{} missing disposition",
                 path.display()
             );

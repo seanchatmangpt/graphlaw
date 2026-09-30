@@ -1,0 +1,2 @@
+@prefix sa2a: <https://chatmangpt.com/sa2a#> .
+<urn:run14:063> a sa2a:SemanticEvidenceCourt ; sa2a:dimension "vectorDigest" ; sa2a:observedState "sha256-333" ; sa2a:expectedDecision "ADMIT" ; sa2a:authority "NONE" ; sa2a:consequence "EVIDENCE_ONLY" .

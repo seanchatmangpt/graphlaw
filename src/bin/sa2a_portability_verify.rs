@@ -1,11 +1,7 @@
 //! Verify the SA2A run12 portable evidence corpus through GraphLaw's real JSON ABI.
 //! This is evidence verification only: it never grants authority or performs DO.
 use serde_json::{Value, json};
-use std::{
-    fs,
-    path::{Path, PathBuf},
-    process::ExitCode,
-};
+use std::{fs, path::PathBuf, process::ExitCode};
 
 fn corpus_dir() -> PathBuf {
     std::env::args()
