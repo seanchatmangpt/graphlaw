@@ -1,0 +1,1 @@
+{"profile":"fibo.high_value_finance.v1","inherits":["chicago.universal.v1"],"courts":["transaction_identity","amount_currency_integrity","counterparty_identity","authorization_ceiling","settlement_reconciliation"],"standing_ceiling":"QUALIFIED"}
