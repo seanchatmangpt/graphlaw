@@ -102,3 +102,8 @@ opt-level = 3
 opt-level = 3
 [profile.dev.package.wasmi_wasi]
 opt-level = 3
+
+[[bin]]
+name = "sa2a-portability-verify"
+path = "src/bin/sa2a_portability_verify.rs"
+required-features = ["abi"]
