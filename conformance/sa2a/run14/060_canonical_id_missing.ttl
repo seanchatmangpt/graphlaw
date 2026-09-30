@@ -1,2 +1,7 @@
 @prefix sa2a: <https://chatmangpt.com/sa2a#> .
-<urn:run14:060> a sa2a:SemanticEvidenceCourt ; sa2a:dimension "canonicalId" ; sa2a:observedState "MISSING" ; sa2a:expectedDecision "REFUSE" ; sa2a:authority "NONE" ; sa2a:consequence "EVIDENCE_ONLY" .
+<urn:run14:060> a sa2a:SemanticEvidenceCourt ;
+ sa2a:exactSubject "seanchatmangpt/graphlaw@3983c64db205931d27f87bbd144e1b5d8c5a3402" ;
+ sa2a:dimension "canonicalId" ; sa2a:observedState "MISSING" ; sa2a:expectedDecision "REFUSE" ;
+ sa2a:authority "NONE" ; sa2a:consequence "EVIDENCE_ONLY" ; sa2a:canonicalization "RDFC-1.0" ;
+ sa2a:falsifier "admit iff exact-subject evidence satisfies this dimension without granting authority or DO" ;
+ sa2a:replayKey "run14:060:canonical_id_missing" .

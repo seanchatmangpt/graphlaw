@@ -94,14 +94,19 @@ debug = "line-tables-only"
 # is ~50x slower and makes the suite take minutes.
 [profile.dev.package.wasmi]
 opt-level = 3
+overflow-checks = false
 [profile.dev.package.wasmi_core]
 opt-level = 3
+overflow-checks = false
 [profile.dev.package.wasmi_ir]
 opt-level = 3
+overflow-checks = false
 [profile.dev.package.wasmi_collections]
 opt-level = 3
+overflow-checks = false
 [profile.dev.package.wasmi_wasi]
 opt-level = 3
+overflow-checks = false
 
 [[bin]]
 name = "sa2a-portability-verify"
