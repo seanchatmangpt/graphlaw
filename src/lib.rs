@@ -50,6 +50,8 @@ pub mod hooks;
 pub mod law;
 pub mod plan;
 pub mod policy;
+#[cfg(feature = "abi")]
+pub mod qualification;
 pub mod receipt;
 pub mod receipt_store;
 #[cfg(feature = "pack-tools")]

@@ -1,0 +1,10 @@
+{
+  "law": "observer_independence",
+  "dimension": "observer_independent",
+  "relation": "eq_true",
+  "falsifier": {
+    "mutation": "couple_observer_to_actuator",
+    "expect": "UNKNOWN"
+  },
+  "permanent_negative_knowledge": true
+}

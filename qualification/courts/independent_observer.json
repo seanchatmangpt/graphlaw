@@ -1,0 +1,7 @@
+{
+  "court": "independent_observer",
+  "attack_required": true,
+  "law": "observer_independence",
+  "pass_requires": ["attempt_observed", "observer_independent", "postconditions_satisfied"],
+  "coupled_observer": "UNKNOWN"
+}
