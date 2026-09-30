@@ -1,8 +1,8 @@
 {
   "qme_profile": "QME-1/EcosystemReference",
   "version": "26.9.29",
-  "canonical_spec_subject": "seanchatmangpt/chatman-ecosystem@32c47032a9cefd0ab4f0980efc32fa84505031b2",
-  "local_subject": "seanchatmangpt/graphlaw@6c90441b1a0963a2ceef0a5c4dfa545cedcd9595",
+  "canonical_spec_subject": "seanchatmangpt/chatman-ecosystem@88b276f71e2c8e606553942cb721bceb6836a87e",
+  "local_subject": "seanchatmangpt/graphlaw@48a7bbd801b8df1d7ffab879b10d58d7f14ef7bc",
   "role": "semantic law-state and reasoning",
   "normative": false,
   "weakens_core": false,
