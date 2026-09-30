@@ -1,0 +1,7 @@
+{
+  "court": "exact_subject",
+  "attack_required": true,
+  "law": "exact_subject",
+  "mutation": "subject_digest",
+  "expected_on_mutation": "REFUSED"
+}
