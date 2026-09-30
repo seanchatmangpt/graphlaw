@@ -1,3 +1,11 @@
+# Cap build parallelism. Every integration-test and bin target statically links
+# the full purrdf stack (~1.3 GB per linker, ~2 GB for the wasm LTO rustc), and
+# cargo defaults to one job per core, so on many-core machines dozens of links
+# ran at once and pushed memory past 15 GB. tests/wasm_abi.rs also spawns a
+# nested `cargo build` that inherits this cap.
+[build]
+jobs = 4
+
 [target.wasm32-unknown-unknown]
 # Eyeron and SPARQL evaluation recurse; the 1 MiB default stack is too small.
 rustflags = ["-C", "link-arg=-zstack-size=16777216"]
