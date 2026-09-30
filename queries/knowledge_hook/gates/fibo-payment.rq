@@ -1,0 +1,11 @@
+PREFIX sa2a: <https://graphlaw.dev/sa2a#>
+PREFIX kh: <https://graphlaw.dev/knowledge-hook#>
+ASK WHERE {
+  kh:FiboPaymentExecution a sa2a:CapabilityEvidence ;
+    sa2a:authority "NONE" ;
+    sa2a:consequence "EVIDENCE_ONLY" ;
+    kh:projectsThrough kh:HookCandidate ;
+    sa2a:requiresExactSubject true ;
+    sa2a:requiresSourceDigest true ;
+    sa2a:requiresReplayIdentity true .
+}
