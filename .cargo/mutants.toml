@@ -27,7 +27,7 @@ additional_cargo_test_args = [
 # Rebuilding purrdf/eyeron after each mutation is slow: scale the baseline
 # test time generously and never go below a floor that covers a cold relink.
 timeout_multiplier = 6.0
-minimum_test_timeout = 300.0
+minimum_test_timeout = 60.0
 
 # Non-semantic mutants: formatting/diagnostic surface carries no behavior that a
 # court can observe, so mutating it only produces unkillable noise.

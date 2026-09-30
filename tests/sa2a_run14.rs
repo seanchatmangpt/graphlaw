@@ -85,13 +85,13 @@ fn codes(v: &Value) -> Vec<String> {
 }
 
 #[test]
-fn published_corpus_has_exactly_54_fixtures_with_expected_split() {
+fn published_corpus_has_exactly_65_fixtures_with_expected_split() {
     let d = derive();
-    assert_eq!(d.len(), 54);
-    assert_eq!(d.iter().filter(|x| x.2 == "ADMIT").count(), 25);
-    assert_eq!(d.iter().filter(|x| x.2 == "REFUSE").count(), 29);
+    assert_eq!(d.len(), 65);
+    assert_eq!(d.iter().filter(|x| x.2 == "ADMIT").count(), 31);
+    assert_eq!(d.iter().filter(|x| x.2 == "REFUSE").count(), 34);
     assert_eq!(d.iter().filter(|x| x.1 == "v1").count(), 14);
-    assert_eq!(d.iter().filter(|x| x.1 == "v2").count(), 40);
+    assert_eq!(d.iter().filter(|x| x.1 == "v2").count(), 51);
 }
 
 #[test]
@@ -99,11 +99,11 @@ fn runner_matches_every_fixture_verdict() {
     let (code, v) = run(&corpus());
     assert_eq!(code, 0, "runner failed: {v}");
     assert_eq!(v["ok"], true);
-    assert_eq!(v["vectors"], 54);
-    assert_eq!(v["admit"], 25);
-    assert_eq!(v["refuse"], 29);
+    assert_eq!(v["vectors"], 65);
+    assert_eq!(v["admit"], 31);
+    assert_eq!(v["refuse"], 34);
     assert_eq!(v["v1"], 14);
-    assert_eq!(v["v2"], 40);
+    assert_eq!(v["v2"], 51);
     assert_eq!(v["authority"], "NONE");
     let got: Vec<(String, String, String)> = v["fixtures"]
         .as_array()
@@ -171,7 +171,7 @@ fn unknown_namespace_and_unparsable_fixture_are_typed_failures() {
     let mut c = codes(&v);
     c.sort();
     assert_eq!(c, ["PARSE_REFUSED", "UNKNOWN_NAMESPACE"]);
-    assert_eq!(v["vectors"], 54);
+    assert_eq!(v["vectors"], 65);
     let _ = fs::remove_dir_all(dir);
 }
 
@@ -181,8 +181,8 @@ fn removed_fixture_changes_count_and_missing_dir_exits_2() {
     fs::remove_file(dir.join("060_manufacture_authoritative.ttl")).unwrap();
     let (code, v) = run(&dir);
     assert_eq!(code, 0);
-    assert_eq!(v["vectors"], 53);
-    assert_ne!(v["vectors"], 54);
+    assert_eq!(v["vectors"], 64);
+    assert_ne!(v["vectors"], 65);
     let _ = fs::remove_dir_all(dir);
     let (code, v) = run(Path::new("/nonexistent/run14"));
     assert_eq!(code, 2);

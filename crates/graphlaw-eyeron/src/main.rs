@@ -7,7 +7,7 @@ use eyeron::{
     fuse_report, is_rdf_message_log, parse_n3, parse_n3_with_source, parse_rdf12,
     parse_rdf_message_log, RdfFormat,
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::env;
 use std::fs;
 use std::io::{self, BufRead, BufReader, Read, Write};
@@ -15,6 +15,64 @@ use std::path::Path;
 use ureq::ResponseExt;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Upper bound on any single input source (file, stdin, HTTP body). Exceeding
+/// it is an error, not a silent truncation.
+const MAX_INPUT_BYTES: u64 = 256 * 1024 * 1024;
+/// Upper bound on one line of an RDF Message Log; a log without newlines would
+/// otherwise buffer the whole stream as a single line.
+const MAX_LINE_BYTES: u64 = 16 * 1024 * 1024;
+
+/// Reader that fails with `InvalidData` once more than `limit` bytes are
+/// available, where `Read::take` would end the stream quietly.
+struct CappedReader<R> {
+    inner: R,
+    remaining: u64,
+    limit: u64,
+}
+
+impl<R: Read> CappedReader<R> {
+    fn new(inner: R) -> Self {
+        Self {
+            inner,
+            remaining: MAX_INPUT_BYTES,
+            limit: MAX_INPUT_BYTES,
+        }
+    }
+}
+
+impl<R: Read> Read for CappedReader<R> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if self.remaining == 0 {
+            let mut probe = [0u8; 1];
+            return match self.inner.read(&mut probe)? {
+                0 => Ok(0),
+                _ => Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    format!("input exceeds the {} byte limit", self.limit),
+                )),
+            };
+        }
+        let max = (buf.len() as u64).min(self.remaining) as usize;
+        let n = self.inner.read(&mut buf[..max])?;
+        self.remaining -= n as u64;
+        Ok(n)
+    }
+}
+
+fn read_capped_string<R: Read>(reader: R) -> io::Result<String> {
+    let mut text = String::new();
+    CappedReader::new(reader).read_to_string(&mut text)?;
+    Ok(text)
+}
+
+fn read_stdin_capped() -> io::Result<String> {
+    read_capped_string(io::stdin())
+}
+
+fn read_file_capped(path: &str) -> io::Result<String> {
+    read_capped_string(fs::File::open(path)?)
+}
 
 #[derive(Debug, Default)]
 struct CliOptions {
@@ -137,11 +195,9 @@ fn run_stream_messages(opt: &CliOptions) -> Result<()> {
             continue;
         }
         let text = if source == "-" {
-            let mut text = String::new();
-            io::stdin().read_to_string(&mut text)?;
-            text
+            read_stdin_capped()?
         } else {
-            fs::read_to_string(source)?
+            read_file_capped(source)?
         };
         if is_rdf_message_log(&text) {
             message_sources.push(source.clone());
@@ -194,7 +250,7 @@ fn run_stream_messages(opt: &CliOptions) -> Result<()> {
                 .map_err(|err| EyeronError::new(format!("failed to fetch {source}: {err}")))?;
             let final_url = response.get_uri().to_string();
             stream_message_reader(
-                BufReader::new(response.into_body().into_reader()),
+                BufReader::new(CappedReader::new(response.into_body().into_reader())),
                 &final_url,
                 base.as_deref(),
                 &prepared,
@@ -207,7 +263,7 @@ fn run_stream_messages(opt: &CliOptions) -> Result<()> {
         } else {
             let file = fs::File::open(&source)?;
             stream_message_reader(
-                BufReader::new(file),
+                BufReader::new(CappedReader::new(file)),
                 &source,
                 base.as_deref(),
                 &prepared,
@@ -226,6 +282,7 @@ fn stream_message_reader<R: BufRead>(
     reasoner_options: &ReasonerOptions,
 ) -> Result<()> {
     let mut directives = String::new();
+    let mut seen_directives: HashSet<String> = HashSet::new();
     let mut message = String::new();
     let mut line = String::new();
     let mut saw_version = false;
@@ -234,11 +291,21 @@ fn stream_message_reader<R: BufRead>(
 
     loop {
         line.clear();
-        let bytes = reader.read_line(&mut line).map_err(|err| {
-            EyeronError::new(format!("failed to read response from {label}: {err}"))
-        })?;
+        let bytes = reader
+            .by_ref()
+            .take(MAX_LINE_BYTES + 1)
+            .read_line(&mut line)
+            .map_err(|err| {
+                EyeronError::new(format!("failed to read response from {label}: {err}"))
+            })?;
         if bytes == 0 {
             break;
+        }
+        if bytes as u64 > MAX_LINE_BYTES {
+            return Err(EyeronError::new(format!(
+                "a line in message {} of {label} exceeds the {MAX_LINE_BYTES} byte line limit",
+                message_index
+            )));
         }
         let trimmed = line.trim();
         let lower = trimmed.to_ascii_lowercase();
@@ -266,7 +333,7 @@ fn stream_message_reader<R: BufRead>(
             || trimmed.starts_with("BASE ")
             || trimmed.starts_with("base ")
         {
-            if !directives.contains(&line) {
+            if seen_directives.insert(line.clone()) {
                 directives.push_str(&line);
             }
         } else {
@@ -319,9 +386,7 @@ fn run_one_message(
 
 fn read_text_source(source: &str) -> Result<String> {
     if source == "-" {
-        let mut s = String::new();
-        io::stdin().read_to_string(&mut s)?;
-        Ok(s)
+        Ok(read_stdin_capped()?)
     } else if is_http_url(source) {
         let response = ureq::get(source)
             .call()
@@ -330,7 +395,7 @@ fn read_text_source(source: &str) -> Result<String> {
             EyeronError::new(format!("failed to read response from {source}: {err}"))
         })
     } else {
-        Ok(fs::read_to_string(source)?)
+        Ok(read_file_capped(source)?)
     }
 }
 
@@ -378,7 +443,8 @@ fn cli_reasoner_options(opt: &CliOptions, proof: bool) -> ReasonerOptions {
         ..ReasonerOptions::default()
     };
     if let Some(max_backward_depth) = opt.max_backward_depth {
-        options.max_backward_depth = max_backward_depth;
+        // Backward chaining recurses on the native stack: an absurd depth is a stack overflow.
+        options.max_backward_depth = max_backward_depth.min(256);
     }
     options
 }
@@ -488,17 +554,13 @@ fn rdf_format_for_source(label: &str, rdf_mode: bool) -> Result<Option<RdfFormat
 
 fn read_sources(files: &[String]) -> Result<Vec<(String, String)>> {
     if files.is_empty() {
-        let mut s = String::new();
-        io::stdin().read_to_string(&mut s)?;
-        return Ok(vec![("<stdin>".to_string(), s)]);
+        return Ok(vec![("<stdin>".to_string(), read_stdin_capped()?)]);
     }
 
     let mut out = Vec::new();
     for f in files {
         if f == "-" {
-            let mut s = String::new();
-            io::stdin().read_to_string(&mut s)?;
-            out.push(("<stdin>".to_string(), s));
+            out.push(("<stdin>".to_string(), read_stdin_capped()?));
         } else if is_http_url(f) {
             let response = ureq::get(f)
                 .call()
@@ -509,7 +571,7 @@ fn read_sources(files: &[String]) -> Result<Vec<(String, String)>> {
             })?;
             out.push((final_url, text));
         } else {
-            out.push((f.clone(), fs::read_to_string(f)?));
+            out.push((f.clone(), read_file_capped(f)?));
         }
     }
     Ok(out)

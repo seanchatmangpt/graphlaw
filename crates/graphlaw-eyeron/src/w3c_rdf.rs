@@ -242,7 +242,7 @@ impl Runner {
         let start = Instant::now();
         let mut seen = BTreeSet::new();
         let mut infos = Vec::new();
-        let cases = self.load_manifest_recursive(resource, &mut seen, &mut infos)?;
+        let cases = self.load_manifest_recursive(resource, &mut seen, &mut infos, 0)?;
         let mut results = Vec::new();
         for (idx, case) in cases.into_iter().enumerate() {
             if let Some(filter) = &opt.filter {
@@ -256,8 +256,9 @@ impl Runner {
         Ok(ManifestRun { source: resource.to_string(), manifests_loaded: infos, results, duration_ms: start.elapsed().as_millis() })
     }
 
-    fn load_manifest_recursive(&mut self, resource: &str, seen: &mut BTreeSet<String>, infos: &mut Vec<ManifestLoadInfo>) -> Result<Vec<ManifestCase>, String> {
+    fn load_manifest_recursive(&mut self, resource: &str, seen: &mut BTreeSet<String>, infos: &mut Vec<ManifestLoadInfo>, depth: usize) -> Result<Vec<ManifestCase>, String> {
         let resource = normalize_resource(resource);
+        if depth > MAX_MANIFEST_INCLUDE_DEPTH { return Err(format!("manifest include chain deeper than {MAX_MANIFEST_INCLUDE_DEPTH} at {resource}")); }
         if !seen.insert(resource.clone()) { return Ok(Vec::new()); }
         let text = self.read_resource(&resource)?;
         let doc = parse_rdf12(&text, Some(&resource), RdfFormat::Turtle)
@@ -266,7 +267,7 @@ impl Runner {
         let mut cases = manifest_cases(&doc, &resource);
         infos.push(ManifestLoadInfo { resource: resource.clone(), include_count: includes.len(), test_count: cases.len() });
         for include in includes {
-            cases.extend(self.load_manifest_recursive(&include, seen, infos)?);
+            cases.extend(self.load_manifest_recursive(&include, seen, infos, depth + 1)?);
         }
         Ok(cases)
     }
@@ -590,6 +591,12 @@ fn canonical_literal(lit: &Literal) -> CTerm {
     CTerm::Literal { value: lit.value.clone().to_string(), datatype, language }
 }
 
+/// Work budget for the backtracking comparisons below; an exhausted budget
+/// reports no match rather than running unboundedly on adversarial graphs.
+const MAX_SEARCH_STEPS: usize = 5_000_000;
+/// Deepest chain of manifest `mf:include`s followed.
+const MAX_MANIFEST_INCLUDE_DEPTH: usize = 64;
+
 fn graphs_isomorphic(actual: &[CQuad], expected: &[CQuad]) -> bool {
     let actual = unique_quads(actual);
     let expected = unique_quads(expected);
@@ -601,7 +608,8 @@ fn graphs_isomorphic(actual: &[CQuad], expected: &[CQuad]) -> bool {
     if actual_blanks.is_empty() { return actual.iter().all(|q| expected_set.contains(&render_quad(q, &BTreeMap::new(), false))); }
     let mut order = actual_blanks.iter().cloned().collect::<Vec<_>>();
     order.sort_by_key(|id| std::cmp::Reverse(count_blank_uses(id, &actual)));
-    search_blank_mapping(0, &order, &expected_blanks.iter().cloned().collect::<Vec<_>>(), &mut BTreeMap::new(), &mut BTreeSet::new(), &actual, &expected_set)
+    let mut budget = MAX_SEARCH_STEPS;
+    search_blank_mapping(0, &order, &expected_blanks.iter().cloned().collect::<Vec<_>>(), &mut BTreeMap::new(), &mut BTreeSet::new(), &actual, &expected_set, &mut budget)
 }
 
 fn unique_quads(quads: &[CQuad]) -> Vec<CQuad> {
@@ -614,7 +622,9 @@ fn unique_quads(quads: &[CQuad]) -> Vec<CQuad> {
     out
 }
 
-fn search_blank_mapping(index: usize, order: &[String], candidates: &[String], mapping: &mut BTreeMap<String, String>, used: &mut BTreeSet<String>, actual: &[CQuad], expected_set: &BTreeSet<String>) -> bool {
+fn search_blank_mapping(index: usize, order: &[String], candidates: &[String], mapping: &mut BTreeMap<String, String>, used: &mut BTreeSet<String>, actual: &[CQuad], expected_set: &BTreeSet<String>, budget: &mut usize) -> bool {
+    if *budget == 0 { return false; }
+    *budget -= 1;
     if index >= order.len() {
         return actual.iter().all(|q| expected_set.contains(&render_quad(q, mapping, true)));
     }
@@ -623,7 +633,7 @@ fn search_blank_mapping(index: usize, order: &[String], candidates: &[String], m
         if used.contains(b) { continue; }
         mapping.insert(a.clone(), b.clone());
         used.insert(b.clone());
-        if partial_mapping_consistent(mapping, actual, expected_set) && search_blank_mapping(index + 1, order, candidates, mapping, used, actual, expected_set) { return true; }
+        if partial_mapping_consistent(mapping, actual, expected_set) && search_blank_mapping(index + 1, order, candidates, mapping, used, actual, expected_set, budget) { return true; }
         used.remove(b);
         mapping.remove(a);
     }
@@ -979,15 +989,18 @@ fn entails(closure: &[CQuad], expected: &[CQuad], recognized: &[String]) -> bool
     let expected = unique_quads(expected);
     let mut order = expected;
     order.sort_by_key(|p| candidate_count(p, closure, recognized));
-    entails_search(0, &order, closure, &mut BTreeMap::new(), recognized)
+    let mut budget = MAX_SEARCH_STEPS;
+    entails_search(0, &order, closure, &mut BTreeMap::new(), recognized, &mut budget)
 }
 
-fn entails_search(index: usize, expected: &[CQuad], closure: &[CQuad], binding: &mut BTreeMap<String, CTerm>, recognized: &[String]) -> bool {
+fn entails_search(index: usize, expected: &[CQuad], closure: &[CQuad], binding: &mut BTreeMap<String, CTerm>, recognized: &[String], budget: &mut usize) -> bool {
     if index >= expected.len() { return true; }
     let pat = &expected[index];
     for cand in closure {
+        if *budget == 0 { return false; }
+        *budget -= 1;
         let saved = binding.clone();
-        if match_expected_quad(pat, cand, binding, recognized) && entails_search(index + 1, expected, closure, binding, recognized) { return true; }
+        if match_expected_quad(pat, cand, binding, recognized) && entails_search(index + 1, expected, closure, binding, recognized, budget) { return true; }
         *binding = saved;
     }
     false

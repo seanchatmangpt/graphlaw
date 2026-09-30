@@ -62,8 +62,8 @@ Also part of the wave:
     cargo test --all-features --test chicago_cross_authority
     cargo test --all-features --test sa2a_run14
 
-The run14 runner (`sa2a-run14-verify`, feature `abi`) checks 54 files in
-`conformance/sa2a/run14/` (25 ADMIT, 29 REFUSE; 14 under `https://sa2a.dev/ontology#`, 40 under
+The run14 runner (`sa2a-run14-verify`, feature `abi`) checks 65 files in
+`conformance/sa2a/run14/` (31 ADMIT, 34 REFUSE; 14 under `https://sa2a.dev/ontology#`, 51 under
 `https://chatmangpt.com/sa2a#`). Disposition is declared and cross-checked against filename and
 courtId, not computed from payload. Fixtures 001 and 002 are payload-identical. All carry
 authority NONE and EVIDENCE_ONLY. The corpus is read-only; failure cases run on a temp copy.

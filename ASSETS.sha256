@@ -460,6 +460,8 @@ e79633b8d0564816cee8a99f5c9acf9a0e6fc7257c7209acd684ecad53a89dd6  28966  RdfXml 
 738613a5ae48fafba7ee2dd5d4ef288d81512e68bb9abec2d483d3b5227fda0e  937978  Turtle  packs/self-monitoring-pack/fixtures/session-real.ttl
 3cb6df4852fbbb3ecf04b61de021fd6597718d6617e3a940f0f7bec75db612bf  10477  Turtle  packs/self-monitoring-pack/hook.ttl
 1c1abcf3c67f47f4d07e3dbbeb46906821e136fd7d155cbf6fbce2c30fc80e45  17477  Turtle  packs/self-monitoring-pack/ontology.ttl
+9a9f66170c21db3778bcfc7db3aa8f6cbe64b471b29de671c08cfa6fa097bcc7  382  Sparql  queries/knowledge_hook/gates/fibo-payment.rq
+97c669b98f727ad66c8ef96e1965b17f36472168fc2895cefdc206539a729539  522  Sparql  queries/knowledge_hook/gates/hook-candidate.rq
 42421f4d400b0b88bb39beddef9f4eb9dce55a3fbe655ecd1ba0e9a6b785c498  5124  Sparql  queries/render_model_projection.rq
 c06446cc8cd3c68ece8f29d7ed4de2c16c004bd94b3af6a178412a5f756a08d7  763  Sparql  queries/sa2a/gates/admission-authority-none.rq
 4c9c6801d4f5794ad89675245adf0be6b4f32b90b2eb51059a6ac4561402c930  761  Sparql  queries/sa2a/gates/admission-exact-subject.rq

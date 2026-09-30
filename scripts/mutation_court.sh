@@ -43,9 +43,15 @@ for f in "${GUARDED[@]}"; do
   if [ -f "$f" ]; then mkdir -p "$SNAP/src"; cp -p "$f" "$SNAP/$f"; fi
 done
 
+MPID=
+WPID=
 restore() {
   local rc=$?
   trap - EXIT INT TERM
+  # Stop cargo-mutants and the watchdog first: an in-place run that outlives this trap
+  # would keep mutating the tree after the sources were restored.
+  kill -TERM ${MPID:+"$MPID"} ${WPID:+"$WPID"} 2>/dev/null || true
+  [ -n "$MPID" ] && wait "$MPID" 2>/dev/null || true
   local restored=0
   for f in "${GUARDED[@]}"; do
     if [ -f "$SNAP/$f" ] && ! cmp -s "$SNAP/$f" "$f"; then
@@ -71,13 +77,42 @@ trap restore EXIT INT TERM
 EXTRA=(${MUTANTS_EXTRA:-})
 
 if [ "$MODE" = list ]; then
-  "$MUTANTS_BIN" mutants --list --no-shuffle "${EXTRA[@]}"
+  "$MUTANTS_BIN" mutants --list --no-shuffle ${EXTRA[@]+"${EXTRA[@]}"}
   exit $?
 fi
 
+# A previous run killed mid-mutant (OOM/SIGKILL skips the trap) leaves edits behind.
+MARK="changed by ""cargo-mutants"
+if grep -rn --include='*.rs' "$MARK" src >&2; then
+  echo "mutation_court: leaked mutant edits in src/ (above); fix them before running" >&2
+  exit 5
+fi
+
+# A mutant can loop while allocating; nothing else bounds memory (macOS ignores
+# ulimit -v). Watchdog: when any test process from this target
+# dir exceeds MUTANTS_MAX_RSS_MB and KILL it: cargo-mutants records the mutant as failed
+# and continues, and the EXIT trap above still restores the sources.
+MAX_RSS_KB=$(( ${MUTANTS_MAX_RSS_MB:-4096} * 1024 ))
 set +e
-"$MUTANTS_BIN" mutants --in-place --no-shuffle --output "$OUTPUT_DIR" "${EXTRA[@]}"
+"$MUTANTS_BIN" mutants --in-place --no-shuffle --output "$OUTPUT_DIR" ${EXTRA[@]+"${EXTRA[@]}"} &
+MPID=$!
+(
+  while kill -0 "$MPID" 2>/dev/null; do
+    # argv0 of a test binary from this target dir only (not rustc/ld lines that merely mention it)
+    OFFENDER=$(ps -axo pid=,rss=,command= | awk -v max="$MAX_RSS_KB" -v dir="$CARGO_TARGET_DIR/debug/deps/" \
+      'index($3, dir) && $2 > max { print $1; exit }')
+    if [ -n "$OFFENDER" ]; then
+      echo "mutation_court: RSS cap exceeded by pid $OFFENDER; killing it" >&2
+      kill -KILL "$OFFENDER" 2>/dev/null
+      sleep 5
+    fi
+    sleep 2
+  done
+) &
+WPID=$!
+wait "$MPID"
 RC=$?
+kill "$WPID" 2>/dev/null
 set -e
 
 OUT="$OUTPUT_DIR/mutants.out"

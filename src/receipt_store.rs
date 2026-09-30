@@ -202,7 +202,16 @@ impl Cur<'_> {
         self.eat("\"")?;
         let mut out = String::new();
         loop {
-            let rest = std::str::from_utf8(&self.b[self.i..]).ok()?;
+            // One scalar is at most 4 bytes: validate that window, not the whole
+            // remainder (which made each string O(n^2) in the input length).
+            let window = &self.b[self.i..self.b.len().min(self.i + 4)];
+            let rest = match std::str::from_utf8(window) {
+                Ok(s) => s,
+                Err(e) if e.valid_up_to() > 0 => {
+                    std::str::from_utf8(&window[..e.valid_up_to()]).ok()?
+                }
+                Err(_) => return None,
+            };
             let c = rest.chars().next()?;
             self.i += c.len_utf8();
             match c {
@@ -464,13 +473,16 @@ fn chain(rs: Vec<Receipt>) -> Result<Vec<Receipt>, StoreError> {
         return Err(broken("no unique root receipt"));
     };
     let mut order = vec![*root];
+    let mut visited = vec![false; rs.len()];
+    visited[*root] = true;
     while let Some(next) = by_parent
         .get(rs[*order.last().expect("non-empty")].child.as_str())
         .map(|v| v[0])
     {
-        if order.contains(&next) {
+        if visited[next] {
             return Err(broken("cycle"));
         }
+        visited[next] = true;
         order.push(next);
     }
     if order.len() != rs.len() {

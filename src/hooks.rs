@@ -47,6 +47,9 @@ pub const HANDLER_SPARQL_CONSTRUCT: &str =
 pub const MAX_ROUNDS: usize = 64;
 /// Hard ceiling on total hook firings.
 pub const MAX_FIRINGS: usize = 10_000;
+/// Largest dataset, in quads, a pack may grow the state to. `MAX_FIRINGS` bounds
+/// how often hooks fire, not how much each CONSTRUCT adds.
+pub const MAX_STATE_QUADS: usize = 1_000_000;
 
 /// One `kh:Hook` with its resolved action.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -308,6 +311,15 @@ impl HookPack {
                         .freeze()
                         .map_err(|e| Refusal::engine(Dialect::NQuads, e))?;
                     let next = LawState::from_dataset(merged)?;
+                    if next.quad_count() > MAX_STATE_QUADS {
+                        return Err(refuse(
+                            RefusalKind::ResourceLimit,
+                            format!(
+                                "resource limit `state_quads` exceeded: {} > {MAX_STATE_QUADS}",
+                                next.quad_count()
+                            ),
+                        ));
+                    }
                     firings.push(Firing {
                         hook: hook.iri.clone(),
                         round,
