@@ -1,0 +1,24 @@
+# SYNTHETIC financial subject. Chicago-court SHACL shapes over FIBO-IRI instance data.
+# Standing: finite published corpus passes on exact subject; authority NONE; synthetic subject;
+# no general financial safety claim.
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> .
+@prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> .
+@prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> .
+@prefix fin: <https://chicago.graphlaw.dev/fin#> .
+
+fin:MarketTransactionShape a sh:NodeShape ;
+    sh:targetClass tx:MarketTransaction ;
+    sh:property [ sh:path fin:principal ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path ctr:hasCounterparty ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path tx:consideration ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path tx:paymentTerms ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path fin:settlement ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+# One currency, one decimal, one integer-micros amount per MonetaryAmount.
+fin:MonetaryAmountShape a sh:NodeShape ;
+    sh:targetClass cur:MonetaryAmount ;
+    sh:property [ sh:path cur:hasCurrency ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
+    sh:property [ sh:path cur:hasAmount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:decimal ] ;
+    sh:property [ sh:path fin:amountMicros ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ] .

@@ -107,3 +107,8 @@ opt-level = 3
 name = "sa2a-portability-verify"
 path = "src/bin/sa2a_portability_verify.rs"
 required-features = ["abi"]
+
+[[bin]]
+name = "sa2a-run14-verify"
+path = "src/bin/sa2a_run14_verify.rs"
+required-features = ["abi"]

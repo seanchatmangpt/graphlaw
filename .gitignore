@@ -5,3 +5,8 @@ target/
 mutants.out*/
 target-lane*/
 target-mutants/
+
+# generated/runtime state (signing keys, receipt logs)
+.ggen/
+.ggen-v2/
+.clap-noun-verb/
