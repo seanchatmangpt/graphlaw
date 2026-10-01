@@ -39,8 +39,7 @@ fn substitute(v: &Value, prev: Option<&Value>) -> Value {
             if let Some(path) = s.strip_prefix("$FILE:") {
                 let full = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(path);
                 return Value::String(
-                    std::fs::read_to_string(&full)
-                        .unwrap_or_else(|e| panic!("$FILE {path}: {e}")),
+                    std::fs::read_to_string(&full).unwrap_or_else(|e| panic!("$FILE {path}: {e}")),
                 );
             }
             v.clone()
@@ -98,9 +97,16 @@ fn assert_expect(resp: &Value, expect: &str, label: &str) {
                 Some(Value::Object(m)) => m.len(),
                 other => panic!("{label}: {ptr} len on {other:?}; response {resp}"),
             };
-            assert_eq!(Some(len as u64), want.as_u64(), "{label}: {ptr} len; response {resp}");
+            assert_eq!(
+                Some(len as u64),
+                want.as_u64(),
+                "{label}: {ptr} len; response {resp}"
+            );
         } else if a.get("absent") == Some(&Value::Bool(true)) {
-            assert!(got.is_none(), "{label}: {ptr} should be absent; response {resp}");
+            assert!(
+                got.is_none(),
+                "{label}: {ptr} should be absent; response {resp}"
+            );
         } else {
             panic!("{label}: unknown assertion form {a}");
         }
@@ -112,8 +118,12 @@ fn assert_compare(a: &Value, b: &Value, compare: &str) {
     for c in list.as_array().expect("compare is a JSON array") {
         let pa = c["a"].as_str().expect("compare.a");
         let pb = c["b"].as_str().expect("compare.b");
-        let va = a.pointer(pa).unwrap_or_else(|| panic!("compare: {pa} absent in {a}"));
-        let vb = b.pointer(pb).unwrap_or_else(|| panic!("compare: {pb} absent in {b}"));
+        let va = a
+            .pointer(pa)
+            .unwrap_or_else(|| panic!("compare: {pa} absent in {a}"));
+        let vb = b
+            .pointer(pb)
+            .unwrap_or_else(|| panic!("compare: {pb} absent in {b}"));
         match c["rel"].as_str().expect("compare.rel") {
             "eq" => assert_eq!(va, vb, "compare {pa} eq {pb}"),
             "neq" => assert_ne!(va, vb, "compare {pa} neq {pb}"),
@@ -164,8 +174,12 @@ fn xa_reach_n3_vs_owlrl_rdfc() {
         "xa_reach_n3_vs_owlrl_rdfc",
         r####"[{"op":"n3","text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n{ ?x :edge ?y } => { ?x :reachable ?y } .\n{ ?x :reachable ?y . ?y :edge ?z } => { ?x :reachable ?z } .\n"},{"op":"sparql","data":{"text":"$PREV:/derived","dialect":"turtle"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
         r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
-        Some(r####"[{"op":"entail","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n:edge rdfs:subPropertyOf :reachable .\n:reachable a owl:TransitiveProperty .\n","dialect":"turtle"},"regime":"owl-rl"},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####),
-        Some(r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####),
+        Some(
+            r####"[{"op":"entail","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n:edge rdfs:subPropertyOf :reachable .\n:reachable a owl:TransitiveProperty .\n","dialect":"turtle"},"regime":"owl-rl"},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
+        ),
+        Some(
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
+        ),
         Some(r####"[{"a":"/id","rel":"eq","b":"/id"}]"####),
         false,
     );
@@ -180,8 +194,12 @@ fn xa_reach_n3_vs_sparql_path_rdfc() {
         "xa_reach_n3_vs_sparql_path_rdfc",
         r####"[{"op":"n3","text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n{ ?x :edge ?y } => { ?x :reachable ?y } .\n{ ?x :reachable ?y . ?y :edge ?z } => { ?x :reachable ?z } .\n"},{"op":"sparql","data":{"text":"$PREV:/derived","dialect":"turtle"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
         r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
-        Some(r####"[{"op":"sparql","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n","dialect":"turtle"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/edge>+ ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####),
-        Some(r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####),
+        Some(
+            r####"[{"op":"sparql","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n","dialect":"turtle"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/edge>+ ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
+        ),
+        Some(
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
+        ),
         Some(r####"[{"a":"/id","rel":"eq","b":"/id"}]"####),
         false,
     );
@@ -196,8 +214,12 @@ fn xa_reach_n3_vs_law_n3_rdfc() {
         "xa_reach_n3_vs_law_n3_rdfc",
         r####"[{"op":"n3","text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n{ ?x :edge ?y } => { ?x :reachable ?y } .\n{ ?x :reachable ?y . ?y :edge ?z } => { ?x :reachable ?z } .\n"},{"op":"sparql","data":{"text":"$PREV:/derived","dialect":"turtle"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
         r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
-        Some(r####"[{"op":"law","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n","dialect":"turtle"},"steps":[{"step":"n3","rules":"@prefix : <https://chicago.graphlaw.dev/> .\n{ ?x :edge ?y } => { ?x :reachable ?y } .\n{ ?x :reachable ?y . ?y :edge ?z } => { ?x :reachable ?z } .\n"}]},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####),
-        Some(r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####),
+        Some(
+            r####"[{"op":"law","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n","dialect":"turtle"},"steps":[{"step":"n3","rules":"@prefix : <https://chicago.graphlaw.dev/> .\n{ ?x :edge ?y } => { ?x :reachable ?y } .\n{ ?x :reachable ?y . ?y :edge ?z } => { ?x :reachable ?z } .\n"}]},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
+        ),
+        Some(
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
+        ),
         Some(r####"[{"a":"/id","rel":"eq","b":"/id"}]"####),
         false,
     );
@@ -212,8 +234,12 @@ fn xa_reach_owlrl_vs_law_owlrl_rdfc() {
         "xa_reach_owlrl_vs_law_owlrl_rdfc",
         r####"[{"op":"entail","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n:edge rdfs:subPropertyOf :reachable .\n:reachable a owl:TransitiveProperty .\n","dialect":"turtle"},"regime":"owl-rl"},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
         r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
-        Some(r####"[{"op":"law","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n:edge rdfs:subPropertyOf :reachable .\n:reachable a owl:TransitiveProperty .\n","dialect":"turtle"},"steps":[{"step":"owl-rl"}]},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####),
-        Some(r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####),
+        Some(
+            r####"[{"op":"law","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n:edge rdfs:subPropertyOf :reachable .\n:reachable a owl:TransitiveProperty .\n","dialect":"turtle"},"steps":[{"step":"owl-rl"}]},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
+        ),
+        Some(
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
+        ),
         Some(r####"[{"a":"/id","rel":"eq","b":"/id"}]"####),
         false,
     );
@@ -276,7 +302,9 @@ fn xa_reach_sparql_count_n3_vs_owlrl() {
         "xa_reach_sparql_count_n3_vs_owlrl",
         r####"[{"op":"n3","text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n{ ?x :edge ?y } => { ?x :reachable ?y } .\n{ ?x :reachable ?y . ?y :edge ?z } => { ?x :reachable ?z } .\n"},{"op":"sparql","data":{"text":"$PREV:/derived","dialect":"turtle"},"query":"SELECT (COUNT(*) AS ?n) WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"}]"####,
         r####"[{"ptr":"/ok","eq":true},{"ptr":"/rows/0/0/value","eq":"9"}]"####,
-        Some(r####"[{"op":"entail","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n:edge rdfs:subPropertyOf :reachable .\n:reachable a owl:TransitiveProperty .\n","dialect":"turtle"},"regime":"owl-rl"},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"SELECT (COUNT(*) AS ?n) WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"}]"####),
+        Some(
+            r####"[{"op":"entail","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n:edge rdfs:subPropertyOf :reachable .\n:reachable a owl:TransitiveProperty .\n","dialect":"turtle"},"regime":"owl-rl"},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"SELECT (COUNT(*) AS ?n) WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"}]"####,
+        ),
         Some(r####"[{"ptr":"/ok","eq":true},{"ptr":"/rows/0/0/value","eq":"9"}]"####),
         Some(r####"[{"a":"/rows","rel":"eq","b":"/rows"}]"####),
         false,
@@ -292,8 +320,12 @@ fn xa_inv_n3_statement_order() {
         "xa_inv_n3_statement_order",
         r####"[{"op":"n3","text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n{ ?x :edge ?y } => { ?x :reachable ?y } .\n{ ?x :reachable ?y . ?y :edge ?z } => { ?x :reachable ?z } .\n"},{"op":"sparql","data":{"text":"$PREV:/derived","dialect":"turtle"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
         r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
-        Some(r####"[{"op":"n3","text":"@prefix : <https://chicago.graphlaw.dev/> .\n:c :edge :d .\n:c :edge :b .\n{ ?x :reachable ?y . ?y :edge ?z } => { ?x :reachable ?z } .\n{ ?x :edge ?y } => { ?x :reachable ?y } .\n:b :edge :c .\n:a :edge :b .\n"},{"op":"sparql","data":{"text":"$PREV:/derived","dialect":"turtle"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####),
-        Some(r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####),
+        Some(
+            r####"[{"op":"n3","text":"@prefix : <https://chicago.graphlaw.dev/> .\n:c :edge :d .\n:c :edge :b .\n{ ?x :reachable ?y . ?y :edge ?z } => { ?x :reachable ?z } .\n{ ?x :edge ?y } => { ?x :reachable ?y } .\n:b :edge :c .\n:a :edge :b .\n"},{"op":"sparql","data":{"text":"$PREV:/derived","dialect":"turtle"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
+        ),
+        Some(
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
+        ),
         Some(r####"[{"a":"/id","rel":"eq","b":"/id"}]"####),
         false,
     );
@@ -308,8 +340,12 @@ fn xa_inv_datalog_fact_rule_order() {
         "xa_inv_datalog_fact_rule_order",
         r####"{"op":"datalog","rules":[{"head":["?x","https://chicago.graphlaw.dev/reachable","?y"],"body":[["?x","https://chicago.graphlaw.dev/edge","?y"]]},{"head":["?x","https://chicago.graphlaw.dev/reachable","?z"],"body":[["?x","https://chicago.graphlaw.dev/reachable","?y"],["?y","https://chicago.graphlaw.dev/edge","?z"]]}],"facts":[["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/d"]]}"####,
         r####"[{"ptr":"/ok","eq":true},{"ptr":"/facts","eq":[["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/d"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/d"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/d"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/d"]]}]"####,
-        Some(r####"{"op":"datalog","rules":[{"head":["?x","https://chicago.graphlaw.dev/reachable","?z"],"body":[["?x","https://chicago.graphlaw.dev/reachable","?y"],["?y","https://chicago.graphlaw.dev/edge","?z"]]},{"head":["?x","https://chicago.graphlaw.dev/reachable","?y"],"body":[["?x","https://chicago.graphlaw.dev/edge","?y"]]}],"facts":[["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/d"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"]]}"####),
-        Some(r####"[{"ptr":"/ok","eq":true},{"ptr":"/facts","eq":[["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/d"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/d"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/d"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/d"]]}]"####),
+        Some(
+            r####"{"op":"datalog","rules":[{"head":["?x","https://chicago.graphlaw.dev/reachable","?z"],"body":[["?x","https://chicago.graphlaw.dev/reachable","?y"],["?y","https://chicago.graphlaw.dev/edge","?z"]]},{"head":["?x","https://chicago.graphlaw.dev/reachable","?y"],"body":[["?x","https://chicago.graphlaw.dev/edge","?y"]]}],"facts":[["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/d"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"]]}"####,
+        ),
+        Some(
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/facts","eq":[["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/a","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/d"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/b","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/d"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/edge","https://chicago.graphlaw.dev/d"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/b"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/c"],["https://chicago.graphlaw.dev/c","https://chicago.graphlaw.dev/reachable","https://chicago.graphlaw.dev/d"]]}]"####,
+        ),
         Some(r####"[{"a":"/facts","rel":"eq","b":"/facts"}]"####),
         false,
     );
@@ -324,8 +360,12 @@ fn xa_inv_owlrl_statement_order() {
         "xa_inv_owlrl_statement_order",
         r####"[{"op":"entail","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n:edge rdfs:subPropertyOf :reachable .\n:reachable a owl:TransitiveProperty .\n","dialect":"turtle"},"regime":"owl-rl"},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
         r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
-        Some(r####"[{"op":"entail","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n:edge rdfs:subPropertyOf :reachable .\n:reachable a owl:TransitiveProperty .\n:c :edge :d .\n:c :edge :b .\n:b :edge :c .\n:a :edge :b .\n","dialect":"turtle"},"regime":"owl-rl"},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####),
-        Some(r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####),
+        Some(
+            r####"[{"op":"entail","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n@prefix owl: <http://www.w3.org/2002/07/owl#> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n:edge rdfs:subPropertyOf :reachable .\n:reachable a owl:TransitiveProperty .\n:c :edge :d .\n:c :edge :b .\n:b :edge :c .\n:a :edge :b .\n","dialect":"turtle"},"regime":"owl-rl"},{"op":"sparql","data":{"text":"$PREV:/nquads","dialect":"nquads"},"query":"CONSTRUCT { ?x <https://chicago.graphlaw.dev/reachable> ?y } WHERE { ?x <https://chicago.graphlaw.dev/reachable> ?y }"},{"op":"canonical","data":{"text":"$PREV:/nquads","dialect":"nquads"}}]"####,
+        ),
+        Some(
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":9},{"ptr":"/id","eq":"sha256:07f321dfa2119518c580fb235466a1c28d90a677e9c459cbbb8417ddf1c37e52"}]"####,
+        ),
         Some(r####"[{"a":"/id","rel":"eq","b":"/id"}]"####),
         false,
     );
@@ -340,7 +380,9 @@ fn xa_inv_canonical_bnode_labels() {
         "xa_inv_canonical_bnode_labels",
         r####"{"op":"canonical","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n_:x :edge :b . _:x :edge _:y .","dialect":"turtle"}}"####,
         r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":2},{"ptr":"/id","eq":"sha256:29daf608ef3e3ce61827ab7467bff8dab3ea241d92297b704872c3bef2e4bbbd"}]"####,
-        Some(r####"{"op":"canonical","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n_:q :edge _:r . _:q :edge :b .","dialect":"turtle"}}"####),
+        Some(
+            r####"{"op":"canonical","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n_:q :edge _:r . _:q :edge :b .","dialect":"turtle"}}"####,
+        ),
         Some(r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":2}]"####),
         Some(r####"[{"a":"/id","rel":"eq","b":"/id"}]"####),
         false,
@@ -356,7 +398,9 @@ fn xa_inv_canonical_serialization() {
         "xa_inv_canonical_serialization",
         r####"{"op":"canonical","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .","dialect":"turtle"}}"####,
         r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:f588e41d5d04256bb065a5070ea12b1a6b2acb44620994d31c939c75ff35954f"}]"####,
-        Some(r####"{"op":"canonical","data":{"text":"<https://chicago.graphlaw.dev/a> <https://chicago.graphlaw.dev/edge> <https://chicago.graphlaw.dev/b> .\n","dialect":"ntriples"}}"####),
+        Some(
+            r####"{"op":"canonical","data":{"text":"<https://chicago.graphlaw.dev/a> <https://chicago.graphlaw.dev/edge> <https://chicago.graphlaw.dev/b> .\n","dialect":"ntriples"}}"####,
+        ),
         Some(r####"[{"ptr":"/ok","eq":true},{"ptr":"/quads","eq":1}]"####),
         Some(r####"[{"a":"/id","rel":"eq","b":"/id"}]"####),
         false,
@@ -1269,8 +1313,15 @@ fn xa_ceil_lease_select_refuses_n3() {
 fn court_declares_exactly_the_published_case_count() {
     let src = include_str!("chicago_cross_authority.rs");
     let needle = concat!("#[", "test]");
-    let n = src.lines().filter(|l| l.trim_start().starts_with(needle)).count();
-    assert_eq!(n, EXPECTED_CASE_COUNT + 2, "case tests plus the two proof tests");
+    let n = src
+        .lines()
+        .filter(|l| l.trim_start().starts_with(needle))
+        .count();
+    assert_eq!(
+        n,
+        EXPECTED_CASE_COUNT + 2,
+        "case tests plus the two proof tests"
+    );
 }
 
 #[test]
@@ -1281,7 +1332,11 @@ fn court_covers_every_kind() {
     const { assert!(KIND_CROSS_AUTHORITY >= 1, "no cross-authority case") };
     const { assert!(KIND_BOUNDARY_MUTATION >= 1, "no boundary-mutation case") };
     assert_eq!(
-        KIND_POSITIVE + KIND_NEGATIVE + KIND_INVARIANCE + KIND_CROSS_AUTHORITY + KIND_BOUNDARY_MUTATION,
+        KIND_POSITIVE
+            + KIND_NEGATIVE
+            + KIND_INVARIANCE
+            + KIND_CROSS_AUTHORITY
+            + KIND_BOUNDARY_MUTATION,
         EXPECTED_CASE_COUNT
     );
 }
