@@ -79,4 +79,6 @@ The corresponding executable tests are:
 - `tests/sparql_construct_projection.rs`
 - `tests/chatman_rdf_innovation_crown.rs`
 
+`resource-caps-errc.ttl` applies the same pack to GraphLaw's own resource caps (Eliminate 4, Reduce 2, Raise 2, Create 3); it uses only terms the existing rules consume and carries no authority.
+
 The design deliberately treats innovation as **closure + contradiction + construction + constraint + falsification + planning**, not as an inherently cognitive act.

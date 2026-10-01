@@ -1,0 +1,33 @@
+{
+  "errc_pass": "GraphLaw runaway-loop and resource caps (branch fix/runaway-loop-and-resource-caps-v26.9.29)",
+  "timestamp_utc": "2026-09-30T00:00:00Z",
+  "evidence_anchor": "graphlaw@55164d4fe1cdb2e073a98fddd287cc07216663fa; facts innovation/resource-caps-errc.ttl; rules innovation/blue-ocean-triz.n3",
+  "eliminate": [
+    "uncapped %.Nf precision",
+    "quadratic receipt parsing",
+    "quadratic policy closure",
+    "unbounded response size and law steps"
+  ],
+  "reduce": [
+    "1M default iterations on untrusted paths",
+    "per-field atom limits (unlimited atoms per field)"
+  ],
+  "raise": [
+    "typed ResourceLimit refusal vocabulary",
+    "regression tests pinning every cap"
+  ],
+  "create": [
+    "mutation watchdog",
+    "bounded BFS",
+    "budget vocabulary"
+  ],
+  "authority": "NONE",
+  "standing": "PARTIAL_ALIVE",
+  "standing_note": "Closed vocabulary only. Standing is PARTIAL_ALIVE, not ALIVE: caps are pinned by in-tree regression tests but no external replay, release, or adversarial soak has been performed.",
+  "regression_bound": [
+    "tests/resource_limits.rs",
+    "tests/policy_closure_scaling.rs",
+    "tests/chatman_rdf_innovation_crown.rs",
+    "tests/sparql_construct_projection.rs"
+  ]
+}

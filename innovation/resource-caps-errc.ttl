@@ -1,0 +1,82 @@
+@prefix inv: <https://praxis.chatman.io/innovation#> .
+@prefix rc: <https://praxis.chatman.io/innovation/resource-caps#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ERRC for GraphLaw resource caps (2026-09-30), expressed only with terms the
+# existing blue-ocean-triz.n3 rules consume. Loading this file next to the
+# rules derives Eliminate(4) + Reduce(2) + Raise(2) + Create(3 candidates).
+# The "buyer" is an untrusted caller of the ABI; "cost" is the unbounded work
+# an adversarial request can force. Nothing here grants authority.
+
+# ELIMINATE: high cost, no buyer utility. All four perform the same function,
+# bounding untrusted work, which the deterministic capabilities below replace.
+rc:uncapped-float-precision a inv:Activity ;
+    rdfs:label "uncapped %.Nf precision" ;
+    inv:costClass inv:High ;
+    inv:buyerUtility inv:Low ;
+    inv:performs rc:bound-untrusted-work .
+
+rc:quadratic-receipt-parsing a inv:Activity ;
+    rdfs:label "quadratic receipt parsing" ;
+    inv:costClass inv:High ;
+    inv:buyerUtility inv:Low ;
+    inv:performs rc:bound-untrusted-work .
+
+rc:quadratic-policy-closure a inv:Activity ;
+    rdfs:label "quadratic policy closure" ;
+    inv:costClass inv:High ;
+    inv:buyerUtility inv:Low ;
+    inv:performs rc:bound-untrusted-work .
+
+rc:unbounded-response-and-law-steps a inv:Activity ;
+    rdfs:label "unbounded response size and law steps" ;
+    inv:costClass inv:High ;
+    inv:buyerUtility inv:Low ;
+    inv:performs rc:bound-untrusted-work .
+
+# REDUCE: heavy incumbent investment, little buyer utility.
+rc:default-million-iterations a inv:ValueFactor ;
+    rdfs:label "1M default iterations on untrusted paths" ;
+    inv:investmentLevel inv:High ;
+    inv:buyerUtility inv:Low .
+
+rc:unlimited-atoms-per-field a inv:ValueFactor ;
+    rdfs:label "per-field atom count without a limit" ;
+    inv:investmentLevel inv:High ;
+    inv:buyerUtility inv:Low .
+
+# RAISE: matters to buyers, currently weak.
+rc:typed-resource-limit-vocabulary a inv:ValueFactor ;
+    rdfs:label "typed ResourceLimit refusal vocabulary" ;
+    inv:buyerImportance inv:High ;
+    inv:currentPerformance inv:Low .
+
+rc:regression-tests a inv:ValueFactor ;
+    rdfs:label "regression tests pinning every cap" ;
+    inv:buyerImportance inv:High ;
+    inv:currentPerformance inv:Low .
+
+# CREATE: deterministic capabilities, each with its own future identity.
+rc:mutation-watchdog a inv:Capability ;
+    rdfs:label "mutation watchdog" ;
+    inv:performs rc:bound-untrusted-work ;
+    inv:mediation inv:Deterministic ;
+    inv:futureIdentity rc:watchdog-future .
+
+rc:bounded-bfs a inv:Capability ;
+    rdfs:label "bounded breadth-first search" ;
+    inv:performs rc:bound-untrusted-work ;
+    inv:mediation inv:Deterministic ;
+    inv:futureIdentity rc:bounded-bfs-future .
+
+rc:budget-vocabulary a inv:Capability ;
+    rdfs:label "budget vocabulary" ;
+    inv:performs rc:bound-untrusted-work ;
+    inv:mediation inv:Deterministic ;
+    inv:futureIdentity rc:budget-vocabulary-future .
+
+rc:untrusted-caller a inv:Noncustomer ;
+    inv:blockedBy rc:uncapped-float-precision ,
+        rc:quadratic-receipt-parsing ,
+        rc:quadratic-policy-closure ,
+        rc:unbounded-response-and-law-steps .
