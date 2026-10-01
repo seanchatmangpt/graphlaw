@@ -7,6 +7,7 @@ use crate::proof_writer::proof_to_n3;
 use crate::rdf_compat::{parse_rdf12, RdfFormat};
 use crate::reasoner::{
     reason as reason_document, PreparedReasoner, ReasonerError, ReasonerOptions, ReasonerResult,
+    UNTRUSTED_MAX_ITERATIONS,
 };
 
 #[wasm_bindgen(js_name = version)]
@@ -140,6 +141,7 @@ impl EyeronSession {
             &data_doc,
             &ReasonerOptions {
                 proof: self.proof,
+                max_iterations: UNTRUSTED_MAX_ITERATIONS,
                 ..ReasonerOptions::default()
             },
         );
@@ -186,6 +188,7 @@ fn run_report(
         &doc,
         &ReasonerOptions {
             proof,
+            max_iterations: UNTRUSTED_MAX_ITERATIONS,
             ..ReasonerOptions::default()
         },
     );

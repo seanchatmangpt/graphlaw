@@ -766,6 +766,11 @@ pub struct ReasonerStatistics {
     pub match_steps: usize,
 }
 
+/// `max_iterations` for reasoning over untrusted input (the Wasm shim).  It
+/// mirrors the law pipeline's `N3_MAX_ITERATIONS`; `ReasonerOptions::default()`
+/// keeps the far larger trusted-CLI budget.
+pub const UNTRUSTED_MAX_ITERATIONS: usize = 4_000;
+
 /// Safety limits and output options for a reasoning run.
 #[derive(Debug, Clone)]
 pub struct ReasonerOptions {
@@ -6709,7 +6714,13 @@ fn simple_format(fmt: &str, args: &[String]) -> Option<String> {
                     break;
                 }
             }
-            precision = p.parse::<usize>().ok();
+            // An overflowing precision (e.g. on 32-bit/wasm) is rejected
+            // rather than silently replaced by the default.
+            precision = if p.is_empty() {
+                None
+            } else {
+                Some(p.parse::<usize>().ok()?)
+            };
         }
         let spec = chars.next()?;
         let arg = args.get(arg_index)?.clone();
@@ -6726,6 +6737,11 @@ fn simple_format(fmt: &str, args: &[String]) -> Option<String> {
             'f' => {
                 let n = arg.parse::<f64>().ok()?;
                 let p = precision.unwrap_or(6);
+                // Like the width, the precision comes straight from the
+                // input and `%.99999999999f` would allocate that many digits.
+                if p > DEFAULT_MAX_TERM_BYTES {
+                    return None;
+                }
                 format!("{:.*}", p, n)
             }
             _ => return None,
@@ -7750,6 +7766,18 @@ fn resolve_with_seen(term: &Term, bindings: &Bindings, seen: &mut HashSet<Name>)
 #[cfg(test)]
 mod reasoner_index_regression_tests {
     use super::*;
+
+    #[test]
+    fn simple_format_rejects_an_absurd_precision() {
+        let args = vec!["1.5".to_string()];
+        assert_eq!(simple_format("%.99999999999f", &args), None);
+        assert_eq!(simple_format("%.2f", &args).as_deref(), Some("1.50"));
+    }
+
+    #[test]
+    fn untrusted_iteration_cap_is_below_the_trusted_default() {
+        assert!(UNTRUSTED_MAX_ITERATIONS < ReasonerOptions::default().max_iterations);
+    }
 
     #[test]
     fn fully_bound_goal_uses_the_more_selective_fact_index_bucket() {

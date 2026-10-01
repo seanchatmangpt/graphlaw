@@ -189,7 +189,8 @@ fn run_stream_messages(opt: &CliOptions) -> Result<()> {
             }
         });
         if is_http_url(&source) {
-            let response = ureq::get(&source)
+            let response = http_agent()
+                .get(&source)
                 .call()
                 .map_err(|err| EyeronError::new(format!("failed to fetch {source}: {err}")))?;
             let final_url = response.get_uri().to_string();
@@ -218,6 +219,20 @@ fn run_stream_messages(opt: &CliOptions) -> Result<()> {
     Ok(())
 }
 
+/// Most bytes `--stream-messages` reads from one message-log source.
+const MAX_MESSAGE_LOG_BYTES: u64 = 1024 * 1024 * 1024;
+
+/// An HTTP agent that gives up on a silent or trickling server instead of
+/// waiting on it forever.
+fn http_agent() -> ureq::Agent {
+    let config = ureq::Agent::config_builder()
+        .timeout_connect(Some(std::time::Duration::from_secs(30)))
+        .timeout_recv_response(Some(std::time::Duration::from_secs(30)))
+        .timeout_recv_body(Some(std::time::Duration::from_secs(600)))
+        .build();
+    ureq::Agent::new_with_config(config)
+}
+
 fn stream_message_reader<R: BufRead>(
     mut reader: R,
     label: &str,
@@ -231,14 +246,26 @@ fn stream_message_reader<R: BufRead>(
     let mut saw_version = false;
     let mut saw_delimiter = false;
     let mut message_index = 1usize;
+    let mut total_bytes = 0u64;
 
     loop {
         line.clear();
-        let bytes = reader.read_line(&mut line).map_err(|err| {
-            EyeronError::new(format!("failed to read response from {label}: {err}"))
-        })?;
+        // `take` bounds a single newline-free line too, not just the total.
+        let remaining = MAX_MESSAGE_LOG_BYTES.saturating_sub(total_bytes);
+        let bytes = (&mut reader)
+            .take(remaining + 1)
+            .read_line(&mut line)
+            .map_err(|err| {
+                EyeronError::new(format!("failed to read response from {label}: {err}"))
+            })?;
         if bytes == 0 {
             break;
+        }
+        total_bytes += bytes as u64;
+        if total_bytes > MAX_MESSAGE_LOG_BYTES {
+            return Err(EyeronError::new(format!(
+                "RDF Message Log {label} exceeds the {MAX_MESSAGE_LOG_BYTES}-byte limit"
+            )));
         }
         let trimmed = line.trim();
         let lower = trimmed.to_ascii_lowercase();
@@ -323,7 +350,8 @@ fn read_text_source(source: &str) -> Result<String> {
         io::stdin().read_to_string(&mut s)?;
         Ok(s)
     } else if is_http_url(source) {
-        let response = ureq::get(source)
+        let response = http_agent()
+            .get(source)
             .call()
             .map_err(|err| EyeronError::new(format!("failed to fetch {source}: {err}")))?;
         response.into_body().read_to_string().map_err(|err| {

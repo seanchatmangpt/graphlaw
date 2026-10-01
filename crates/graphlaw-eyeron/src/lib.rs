@@ -33,7 +33,7 @@ pub use proof_writer::proof_to_n3;
 pub use rdf_compat::{parse_rdf12, RdfFormat};
 pub use reasoner::{
     reason as reason_document, CompletionStatus, FiredFuse, PreparedReasoner, ReasonerError,
-    ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics,
+    ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, UNTRUSTED_MAX_ITERATIONS,
 };
 
 /// Parse an N3 string, run the forward reasoner, and return the N3 output for

@@ -50,6 +50,24 @@ pub const MAX_PLAN_ACTIONS: usize = 1_000;
 pub const MAX_ATOMS_PER_FIELD: usize = 10_000;
 /// Most entries accepted in one FOND policy.
 pub const MAX_POLICY_ENTRIES: usize = 100_000;
+/// Largest response body, in bytes (64 MiB); larger results refuse with `ResourceLimit`.
+pub const MAX_RESPONSE_BYTES: usize = 64 * 1024 * 1024;
+/// Most steps accepted in one `law` request.
+pub const MAX_LAW_STEPS: usize = 1_000;
+/// Most atoms, summed over every field of every action and the goal, in one plan.
+pub const MAX_PLAN_ATOMS: usize = 50_000;
+/// Longest accepted plan action name, in bytes.
+pub const MAX_NAME_BYTES: usize = 1_024;
+/// Most rules accepted in one `datalog` request.
+pub const MAX_DATALOG_RULES: usize = 1_000;
+/// Most body atoms accepted in one `datalog` rule.
+pub const MAX_BODY_ATOMS: usize = 64;
+/// Most input facts accepted in one `datalog` request (purrdf also caps derived facts internally).
+pub const MAX_DATALOG_FACTS: usize = 100_000;
+/// Most input quads accepted by the `entail` op.
+pub const MAX_ENTAIL_QUADS: usize = 50_000;
+/// Largest JSON document embedded as a string (or re-serialised object) in a `policy` request, in bytes.
+pub const MAX_EMBEDDED_JSON_BYTES: usize = 4 * 1024 * 1024;
 
 /// A refusal plus optional machine-readable `details` (`{"code": ...}`).
 #[derive(Debug, Clone)]
@@ -144,6 +162,12 @@ fn bad(message: impl Into<String>) -> Fail {
 
 /// Handle one request; always returns a JSON document.
 pub fn call(request: &[u8]) -> Vec<u8> {
+    call_with_response_cap(request, MAX_RESPONSE_BYTES)
+}
+
+/// Like [`call`] with an explicit response-size cap (lets tests hit the cap cheaply).
+#[doc(hidden)]
+pub fn call_with_response_cap(request: &[u8], max_response: usize) -> Vec<u8> {
     let out = check_limit("request_bytes", request.len(), MAX_REQUEST_BYTES)
         .and_then(|()| check_limit("json_depth", json_depth(request), MAX_JSON_DEPTH))
         .and_then(|()| {
@@ -151,10 +175,14 @@ pub fn call(request: &[u8]) -> Vec<u8> {
                 .map_err(|e| bad(format!("request is not JSON: {e}")))
         })
         .and_then(|v| dispatch(&v));
-    respond(out)
+    respond_capped(out, max_response)
 }
 
 fn respond(out: Res<Value>) -> Vec<u8> {
+    respond_capped(out, MAX_RESPONSE_BYTES)
+}
+
+fn respond_capped(out: Res<Value>, max_response: usize) -> Vec<u8> {
     let v = match out {
         Ok(mut v) => {
             if let Some(o) = v.as_object_mut() {
@@ -164,7 +192,13 @@ fn respond(out: Res<Value>) -> Vec<u8> {
         }
         Err(f) => json!({"ok": false, "error": refusal_json(&f)}),
     };
-    serde_json::to_vec(&v).expect("json serializes")
+    let bytes = serde_json::to_vec(&v).expect("json serializes");
+    if bytes.len() > max_response {
+        let f = limit("response_bytes", bytes.len(), max_response);
+        return serde_json::to_vec(&json!({"ok": false, "error": refusal_json(&f)}))
+            .expect("json serializes");
+    }
+    bytes
 }
 
 fn refusal_json(f: &Fail) -> Value {
@@ -538,6 +572,7 @@ fn op_shex(v: &Value) -> Res<Value> {
 fn op_entail(v: &Value) -> Res<Value> {
     use crate::entailment::Materialization as M;
     let data = state_field(v, "data")?;
+    check_limit("entail_quads", data.quad_count(), MAX_ENTAIL_QUADS)?;
     let plan = match str_field(v, "regime")? {
         "simple" => M::Simple,
         "rdf" => M::Rdf,
@@ -616,18 +651,23 @@ fn op_datalog(v: &Value) -> Res<Value> {
         message: format!("datalog: {e:?}"),
     };
     let mut rules = Vec::new();
-    for r in v
+    let raw_rules = v
         .get("rules")
         .and_then(Value::as_array)
-        .ok_or_else(|| bad("missing `rules` array"))?
-    {
-        let body = r
+        .ok_or_else(|| bad("missing `rules` array"))?;
+    check_limit("datalog_rules", raw_rules.len(), MAX_DATALOG_RULES)?;
+    let raw_facts = v
+        .get("facts")
+        .and_then(Value::as_array)
+        .ok_or_else(|| bad("missing `facts` array"))?;
+    check_limit("datalog_facts", raw_facts.len(), MAX_DATALOG_FACTS)?;
+    for r in raw_rules {
+        let raw_body = r
             .get("body")
             .and_then(Value::as_array)
-            .ok_or_else(|| bad("rule needs a `body` array"))?
-            .iter()
-            .map(atom)
-            .collect::<Res<Vec<_>>>()?;
+            .ok_or_else(|| bad("rule needs a `body` array"))?;
+        check_limit("datalog_body_atoms", raw_body.len(), MAX_BODY_ATOMS)?;
+        let body = raw_body.iter().map(atom).collect::<Res<Vec<_>>>()?;
         rules.push(DlClause::datalog(
             atom(r.get("head").ok_or_else(|| bad("rule needs a `head`"))?)?,
             body,
@@ -635,11 +675,7 @@ fn op_datalog(v: &Value) -> Res<Value> {
     }
     let exe = compile(rules).map_err(|e| dl(&e))?;
     let mut facts = RelationStore::new();
-    for f in v
-        .get("facts")
-        .and_then(Value::as_array)
-        .ok_or_else(|| bad("missing `facts` array"))?
-    {
+    for f in raw_facts {
         let [s, p, o] = triple(f)?;
         facts.insert(
             &surface(s)?,
@@ -674,12 +710,20 @@ fn op_hooks(v: &Value) -> Res<Value> {
 
 fn plan_field(step: &Value) -> Res<crate::plan::Plan> {
     let p = step.get("plan").ok_or_else(|| bad("missing `plan`"))?;
+    // Running atom total across the whole plan (per-field caps alone let many fields add up).
+    let total_atoms = std::cell::Cell::new(0usize);
     let text = |o: &Value, k: &str| -> Res<String> {
         match o.get(k) {
             None | Some(Value::Null) => Ok(String::new()),
+            Some(Value::String(t)) if k == "name" => {
+                check_limit("name_bytes", t.len(), MAX_NAME_BYTES)?;
+                Ok(t.clone())
+            }
             Some(Value::String(t)) => {
                 let atoms = t.lines().filter(|l| !l.trim().is_empty()).count();
                 check_limit("atoms_per_field", atoms, MAX_ATOMS_PER_FIELD)?;
+                total_atoms.set(total_atoms.get().saturating_add(atoms));
+                check_limit("plan_atoms", total_atoms.get(), MAX_PLAN_ATOMS)?;
                 Ok(t.clone())
             }
             Some(_) => Err(bad(format!("`{k}` must be an N-Triples string"))),
@@ -875,13 +919,6 @@ pub fn plan_from_json(plan: &Value) -> Result<crate::plan::Plan, String> {
 /// `{"op":"policy","problem":<PlanningProblem JSON|string>,"policy":<UniversalPlan|entries JSON|string>}`:
 /// independent strong-cyclic admission of a FOND policy (see `policy`).
 fn op_policy(v: &Value) -> Res<Value> {
-    let text = |k: &str| -> Res<String> {
-        match v.get(k) {
-            Some(Value::String(t)) => Ok(t.clone()),
-            Some(o) if o.is_object() || o.is_array() => Ok(o.to_string()),
-            _ => Err(bad(format!("missing `{k}` (JSON object or string)"))),
-        }
-    };
     let count = |p: &Value| match p {
         Value::Array(a) => a.len(),
         o @ Value::Object(_) => o
@@ -891,12 +928,35 @@ fn op_policy(v: &Value) -> Res<Value> {
         _ => 0,
     };
     let entries = match v.get("policy") {
-        Some(Value::String(t)) => serde_json::from_str::<Value>(t).map_or(0, |p| count(&p)),
+        Some(Value::String(t)) => {
+            check_limit("embedded_json_bytes", t.len(), MAX_EMBEDDED_JSON_BYTES)?;
+            serde_json::from_str::<Value>(t).map_or(0, |p| count(&p))
+        }
         Some(p) => count(p),
         None => 0,
     };
     check_limit("policy_entries", entries, MAX_POLICY_ENTRIES)?;
-    let admitted = crate::policy::admit(&text("problem")?, &text("policy")?).map_err(|r| Fail {
+    // Embedded JSON is bounded in size and (for strings, which the outer depth
+    // scan cannot see into) nesting depth before anything parses it.
+    let text = |k: &str| -> Res<String> {
+        let t = match v.get(k) {
+            Some(Value::String(t)) => {
+                check_limit("embedded_json_bytes", t.len(), MAX_EMBEDDED_JSON_BYTES)?;
+                check_limit(
+                    "embedded_json_depth",
+                    json_depth(t.as_bytes()),
+                    MAX_JSON_DEPTH,
+                )?;
+                t.clone()
+            }
+            Some(o) if o.is_object() || o.is_array() => o.to_string(),
+            _ => return Err(bad(format!("missing `{k}` (JSON object or string)"))),
+        };
+        check_limit("embedded_json_bytes", t.len(), MAX_EMBEDDED_JSON_BYTES)?;
+        Ok(t)
+    };
+    let (problem, policy) = (text("problem")?, text("policy")?);
+    let admitted = crate::policy::admit(&problem, &policy).map_err(|r| Fail {
         refusal: Refusal {
             kind: RefusalKind::EngineRejected,
             dialect: None,
@@ -931,11 +991,12 @@ fn op_law(v: &Value) -> Res<Value> {
     let mut receipts = Vec::new();
     let mut produced: Vec<crate::law::Receipt> = Vec::new();
     let mut recorded = 0usize;
-    for step in v
+    let steps = v
         .get("steps")
         .and_then(Value::as_array)
-        .ok_or_else(|| bad("missing `steps` array"))?
-    {
+        .ok_or_else(|| bad("missing `steps` array"))?;
+    check_limit("law_steps", steps.len(), MAX_LAW_STEPS)?;
+    for step in steps {
         if str_field(step, "step")? == "plan" {
             let plan = plan_field(step)?;
             lease

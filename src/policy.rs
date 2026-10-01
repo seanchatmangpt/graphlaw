@@ -295,17 +295,26 @@ pub fn admit_parsed(problem: &Problem, policy: &[Entry]) -> Result<PolicyAdmitte
         succ.insert(s, next);
     }
 
-    // (c) backward closure from goal states over the policy graph.
-    let mut good: BTreeSet<String> = seen.iter().filter(|s| is_goal(s)).cloned().collect();
-    loop {
-        let before = good.len();
-        for (s, ns) in &succ {
-            if !good.contains(s) && ns.iter().any(|n| good.contains(n)) {
-                good.insert(s.clone());
-            }
+    // (c) backward closure from goal states over the policy graph: linear
+    // reverse-edge BFS (each edge is visited once).
+    let mut preds: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for (s, ns) in &succ {
+        for n in ns {
+            preds.entry(n.as_str()).or_default().push(s.as_str());
         }
-        if good.len() == before {
-            break;
+    }
+    let mut good: BTreeSet<String> = seen.iter().filter(|s| is_goal(s)).cloned().collect();
+    let mut work: VecDeque<&str> = seen
+        .iter()
+        .filter(|s| is_goal(s))
+        .map(String::as_str)
+        .collect();
+    while let Some(n) = work.pop_front() {
+        for &p in preds.get(n).into_iter().flatten() {
+            if !good.contains(p) {
+                good.insert(p.to_string());
+                work.push_back(p);
+            }
         }
     }
     if let Some(s) = seen.iter().find(|s| !good.contains(*s)) {

@@ -479,6 +479,15 @@ pub fn reason_n3_bounded(input: &str) -> Result<String, N3Error> {
         ..eyeron::ReasonerOptions::default()
     };
     let result = eyeron::reason_document(&doc, &options);
+    // A fired `=> false` fuse means the rules forbade this state; the reasoner
+    // clears `derived`, so without this check the denial would read as an
+    // empty, admitted derivation.
+    if let Some(fired) = &result.fuse {
+        return Err(refuse(eyeron::EyeronError::new(format!(
+            "inference fuse fired: {} triple(s) of forbidden situation",
+            fired.instance.len()
+        ))));
+    }
     if let Some(summary) = result.incomplete_summary() {
         if !result.limits_reached.is_empty() {
             return Err(N3Error::Limit {

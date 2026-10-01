@@ -74,7 +74,21 @@ pub enum StoreError {
         /// Description of where the chain breaks.
         detail: String,
     },
+    /// A stored receipt file exceeds [`MAX_RECEIPT_BYTES`]; it is refused unread.
+    TooLarge {
+        /// File that is too large.
+        file: String,
+        /// Size of the file in bytes.
+        size: u64,
+        /// Maximum accepted size in bytes.
+        limit: u64,
+    },
 }
+
+/// Maximum size in bytes of one stored receipt file accepted by
+/// [`ReceiptStore::verify`]. Canonical receipts are a few hundred bytes; the cap
+/// bounds memory and parse work on hostile or corrupted store directories.
+pub const MAX_RECEIPT_BYTES: usize = 1 << 20;
 
 impl fmt::Display for StoreError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -95,6 +109,12 @@ impl fmt::Display for StoreError {
                 write!(f, "receipt `{file}` attestation refused: {error}")
             }
             StoreError::BrokenChain { detail } => write!(f, "receipt chain broken: {detail}"),
+            StoreError::TooLarge { file, size, limit } => {
+                write!(
+                    f,
+                    "receipt file `{file}` is {size} bytes, over the {limit} byte limit"
+                )
+            }
         }
     }
 }
@@ -202,8 +222,18 @@ impl Cur<'_> {
         self.eat("\"")?;
         let mut out = String::new();
         loop {
-            let rest = std::str::from_utf8(&self.b[self.i..]).ok()?;
-            let c = rest.chars().next()?;
+            // Validate only this char's bytes (at most 4), not the whole tail.
+            let len = match *self.b.get(self.i)? {
+                0x00..=0x7f => 1,
+                0xc0..=0xdf => 2,
+                0xe0..=0xef => 3,
+                0xf0..=0xf7 => 4,
+                _ => return None,
+            };
+            let c = std::str::from_utf8(self.b.get(self.i..self.i + len)?)
+                .ok()?
+                .chars()
+                .next()?;
             self.i += c.len_utf8();
             match c {
                 '"' => return Some(out),
@@ -258,6 +288,9 @@ fn step_name(name: &str) -> Option<&'static str> {
 }
 
 fn decode(bytes: &[u8]) -> Option<Receipt> {
+    if bytes.len() > MAX_RECEIPT_BYTES {
+        return None;
+    }
     let mut c = Cur { b: bytes, i: 0 };
     c.eat("{")?;
     c.key("parent")?;
@@ -423,7 +456,24 @@ impl ReceiptStore {
         let mut rs = Vec::new();
         for d in self.list(subject_sha)? {
             let file = format!("{d}.json");
-            let bytes = fs::read(sd.join(&file))?;
+            let path = sd.join(&file);
+            let size = fs::metadata(&path)?.len();
+            if size > MAX_RECEIPT_BYTES as u64 {
+                return Err(StoreError::TooLarge {
+                    file,
+                    size,
+                    limit: MAX_RECEIPT_BYTES as u64,
+                });
+            }
+            let bytes = fs::read(&path)?;
+            // Re-check: the file may have grown between stat and read.
+            if bytes.len() > MAX_RECEIPT_BYTES {
+                return Err(StoreError::TooLarge {
+                    file,
+                    size: bytes.len() as u64,
+                    limit: MAX_RECEIPT_BYTES as u64,
+                });
+            }
             let actual = digest_of(&bytes);
             if actual != d {
                 return Err(StoreError::DigestMismatch {
