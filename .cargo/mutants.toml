@@ -1,0 +1,31 @@
+# cargo-mutants configuration. Run via scripts/mutants.sh, never bare.
+
+# Mutants that hang (e.g. loop conditions flipped) are killed after
+# max(minimum_test_timeout, baseline * timeout_multiplier) seconds.
+timeout_multiplier = 3.0
+minimum_test_timeout = 60.0
+
+# Do not let mutated code emit lints-as-errors that mask test results.
+cap_lints = true
+
+# Vendored crates, wasm bindings, build output, and generated data are not
+# subject to mutation testing.
+exclude_globs = [
+    "vendor/**",
+    "wasm/**",
+    "target/**",
+    "tests/**",
+    "examples/**",
+    "conformance/**",
+    "receipts/**",
+    "qualification/**",
+    "**/generated/**",
+    "**/*.generated.rs",
+    "**/build.rs",
+]
+
+# Skip mutations of Debug/Display impls and other non-semantic functions.
+exclude_re = [
+    # Mutant names look like "replace <impl Display for Foo>::fmt -> fmt::Result with Ok(Default::default())".
+    "impl (\\w+::)*(Debug|Display) for",
+]

@@ -1,3 +1,7 @@
+[build]
+# Cap parallel rustc jobs; unbounded parallelism exhausts memory on small hosts.
+jobs = 4
+
 [target.wasm32-unknown-unknown]
 # Eyeron and SPARQL evaluation recurse; the 1 MiB default stack is too small.
 rustflags = ["-C", "link-arg=-zstack-size=16777216"]
