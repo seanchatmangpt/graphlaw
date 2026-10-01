@@ -184,14 +184,493 @@
     "untrusted_key",
     "clock_skew"
   ],
+  "limit_meta": {
+    "hooks_max_firings": {
+      "scope": "hooks",
+      "source": "src/hooks.rs",
+      "unit": "firings"
+    },
+    "hooks_max_rounds": {
+      "scope": "hooks",
+      "source": "src/hooks.rs",
+      "unit": "rounds"
+    },
+    "hooks_max_state_quads": {
+      "refusal_name": "state_quads",
+      "scope": "hooks",
+      "source": "src/hooks.rs",
+      "unit": "quads"
+    },
+    "max_atoms_per_field": {
+      "refusal_name": "atoms_per_field",
+      "scope": "abi",
+      "source": "src/abi.rs",
+      "unit": "count"
+    },
+    "max_json_depth": {
+      "refusal_name": "json_depth",
+      "scope": "abi",
+      "source": "src/abi.rs",
+      "unit": "count"
+    },
+    "max_outstanding_alloc_bytes": {
+      "scope": "wasm",
+      "source": "src/abi.rs",
+      "unit": "bytes"
+    },
+    "max_plan_actions": {
+      "refusal_name": "plan_actions",
+      "scope": "abi",
+      "source": "src/abi.rs",
+      "unit": "count"
+    },
+    "max_plan_total_atoms": {
+      "refusal_name": "plan_total_atoms",
+      "scope": "plan",
+      "source": "src/plan.rs",
+      "unit": "count"
+    },
+    "max_policy_entries": {
+      "refusal_name": "policy_entries",
+      "scope": "abi",
+      "source": "src/abi.rs",
+      "unit": "count"
+    },
+    "max_request_bytes": {
+      "refusal_name": "request_bytes",
+      "scope": "abi",
+      "source": "src/abi.rs",
+      "unit": "bytes"
+    },
+    "n3_max_derived_facts": {
+      "refusal_name": "n3_derived_facts",
+      "scope": "n3",
+      "source": "src/law.rs",
+      "unit": "count"
+    },
+    "n3_max_iterations": {
+      "refusal_name": "n3_iterations",
+      "scope": "n3",
+      "source": "src/law.rs",
+      "unit": "count"
+    },
+    "n3_max_match_steps": {
+      "refusal_name": "n3_match_steps",
+      "scope": "n3",
+      "source": "src/law.rs",
+      "unit": "steps"
+    },
+    "n3_max_term_bytes": {
+      "refusal_name": "n3_term_bytes",
+      "scope": "n3",
+      "source": "src/law.rs",
+      "unit": "bytes"
+    },
+    "n3_max_total_bytes": {
+      "refusal_name": "n3_total_bytes",
+      "scope": "n3",
+      "source": "src/law.rs",
+      "unit": "bytes"
+    }
+  },
   "limits": {
+    "hooks_max_firings": 10000,
+    "hooks_max_rounds": 64,
+    "hooks_max_state_quads": 1000000,
     "max_atoms_per_field": 10000,
     "max_json_depth": 64,
+    "max_outstanding_alloc_bytes": 268435456,
     "max_plan_actions": 1000,
+    "max_plan_total_atoms": 100000,
     "max_policy_entries": 100000,
     "max_request_bytes": 16777216,
-    "n3_max_iterations": 4000
+    "n3_max_derived_facts": 500000,
+    "n3_max_iterations": 4000,
+    "n3_max_match_steps": 50000000,
+    "n3_max_term_bytes": 65536,
+    "n3_max_total_bytes": 268435456
   },
+  "model_enums": [
+    {
+      "name": "Ceiling",
+      "order": 1,
+      "values": [
+        "observe",
+        "select",
+        "construct"
+      ]
+    },
+    {
+      "name": "LeaseReason",
+      "order": 2,
+      "values": [
+        "expired",
+        "out_of_scope",
+        "ceiling",
+        "bad_signature",
+        "untrusted_key",
+        "clock_skew"
+      ]
+    },
+    {
+      "name": "ReceiptReason",
+      "order": 3,
+      "values": [
+        "unattested",
+        "bad_signature",
+        "untrusted_key"
+      ]
+    },
+    {
+      "name": "PolicyRefusalKind",
+      "order": 4,
+      "values": [
+        "MissingEntry",
+        "InventedOutcome",
+        "BadMass",
+        "DeadEnd",
+        "Malformed"
+      ]
+    }
+  ],
+  "models": [
+    {
+      "doc": "Time-boxed authority grant for law steps.",
+      "elixir_module": "AshGraphLaw.Model.Lease",
+      "fields": [
+        {
+          "doc": "Lease identifier.",
+          "name": "id",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Identity of the lease holder.",
+          "name": "holder",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Highest authority the lease grants.",
+          "name": "ceiling",
+          "nullable": false,
+          "order": 3,
+          "required": true,
+          "type": "enum:Ceiling"
+        },
+        {
+          "doc": "Step names the lease covers.",
+          "name": "scope",
+          "nullable": false,
+          "order": 4,
+          "required": true,
+          "type": "list<string>"
+        },
+        {
+          "doc": "Expired when now >= expires_unix.",
+          "name": "expires_unix",
+          "nullable": false,
+          "order": 5,
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "doc": "Issuer-stated issue time; 0 means not stated.",
+          "name": "issued_unix",
+          "nullable": false,
+          "order": 6,
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "name": "Lease",
+      "order": 1,
+      "rust_path": "graphlaw::law::Lease"
+    },
+    {
+      "doc": "A lease with its Ed25519 attestation.",
+      "elixir_module": "AshGraphLaw.Model.SignedLease",
+      "fields": [
+        {
+          "doc": "The lease being attested.",
+          "name": "lease",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "model:Lease"
+        },
+        {
+          "doc": "Signature over the lease.",
+          "name": "attestation",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "model:Attestation"
+        }
+      ],
+      "name": "SignedLease",
+      "order": 2,
+      "rust_path": "graphlaw::law::SignedLease"
+    },
+    {
+      "doc": "Record of one executed law step.",
+      "elixir_module": "AshGraphLaw.Model.Receipt",
+      "fields": [
+        {
+          "doc": "Id of the parent state.",
+          "name": "parent",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Id of the child state.",
+          "name": "child",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Step name, for example derive:rdfs.",
+          "name": "step",
+          "nullable": false,
+          "order": 3,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Backend authority capability.",
+          "name": "authority",
+          "nullable": false,
+          "order": 4,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Backend authority revision.",
+          "name": "revision",
+          "nullable": false,
+          "order": 5,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Quads added by the step.",
+          "name": "added",
+          "nullable": false,
+          "order": 6,
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "doc": "Lease id when the step ran under a lease.",
+          "name": "lease_id",
+          "nullable": true,
+          "order": 7,
+          "required": false,
+          "type": "string"
+        },
+        {
+          "doc": "Plan digest for plan steps.",
+          "name": "plan_sha256",
+          "nullable": true,
+          "order": 8,
+          "required": false,
+          "type": "string"
+        },
+        {
+          "doc": "Digest of the external subject, when bound.",
+          "name": "subject_sha256",
+          "nullable": true,
+          "order": 9,
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "name": "Receipt",
+      "order": 3,
+      "rust_path": "graphlaw::law::Receipt"
+    },
+    {
+      "doc": "Ed25519 attestation over a canonical payload.",
+      "elixir_module": "AshGraphLaw.Model.Attestation",
+      "fields": [
+        {
+          "doc": "Lowercase hex SHA-256 of the canonical payload.",
+          "name": "payload_sha256",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Identifier of the signing key.",
+          "name": "key_id",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Lowercase hex Ed25519 signature over the payload.",
+          "name": "signature",
+          "nullable": false,
+          "order": 3,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "name": "Attestation",
+      "order": 4,
+      "rust_path": "graphlaw::attest::Attestation"
+    },
+    {
+      "doc": "Ordered candidate plan and the goal it claims to reach.",
+      "elixir_module": "AshGraphLaw.Model.Plan",
+      "fields": [
+        {
+          "doc": "Actions in replay order.",
+          "name": "actions",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "list<model:Action>"
+        },
+        {
+          "doc": "Triples that must hold after the last action.",
+          "name": "goal",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Triples that must be absent after the last action.",
+          "name": "goal_not",
+          "nullable": false,
+          "order": 3,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "name": "Plan",
+      "order": 5,
+      "rust_path": "graphlaw::plan::Plan"
+    },
+    {
+      "doc": "One plan action over ground triples.",
+      "elixir_module": "AshGraphLaw.Model.Action",
+      "fields": [
+        {
+          "doc": "Action name, for example go a b.",
+          "name": "name",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Triples that must hold before the action.",
+          "name": "pre",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Triples that must be absent before the action.",
+          "name": "pre_not",
+          "nullable": false,
+          "order": 3,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Triples added by the action.",
+          "name": "add",
+          "nullable": false,
+          "order": 4,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Triples removed by the action.",
+          "name": "del",
+          "nullable": false,
+          "order": 5,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "name": "Action",
+      "order": 6,
+      "rust_path": "graphlaw::plan::Action"
+    },
+    {
+      "doc": "One FOND policy entry.",
+      "elixir_module": "AshGraphLaw.Model.PolicyEntry",
+      "fields": [
+        {
+          "doc": "State the entry applies to.",
+          "name": "state",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Action chosen in the state.",
+          "name": "action",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Possible outcomes of the action.",
+          "name": "outcomes",
+          "nullable": false,
+          "order": 3,
+          "required": true,
+          "type": "list<model:PolicyOutcome>"
+        }
+      ],
+      "name": "PolicyEntry",
+      "order": 7,
+      "rust_path": "graphlaw::policy::Entry"
+    },
+    {
+      "doc": "One possible outcome of a policy action.",
+      "elixir_module": "AshGraphLaw.Model.PolicyOutcome",
+      "fields": [
+        {
+          "doc": "State reached by the outcome.",
+          "name": "state",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "doc": "Probability in parts per million.",
+          "name": "probability_ppm",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "name": "PolicyOutcome",
+      "order": 8,
+      "rust_path": "graphlaw::policy::Outcome"
+    }
+  ],
   "ops": [
     {
       "name": "capabilities",
@@ -1880,7 +2359,7 @@
     "owl-rl",
     "d"
   ],
-  "registry_sha256": "sha256:8f3ef15bad35fc095e4a832b4cca945414e90152c485dc5a5a92d2ff0f804e16",
+  "registry_sha256": "sha256:dcecf65bfdcd415591fd6f52e09781487fe7eb16771b72c3aa240792312d2b97",
   "schema": "graphlaw.capability-registry/1",
   "surface_sha256": "sha256:fcee74ee068940f9e9879ccd41371807f469d63950c8f63b095117391dbc8e28"
 }

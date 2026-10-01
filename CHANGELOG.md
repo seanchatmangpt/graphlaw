@@ -9,6 +9,15 @@ v26.9.29 is released (GitHub release v26.9.29; crates.io `graphlaw` 26.9.29 with
 
 ### Changed
 
+- Capability registry (additive, schema id unchanged): `limits` now lists all 15 engine limits
+  (adds `n3_max_derived_facts`, `n3_max_total_bytes`, `n3_max_term_bytes`, `n3_max_match_steps`,
+  `max_plan_total_atoms`, `hooks_max_rounds`, `hooks_max_firings`, `hooks_max_state_quads`,
+  `max_outstanding_alloc_bytes`), each read from its source constant; new `limit_meta` (scope,
+  unit, source, refusal name), `models` (Lease, SignedLease, Receipt, Attestation, Plan, Action,
+  PolicyEntry, PolicyOutcome) and `model_enums`; the Turtle projection gains `gac:Model*` and
+  limit scope/unit/source. The wasm 256 MiB outstanding-alloc cap is now
+  `graphlaw::abi::MAX_OUTSTANDING_ALLOC_BYTES`. Registry and wasm pins in `ARTIFACTS.sha256`
+  were regenerated.
 - Resource safety: the registry Turtle projection can no longer loop (a leaked cargo-mutants edit
   had made it spin and exhaust memory); Eyeron gains run-wide caps and `ReasonerLimit::ClosureSize`
   / `ClosureFacts` (`graphlaw-eyeron` 0.7.8); N3 refusals report their real limit and ceiling

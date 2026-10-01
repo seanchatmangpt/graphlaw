@@ -19,8 +19,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// Bytes handed to the host (`gl_alloc` buffers and `gl_call` responses) and not yet freed.
 static OUTSTANDING: AtomicUsize = AtomicUsize::new(0);
-/// Ceiling on `OUTSTANDING`; `gl_alloc` returns null beyond it.
-const MAX_OUTSTANDING_BYTES: usize = 256 * 1024 * 1024;
 
 fn release(bytes: usize) {
     let _ = OUTSTANDING.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
@@ -39,7 +37,7 @@ pub extern "C" fn gl_alloc(len: u32) -> *mut u8 {
     // A host that allocates and never frees must not be able to fill linear memory.
     let held = len.max(1) as usize;
     let reserved = OUTSTANDING.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
-        (n + held <= MAX_OUTSTANDING_BYTES).then_some(n + held)
+        (n + held <= graphlaw::abi::MAX_OUTSTANDING_ALLOC_BYTES).then_some(n + held)
     });
     if reserved.is_err() {
         return std::ptr::null_mut();

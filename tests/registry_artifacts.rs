@@ -501,6 +501,19 @@ fn j_duplicate_op_order_is_non_conforming() {
 }
 
 #[test]
+fn j2_model_shapes_reject_malformed_model_rows() {
+    let mutant = with_appended(
+        "<https://graphlaw.dev/registry#model/ZzBad> a gac:Model ;\n  \
+         gac:modelName \"ZzBad\" ; gac:modelOrder 0 .\n\
+         <https://graphlaw.dev/registry#model/ZzBad/f> a gac:ModelField ;\n  \
+         gac:modelFieldOf <https://graphlaw.dev/registry#model/ZzBad> ; gac:modelFieldName \"f\" .",
+    );
+    let report = shacl_report(&mutant);
+    assert_eq!(report["conforms"], false, "{:#?}", messages(&report));
+    assert!(report["results"].as_array().unwrap().len() >= 5);
+}
+
+#[test]
 fn k_unknown_field_type_is_non_conforming() {
     assert_eq!(
         shacl_report(&read("capability-registry.ttl"))["conforms"],
@@ -602,4 +615,149 @@ fn artifacts_pin_file_carries_the_live_registry_and_surface_digests() {
         let bytes = std::fs::read(path).expect("wasm readable");
         assert_eq!(hex(&Sha256::digest(&bytes)), wasm[1], "wasm pin is stale");
     }
+}
+
+#[test]
+fn limits_track_source_constants() {
+    let doc = json_doc();
+    let s = schema();
+    let limits = doc["limits"].as_object().expect("limits object");
+    let expected: [(&str, usize); 15] = [
+        ("max_request_bytes", graphlaw::abi::MAX_REQUEST_BYTES),
+        ("max_json_depth", graphlaw::abi::MAX_JSON_DEPTH),
+        ("max_plan_actions", graphlaw::abi::MAX_PLAN_ACTIONS),
+        ("max_atoms_per_field", graphlaw::abi::MAX_ATOMS_PER_FIELD),
+        ("max_policy_entries", graphlaw::abi::MAX_POLICY_ENTRIES),
+        ("n3_max_iterations", graphlaw::law::N3_MAX_ITERATIONS),
+        ("n3_max_derived_facts", graphlaw::law::N3_MAX_DERIVED_FACTS),
+        ("n3_max_total_bytes", graphlaw::law::N3_MAX_TOTAL_BYTES),
+        ("n3_max_term_bytes", graphlaw::law::N3_MAX_TERM_BYTES),
+        ("n3_max_match_steps", graphlaw::law::N3_MAX_TOTAL_STEPS),
+        ("max_plan_total_atoms", graphlaw::plan::MAX_PLAN_TOTAL_ATOMS),
+        ("hooks_max_rounds", graphlaw::hooks::MAX_ROUNDS),
+        ("hooks_max_firings", graphlaw::hooks::MAX_FIRINGS),
+        ("hooks_max_state_quads", graphlaw::hooks::MAX_STATE_QUADS),
+        (
+            "max_outstanding_alloc_bytes",
+            graphlaw::abi::MAX_OUTSTANDING_ALLOC_BYTES,
+        ),
+    ];
+    for (name, value) in expected {
+        assert_eq!(
+            limits[name],
+            json!(value),
+            "limit `{name}` tracks its constant"
+        );
+    }
+    assert_eq!(
+        limits.len(),
+        s["properties"]["limits"]["required"]
+            .as_array()
+            .unwrap()
+            .len(),
+        "every registry limit is schema-required and vice versa"
+    );
+    assert_eq!(limits.len(), expected.len());
+}
+
+#[test]
+fn limit_meta_keys_equal_limit_keys() {
+    let doc = json_doc();
+    let limits: Vec<&String> = doc["limits"].as_object().unwrap().keys().collect();
+    let meta: Vec<&String> = doc["limit_meta"].as_object().unwrap().keys().collect();
+    assert_eq!(limits, meta, "limit_meta covers exactly the limits");
+    for (name, m) in doc["limit_meta"].as_object().unwrap() {
+        for k in ["scope", "unit", "source"] {
+            assert!(
+                m[k].as_str().is_some_and(|v| !v.is_empty()),
+                "limit_meta.{name}.{k}"
+            );
+        }
+        // refusal_name is present only where the source emits a machine name.
+        let unnamed = matches!(
+            name.as_str(),
+            "hooks_max_rounds" | "hooks_max_firings" | "max_outstanding_alloc_bytes"
+        );
+        match m.get("refusal_name") {
+            None => assert!(unnamed, "limit_meta.{name} lost its refusal_name"),
+            Some(v) => {
+                assert!(!unnamed, "limit_meta.{name} has no source refusal name");
+                assert!(v.as_str().is_some_and(|v| !v.is_empty()), "{name}");
+            }
+        }
+    }
+}
+
+#[test]
+fn models_cover_the_typed_surface() {
+    let doc = json_doc();
+    let names: Vec<&str> = doc["models"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|m| m["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        names,
+        [
+            "Lease",
+            "SignedLease",
+            "Receipt",
+            "Attestation",
+            "Plan",
+            "Action",
+            "PolicyEntry",
+            "PolicyOutcome"
+        ]
+    );
+    let enums: Vec<&str> = doc["model_enums"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|m| m["name"].as_str().unwrap())
+        .collect();
+    assert_eq!(
+        enums,
+        [
+            "Ceiling",
+            "LeaseReason",
+            "ReceiptReason",
+            "PolicyRefusalKind"
+        ]
+    );
+    // Every model/enum reference resolves.
+    for m in doc["models"].as_array().unwrap() {
+        assert_eq!(
+            m["elixir_module"],
+            json!(format!("AshGraphLaw.Model.{}", m["name"].as_str().unwrap()))
+        );
+        for (i, f) in m["fields"].as_array().unwrap().iter().enumerate() {
+            assert_eq!(f["order"], json!(i + 1));
+            let ty = f["type"].as_str().unwrap();
+            let target = ty
+                .strip_prefix("list<model:")
+                .and_then(|t| t.strip_suffix('>'))
+                .map(|t| ("model", t))
+                .or_else(|| ty.strip_prefix("model:").map(|t| ("model", t)))
+                .or_else(|| ty.strip_prefix("enum:").map(|t| ("enum", t)));
+            if let Some((kind, t)) = target {
+                let pool = if kind == "model" { &names } else { &enums };
+                assert!(pool.contains(&t), "{ty} unresolved");
+            }
+        }
+    }
+    assert_eq!(doc["model_enums"][0]["values"], doc["lease_ceilings"]);
+    assert_eq!(doc["model_enums"][3]["values"], doc["policy_refusal_kinds"]);
+}
+
+#[test]
+fn wasm_outstanding_cap_has_one_source_of_truth() {
+    let src =
+        std::fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("wasm/src/lib.rs"))
+            .expect("wasm source readable");
+    assert!(
+        !src.contains("const MAX_OUTSTANDING_BYTES"),
+        "wasm/src/lib.rs must use graphlaw::abi::MAX_OUTSTANDING_ALLOC_BYTES"
+    );
+    assert!(src.contains("graphlaw::abi::MAX_OUTSTANDING_ALLOC_BYTES"));
 }

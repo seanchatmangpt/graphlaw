@@ -159,3 +159,32 @@ gls:LimitShape a sh:NodeShape ;
     sh:targetClass gac:Limit ;
     sh:property [ sh:path gac:limitName ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
     sh:property [ sh:path gac:limitValue ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ] .
+
+gls:ModelShape a sh:NodeShape ;
+    sh:targetClass gac:Model ;
+    sh:property [ sh:path gac:modelName ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path gac:modelOrder ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
+    sh:property [ sh:path gac:modelElixirModule ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path gac:modelRustPath ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path gac:modelDoc ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+gls:ModelFieldShape a sh:NodeShape ;
+    sh:targetClass gac:ModelField ;
+    sh:property [ sh:path gac:modelFieldOf ; sh:minCount 1 ; sh:maxCount 1 ; sh:class gac:Model ] ;
+    sh:property [ sh:path gac:modelFieldName ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path gac:modelFieldOrder ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
+    sh:property [ sh:path gac:modelFieldType ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path gac:modelFieldRequired ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+    sh:property [ sh:path gac:modelFieldNullable ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
+    sh:property [ sh:path gac:modelFieldDoc ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] .
+
+gls:ModelEnumShape a sh:NodeShape ;
+    sh:targetClass gac:ModelEnum ;
+    sh:property [ sh:path gac:modelName ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path gac:modelOrder ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] .
+
+gls:ModelEnumValueShape a sh:NodeShape ;
+    sh:targetClass gac:ModelEnumValue ;
+    sh:property [ sh:path gac:enumOf ; sh:minCount 1 ; sh:maxCount 1 ; sh:class gac:ModelEnum ] ;
+    sh:property [ sh:path gac:enumOrder ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
+    sh:property [ sh:path gac:enumValue ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] .
