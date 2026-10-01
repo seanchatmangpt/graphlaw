@@ -1,0 +1,31 @@
+{
+  "profile": "chicago.ecosystem-witnesses.v1",
+  "authority": "NONE",
+  "consequence": "EVIDENCE_ONLY",
+  "witnesses": [
+    {
+      "repo": "seanchatmangpt/ggen-marketplace",
+      "sha": "4d1bd3e1d8d780e904d3c68834a285dcd3d2ace7",
+      "role": "semantic negative-evidence manufacture",
+      "standing": "MERGED"
+    },
+    {
+      "repo": "seanchatmangpt/ash_a2a",
+      "sha": "199f8b6784a8f6eac3372f509c3c2c1fa1854add",
+      "role": "FIBO high-value inherited domain court",
+      "standing": "CANDIDATE"
+    },
+    {
+      "repo": "seanchatmangpt/beam4pm",
+      "sha": "0f912aceb954c979e0b09aef9d04fe08ec03c03a",
+      "role": "independent OCEL observer court",
+      "standing": "CANDIDATE"
+    },
+    {
+      "repo": "seanchatmangpt/affidavit",
+      "sha": "17ba1c463904b329b0e52c9e12526c673f0548b3",
+      "role": "cryptographic trust-plane and receipt witness",
+      "standing": "MERGED"
+    }
+  ]
+}

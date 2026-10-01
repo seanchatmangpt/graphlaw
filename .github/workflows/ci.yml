@@ -1,15 +1,102 @@
 name: CI
+
 on:
   push:
     branches: [main]
   pull_request:
+
 permissions:
   contents: read
+
 jobs:
-  graphlaw:
+  native:
+    name: library-backed native
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo metadata --format-version 1 --no-deps
-      - run: cargo check -p praxis-graphlaw --lib
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.96.0
+          components: rustfmt, clippy
+          targets: wasm32-wasip1
+      - name: Resolve dependency graph
+        run: cargo metadata --format-version 1
+      - name: Chicago N3 + Datalog 80/20 court
+        run: cargo test --all-features --test chicago_n3_datalog
+      - name: Chicago qualification algebra
+        run: cargo test --all-features --test qualification_algebra
+      - name: Format
+        run: cargo fmt --check
+      - name: Check
+        run: cargo check --all-targets --all-features
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Build WASI module
+        run: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+      - name: Capability registry is current (graphlaw-registry --check)
+        run: cargo run --locked --features abi --bin graphlaw-registry -- --check
+      - name: Test backend authorities
+        env:
+          GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
+        run: cargo test --locked --all-targets --all-features
+      - name: Upload WASI module
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: graphlaw-wasm
+          path: target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
+      - name: Package both crates together (publish readiness)
+        run: cargo package -p graphlaw-eyeron -p graphlaw
+      - name: Docs
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+
+  wasm:
+    name: library-backed wasm32
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.96.0
+          targets: wasm32-unknown-unknown
+      - name: Compile facade for wasm32
+        run: cargo check --lib --target wasm32-unknown-unknown
+
+  semver:
+    name: semver (cargo-semver-checks)
+    runs-on: ubuntu-latest
+    # continue-on-error while v26.9.29 is unreleased: it intentionally breaks the
+    # public API against the latest crates.io baseline (26.9.28), so a failure here
+    # is informational until the release lands. Remove this line after v26.9.29 ships.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.96.0
+      - uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v2
+        with:
+          package: graphlaw
+
+  deny:
+    name: cargo-deny (advisories licenses bans sources)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
+        with:
+          command: check advisories licenses bans sources
+
+  audit:
+    name: cargo-audit (RustSec)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.96.0
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Audit Cargo.lock
+        run: cargo audit

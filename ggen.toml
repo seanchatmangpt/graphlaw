@@ -1,0 +1,40 @@
+# Consumer manifest: install as /Users/sac/graphlaw/ggen.toml (coordinator-owned there).
+# Reads the pack via the sibling checkout; writes only the two generated court files.
+[project]
+name = "graphlaw-chicago-courts"
+version = "26.9.29"
+description = "Generated Chicago courts for GraphLaw: chicago-fibo, chicago-cross-authority"
+authors = ["Sean Chatman"]
+license = "MIT"
+
+[ontology]
+source = "../ggen-marketplace/packs/chicago-graphlaw-court-pack/ontology.ttl"
+base_iri = "https://chicago.graphlaw.dev/court#"
+imports = [
+  "../ggen-marketplace/packs/chicago-graphlaw-court-pack/cases/a.ttl",
+  "../ggen-marketplace/packs/chicago-graphlaw-court-pack/cases/b.ttl",
+]
+
+[ontology.prefixes]
+cc = "https://chicago.graphlaw.dev/court#"
+sh = "http://www.w3.org/ns/shacl#"
+xsd = "http://www.w3.org/2001/XMLSchema#"
+
+[generation]
+output_dir = "."
+
+[[generation.rules]]
+name = "chicago-fibo-court"
+query = { file = "../ggen-marketplace/packs/chicago-graphlaw-court-pack/queries/cases_fibo.rq" }
+template = { file = "../ggen-marketplace/packs/chicago-graphlaw-court-pack/templates/chicago_court.rs.tmpl" }
+output_file = "tests/chicago_fibo.rs"
+skip_empty = false
+mode = "Overwrite"
+
+[[generation.rules]]
+name = "chicago-cross-authority-court"
+query = { file = "../ggen-marketplace/packs/chicago-graphlaw-court-pack/queries/cases_xauth.rq" }
+template = { file = "../ggen-marketplace/packs/chicago-graphlaw-court-pack/templates/chicago_court.rs.tmpl" }
+output_file = "tests/chicago_cross_authority.rs"
+skip_empty = false
+mode = "Overwrite"

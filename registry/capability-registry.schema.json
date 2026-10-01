@@ -1,0 +1,148 @@
+{
+  "$defs": {
+    "dialect": {
+      "additionalProperties": true,
+      "properties": {
+        "aliases": {"items": {"type": "string"}, "type": "array"},
+        "kind": {"enum": ["rdf", "other"]},
+        "media_type": {"type": ["string", "null"]},
+        "name": {"minLength": 1, "type": "string"},
+        "order": {"minimum": 1, "type": "integer"},
+        "response_name": {"minLength": 1, "type": "string"}
+      },
+      "required": ["name", "order", "aliases", "response_name", "media_type", "kind"],
+      "type": "object"
+    },
+    "field": {
+      "additionalProperties": true,
+      "properties": {
+        "default": {"type": ["string", "integer", "boolean", "null"]},
+        "doc": {"type": "string"},
+        "enum": {"items": {"type": "string"}, "type": ["array", "null"]},
+        "name": {"pattern": "^[a-z][a-z0-9_]*$", "type": "string"},
+        "nullable": {"type": "boolean"},
+        "order": {"minimum": 1, "type": "integer"},
+        "required": {"type": "boolean"},
+        "type": {"$ref": "#/$defs/field_type"}
+      },
+      "required": ["name", "order", "type", "required", "nullable", "doc", "enum", "default"],
+      "type": "object"
+    },
+    "field_list": {"items": {"$ref": "#/$defs/field"}, "type": "array"},
+    "field_type": {
+      "enum": [
+        "string", "integer", "boolean", "object", "any", "data_spec", "term", "json_or_string",
+        "list<string>", "list<object>", "list<any>", "list<term>",
+        "list<list<string>>", "list<list<term>>"
+      ]
+    },
+    "law_step": {
+      "additionalProperties": true,
+      "properties": {
+        "ceiling": {"enum": ["observe", "select", "construct", null]},
+        "fields": {"$ref": "#/$defs/field_list"},
+        "name": {"minLength": 1, "type": "string"},
+        "order": {"minimum": 1, "type": "integer"}
+      },
+      "required": ["name", "order", "ceiling", "fields"],
+      "type": "object"
+    },
+    "op": {
+      "additionalProperties": true,
+      "properties": {
+        "name": {"pattern": "^[a-z][a-z0-9_]*$", "type": "string"},
+        "order": {"minimum": 1, "type": "integer"},
+        "refusal_codes": {"items": {"type": "string"}, "type": "array"},
+        "refusal_kinds": {"items": {"type": "string"}, "type": "array"},
+        "request": {
+          "additionalProperties": true,
+          "properties": {"fields": {"$ref": "#/$defs/field_list"}},
+          "required": ["fields"],
+          "type": "object"
+        },
+        "responses": {"items": {"$ref": "#/$defs/variant"}, "minItems": 1, "type": "array"},
+        "summary": {"minLength": 1, "type": "string"}
+      },
+      "required": ["name", "order", "summary", "request", "responses", "refusal_kinds", "refusal_codes"],
+      "type": "object"
+    },
+    "refusal_code": {
+      "additionalProperties": true,
+      "properties": {
+        "code": {"minLength": 1, "type": "string"},
+        "fields": {"$ref": "#/$defs/field_list"},
+        "kind": {"type": ["string", "null"]},
+        "order": {"minimum": 1, "type": "integer"}
+      },
+      "required": ["code", "order", "kind", "fields"],
+      "type": "object"
+    },
+    "sha256": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+    "string_list": {"items": {"type": "string"}, "type": "array"},
+    "variant": {
+      "additionalProperties": true,
+      "properties": {
+        "fields": {"$ref": "#/$defs/field_list"},
+        "tag": {"type": ["string", "null"]},
+        "tag_field": {"type": ["string", "null"]}
+      },
+      "required": ["tag", "tag_field", "fields"],
+      "type": "object"
+    }
+  },
+  "$id": "https://graphlaw.dev/registry/capability-registry.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "abi_version": {"minimum": 1, "type": "integer"},
+    "authorities": {
+      "items": {
+        "additionalProperties": true,
+        "properties": {"authority": {"type": "string"}, "capability": {"type": "string"}},
+        "required": ["capability", "authority"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "engines": {"$ref": "#/$defs/string_list"},
+    "graphlaw_version": {"pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+", "type": "string"},
+    "law_steps": {"items": {"$ref": "#/$defs/law_step"}, "type": "array"},
+    "lease_ceilings": {"$ref": "#/$defs/string_list"},
+    "lease_reasons": {"$ref": "#/$defs/string_list"},
+    "limits": {
+      "additionalProperties": {"minimum": 0, "type": "integer"},
+      "properties": {
+        "max_atoms_per_field": {"type": "integer"},
+        "max_json_depth": {"type": "integer"},
+        "max_plan_actions": {"type": "integer"},
+        "max_policy_entries": {"type": "integer"},
+        "max_request_bytes": {"type": "integer"},
+        "n3_max_iterations": {"type": "integer"}
+      },
+      "required": [
+        "max_request_bytes", "max_json_depth", "max_plan_actions",
+        "max_atoms_per_field", "max_policy_entries", "n3_max_iterations"
+      ],
+      "type": "object"
+    },
+    "ops": {"items": {"$ref": "#/$defs/op"}, "minItems": 14, "type": "array"},
+    "other_dialects": {"items": {"$ref": "#/$defs/dialect"}, "type": "array"},
+    "policy_refusal_kinds": {"$ref": "#/$defs/string_list"},
+    "rdf_dialects": {"items": {"$ref": "#/$defs/dialect"}, "minItems": 1, "type": "array"},
+    "receipt_reasons": {"$ref": "#/$defs/string_list"},
+    "refusal_codes": {"items": {"$ref": "#/$defs/refusal_code"}, "minItems": 1, "type": "array"},
+    "refusal_kinds": {"$ref": "#/$defs/string_list"},
+    "regimes": {"$ref": "#/$defs/string_list"},
+    "registry_sha256": {"$ref": "#/$defs/sha256"},
+    "schema": {"const": "graphlaw.capability-registry/1"},
+    "surface_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "required": [
+    "schema", "graphlaw_version", "abi_version", "surface_sha256", "registry_sha256",
+    "authorities", "engines", "refusal_kinds", "rdf_dialects", "other_dialects", "regimes",
+    "lease_ceilings", "lease_reasons", "receipt_reasons", "policy_refusal_kinds", "limits",
+    "refusal_codes", "law_steps", "ops"
+  ],
+  "title": "GraphLaw capability registry",
+  "type": "object"
+}

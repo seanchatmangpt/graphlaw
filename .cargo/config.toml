@@ -1,0 +1,11 @@
+# Cap rustc/linker concurrency: 37 integration-test binaries each link purrdf+eyeron;
+# default jobs = ncpu (16) put >15 GB of rustc+ld resident at once.
+[build]
+jobs = 4
+
+[target.wasm32-unknown-unknown]
+# Eyeron and SPARQL evaluation recurse; the 1 MiB default stack is too small.
+rustflags = ["-C", "link-arg=-zstack-size=16777216"]
+
+[target.wasm32-wasip1]
+rustflags = ["-C", "link-arg=-zstack-size=16777216"]

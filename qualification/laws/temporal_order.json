@@ -1,0 +1,1 @@
+{"law":"temporal_order","dimension":"event_order","relation":"precedes","falsifier":{"mutation":"swap_required_pair","expect":"REFUSED"},"permanent_negative_knowledge":true}

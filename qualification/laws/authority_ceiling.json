@@ -1,0 +1,10 @@
+{
+  "law": "authority_ceiling",
+  "dimension": "authority",
+  "relation": "lte_admitted_ceiling",
+  "falsifier": {
+    "mutation": "raise_authority_above_ceiling",
+    "expect": "REFUSED"
+  },
+  "permanent_negative_knowledge": true
+}

@@ -1,0 +1,8 @@
+# graphlaw v26.9.29 release artifacts. Format: <kind> <sha256> <bytes> <name>
+# wasm: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm (rust 1.96.0);
+#   two builds in separate target dirs produced identical bytes (reproducibility verified 2026-09-29).
+#   Regenerate after any src/ change; the wasm line is a pin, not a live check.
+# registry/surface: recomputed by tests/capabilities_digest.rs and tests/registry_artifacts.rs.
+wasm b4cf5dd164c736ed694c2c0362a4af2b8d7969d932d4fa6f2b6812f43ee3ef6d 6616140 graphlaw_wasm.wasm
+registry sha256:8f3ef15bad35fc095e4a832b4cca945414e90152c485dc5a5a92d2ff0f804e16 - capability-registry.json
+surface sha256:fcee74ee068940f9e9879ccd41371807f469d63950c8f63b095117391dbc8e28 - capability-registry.json

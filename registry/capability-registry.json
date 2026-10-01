@@ -1,0 +1,1886 @@
+{
+  "abi_version": 1,
+  "authorities": [
+    {
+      "authority": "purrdf",
+      "capability": "RDF 1.2 / codecs / storage IR"
+    },
+    {
+      "authority": "purrdf::sparql",
+      "capability": "SPARQL 1.1/1.2"
+    },
+    {
+      "authority": "purrdf::shapes",
+      "capability": "SHACL"
+    },
+    {
+      "authority": "purrdf::shex",
+      "capability": "ShEx 2.1"
+    },
+    {
+      "authority": "purrdf::datalog",
+      "capability": "Datalog"
+    },
+    {
+      "authority": "purrdf::entail",
+      "capability": "RDF/RDFS/OWL-RL entailment"
+    },
+    {
+      "authority": "purrdf::sparql",
+      "capability": "Knowledge hooks (kh: orchestration over SPARQL)"
+    },
+    {
+      "authority": "eyeron",
+      "capability": "Notation3"
+    }
+  ],
+  "engines": [
+    "PurRdf",
+    "Eyeron"
+  ],
+  "graphlaw_version": "26.9.29",
+  "law_steps": [
+    {
+      "ceiling": "observe",
+      "fields": [
+        {
+          "default": null,
+          "doc": "SHACL shapes graph as Turtle text.",
+          "enum": null,
+          "name": "shapes",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "name": "shacl",
+      "order": 1
+    },
+    {
+      "ceiling": "construct",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Notation3 rules text.",
+          "enum": null,
+          "name": "rules",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "name": "n3",
+      "order": 2
+    },
+    {
+      "ceiling": "construct",
+      "fields": [],
+      "name": "rdfs",
+      "order": 3
+    },
+    {
+      "ceiling": "construct",
+      "fields": [],
+      "name": "owl-rl",
+      "order": 4
+    },
+    {
+      "ceiling": "construct",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Hook pack as a data spec.",
+          "enum": null,
+          "name": "pack",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "data_spec"
+        }
+      ],
+      "name": "hooks",
+      "order": 5
+    },
+    {
+      "ceiling": "select",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Plan {actions: [{name, pre, pre_not?, add, del}], goal, goal_not?} with N-Triples strings.",
+          "enum": null,
+          "name": "plan",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "object"
+        }
+      ],
+      "name": "plan",
+      "order": 6
+    },
+    {
+      "ceiling": null,
+      "fields": [],
+      "name": "record-receipts",
+      "order": 7
+    },
+    {
+      "ceiling": "observe",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Step whose receipt must already be recorded.",
+          "enum": null,
+          "name": "step_name",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "name": "require-receipt",
+      "order": 8
+    },
+    {
+      "ceiling": "observe",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Step whose receipt must carry a valid attestation.",
+          "enum": null,
+          "name": "step_name",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "doc": "Hex Ed25519 public keys trusted to attest the receipt.",
+          "enum": null,
+          "name": "trusted_keys",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "list<string>"
+        }
+      ],
+      "name": "require-signed-receipt",
+      "order": 9
+    }
+  ],
+  "lease_ceilings": [
+    "observe",
+    "select",
+    "construct"
+  ],
+  "lease_reasons": [
+    "expired",
+    "out_of_scope",
+    "ceiling",
+    "bad_signature",
+    "untrusted_key",
+    "clock_skew"
+  ],
+  "limits": {
+    "max_atoms_per_field": 10000,
+    "max_json_depth": 64,
+    "max_plan_actions": 1000,
+    "max_policy_entries": 100000,
+    "max_request_bytes": 16777216,
+    "n3_max_iterations": 4000
+  },
+  "ops": [
+    {
+      "name": "capabilities",
+      "order": 1,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": []
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "ABI revision (legacy alias of abi_version).",
+              "enum": null,
+              "name": "abi",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "integer"
+            },
+            {
+              "default": null,
+              "doc": "ABI revision.",
+              "enum": null,
+              "name": "abi_version",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "integer"
+            },
+            {
+              "default": null,
+              "doc": "GraphLaw crate version.",
+              "enum": null,
+              "name": "crate",
+              "nullable": false,
+              "order": 3,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Semantic authority map: {capability, authority, revision}.",
+              "enum": null,
+              "name": "authorities",
+              "nullable": false,
+              "order": 4,
+              "required": true,
+              "type": "list<object>"
+            },
+            {
+              "default": null,
+              "doc": "RDF dialect wire names.",
+              "enum": null,
+              "name": "rdf_dialects",
+              "nullable": false,
+              "order": 5,
+              "required": true,
+              "type": "list<string>"
+            },
+            {
+              "default": null,
+              "doc": "Non-RDF dialect wire names.",
+              "enum": null,
+              "name": "other_dialects",
+              "nullable": false,
+              "order": 6,
+              "required": true,
+              "type": "list<string>"
+            },
+            {
+              "default": null,
+              "doc": "ABI op names in registry order.",
+              "enum": null,
+              "name": "ops",
+              "nullable": false,
+              "order": 7,
+              "required": true,
+              "type": "list<string>"
+            },
+            {
+              "default": null,
+              "doc": "Registry schema id; absent on engines older than v26.9.29.",
+              "enum": null,
+              "name": "registry_schema",
+              "nullable": false,
+              "order": 8,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Registry digest; absent on engines older than v26.9.29.",
+              "enum": null,
+              "name": "registry_sha256",
+              "nullable": false,
+              "order": 9,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Surface digest; absent on engines older than v26.9.29.",
+              "enum": null,
+              "name": "surface_sha256",
+              "nullable": false,
+              "order": 10,
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Report ABI version, crate version, semantic authorities, dialects, ops and registry digests."
+    },
+    {
+      "name": "sniff",
+      "order": 2,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "NotSemanticContent",
+        "Ambiguous",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Text to route.",
+            "enum": null,
+            "name": "text",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "File extension or name hint.",
+            "enum": null,
+            "name": "hint",
+            "nullable": true,
+            "order": 2,
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Sniffed dialect (Rust variant name).",
+              "enum": null,
+              "name": "dialect",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Owning engine (PurRdf or Eyeron).",
+              "enum": null,
+              "name": "engine",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "string"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Route text to a dialect and owning engine without parsing it."
+    },
+    {
+      "name": "parse",
+      "order": 3,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "NotSemanticContent",
+        "Ambiguous",
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Text to parse.",
+            "enum": null,
+            "name": "text",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "Dialect name; sniffed when omitted.",
+            "enum": null,
+            "name": "dialect",
+            "nullable": true,
+            "order": 2,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "File extension or name hint for sniffing.",
+            "enum": null,
+            "name": "hint",
+            "nullable": true,
+            "order": 3,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "Base IRI.",
+            "enum": null,
+            "name": "base",
+            "nullable": true,
+            "order": 4,
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Dialect used (Rust variant name).",
+              "enum": null,
+              "name": "dialect",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Quad count; present for RDF dialects.",
+              "enum": null,
+              "name": "quads",
+              "nullable": false,
+              "order": 2,
+              "required": false,
+              "type": "integer"
+            },
+            {
+              "default": null,
+              "doc": "Content-addressed state id; present for RDF dialects.",
+              "enum": null,
+              "name": "id",
+              "nullable": false,
+              "order": 3,
+              "required": false,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Syntax validity; present for non-RDF dialects.",
+              "enum": null,
+              "name": "valid",
+              "nullable": false,
+              "order": 4,
+              "required": false,
+              "type": "boolean"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Parse text with the owning engine; counts quads or validates syntax."
+    },
+    {
+      "name": "convert",
+      "order": 4,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "NotSemanticContent",
+        "Ambiguous",
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Text to convert.",
+            "enum": null,
+            "name": "text",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "Target RDF dialect name.",
+            "enum": null,
+            "name": "to",
+            "nullable": false,
+            "order": 2,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "Source dialect name; sniffed when omitted.",
+            "enum": null,
+            "name": "dialect",
+            "nullable": true,
+            "order": 3,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "File extension or name hint for sniffing.",
+            "enum": null,
+            "name": "hint",
+            "nullable": true,
+            "order": 4,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "Base IRI.",
+            "enum": null,
+            "name": "base",
+            "nullable": true,
+            "order": 5,
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Serialized output.",
+              "enum": null,
+              "name": "text",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Content-addressed id of the source state.",
+              "enum": null,
+              "name": "id",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "string"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Serialize parsed RDF text into another RDF dialect."
+    },
+    {
+      "name": "canonical",
+      "order": 5,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "NotSemanticContent",
+        "Ambiguous",
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Data to operate on: an object {text, dialect?, hint?, base?}; the dialect is sniffed when omitted.",
+            "enum": null,
+            "name": "data",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "data_spec"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Content-addressed state id.",
+              "enum": null,
+              "name": "id",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Canonical N-Quads.",
+              "enum": null,
+              "name": "nquads",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Quad count.",
+              "enum": null,
+              "name": "quads",
+              "nullable": false,
+              "order": 3,
+              "required": true,
+              "type": "integer"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Canonicalize a dataset to N-Quads and return its content-addressed id."
+    },
+    {
+      "name": "sparql",
+      "order": 6,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "NotSemanticContent",
+        "Ambiguous",
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Data to operate on: an object {text, dialect?, hint?, base?}; the dialect is sniffed when omitted.",
+            "enum": null,
+            "name": "data",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "data_spec"
+          },
+          {
+            "default": null,
+            "doc": "SPARQL query text.",
+            "enum": null,
+            "name": "query",
+            "nullable": false,
+            "order": 2,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "Base IRI.",
+            "enum": null,
+            "name": "base",
+            "nullable": true,
+            "order": 3,
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Projected variable names.",
+              "enum": null,
+              "name": "variables",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "list<string>"
+            },
+            {
+              "default": null,
+              "doc": "Solution rows; null marks an unbound cell.",
+              "enum": null,
+              "name": "rows",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "list<list<term>>"
+            }
+          ],
+          "tag": "solutions",
+          "tag_field": "kind"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Constructed graph as N-Quads.",
+              "enum": null,
+              "name": "nquads",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Quad count of the constructed graph.",
+              "enum": null,
+              "name": "quads",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "integer"
+            }
+          ],
+          "tag": "graph",
+          "tag_field": "kind"
+        },
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "ASK result.",
+              "enum": null,
+              "name": "value",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "boolean"
+            }
+          ],
+          "tag": "boolean",
+          "tag_field": "kind"
+        }
+      ],
+      "summary": "Evaluate a SPARQL query over a dataset."
+    },
+    {
+      "name": "shacl",
+      "order": 7,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "NotSemanticContent",
+        "Ambiguous",
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Data to operate on: an object {text, dialect?, hint?, base?}; the dialect is sniffed when omitted.",
+            "enum": null,
+            "name": "data",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "data_spec"
+          },
+          {
+            "default": null,
+            "doc": "SHACL shapes graph as Turtle text.",
+            "enum": null,
+            "name": "shapes",
+            "nullable": false,
+            "order": 2,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "Base IRI.",
+            "enum": null,
+            "name": "base",
+            "nullable": true,
+            "order": 3,
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "True when the data conforms.",
+              "enum": null,
+              "name": "conforms",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "doc": "Validation results: {focus, path, value, severity, component, shape, message}.",
+              "enum": null,
+              "name": "results",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "list<object>"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Validate a dataset against SHACL shapes."
+    },
+    {
+      "name": "shex",
+      "order": 8,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "NotSemanticContent",
+        "Ambiguous",
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Data to operate on: an object {text, dialect?, hint?, base?}; the dialect is sniffed when omitted.",
+            "enum": null,
+            "name": "data",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "data_spec"
+          },
+          {
+            "default": null,
+            "doc": "ShEx schema text.",
+            "enum": null,
+            "name": "schema",
+            "nullable": false,
+            "order": 2,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": "shexc",
+            "doc": "Schema syntax.",
+            "enum": [
+              "shexc",
+              "shexj"
+            ],
+            "name": "schema_dialect",
+            "nullable": true,
+            "order": 3,
+            "required": false,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "Shape map text.",
+            "enum": null,
+            "name": "map",
+            "nullable": false,
+            "order": 4,
+            "required": true,
+            "type": "string"
+          },
+          {
+            "default": null,
+            "doc": "Base IRI.",
+            "enum": null,
+            "name": "base",
+            "nullable": true,
+            "order": 5,
+            "required": false,
+            "type": "string"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "True when every map entry is conformant.",
+              "enum": null,
+              "name": "conforms",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "boolean"
+            },
+            {
+              "default": null,
+              "doc": "Shape map entries: {node, shape, status, reason}.",
+              "enum": null,
+              "name": "entries",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "list<object>"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Validate a dataset against a ShEx schema and shape map."
+    },
+    {
+      "name": "n3",
+      "order": 9,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Notation3 document with data and rules.",
+            "enum": null,
+            "name": "text",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "string"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Reasoner output; shape is owned by Eyeron.",
+              "enum": null,
+              "name": "derived",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "any"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Run bounded Notation3 forward reasoning over a document."
+    },
+    {
+      "name": "entail",
+      "order": 10,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "NotSemanticContent",
+        "Ambiguous",
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Data to operate on: an object {text, dialect?, hint?, base?}; the dialect is sniffed when omitted.",
+            "enum": null,
+            "name": "data",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "data_spec"
+          },
+          {
+            "default": null,
+            "doc": "Entailment regime.",
+            "enum": [
+              "simple",
+              "rdf",
+              "rdfs",
+              "owl-rl",
+              "d"
+            ],
+            "name": "regime",
+            "nullable": false,
+            "order": 2,
+            "required": true,
+            "type": "string"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Closure as N-Quads.",
+              "enum": null,
+              "name": "nquads",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Quads added by materialization.",
+              "enum": null,
+              "name": "added",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "integer"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Materialize an entailment regime over a dataset."
+    },
+    {
+      "name": "datalog",
+      "order": 11,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Rules: {head: [s,p,o], body: [[s,p,o], ...]}; terms starting with ? are variables.",
+            "enum": null,
+            "name": "rules",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "list<object>"
+          },
+          {
+            "default": null,
+            "doc": "Ground facts as [subject, predicate, object] strings.",
+            "enum": null,
+            "name": "facts",
+            "nullable": false,
+            "order": 2,
+            "required": true,
+            "type": "list<list<string>>"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Number of facts in the fixpoint.",
+              "enum": null,
+              "name": "count",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "integer"
+            },
+            {
+              "default": null,
+              "doc": "Sorted fixpoint facts as [subject, predicate, object].",
+              "enum": null,
+              "name": "facts",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "list<list<string>>"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Evaluate Datalog rules over triple facts to a fixpoint."
+    },
+    {
+      "name": "hooks",
+      "order": 12,
+      "refusal_codes": [
+        "ResourceLimit"
+      ],
+      "refusal_kinds": [
+        "NotSemanticContent",
+        "Ambiguous",
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Hook pack as a data spec (kh: vocabulary).",
+            "enum": null,
+            "name": "pack",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "data_spec"
+          },
+          {
+            "default": null,
+            "doc": "Data to operate on: an object {text, dialect?, hint?, base?}; the dialect is sniffed when omitted.",
+            "enum": null,
+            "name": "data",
+            "nullable": false,
+            "order": 2,
+            "required": true,
+            "type": "data_spec"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Content-addressed id of the materialized state.",
+              "enum": null,
+              "name": "id",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Fixpoint rounds executed.",
+              "enum": null,
+              "name": "rounds",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "integer"
+            },
+            {
+              "default": null,
+              "doc": "Quad count of the materialized state.",
+              "enum": null,
+              "name": "quads",
+              "nullable": false,
+              "order": 3,
+              "required": true,
+              "type": "integer"
+            },
+            {
+              "default": null,
+              "doc": "Materialized state as N-Quads.",
+              "enum": null,
+              "name": "nquads",
+              "nullable": false,
+              "order": 4,
+              "required": true,
+              "type": "string"
+            },
+            {
+              "default": null,
+              "doc": "Hook firings: {hook, round, added, row}.",
+              "enum": null,
+              "name": "firings",
+              "nullable": false,
+              "order": 5,
+              "required": true,
+              "type": "list<object>"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Materialize a knowledge-hook pack over a dataset."
+    },
+    {
+      "name": "law",
+      "order": 13,
+      "refusal_codes": [
+        "Refused",
+        "ResourceLimit",
+        "PlanRefused",
+        "ReceiptRequired",
+        "ReceiptRefused",
+        "LeaseRefused",
+        "NotAdmitted",
+        "UnverifiedLeaseRefused"
+      ],
+      "refusal_kinds": [
+        "NotSemanticContent",
+        "Ambiguous",
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Data to operate on: an object {text, dialect?, hint?, base?}; the dialect is sniffed when omitted.",
+            "enum": null,
+            "name": "data",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "data_spec"
+          },
+          {
+            "default": null,
+            "doc": "Ordered law steps; see law_steps.",
+            "enum": null,
+            "name": "steps",
+            "nullable": false,
+            "order": 2,
+            "required": true,
+            "type": "list<object>"
+          },
+          {
+            "default": null,
+            "doc": "Signed lease {lease, attestation}; verified offline against trusted_keys.",
+            "enum": null,
+            "name": "signed_lease",
+            "nullable": false,
+            "order": 3,
+            "required": false,
+            "type": "object"
+          },
+          {
+            "default": null,
+            "doc": "Unsigned lease; refused unless unverified_lease is true.",
+            "enum": null,
+            "name": "lease",
+            "nullable": false,
+            "order": 4,
+            "required": false,
+            "type": "object"
+          },
+          {
+            "default": null,
+            "doc": "Hex Ed25519 public keys trusted to sign leases.",
+            "enum": null,
+            "name": "trusted_keys",
+            "nullable": false,
+            "order": 5,
+            "required": false,
+            "type": "list<string>"
+          },
+          {
+            "default": null,
+            "doc": "Clock skew tolerance for signed leases in seconds.",
+            "enum": null,
+            "name": "max_skew_secs",
+            "nullable": true,
+            "order": 6,
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "default": null,
+            "doc": "Accept an unsigned lease; proves nothing about its issuer.",
+            "enum": null,
+            "name": "unverified_lease",
+            "nullable": false,
+            "order": 7,
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "default": null,
+            "doc": "Caller clock in unix seconds; used only with an unverified lease.",
+            "enum": null,
+            "name": "now_unix",
+            "nullable": false,
+            "order": 8,
+            "required": false,
+            "type": "integer"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "State ids after each step, starting with the input.",
+              "enum": null,
+              "name": "states",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "list<string>"
+            },
+            {
+              "default": null,
+              "doc": "Receipts, one per transition.",
+              "enum": null,
+              "name": "receipts",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "list<object>"
+            },
+            {
+              "default": null,
+              "doc": "Final state as N-Quads.",
+              "enum": null,
+              "name": "nquads",
+              "nullable": false,
+              "order": 3,
+              "required": true,
+              "type": "string"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Run an ordered chain of law steps with receipts and optional lease authorization."
+    },
+    {
+      "name": "policy",
+      "order": 14,
+      "refusal_codes": [
+        "ResourceLimit",
+        "PolicyRefused"
+      ],
+      "refusal_kinds": [
+        "EngineRejected",
+        "Unsupported",
+        "ResourceLimit"
+      ],
+      "request": {
+        "fields": [
+          {
+            "default": null,
+            "doc": "Planning problem as a JSON object or JSON text.",
+            "enum": null,
+            "name": "problem",
+            "nullable": false,
+            "order": 1,
+            "required": true,
+            "type": "json_or_string"
+          },
+          {
+            "default": null,
+            "doc": "Policy as a JSON object, entries array or JSON text.",
+            "enum": null,
+            "name": "policy",
+            "nullable": false,
+            "order": 2,
+            "required": true,
+            "type": "json_or_string"
+          }
+        ]
+      },
+      "responses": [
+        {
+          "fields": [
+            {
+              "default": null,
+              "doc": "Initial states of the problem.",
+              "enum": null,
+              "name": "initial_states",
+              "nullable": false,
+              "order": 1,
+              "required": true,
+              "type": "list<string>"
+            },
+            {
+              "default": null,
+              "doc": "States reachable under the policy.",
+              "enum": null,
+              "name": "reachable",
+              "nullable": false,
+              "order": 2,
+              "required": true,
+              "type": "list<string>"
+            },
+            {
+              "default": null,
+              "doc": "Reachable goal states.",
+              "enum": null,
+              "name": "goal_states",
+              "nullable": false,
+              "order": 3,
+              "required": true,
+              "type": "list<string>"
+            },
+            {
+              "default": null,
+              "doc": "Admitted policy entries as [state, action].",
+              "enum": null,
+              "name": "entries",
+              "nullable": false,
+              "order": 4,
+              "required": true,
+              "type": "list<list<string>>"
+            },
+            {
+              "default": null,
+              "doc": "Admitted policy as N-Triples.",
+              "enum": null,
+              "name": "ntriples",
+              "nullable": false,
+              "order": 5,
+              "required": true,
+              "type": "string"
+            }
+          ],
+          "tag": null,
+          "tag_field": null
+        }
+      ],
+      "summary": "Admit a FOND policy as strong-cyclic against a planning problem."
+    }
+  ],
+  "other_dialects": [
+    {
+      "aliases": [],
+      "kind": "other",
+      "media_type": null,
+      "name": "n3",
+      "order": 10,
+      "response_name": "N3"
+    },
+    {
+      "aliases": [
+        "rq"
+      ],
+      "kind": "other",
+      "media_type": null,
+      "name": "sparql",
+      "order": 11,
+      "response_name": "Sparql"
+    },
+    {
+      "aliases": [
+        "shex"
+      ],
+      "kind": "other",
+      "media_type": null,
+      "name": "shexc",
+      "order": 12,
+      "response_name": "ShExC"
+    },
+    {
+      "aliases": [],
+      "kind": "other",
+      "media_type": null,
+      "name": "shexj",
+      "order": 13,
+      "response_name": "ShExJ"
+    }
+  ],
+  "policy_refusal_kinds": [
+    "MissingEntry",
+    "InventedOutcome",
+    "BadMass",
+    "DeadEnd",
+    "Malformed"
+  ],
+  "rdf_dialects": [
+    {
+      "aliases": [
+        "ttl"
+      ],
+      "kind": "rdf",
+      "media_type": "text/turtle",
+      "name": "turtle",
+      "order": 1,
+      "response_name": "Turtle"
+    },
+    {
+      "aliases": [],
+      "kind": "rdf",
+      "media_type": "application/trig",
+      "name": "trig",
+      "order": 2,
+      "response_name": "TriG"
+    },
+    {
+      "aliases": [
+        "nt"
+      ],
+      "kind": "rdf",
+      "media_type": "application/n-triples",
+      "name": "ntriples",
+      "order": 3,
+      "response_name": "NTriples"
+    },
+    {
+      "aliases": [
+        "nq"
+      ],
+      "kind": "rdf",
+      "media_type": "application/n-quads",
+      "name": "nquads",
+      "order": 4,
+      "response_name": "NQuads"
+    },
+    {
+      "aliases": [
+        "rdf",
+        "owl"
+      ],
+      "kind": "rdf",
+      "media_type": "application/rdf+xml",
+      "name": "rdfxml",
+      "order": 5,
+      "response_name": "RdfXml"
+    },
+    {
+      "aliases": [],
+      "kind": "rdf",
+      "media_type": "application/ld+json",
+      "name": "jsonld",
+      "order": 6,
+      "response_name": "JsonLd"
+    },
+    {
+      "aliases": [],
+      "kind": "rdf",
+      "media_type": "application/ld+yaml",
+      "name": "yamlld",
+      "order": 7,
+      "response_name": "YamlLd"
+    },
+    {
+      "aliases": [],
+      "kind": "rdf",
+      "media_type": "application/trix",
+      "name": "trix",
+      "order": 8,
+      "response_name": "TriX"
+    },
+    {
+      "aliases": [
+        "hext"
+      ],
+      "kind": "rdf",
+      "media_type": "application/x-hextuples",
+      "name": "hextuples",
+      "order": 9,
+      "response_name": "HexTuples"
+    }
+  ],
+  "receipt_reasons": [
+    "unattested",
+    "bad_signature",
+    "untrusted_key"
+  ],
+  "refusal_codes": [
+    {
+      "code": "Refused",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Refusal kind of the underlying engine refusal.",
+          "enum": null,
+          "name": "kind",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "kind": null,
+      "order": 1
+    },
+    {
+      "code": "ResourceLimit",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Name of the exceeded limit.",
+          "enum": null,
+          "name": "limit",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "doc": "Observed size; absent for iteration limits.",
+          "enum": null,
+          "name": "observed",
+          "nullable": false,
+          "order": 2,
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "default": null,
+          "doc": "Configured maximum.",
+          "enum": null,
+          "name": "max",
+          "nullable": false,
+          "order": 3,
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "kind": "ResourceLimit",
+      "order": 2
+    },
+    {
+      "code": "PlanRefused",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Index of the refused plan action.",
+          "enum": null,
+          "name": "index",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "default": null,
+          "doc": "Name of the refused action.",
+          "enum": null,
+          "name": "action",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "doc": "Unmet precondition atoms.",
+          "enum": null,
+          "name": "unmet",
+          "nullable": false,
+          "order": 3,
+          "required": true,
+          "type": "list<string>"
+        },
+        {
+          "default": null,
+          "doc": "Atoms that were required absent but present.",
+          "enum": null,
+          "name": "violated_absent",
+          "nullable": false,
+          "order": 4,
+          "required": true,
+          "type": "list<string>"
+        }
+      ],
+      "kind": "EngineRejected",
+      "order": 3
+    },
+    {
+      "code": "ReceiptRequired",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Step name with no recorded receipt.",
+          "enum": null,
+          "name": "step",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "kind": "EngineRejected",
+      "order": 4
+    },
+    {
+      "code": "ReceiptRefused",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Step name whose receipt was refused.",
+          "enum": null,
+          "name": "step",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "doc": "Refusal reason.",
+          "enum": [
+            "unattested",
+            "bad_signature",
+            "untrusted_key"
+          ],
+          "name": "reason",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "kind": "EngineRejected",
+      "order": 5
+    },
+    {
+      "code": "LeaseRefused",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Refusal reason.",
+          "enum": [
+            "expired",
+            "out_of_scope",
+            "ceiling",
+            "bad_signature",
+            "untrusted_key",
+            "clock_skew"
+          ],
+          "name": "reason",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "doc": "Id of the refused lease.",
+          "enum": null,
+          "name": "lease_id",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "doc": "Step that was refused.",
+          "enum": null,
+          "name": "step",
+          "nullable": false,
+          "order": 3,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "kind": "EngineRejected",
+      "order": 6
+    },
+    {
+      "code": "NotAdmitted",
+      "fields": [
+        {
+          "default": null,
+          "doc": "SHACL violations: {focus, path, component, message, severity}.",
+          "enum": null,
+          "name": "violations",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "list<object>"
+        }
+      ],
+      "kind": "EngineRejected",
+      "order": 7
+    },
+    {
+      "code": "UnverifiedLeaseRefused",
+      "fields": [],
+      "kind": "Unsupported",
+      "order": 8
+    },
+    {
+      "code": "PolicyRefused",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Policy refusal kind.",
+          "enum": [
+            "MissingEntry",
+            "InventedOutcome",
+            "BadMass",
+            "DeadEnd",
+            "Malformed"
+          ],
+          "name": "policy_kind",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "doc": "State at which the policy was refused.",
+          "enum": null,
+          "name": "state",
+          "nullable": false,
+          "order": 2,
+          "required": true,
+          "type": "string"
+        },
+        {
+          "default": null,
+          "doc": "Action at which the policy was refused.",
+          "enum": null,
+          "name": "action",
+          "nullable": false,
+          "order": 3,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "kind": "EngineRejected",
+      "order": 9
+    }
+  ],
+  "refusal_kinds": [
+    "NotSemanticContent",
+    "Ambiguous",
+    "EngineRejected",
+    "Unsupported",
+    "ResourceLimit"
+  ],
+  "regimes": [
+    "simple",
+    "rdf",
+    "rdfs",
+    "owl-rl",
+    "d"
+  ],
+  "registry_sha256": "sha256:8f3ef15bad35fc095e4a832b4cca945414e90152c485dc5a5a92d2ff0f804e16",
+  "schema": "graphlaw.capability-registry/1",
+  "surface_sha256": "sha256:fcee74ee068940f9e9879ccd41371807f469d63950c8f63b095117391dbc8e28"
+}
