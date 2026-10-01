@@ -34,9 +34,16 @@ fn eyeron_revision_matches_the_vendored_crate() {
         .filter(|a| a.authority == "eyeron")
     {
         let version = a.revision.split_whitespace().next().unwrap();
+        // The authority revision names the UPSTREAM version; the vendored crate carries its own
+        // patch version on top (see UPSTREAM.md), so the upstream version is checked there.
         assert!(
-            manifest.contains(&format!("version = \"{version}\"")),
-            "{}: vendored version differs",
+            upstream.contains(&format!("crate version {version}")),
+            "{}: UPSTREAM.md does not record upstream version {version}",
+            a.capability
+        );
+        assert!(
+            manifest.contains("name = \"graphlaw-eyeron\""),
+            "{}: vendored manifest is not graphlaw-eyeron",
             a.capability
         );
         let commit = a

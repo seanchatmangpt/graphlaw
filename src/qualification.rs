@@ -174,7 +174,10 @@ pub fn compose_courts(parent: &Value, child: &Value) -> Result<BTreeSet<String>,
         .get("inherits")
         .and_then(Value::as_array)
         .ok_or_else(|| "child inherits must be an array".to_string())?;
-    if !inherits.iter().any(|value| value.as_str() == Some(parent_id)) {
+    if !inherits
+        .iter()
+        .any(|value| value.as_str() == Some(parent_id))
+    {
         return Err(format!(
             "child profile does not inherit required parent {parent_id}"
         ));
