@@ -1,8 +1,8 @@
-# graphlaw working-tree artifacts (crate version 26.9.29; tree differs from the v26.9.29 release, whose graphlaw.wasm digest is b4cf5dd1... -- a new release tag is an operator decision). Format: <kind> <sha256> <bytes> <name>
+# graphlaw working-tree artifacts (crate version 26.10.5; tree differs from the v26.9.29 release, whose graphlaw.wasm digest is b4cf5dd1... -- a new release tag is an operator decision). Format: <kind> <sha256> <bytes> <name>
 # wasm: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm (rust 1.96.0);
 #   observed 2026-09-30: two builds, each after `cargo clean -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`, same target dir (dependency crates cached, not rebuilt), same machine, produced identical bytes. Not verified across separate target dirs or machines.
 #   Regenerate after any src/ change; the wasm line is a pin, not a live check.
 # registry/surface: recomputed by tests/capabilities_digest.rs and tests/registry_artifacts.rs.
 wasm 8bfff66cccd1e1a4834d61a893888bb479f046c1da1152a29098be7de0fe71a8 6657549 graphlaw_wasm.wasm
-registry sha256:dcecf65bfdcd415591fd6f52e09781487fe7eb16771b72c3aa240792312d2b97 - capability-registry.json
+registry sha256:9bdaedd8a284e5187bd14f18251c57193809a73cf4c337093c241981e71a60d6 - capability-registry.json
 surface sha256:fcee74ee068940f9e9879ccd41371807f469d63950c8f63b095117391dbc8e28 - capability-registry.json

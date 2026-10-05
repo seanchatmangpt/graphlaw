@@ -2,7 +2,7 @@
 # Reads the pack via the sibling checkout; writes only the two generated court files.
 [project]
 name = "graphlaw-chicago-courts"
-version = "26.9.29"
+version = "26.10.5"
 description = "Generated Chicago courts for GraphLaw: chicago-fibo, chicago-cross-authority"
 authors = ["Sean Chatman"]
 license = "MIT"

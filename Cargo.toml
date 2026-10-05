@@ -1,6 +1,6 @@
 [package]
 name = "graphlaw"
-version = "26.9.29"
+version = "26.10.5"
 edition = "2024"
 rust-version = "1.96"
 authors = ["Sean Chatman"]

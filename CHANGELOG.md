@@ -5,7 +5,14 @@ All notable changes to this project are documented here, in the
 
 ## [Unreleased]
 
-v26.9.29 is released (GitHub release v26.9.29; crates.io `graphlaw` 26.9.29 with `graphlaw-eyeron` 0.7.8).
+Nothing.
+
+## [26.10.5] - 2026-10-05
+
+Published as crates.io `graphlaw` 26.10.5 (`graphlaw-eyeron` remains 0.7.8; it is independently
+versioned upstream-vendored and is not coupled to the workspace calendar version).
+
+publish: BLOCKED:crates_io_credentials
 
 ### Added
 
@@ -35,7 +42,7 @@ v26.9.29 is released (GitHub release v26.9.29; crates.io `graphlaw` 26.9.29 with
   (`n3_iterations`, `n3_derived_facts`, `n3_total_bytes`, `n3_term_bytes`, `n3_match_steps`);
   `plan_total_atoms` caps a plan's cumulative atoms; hooks cap the state at 1,000,000 quads; the
   wasm module caps outstanding `gl_alloc` bytes at 256 MiB; `N3Error::Limit` gains `limit` and `max`.
-- BREAKING (unreleased): `plan::Action` gains `pre_not`, `plan::Plan` gains `goal_not`, and
+- BREAKING: `plan::Action` gains `pre_not`, `plan::Plan` gains `goal_not`, and
   `LawError::PlanRefused` gains `violated_absent`; every in-repo struct literal (tests, examples)
   was updated with `..Default::default()`. Digests of plans without negation are unchanged.
   Migration (introduced in 797056b, "Negative preconditions and negative goals in plan
@@ -51,7 +58,7 @@ v26.9.29 is released (GitHub release v26.9.29; crates.io `graphlaw` 26.9.29 with
         add: "<urn:d> <urn:p:is> <urn:v:open> .".into(),
         del: "<urn:d> <urn:p:is> <urn:v:closed> .".into(),
     };
-    // after (unreleased)
+    // after (26.10.5)
     let a = graphlaw::plan::Action {
         name: "open".into(),
         pre: "<urn:d> <urn:p:is> <urn:v:closed> .".into(),
@@ -68,7 +75,7 @@ v26.9.29 is released (GitHub release v26.9.29; crates.io `graphlaw` 26.9.29 with
     ```rust
     // before (26.9.28)
     let p = graphlaw::plan::Plan { actions, goal: goal_nt.into() };
-    // after (unreleased)
+    // after (26.10.5)
     let p = graphlaw::plan::Plan {
         actions,
         goal: goal_nt.into(),
@@ -82,7 +89,7 @@ v26.9.29 is released (GitHub release v26.9.29; crates.io `graphlaw` 26.9.29 with
     ```rust
     // before (26.9.28)
     LawError::PlanRefused { index, action, missing } => { ... }
-    // after (unreleased)
+    // after (26.10.5)
     LawError::PlanRefused { index, action, missing, violated_absent } => { ... }
     // or: LawError::PlanRefused { index, action, missing, .. } => { ... }
     ```
@@ -137,7 +144,7 @@ v26.9.29 is released (GitHub release v26.9.29; crates.io `graphlaw` 26.9.29 with
   uses them. Struct-literal construction is unchanged.
 - `docs/api-stability.md` (stability, deprecation, MSRV and `ABI_VERSION` policy),
   `tests/api_stability.rs`, `tests/plan_builder.rs`.
-- CI jobs `semver` (cargo-semver-checks, informational while unreleased), `deny` (`deny.toml`) and
+- CI jobs `semver` (cargo-semver-checks, informational), `deny` (`deny.toml`) and
   `audit` (cargo-audit).
 
 - Independent plan admission: `plan::Plan::admit` replays actions and refuses on the first unmet

@@ -4,8 +4,8 @@
 
 | version | supported |
 |---|---|
-| 26.9.28 (latest released) | yes |
-| 26.9.29 (unreleased) | not yet released |
+| 26.10.5 (latest released) | yes |
+| 26.9.28 | no |
 | earlier / `praxis-graphlaw` | no |
 
 ## Reporting a vulnerability

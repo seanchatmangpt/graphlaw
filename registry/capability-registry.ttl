@@ -2532,9 +2532,9 @@
     a gac:Registry ;
     gac:abiVersion 1 ;
     gac:dialectCount 13 ;
-    gac:graphlawVersion "26.9.29" ;
+    gac:graphlawVersion "26.10.5" ;
     gac:opCount 14 ;
-    gac:registrySha256 "sha256:dcecf65bfdcd415591fd6f52e09781487fe7eb16771b72c3aa240792312d2b97" ;
+    gac:registrySha256 "sha256:9bdaedd8a284e5187bd14f18251c57193809a73cf4c337093c241981e71a60d6" ;
     gac:schemaId "graphlaw.capability-registry/1" ;
     gac:surfaceSha256 "sha256:fcee74ee068940f9e9879ccd41371807f469d63950c8f63b095117391dbc8e28" .
 
