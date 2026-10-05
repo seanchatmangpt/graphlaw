@@ -136,11 +136,8 @@ publish: BLOCKED:crates_io_credentials
   each with a `.sha256`, are attached next to `graphlaw.wasm` (release remains held by
   `RELEASE_HOLD`).
 - `docs/api-stability.md`: registry additive-field rule and `surface_sha256` compatibility rule.
-- Negative preconditions and goals: `Action::pre_not` / `Plan::goal_not` (triples that must be ABSENT,
-  PDDL `(not p)`, closed-world over ground atoms), `ActionBuilder::requires_not`,
-  `PlanBuilder::requires_not` / `goal_not`, ABI `pre_not` / `goal_not` fields, and
-  `details.violated_absent` on `PlanRefused`. Included in the plan digest only when non-empty.
-  `tests/plan_negation.rs`.
+- Plan negation (negative preconditions and goals) — see Changed above for the full treatment,
+  migration blocks and provenance.
 - `plan::Triple` (validated IRIs, escaped literals), `plan::PlanBuilder` / `Plan::builder()`,
   `plan::ActionBuilder` / `Action::builder()` and `plan::TripleError`; `examples/quickstart_plan.rs`
   uses them. Struct-literal construction is unchanged.
