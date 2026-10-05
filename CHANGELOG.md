@@ -38,6 +38,54 @@ v26.9.29 is released (GitHub release v26.9.29; crates.io `graphlaw` 26.9.29 with
 - BREAKING (unreleased): `plan::Action` gains `pre_not`, `plan::Plan` gains `goal_not`, and
   `LawError::PlanRefused` gains `violated_absent`; every in-repo struct literal (tests, examples)
   was updated with `..Default::default()`. Digests of plans without negation are unchanged.
+  Migration (introduced in 797056b, "Negative preconditions and negative goals in plan
+  admission"):
+  - `plan::Action` — exhaustive struct literals no longer compile; add `pre_not` or spread
+    `..Default::default()`:
+
+    ```rust
+    // before (26.9.28)
+    let a = graphlaw::plan::Action {
+        name: "open".into(),
+        pre: "<urn:d> <urn:p:is> <urn:v:closed> .".into(),
+        add: "<urn:d> <urn:p:is> <urn:v:open> .".into(),
+        del: "<urn:d> <urn:p:is> <urn:v:closed> .".into(),
+    };
+    // after (unreleased)
+    let a = graphlaw::plan::Action {
+        name: "open".into(),
+        pre: "<urn:d> <urn:p:is> <urn:v:closed> .".into(),
+        pre_not: "<urn:d> <urn:p:is> <urn:v:locked> .".into(),
+        add: "<urn:d> <urn:p:is> <urn:v:open> .".into(),
+        del: "<urn:d> <urn:p:is> <urn:v:closed> .".into(),
+    };
+    // or: ..Default::default() after `del` to keep the old shape.
+    ```
+
+  - `plan::Plan` — same shape change for `goal_not` (or prefer `Plan::builder()`, which is
+    unaffected):
+
+    ```rust
+    // before (26.9.28)
+    let p = graphlaw::plan::Plan { actions, goal: goal_nt.into() };
+    // after (unreleased)
+    let p = graphlaw::plan::Plan {
+        actions,
+        goal: goal_nt.into(),
+        goal_not: String::new(),
+    };
+    ```
+
+  - `LawError::PlanRefused` — the variant is `#[non_exhaustive]`-exempt (it is a struct
+    variant), so exhaustive matches gain a new binding; add the field or a wildcard:
+
+    ```rust
+    // before (26.9.28)
+    LawError::PlanRefused { index, action, missing } => { ... }
+    // after (unreleased)
+    LawError::PlanRefused { index, action, missing, violated_absent } => { ... }
+    // or: LawError::PlanRefused { index, action, missing, .. } => { ... }
+    ```
 - API stability: growable public enums (`Step`, `Dialect`, `Engine`, `RefusalKind`,
   `PolicyRefusalKind`, `LeaseReason`, `ReceiptReason`, `Ceiling`, `N3Error`, `LawError`,
   `StoreError`, `AttestError`) are `#[non_exhaustive]`; downstream matches need a wildcard arm.
