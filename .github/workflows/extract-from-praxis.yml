@@ -20,7 +20,7 @@ jobs:
       WASM4PM_SHA: 9fc4f1ae3cc99cf65a5f014580db8e1ea3d08b55
     steps:
       - name: Checkout GraphLaw
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
@@ -190,8 +190,8 @@ jobs:
             graphlaw:
               runs-on: ubuntu-latest
               steps:
-                - uses: actions/checkout@v4
-                - uses: dtolnay/rust-toolchain@stable
+                - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+                - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # stable
                 - run: cargo metadata --format-version 1 --no-deps
                 - run: cargo check -p praxis-graphlaw --lib
           YAML
