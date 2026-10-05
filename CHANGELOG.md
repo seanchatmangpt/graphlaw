@@ -42,10 +42,12 @@ publish: BLOCKED:crates_io_credentials
   (`n3_iterations`, `n3_derived_facts`, `n3_total_bytes`, `n3_term_bytes`, `n3_match_steps`);
   `plan_total_atoms` caps a plan's cumulative atoms; hooks cap the state at 1,000,000 quads; the
   wasm module caps outstanding `gl_alloc` bytes at 256 MiB; `N3Error::Limit` gains `limit` and `max`.
-- BREAKING: `plan::Action` gains `pre_not`, `plan::Plan` gains `goal_not`, and
-  `LawError::PlanRefused` gains `violated_absent`; every in-repo struct literal (tests, examples)
-  was updated with `..Default::default()`. Digests of plans without negation are unchanged.
-  Migration (introduced in 797056b, "Negative preconditions and negative goals in plan
+- `plan::Action` gains `pre_not`, `plan::Plan` gains `goal_not`, and `LawError::PlanRefused`
+  gains `violated_absent`; every in-repo struct literal (tests, examples) was updated with
+  `..Default::default()`. Digests of plans without negation are unchanged.
+  Present since v26.9.29 (misfiled as breaking in this section; verified via
+  cargo-semver-checks 196/196 against the v26.9.29 baseline).
+  Migration notes (introduced in 797056b, "Negative preconditions and negative goals in plan
   admission"):
   - `plan::Action` — exhaustive struct literals no longer compile; add `pre_not` or spread
     `..Default::default()`:
