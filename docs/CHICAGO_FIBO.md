@@ -68,6 +68,13 @@ The run14 runner (`sa2a-run14-verify`, feature `abi`) checks 65 files in
 courtId, not computed from payload. Fixtures 001 and 002 are payload-identical. All carry
 authority NONE and EVIDENCE_ONLY. The corpus is read-only; failure cases run on a temp copy.
 
+The run12 runner (`sa2a-portability-verify`, feature `abi`) runs the 50 vectors in
+`conformance/sa2a/portable/run12/` through GraphLaw's real JSON ABI (`parse` plus RDFC-1.0
+`canonical` on every vector), requires ADMIT vectors to carry the `authority NONE`,
+`consequence EVIDENCE_ONLY` and `canonicalization RDFC-1.0` invariants and REFUSE vectors a typed
+`sa2a:violation`, and asserts the corpus stays at exactly 50 vectors. It is evidence verification
+only: it never grants authority or performs DO.
+
 Elixir counterpart (`ash_a2a`, court CHI-FIN, falsifiers CHI-FIN-001 onward):
 
     MIX_ENV=test mix ash_a2a.chicago --court CHI-FIN --court CHI-ID --court CHI-ADM --court CHI-REAL --require-conformant

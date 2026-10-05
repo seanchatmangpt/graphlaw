@@ -7,6 +7,17 @@ All notable changes to this project are documented here, in the
 
 v26.9.29 is released (GitHub release v26.9.29; crates.io `graphlaw` 26.9.29 with `graphlaw-eyeron` 0.7.8).
 
+### Added
+
+- `graphlaw::capability_intake` (CASTLE donor intake): a descriptive, side-effect-free registry of
+  the donor subjects GraphLaw may wrap or absorb while remaining the sole semantic-law owner.
+  `DONORS` carries three projected donors (unrdf `WRAP`, praxis `ABSORB`, mfw `CANDIDATE_WRAP`);
+  `donor(repository)` looks one up by exact repository identity; the consts `PROJECTION_SOURCE`
+  (the admitting ggen-ecosystem projection, `@50fdfa2`), `OWNER_CAPABILITY`
+  (`SEMANTIC_LAW_DERIVATION`) and `AUTHORITY_CEILING` (`CONSTRUCT`) bound the intake, and
+  `consequence_authority` is `false` for every donor — projected donor capability never carries
+  GraphLaw or CASTLE DO authority.
+
 ### Changed
 
 - Capability registry (additive, schema id unchanged): `limits` now lists all 15 engine limits

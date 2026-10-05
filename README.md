@@ -89,7 +89,7 @@ assert!(derived.contains("Mortal"));
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-The complete upstream surfaces are intentionally re-exported. Consumers can use the authoritative library API directly rather than a lossy GraphLaw copy.
+The complete upstream surfaces are intentionally re-exported. Consumers can use the authoritative library API directly rather than a lossy GraphLaw copy. `graphlaw::capability_intake` adds the CASTLE donor intake: a descriptive, side-effect-free registry of the donor subjects GraphLaw may wrap or absorb (ceiling `CONSTRUCT`, never DO authority).
 
 ## API stability and supply chain
 
