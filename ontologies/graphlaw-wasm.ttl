@@ -1,0 +1,73 @@
+# graphlaw-wasm.ttl - graphlaw's instance of the rust-wasi-wasmex-pack wja: vocabulary.
+# All graphlaw-specific ABI facts (prefix, crate, ops, limits, conventions) live here;
+# the pack is project-neutral. Rendered by `ggen sync` into wasm/src/{abi_meta.rs,ffi.rs}.
+#
+# Facts are restated from the verified in-tree sources (read, not inferred):
+#   - src/abi.rs      : ABI_VERSION 1, MAX_REQUEST_BYTES 16 MiB, MAX_JSON_DEPTH 64,
+#                       MAX_OUTSTANDING_ALLOC_BYTES 256 MiB, hooks call /
+#                       missing_buffer_response / limit_response.
+#   - wasm/src/lib.rs : the verified hand-written shell (gl_ prefix, vec buffer style,
+#                       packed-u64 return, call-consumes input release, no abi-version
+#                       export, outstanding-byte cap active).
+#   - src/registry.rs : the 14 ops (wire order) and 9 refusal codes (wire order),
+#                       mirrored into the generated abi_meta::OPS / ERROR_CODES tables
+#                       and guarded against drift by the native test in wasm/src/lib.rs.
+#
+# The generated ffi.rs is admitted only because it is contract-identical to the
+# verified shell; the compile-time const-asserts in wasm/src/lib.rs keep
+# graphlaw::abi the single source of truth for the limits.
+
+@prefix wja: <https://ggen.dev/ontology/wasi-json-abi#> .
+@prefix glw: <https://graphlaw.dev/wasm#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+glw:module a wja:WasmModule ;
+    rdfs:label "graphlaw WASI module" ;
+    wja:crateName "graphlaw-wasm" ;
+    wja:exportPrefix "gl" ;
+    wja:abiVersion 1 ;
+    wja:maxRequestBytes 16777216 ;
+    wja:maxJsonDepth 64 ;
+    wja:maxOutstandingBytes 268435456 ;
+    wja:hasAbiVersionExport false ;
+    wja:abiModulePath "graphlaw::abi" ;
+    wja:callHook "call" ;
+    wja:emptyResponsePolicy "substitute-empty-object" ;
+    wja:returnConvention "packed-u64" ;
+    wja:inputReleasePolicy "call-consumes" ;
+    wja:bufferStyle "vec" ;
+    wja:symbolSuffix "" ;
+    wja:hasOp glw:op-capabilities , glw:op-sniff , glw:op-parse , glw:op-convert ,
+        glw:op-canonical , glw:op-sparql , glw:op-shacl , glw:op-shex , glw:op-n3 ,
+        glw:op-entail , glw:op-datalog , glw:op-hooks , glw:op-law , glw:op-policy ;
+    wja:hasErrorCode glw:err-refused , glw:err-resource-limit , glw:err-plan-refused ,
+        glw:err-receipt-required , glw:err-receipt-refused , glw:err-lease-refused ,
+        glw:err-not-admitted , glw:err-unverified-lease-refused , glw:err-policy-refused .
+
+# Ops, in wire order (= src/registry.rs OPS order).
+glw:op-capabilities a wja:Op ; wja:opName "capabilities" ; wja:opOrder 1 .
+glw:op-sniff a wja:Op ; wja:opName "sniff" ; wja:opOrder 2 .
+glw:op-parse a wja:Op ; wja:opName "parse" ; wja:opOrder 3 .
+glw:op-convert a wja:Op ; wja:opName "convert" ; wja:opOrder 4 .
+glw:op-canonical a wja:Op ; wja:opName "canonical" ; wja:opOrder 5 .
+glw:op-sparql a wja:Op ; wja:opName "sparql" ; wja:opOrder 6 .
+glw:op-shacl a wja:Op ; wja:opName "shacl" ; wja:opOrder 7 .
+glw:op-shex a wja:Op ; wja:opName "shex" ; wja:opOrder 8 .
+glw:op-n3 a wja:Op ; wja:opName "n3" ; wja:opOrder 9 .
+glw:op-entail a wja:Op ; wja:opName "entail" ; wja:opOrder 10 .
+glw:op-datalog a wja:Op ; wja:opName "datalog" ; wja:opOrder 11 .
+glw:op-hooks a wja:Op ; wja:opName "hooks" ; wja:opOrder 12 .
+glw:op-law a wja:Op ; wja:opName "law" ; wja:opOrder 13 .
+glw:op-policy a wja:Op ; wja:opName "policy" ; wja:opOrder 14 .
+
+# Refusal codes, in wire order (= src/registry.rs REFUSAL_CODES order).
+glw:err-refused a wja:ErrorCode ; wja:codeName "Refused" ; wja:codeOrder 1 .
+glw:err-resource-limit a wja:ErrorCode ; wja:codeName "ResourceLimit" ; wja:codeOrder 2 .
+glw:err-plan-refused a wja:ErrorCode ; wja:codeName "PlanRefused" ; wja:codeOrder 3 .
+glw:err-receipt-required a wja:ErrorCode ; wja:codeName "ReceiptRequired" ; wja:codeOrder 4 .
+glw:err-receipt-refused a wja:ErrorCode ; wja:codeName "ReceiptRefused" ; wja:codeOrder 5 .
+glw:err-lease-refused a wja:ErrorCode ; wja:codeName "LeaseRefused" ; wja:codeOrder 6 .
+glw:err-not-admitted a wja:ErrorCode ; wja:codeName "NotAdmitted" ; wja:codeOrder 7 .
+glw:err-unverified-lease-refused a wja:ErrorCode ; wja:codeName "UnverifiedLeaseRefused" ; wja:codeOrder 8 .
+glw:err-policy-refused a wja:ErrorCode ; wja:codeName "PolicyRefused" ; wja:codeOrder 9 .

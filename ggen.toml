@@ -13,6 +13,7 @@ base_iri = "https://chicago.graphlaw.dev/court#"
 imports = [
   "../ggen-marketplace/packs/chicago-graphlaw-court-pack/cases/a.ttl",
   "../ggen-marketplace/packs/chicago-graphlaw-court-pack/cases/b.ttl",
+  "ontologies/graphlaw-wasm.ttl",
 ]
 
 [ontology.prefixes]
@@ -37,4 +38,28 @@ query = { file = "../ggen-marketplace/packs/chicago-graphlaw-court-pack/queries/
 template = { file = "../ggen-marketplace/packs/chicago-graphlaw-court-pack/templates/chicago_court.rs.tmpl" }
 output_file = "tests/chicago_cross_authority.rs"
 skip_empty = false
+mode = "Overwrite"
+
+# --- WASI JSON-ABI module (rust-wasi-wasmex-pack, project-neutral) -----------
+# All graphlaw specifics (prefix gl, crate, ops, limits, conventions) live in
+# ontologies/graphlaw-wasm.ttl. The generated wasm/src/ffi.rs shell was admitted
+# only after the W647 contract-identity analysis against the verified hand-written
+# shell it replaces (W641c's four conflict points parameterized by W642).
+[[packs]]
+name = "rust-wasi-wasmex-pack"
+registry = "local"
+path = "../ggen-marketplace/packs/rust-wasi-wasmex-pack"
+
+[[generation.rules]]
+name = "wasm-abi-meta"
+query    = { pack = "rust-wasi-wasmex-pack", output = "queries", file = "meta.rq" }
+template = { pack = "rust-wasi-wasmex-pack", output = "templates", file = "abi/abi_meta.rs.tmpl" }
+output_file = "wasm/src/abi_meta.rs"
+mode = "Overwrite"
+
+[[generation.rules]]
+name = "wasm-ffi"
+query    = { pack = "rust-wasi-wasmex-pack", output = "queries", file = "ffi.rq" }
+template = { pack = "rust-wasi-wasmex-pack", output = "templates", file = "abi/ffi.rs.tmpl" }
+output_file = "wasm/src/ffi.rs"
 mode = "Overwrite"
