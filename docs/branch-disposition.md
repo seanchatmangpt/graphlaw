@@ -1,5 +1,9 @@
 # Branch Disposition
 
+> **Historical record.** This is a dated campaign snapshot: dispositions were decided by
+> `git merge-tree` against origin/main 3983c64 at the time of writing and are not maintained
+> against later main movement. Do not treat rows as current state.
+
 Decided by `git merge-tree`, ancestry checks against origin/main 3983c64. Do not re-derive.
 
 | Branch | Disposition |
