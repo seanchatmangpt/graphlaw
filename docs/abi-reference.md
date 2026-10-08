@@ -202,3 +202,9 @@ Signing keys, key distribution, and revocation are outside the module; the calle
 - [Capability registry](capability-registry.md)
 - [Refusals](refusals.md)
 - [API stability](api-stability.md)
+
+External sibling (`../ggen-marketplace`, separate repo):
+
+- [How to represent a Rust ABI crate](../../ggen-marketplace/docs/how-to/represent-a-rust-abi-crate.md)
+- [Ontology maturity L4-L5](../../ggen-marketplace/docs/reference/ONTOLOGY-MATURITY-L4-L5.md) (the ggen bridge doctrine)
+- [rust-wasi-wasmex-pack](../../ggen-marketplace/packs/rust-wasi-wasmex-pack/README.md) (canonical consumer pack rendering this FFI)

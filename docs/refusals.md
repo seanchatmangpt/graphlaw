@@ -57,6 +57,25 @@ Required ceilings per step are in the [ABI reference](abi-reference.md#13-law).
 the problem's transitions), `BadMass` (outcome probabilities do not sum correctly), `DeadEnd`,
 `Malformed`. `state` and `action` name where the policy failed.
 
+## Aggregate boundary
+
+Law-kernel materialization (N3/Datalog closure) refuses SPARQL 1.1 aggregates by design: a law
+kernel is one executable law and must be total and deterministic over the closure, so
+`GROUP_CONCAT`/`SAMPLE` in a query handed to the law path is a refusal, not a result. The praxis
+law-materialization engine (vendored in ggen as `crates/praxis-graphlaw`) converts the
+query-planning failure into a typed refusal:
+
+> `SPARQL query planning refused (unsupported construct): GROUP_CONCAT/SAMPLE ...`
+> — see `build_for_aggregate` in ggen `crates/praxis-graphlaw/src/lib.rs` (its `sparql/plan.rs`
+> catch-all returns `Err`, surfaced at each call site as `Result<_, String>`).
+
+Aggregate projections (`GROUP_CONCAT`, `SAMPLE`, non-`COUNT` aggregation over groups) belong to
+the generation/projection layer instead, where the full SPARQL 1.1 engine (oxigraph in the
+ggen sync path) has standing and determinism is enforced by projection replay, not by the kernel.
+
+Rule: if a gate or query needs an aggregate, run it in the projection layer and admit the
+projected artifact; do not push it through a `law` step expecting a kernel answer.
+
 ## See Also
 
 - [ABI reference](abi-reference.md)

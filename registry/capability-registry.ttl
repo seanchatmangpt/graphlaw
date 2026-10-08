@@ -254,35 +254,641 @@
     gac:lawStepName "shacl" ;
     gac:lawStepOrder 1 .
 
+<https://graphlaw.dev/registry#limit/hooks_max_firings>
+    a gac:Limit ;
+    gac:limitName "hooks_max_firings" ;
+    gac:limitScope "hooks" ;
+    gac:limitSource "src/hooks.rs" ;
+    gac:limitUnit "firings" ;
+    gac:limitValue 10000 .
+
+<https://graphlaw.dev/registry#limit/hooks_max_rounds>
+    a gac:Limit ;
+    gac:limitName "hooks_max_rounds" ;
+    gac:limitScope "hooks" ;
+    gac:limitSource "src/hooks.rs" ;
+    gac:limitUnit "rounds" ;
+    gac:limitValue 64 .
+
+<https://graphlaw.dev/registry#limit/hooks_max_state_quads>
+    a gac:Limit ;
+    gac:limitName "hooks_max_state_quads" ;
+    gac:limitScope "hooks" ;
+    gac:limitSource "src/hooks.rs" ;
+    gac:limitUnit "quads" ;
+    gac:limitValue 1000000 .
+
 <https://graphlaw.dev/registry#limit/max_atoms_per_field>
     a gac:Limit ;
     gac:limitName "max_atoms_per_field" ;
+    gac:limitScope "abi" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "count" ;
     gac:limitValue 10000 .
 
 <https://graphlaw.dev/registry#limit/max_json_depth>
     a gac:Limit ;
     gac:limitName "max_json_depth" ;
+    gac:limitScope "abi" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "count" ;
     gac:limitValue 64 .
+
+<https://graphlaw.dev/registry#limit/max_outstanding_alloc_bytes>
+    a gac:Limit ;
+    gac:limitName "max_outstanding_alloc_bytes" ;
+    gac:limitScope "wasm" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "bytes" ;
+    gac:limitValue 268435456 .
 
 <https://graphlaw.dev/registry#limit/max_plan_actions>
     a gac:Limit ;
     gac:limitName "max_plan_actions" ;
+    gac:limitScope "abi" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "count" ;
     gac:limitValue 1000 .
+
+<https://graphlaw.dev/registry#limit/max_plan_total_atoms>
+    a gac:Limit ;
+    gac:limitName "max_plan_total_atoms" ;
+    gac:limitScope "plan" ;
+    gac:limitSource "src/plan.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 100000 .
 
 <https://graphlaw.dev/registry#limit/max_policy_entries>
     a gac:Limit ;
     gac:limitName "max_policy_entries" ;
+    gac:limitScope "abi" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "count" ;
     gac:limitValue 100000 .
 
 <https://graphlaw.dev/registry#limit/max_request_bytes>
     a gac:Limit ;
     gac:limitName "max_request_bytes" ;
+    gac:limitScope "abi" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "bytes" ;
     gac:limitValue 16777216 .
+
+<https://graphlaw.dev/registry#limit/n3_max_derived_facts>
+    a gac:Limit ;
+    gac:limitName "n3_max_derived_facts" ;
+    gac:limitScope "n3" ;
+    gac:limitSource "src/law.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 500000 .
 
 <https://graphlaw.dev/registry#limit/n3_max_iterations>
     a gac:Limit ;
     gac:limitName "n3_max_iterations" ;
+    gac:limitScope "n3" ;
+    gac:limitSource "src/law.rs" ;
+    gac:limitUnit "count" ;
     gac:limitValue 4000 .
+
+<https://graphlaw.dev/registry#limit/n3_max_match_steps>
+    a gac:Limit ;
+    gac:limitName "n3_max_match_steps" ;
+    gac:limitScope "n3" ;
+    gac:limitSource "src/law.rs" ;
+    gac:limitUnit "steps" ;
+    gac:limitValue 50000000 .
+
+<https://graphlaw.dev/registry#limit/n3_max_term_bytes>
+    a gac:Limit ;
+    gac:limitName "n3_max_term_bytes" ;
+    gac:limitScope "n3" ;
+    gac:limitSource "src/law.rs" ;
+    gac:limitUnit "bytes" ;
+    gac:limitValue 65536 .
+
+<https://graphlaw.dev/registry#limit/n3_max_total_bytes>
+    a gac:Limit ;
+    gac:limitName "n3_max_total_bytes" ;
+    gac:limitScope "n3" ;
+    gac:limitSource "src/law.rs" ;
+    gac:limitUnit "bytes" ;
+    gac:limitValue 268435456 .
+
+<https://graphlaw.dev/registry#model-enum/Ceiling/1>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/Ceiling> ;
+    gac:enumOrder 1 ;
+    gac:enumValue "observe" .
+
+<https://graphlaw.dev/registry#model-enum/Ceiling/2>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/Ceiling> ;
+    gac:enumOrder 2 ;
+    gac:enumValue "select" .
+
+<https://graphlaw.dev/registry#model-enum/Ceiling/3>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/Ceiling> ;
+    gac:enumOrder 3 ;
+    gac:enumValue "construct" .
+
+<https://graphlaw.dev/registry#model-enum/Ceiling>
+    a gac:ModelEnum ;
+    gac:modelName "Ceiling" ;
+    gac:modelOrder 1 .
+
+<https://graphlaw.dev/registry#model-enum/LeaseReason/1>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/LeaseReason> ;
+    gac:enumOrder 1 ;
+    gac:enumValue "expired" .
+
+<https://graphlaw.dev/registry#model-enum/LeaseReason/2>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/LeaseReason> ;
+    gac:enumOrder 2 ;
+    gac:enumValue "out_of_scope" .
+
+<https://graphlaw.dev/registry#model-enum/LeaseReason/3>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/LeaseReason> ;
+    gac:enumOrder 3 ;
+    gac:enumValue "ceiling" .
+
+<https://graphlaw.dev/registry#model-enum/LeaseReason/4>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/LeaseReason> ;
+    gac:enumOrder 4 ;
+    gac:enumValue "bad_signature" .
+
+<https://graphlaw.dev/registry#model-enum/LeaseReason/5>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/LeaseReason> ;
+    gac:enumOrder 5 ;
+    gac:enumValue "untrusted_key" .
+
+<https://graphlaw.dev/registry#model-enum/LeaseReason/6>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/LeaseReason> ;
+    gac:enumOrder 6 ;
+    gac:enumValue "clock_skew" .
+
+<https://graphlaw.dev/registry#model-enum/LeaseReason>
+    a gac:ModelEnum ;
+    gac:modelName "LeaseReason" ;
+    gac:modelOrder 2 .
+
+<https://graphlaw.dev/registry#model-enum/PolicyRefusalKind/1>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/PolicyRefusalKind> ;
+    gac:enumOrder 1 ;
+    gac:enumValue "MissingEntry" .
+
+<https://graphlaw.dev/registry#model-enum/PolicyRefusalKind/2>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/PolicyRefusalKind> ;
+    gac:enumOrder 2 ;
+    gac:enumValue "InventedOutcome" .
+
+<https://graphlaw.dev/registry#model-enum/PolicyRefusalKind/3>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/PolicyRefusalKind> ;
+    gac:enumOrder 3 ;
+    gac:enumValue "BadMass" .
+
+<https://graphlaw.dev/registry#model-enum/PolicyRefusalKind/4>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/PolicyRefusalKind> ;
+    gac:enumOrder 4 ;
+    gac:enumValue "DeadEnd" .
+
+<https://graphlaw.dev/registry#model-enum/PolicyRefusalKind/5>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/PolicyRefusalKind> ;
+    gac:enumOrder 5 ;
+    gac:enumValue "Malformed" .
+
+<https://graphlaw.dev/registry#model-enum/PolicyRefusalKind>
+    a gac:ModelEnum ;
+    gac:modelName "PolicyRefusalKind" ;
+    gac:modelOrder 4 .
+
+<https://graphlaw.dev/registry#model-enum/ReceiptReason/1>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/ReceiptReason> ;
+    gac:enumOrder 1 ;
+    gac:enumValue "unattested" .
+
+<https://graphlaw.dev/registry#model-enum/ReceiptReason/2>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/ReceiptReason> ;
+    gac:enumOrder 2 ;
+    gac:enumValue "bad_signature" .
+
+<https://graphlaw.dev/registry#model-enum/ReceiptReason/3>
+    a gac:ModelEnumValue ;
+    gac:enumOf <https://graphlaw.dev/registry#model-enum/ReceiptReason> ;
+    gac:enumOrder 3 ;
+    gac:enumValue "untrusted_key" .
+
+<https://graphlaw.dev/registry#model-enum/ReceiptReason>
+    a gac:ModelEnum ;
+    gac:modelName "ReceiptReason" ;
+    gac:modelOrder 3 .
+
+<https://graphlaw.dev/registry#model/Action/add>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Triples added by the action." ;
+    gac:modelFieldName "add" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Action> ;
+    gac:modelFieldOrder 4 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Action/del>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Triples removed by the action." ;
+    gac:modelFieldName "del" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Action> ;
+    gac:modelFieldOrder 5 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Action/name>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Action name, for example go a b." ;
+    gac:modelFieldName "name" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Action> ;
+    gac:modelFieldOrder 1 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Action/pre>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Triples that must hold before the action." ;
+    gac:modelFieldName "pre" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Action> ;
+    gac:modelFieldOrder 2 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Action/pre_not>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Triples that must be absent before the action." ;
+    gac:modelFieldName "pre_not" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Action> ;
+    gac:modelFieldOrder 3 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Action>
+    a gac:Model ;
+    gac:modelDoc "One plan action over ground triples." ;
+    gac:modelElixirModule "AshGraphLaw.Model.Action" ;
+    gac:modelName "Action" ;
+    gac:modelOrder 6 ;
+    gac:modelRustPath "graphlaw::plan::Action" .
+
+<https://graphlaw.dev/registry#model/Attestation/key_id>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Identifier of the signing key." ;
+    gac:modelFieldName "key_id" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Attestation> ;
+    gac:modelFieldOrder 2 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Attestation/payload_sha256>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Lowercase hex SHA-256 of the canonical payload." ;
+    gac:modelFieldName "payload_sha256" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Attestation> ;
+    gac:modelFieldOrder 1 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Attestation/signature>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Lowercase hex Ed25519 signature over the payload." ;
+    gac:modelFieldName "signature" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Attestation> ;
+    gac:modelFieldOrder 3 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Attestation>
+    a gac:Model ;
+    gac:modelDoc "Ed25519 attestation over a canonical payload." ;
+    gac:modelElixirModule "AshGraphLaw.Model.Attestation" ;
+    gac:modelName "Attestation" ;
+    gac:modelOrder 4 ;
+    gac:modelRustPath "graphlaw::attest::Attestation" .
+
+<https://graphlaw.dev/registry#model/Lease/ceiling>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Highest authority the lease grants." ;
+    gac:modelFieldName "ceiling" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Lease> ;
+    gac:modelFieldOrder 3 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "enum:Ceiling" .
+
+<https://graphlaw.dev/registry#model/Lease/expires_unix>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Expired when now >= expires_unix." ;
+    gac:modelFieldName "expires_unix" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Lease> ;
+    gac:modelFieldOrder 5 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "integer" .
+
+<https://graphlaw.dev/registry#model/Lease/holder>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Identity of the lease holder." ;
+    gac:modelFieldName "holder" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Lease> ;
+    gac:modelFieldOrder 2 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Lease/id>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Lease identifier." ;
+    gac:modelFieldName "id" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Lease> ;
+    gac:modelFieldOrder 1 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Lease/issued_unix>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Issuer-stated issue time; 0 means not stated." ;
+    gac:modelFieldName "issued_unix" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Lease> ;
+    gac:modelFieldOrder 6 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "integer" .
+
+<https://graphlaw.dev/registry#model/Lease/scope>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Step names the lease covers." ;
+    gac:modelFieldName "scope" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Lease> ;
+    gac:modelFieldOrder 4 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "list<string>" .
+
+<https://graphlaw.dev/registry#model/Lease>
+    a gac:Model ;
+    gac:modelDoc "Time-boxed authority grant for law steps." ;
+    gac:modelElixirModule "AshGraphLaw.Model.Lease" ;
+    gac:modelName "Lease" ;
+    gac:modelOrder 1 ;
+    gac:modelRustPath "graphlaw::law::Lease" .
+
+<https://graphlaw.dev/registry#model/Plan/actions>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Actions in replay order." ;
+    gac:modelFieldName "actions" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Plan> ;
+    gac:modelFieldOrder 1 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "list<model:Action>" .
+
+<https://graphlaw.dev/registry#model/Plan/goal>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Triples that must hold after the last action." ;
+    gac:modelFieldName "goal" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Plan> ;
+    gac:modelFieldOrder 2 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Plan/goal_not>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Triples that must be absent after the last action." ;
+    gac:modelFieldName "goal_not" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Plan> ;
+    gac:modelFieldOrder 3 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Plan>
+    a gac:Model ;
+    gac:modelDoc "Ordered candidate plan and the goal it claims to reach." ;
+    gac:modelElixirModule "AshGraphLaw.Model.Plan" ;
+    gac:modelName "Plan" ;
+    gac:modelOrder 5 ;
+    gac:modelRustPath "graphlaw::plan::Plan" .
+
+<https://graphlaw.dev/registry#model/PolicyEntry/action>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Action chosen in the state." ;
+    gac:modelFieldName "action" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/PolicyEntry> ;
+    gac:modelFieldOrder 2 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/PolicyEntry/outcomes>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Possible outcomes of the action." ;
+    gac:modelFieldName "outcomes" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/PolicyEntry> ;
+    gac:modelFieldOrder 3 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "list<model:PolicyOutcome>" .
+
+<https://graphlaw.dev/registry#model/PolicyEntry/state>
+    a gac:ModelField ;
+    gac:modelFieldDoc "State the entry applies to." ;
+    gac:modelFieldName "state" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/PolicyEntry> ;
+    gac:modelFieldOrder 1 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/PolicyEntry>
+    a gac:Model ;
+    gac:modelDoc "One FOND policy entry." ;
+    gac:modelElixirModule "AshGraphLaw.Model.PolicyEntry" ;
+    gac:modelName "PolicyEntry" ;
+    gac:modelOrder 7 ;
+    gac:modelRustPath "graphlaw::policy::Entry" .
+
+<https://graphlaw.dev/registry#model/PolicyOutcome/probability_ppm>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Probability in parts per million." ;
+    gac:modelFieldName "probability_ppm" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/PolicyOutcome> ;
+    gac:modelFieldOrder 2 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "integer" .
+
+<https://graphlaw.dev/registry#model/PolicyOutcome/state>
+    a gac:ModelField ;
+    gac:modelFieldDoc "State reached by the outcome." ;
+    gac:modelFieldName "state" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/PolicyOutcome> ;
+    gac:modelFieldOrder 1 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/PolicyOutcome>
+    a gac:Model ;
+    gac:modelDoc "One possible outcome of a policy action." ;
+    gac:modelElixirModule "AshGraphLaw.Model.PolicyOutcome" ;
+    gac:modelName "PolicyOutcome" ;
+    gac:modelOrder 8 ;
+    gac:modelRustPath "graphlaw::policy::Outcome" .
+
+<https://graphlaw.dev/registry#model/Receipt/added>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Quads added by the step." ;
+    gac:modelFieldName "added" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Receipt> ;
+    gac:modelFieldOrder 6 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "integer" .
+
+<https://graphlaw.dev/registry#model/Receipt/authority>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Backend authority capability." ;
+    gac:modelFieldName "authority" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Receipt> ;
+    gac:modelFieldOrder 4 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Receipt/child>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Id of the child state." ;
+    gac:modelFieldName "child" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Receipt> ;
+    gac:modelFieldOrder 2 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Receipt/lease_id>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Lease id when the step ran under a lease." ;
+    gac:modelFieldName "lease_id" ;
+    gac:modelFieldNullable true ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Receipt> ;
+    gac:modelFieldOrder 7 ;
+    gac:modelFieldRequired false ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Receipt/parent>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Id of the parent state." ;
+    gac:modelFieldName "parent" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Receipt> ;
+    gac:modelFieldOrder 1 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Receipt/plan_sha256>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Plan digest for plan steps." ;
+    gac:modelFieldName "plan_sha256" ;
+    gac:modelFieldNullable true ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Receipt> ;
+    gac:modelFieldOrder 8 ;
+    gac:modelFieldRequired false ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Receipt/revision>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Backend authority revision." ;
+    gac:modelFieldName "revision" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Receipt> ;
+    gac:modelFieldOrder 5 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Receipt/step>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Step name, for example derive:rdfs." ;
+    gac:modelFieldName "step" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Receipt> ;
+    gac:modelFieldOrder 3 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Receipt/subject_sha256>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Digest of the external subject, when bound." ;
+    gac:modelFieldName "subject_sha256" ;
+    gac:modelFieldNullable true ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/Receipt> ;
+    gac:modelFieldOrder 9 ;
+    gac:modelFieldRequired false ;
+    gac:modelFieldType "string" .
+
+<https://graphlaw.dev/registry#model/Receipt>
+    a gac:Model ;
+    gac:modelDoc "Record of one executed law step." ;
+    gac:modelElixirModule "AshGraphLaw.Model.Receipt" ;
+    gac:modelName "Receipt" ;
+    gac:modelOrder 3 ;
+    gac:modelRustPath "graphlaw::law::Receipt" .
+
+<https://graphlaw.dev/registry#model/SignedLease/attestation>
+    a gac:ModelField ;
+    gac:modelFieldDoc "Signature over the lease." ;
+    gac:modelFieldName "attestation" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/SignedLease> ;
+    gac:modelFieldOrder 2 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "model:Attestation" .
+
+<https://graphlaw.dev/registry#model/SignedLease/lease>
+    a gac:ModelField ;
+    gac:modelFieldDoc "The lease being attested." ;
+    gac:modelFieldName "lease" ;
+    gac:modelFieldNullable false ;
+    gac:modelFieldOf <https://graphlaw.dev/registry#model/SignedLease> ;
+    gac:modelFieldOrder 1 ;
+    gac:modelFieldRequired true ;
+    gac:modelFieldType "model:Lease" .
+
+<https://graphlaw.dev/registry#model/SignedLease>
+    a gac:Model ;
+    gac:modelDoc "A lease with its Ed25519 attestation." ;
+    gac:modelElixirModule "AshGraphLaw.Model.SignedLease" ;
+    gac:modelName "SignedLease" ;
+    gac:modelOrder 2 ;
+    gac:modelRustPath "graphlaw::law::SignedLease" .
 
 <https://graphlaw.dev/registry#op/canonical/request/data>
     a gac:CapabilityField ;
@@ -1926,9 +2532,9 @@
     a gac:Registry ;
     gac:abiVersion 1 ;
     gac:dialectCount 13 ;
-    gac:graphlawVersion "26.9.29" ;
+    gac:graphlawVersion "26.10.5" ;
     gac:opCount 14 ;
-    gac:registrySha256 "sha256:8f3ef15bad35fc095e4a832b4cca945414e90152c485dc5a5a92d2ff0f804e16" ;
+    gac:registrySha256 "sha256:9bdaedd8a284e5187bd14f18251c57193809a73cf4c337093c241981e71a60d6" ;
     gac:schemaId "graphlaw.capability-registry/1" ;
     gac:surfaceSha256 "sha256:fcee74ee068940f9e9879ccd41371807f469d63950c8f63b095117391dbc8e28" .
 

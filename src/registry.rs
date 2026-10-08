@@ -22,8 +22,8 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 use crate::abi::{
-    ABI_VERSION, MAX_ATOMS_PER_FIELD, MAX_JSON_DEPTH, MAX_PLAN_ACTIONS, MAX_POLICY_ENTRIES,
-    MAX_REQUEST_BYTES,
+    ABI_VERSION, MAX_ATOMS_PER_FIELD, MAX_JSON_DEPTH, MAX_OUTSTANDING_ALLOC_BYTES,
+    MAX_PLAN_ACTIONS, MAX_POLICY_ENTRIES, MAX_REQUEST_BYTES,
 };
 
 /// Schema identifier of the registry document.
@@ -994,7 +994,19 @@ fn base_document() -> Value {
             "max_atoms_per_field": MAX_ATOMS_PER_FIELD,
             "max_policy_entries": MAX_POLICY_ENTRIES,
             "n3_max_iterations": crate::law::N3_MAX_ITERATIONS,
+            "n3_max_derived_facts": crate::law::N3_MAX_DERIVED_FACTS,
+            "n3_max_total_bytes": crate::law::N3_MAX_TOTAL_BYTES,
+            "n3_max_term_bytes": crate::law::N3_MAX_TERM_BYTES,
+            "n3_max_match_steps": crate::law::N3_MAX_TOTAL_STEPS,
+            "max_plan_total_atoms": crate::plan::MAX_PLAN_TOTAL_ATOMS,
+            "hooks_max_rounds": crate::hooks::MAX_ROUNDS,
+            "hooks_max_firings": crate::hooks::MAX_FIRINGS,
+            "hooks_max_state_quads": crate::hooks::MAX_STATE_QUADS,
+            "max_outstanding_alloc_bytes": MAX_OUTSTANDING_ALLOC_BYTES,
         },
+        "limit_meta": limit_meta_json(),
+        "models": models_json(),
+        "model_enums": model_enums_json(),
         "refusal_codes": REFUSAL_CODES.iter().enumerate().map(|(i, c)| json!({
             "code": c.code, "order": i + 1, "kind": c.kind, "fields": fields_json(c.fields),
         })).collect::<Vec<_>>(),
@@ -1003,6 +1015,433 @@ fn base_document() -> Value {
         })).collect::<Vec<_>>(),
         "ops": ops,
     })
+}
+
+/// One limit's metadata: (name, scope, unit, source path, machine refusal name).
+/// The refusal name is `None` where the source emits no machine name for the
+/// limit (hook round/firing caps are plain `Unsupported` refusals; the wasm
+/// allocation cap returns a null pointer).
+const LIMIT_META: &[(&str, &str, &str, &str, Option<&str>)] = &[
+    (
+        "max_request_bytes",
+        "abi",
+        "bytes",
+        "src/abi.rs",
+        Some("request_bytes"),
+    ),
+    (
+        "max_json_depth",
+        "abi",
+        "count",
+        "src/abi.rs",
+        Some("json_depth"),
+    ),
+    (
+        "max_plan_actions",
+        "abi",
+        "count",
+        "src/abi.rs",
+        Some("plan_actions"),
+    ),
+    (
+        "max_atoms_per_field",
+        "abi",
+        "count",
+        "src/abi.rs",
+        Some("atoms_per_field"),
+    ),
+    (
+        "max_policy_entries",
+        "abi",
+        "count",
+        "src/abi.rs",
+        Some("policy_entries"),
+    ),
+    (
+        "n3_max_iterations",
+        "n3",
+        "count",
+        "src/law.rs",
+        Some("n3_iterations"),
+    ),
+    (
+        "n3_max_derived_facts",
+        "n3",
+        "count",
+        "src/law.rs",
+        Some("n3_derived_facts"),
+    ),
+    (
+        "n3_max_total_bytes",
+        "n3",
+        "bytes",
+        "src/law.rs",
+        Some("n3_total_bytes"),
+    ),
+    (
+        "n3_max_term_bytes",
+        "n3",
+        "bytes",
+        "src/law.rs",
+        Some("n3_term_bytes"),
+    ),
+    (
+        "n3_max_match_steps",
+        "n3",
+        "steps",
+        "src/law.rs",
+        Some("n3_match_steps"),
+    ),
+    (
+        "max_plan_total_atoms",
+        "plan",
+        "count",
+        "src/plan.rs",
+        Some("plan_total_atoms"),
+    ),
+    ("hooks_max_rounds", "hooks", "rounds", "src/hooks.rs", None),
+    (
+        "hooks_max_firings",
+        "hooks",
+        "firings",
+        "src/hooks.rs",
+        None,
+    ),
+    (
+        "hooks_max_state_quads",
+        "hooks",
+        "quads",
+        "src/hooks.rs",
+        Some("state_quads"),
+    ),
+    (
+        "max_outstanding_alloc_bytes",
+        "wasm",
+        "bytes",
+        "src/abi.rs",
+        None,
+    ),
+];
+
+fn limit_meta_json() -> Value {
+    let mut m = serde_json::Map::new();
+    for (name, scope, unit, source, refusal) in LIMIT_META {
+        let mut entry = json!({"scope": scope, "unit": unit, "source": source});
+        if let Some(r) = refusal {
+            entry["refusal_name"] = json!(r);
+        }
+        m.insert((*name).into(), entry);
+    }
+    Value::Object(m)
+}
+
+/// A model field: (name, type, required, nullable, doc).
+type ModelField = (&'static str, &'static str, bool, bool, &'static str);
+/// A model: (name, rust path, doc, fields).
+type ModelRow = (
+    &'static str,
+    &'static str,
+    &'static str,
+    &'static [ModelField],
+);
+
+const MODELS: &[ModelRow] = &[
+    (
+        "Lease",
+        "graphlaw::law::Lease",
+        "Time-boxed authority grant for law steps.",
+        &[
+            ("id", "string", true, false, "Lease identifier."),
+            (
+                "holder",
+                "string",
+                true,
+                false,
+                "Identity of the lease holder.",
+            ),
+            (
+                "ceiling",
+                "enum:Ceiling",
+                true,
+                false,
+                "Highest authority the lease grants.",
+            ),
+            (
+                "scope",
+                "list<string>",
+                true,
+                false,
+                "Step names the lease covers.",
+            ),
+            (
+                "expires_unix",
+                "integer",
+                true,
+                false,
+                "Expired when now >= expires_unix.",
+            ),
+            (
+                "issued_unix",
+                "integer",
+                true,
+                false,
+                "Issuer-stated issue time; 0 means not stated.",
+            ),
+        ],
+    ),
+    (
+        "SignedLease",
+        "graphlaw::law::SignedLease",
+        "A lease with its Ed25519 attestation.",
+        &[
+            (
+                "lease",
+                "model:Lease",
+                true,
+                false,
+                "The lease being attested.",
+            ),
+            (
+                "attestation",
+                "model:Attestation",
+                true,
+                false,
+                "Signature over the lease.",
+            ),
+        ],
+    ),
+    (
+        "Receipt",
+        "graphlaw::law::Receipt",
+        "Record of one executed law step.",
+        &[
+            ("parent", "string", true, false, "Id of the parent state."),
+            ("child", "string", true, false, "Id of the child state."),
+            (
+                "step",
+                "string",
+                true,
+                false,
+                "Step name, for example derive:rdfs.",
+            ),
+            (
+                "authority",
+                "string",
+                true,
+                false,
+                "Backend authority capability.",
+            ),
+            (
+                "revision",
+                "string",
+                true,
+                false,
+                "Backend authority revision.",
+            ),
+            ("added", "integer", true, false, "Quads added by the step."),
+            (
+                "lease_id",
+                "string",
+                false,
+                true,
+                "Lease id when the step ran under a lease.",
+            ),
+            (
+                "plan_sha256",
+                "string",
+                false,
+                true,
+                "Plan digest for plan steps.",
+            ),
+            (
+                "subject_sha256",
+                "string",
+                false,
+                true,
+                "Digest of the external subject, when bound.",
+            ),
+        ],
+    ),
+    (
+        "Attestation",
+        "graphlaw::attest::Attestation",
+        "Ed25519 attestation over a canonical payload.",
+        &[
+            (
+                "payload_sha256",
+                "string",
+                true,
+                false,
+                "Lowercase hex SHA-256 of the canonical payload.",
+            ),
+            (
+                "key_id",
+                "string",
+                true,
+                false,
+                "Identifier of the signing key.",
+            ),
+            (
+                "signature",
+                "string",
+                true,
+                false,
+                "Lowercase hex Ed25519 signature over the payload.",
+            ),
+        ],
+    ),
+    (
+        "Plan",
+        "graphlaw::plan::Plan",
+        "Ordered candidate plan and the goal it claims to reach.",
+        &[
+            (
+                "actions",
+                "list<model:Action>",
+                true,
+                false,
+                "Actions in replay order.",
+            ),
+            (
+                "goal",
+                "string",
+                true,
+                false,
+                "Triples that must hold after the last action.",
+            ),
+            (
+                "goal_not",
+                "string",
+                true,
+                false,
+                "Triples that must be absent after the last action.",
+            ),
+        ],
+    ),
+    (
+        "Action",
+        "graphlaw::plan::Action",
+        "One plan action over ground triples.",
+        &[
+            (
+                "name",
+                "string",
+                true,
+                false,
+                "Action name, for example go a b.",
+            ),
+            (
+                "pre",
+                "string",
+                true,
+                false,
+                "Triples that must hold before the action.",
+            ),
+            (
+                "pre_not",
+                "string",
+                true,
+                false,
+                "Triples that must be absent before the action.",
+            ),
+            ("add", "string", true, false, "Triples added by the action."),
+            (
+                "del",
+                "string",
+                true,
+                false,
+                "Triples removed by the action.",
+            ),
+        ],
+    ),
+    (
+        "PolicyEntry",
+        "graphlaw::policy::Entry",
+        "One FOND policy entry.",
+        &[
+            (
+                "state",
+                "string",
+                true,
+                false,
+                "State the entry applies to.",
+            ),
+            (
+                "action",
+                "string",
+                true,
+                false,
+                "Action chosen in the state.",
+            ),
+            (
+                "outcomes",
+                "list<model:PolicyOutcome>",
+                true,
+                false,
+                "Possible outcomes of the action.",
+            ),
+        ],
+    ),
+    (
+        "PolicyOutcome",
+        "graphlaw::policy::Outcome",
+        "One possible outcome of a policy action.",
+        &[
+            (
+                "state",
+                "string",
+                true,
+                false,
+                "State reached by the outcome.",
+            ),
+            (
+                "probability_ppm",
+                "integer",
+                true,
+                false,
+                "Probability in parts per million.",
+            ),
+        ],
+    ),
+];
+
+fn models_json() -> Value {
+    Value::Array(
+        MODELS
+            .iter()
+            .enumerate()
+            .map(|(i, (name, rust_path, doc, fields))| {
+                json!({
+                    "name": name,
+                    "order": i + 1,
+                    "elixir_module": format!("AshGraphLaw.Model.{name}"),
+                    "rust_path": rust_path,
+                    "doc": doc,
+                    "fields": fields.iter().enumerate().map(|(j, (fname, ty, required, nullable, fdoc))| json!({
+                        "name": fname, "order": j + 1, "type": ty,
+                        "required": required, "nullable": nullable, "doc": fdoc,
+                    })).collect::<Vec<_>>(),
+                })
+            })
+            .collect(),
+    )
+}
+
+fn model_enums_json() -> Value {
+    let rows: [(&str, &[&str]); 4] = [
+        ("Ceiling", LEASE_CEILINGS),
+        ("LeaseReason", LEASE_REASONS),
+        ("ReceiptReason", RECEIPT_REASONS),
+        ("PolicyRefusalKind", POLICY_REFUSAL_KINDS),
+    ];
+    Value::Array(
+        rows.iter()
+            .enumerate()
+            .map(|(i, (name, values))| {
+                json!({"name": name, "order": i + 1, "values": json_string_array(values)})
+            })
+            .collect(),
+    )
 }
 
 static DOCUMENT: OnceLock<Value> = OnceLock::new();
@@ -1372,6 +1811,57 @@ fn graph(doc: &Value) -> Graph {
             g.typed(&li, "Limit");
             g.add(&li, "gac:limitName", lit(name));
             g.add(&li, "gac:limitValue", value.to_string());
+        }
+    }
+
+    if let Some(meta) = doc.get("limit_meta").and_then(Value::as_object) {
+        for (name, m) in sorted_entries(meta) {
+            let li = format!("limit/{name}");
+            g.add(&li, "gac:limitScope", lit(&text_of(m, "scope")));
+            g.add(&li, "gac:limitUnit", lit(&text_of(m, "unit")));
+            g.add(&li, "gac:limitSource", lit(&text_of(m, "source")));
+        }
+    }
+
+    for m in items(doc, "models") {
+        let name = text_of(m, "name");
+        let mi = format!("model/{name}");
+        g.typed(&mi, "Model");
+        g.add(&mi, "gac:modelName", lit(&name));
+        g.add(&mi, "gac:modelOrder", int_of(m, "order"));
+        g.add(
+            &mi,
+            "gac:modelElixirModule",
+            lit(&text_of(m, "elixir_module")),
+        );
+        g.add(&mi, "gac:modelRustPath", lit(&text_of(m, "rust_path")));
+        g.add(&mi, "gac:modelDoc", lit(&text_of(m, "doc")));
+        for f in items(m, "fields") {
+            let fname = text_of(f, "name");
+            let fi = format!("{mi}/{fname}");
+            g.typed(&fi, "ModelField");
+            g.add(&fi, "gac:modelFieldOf", node(&mi));
+            g.add(&fi, "gac:modelFieldName", lit(&fname));
+            g.add(&fi, "gac:modelFieldOrder", int_of(f, "order"));
+            g.add(&fi, "gac:modelFieldType", lit(&text_of(f, "type")));
+            g.add(&fi, "gac:modelFieldRequired", bool_of(f, "required"));
+            g.add(&fi, "gac:modelFieldNullable", bool_of(f, "nullable"));
+            g.add(&fi, "gac:modelFieldDoc", lit(&text_of(f, "doc")));
+        }
+    }
+
+    for e in items(doc, "model_enums") {
+        let name = text_of(e, "name");
+        let ei = format!("model-enum/{name}");
+        g.typed(&ei, "ModelEnum");
+        g.add(&ei, "gac:modelName", lit(&name));
+        g.add(&ei, "gac:modelOrder", int_of(e, "order"));
+        for (i, v) in items(e, "values").iter().enumerate() {
+            let vi = format!("{ei}/{}", i + 1);
+            g.typed(&vi, "ModelEnumValue");
+            g.add(&vi, "gac:enumOf", node(&ei));
+            g.add(&vi, "gac:enumOrder", (i + 1).to_string());
+            g.add(&vi, "gac:enumValue", lit(v.as_str().unwrap_or_default()));
         }
     }
     g

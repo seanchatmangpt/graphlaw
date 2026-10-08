@@ -78,3 +78,4 @@ Without `--features abi` the example prints a hint and exits.
 ## See also
 
 - `docs/refusals.md`, `CHANGELOG.md`, `SECURITY.md`
+- External sibling (`../ggen-marketplace`): [ABI crate how-to](../../ggen-marketplace/docs/how-to/represent-a-rust-abi-crate.md), [rust-wasi-wasmex-pack](../../ggen-marketplace/packs/rust-wasi-wasmex-pack/README.md)

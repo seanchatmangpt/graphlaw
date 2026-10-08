@@ -54,6 +54,9 @@ pub const MAX_PLAN_ACTIONS: usize = 1_000;
 pub const MAX_ATOMS_PER_FIELD: usize = 10_000;
 /// Most entries accepted in one FOND policy.
 pub const MAX_POLICY_ENTRIES: usize = 100_000;
+/// Ceiling, in bytes, on host-visible buffers (`gl_alloc` buffers and `gl_call`
+/// responses) the wasm module holds at once; `gl_alloc` returns null beyond it.
+pub const MAX_OUTSTANDING_ALLOC_BYTES: usize = 256 * 1024 * 1024;
 
 /// A refusal plus optional machine-readable `details` (`{"code": ...}`).
 #[derive(Debug, Clone)]

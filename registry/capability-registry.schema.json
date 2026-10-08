@@ -36,6 +36,56 @@
         "list<list<string>>", "list<list<term>>"
       ]
     },
+    "limit_meta_entry": {
+      "additionalProperties": true,
+      "properties": {
+        "refusal_name": {"minLength": 1, "type": "string"},
+        "scope": {"enum": ["abi", "n3", "plan", "hooks", "wasm"]},
+        "source": {"minLength": 1, "type": "string"},
+        "unit": {"enum": ["count", "bytes", "rounds", "firings", "quads", "steps"]}
+      },
+      "required": ["scope", "unit", "source"],
+      "type": "object"
+    },
+    "model": {
+      "additionalProperties": true,
+      "properties": {
+        "doc": {"type": "string"},
+        "elixir_module": {"pattern": "^AshGraphLaw\\.Model\\.[A-Z][A-Za-z0-9]*$", "type": "string"},
+        "fields": {"items": {"$ref": "#/$defs/model_field"}, "minItems": 1, "type": "array"},
+        "name": {"pattern": "^[A-Z][A-Za-z0-9]*$", "type": "string"},
+        "order": {"minimum": 1, "type": "integer"},
+        "rust_path": {"pattern": "^graphlaw::", "type": "string"}
+      },
+      "required": ["name", "order", "elixir_module", "rust_path", "doc", "fields"],
+      "type": "object"
+    },
+    "model_enum": {
+      "additionalProperties": true,
+      "properties": {
+        "name": {"pattern": "^[A-Z][A-Za-z0-9]*$", "type": "string"},
+        "order": {"minimum": 1, "type": "integer"},
+        "values": {"items": {"type": "string"}, "minItems": 1, "type": "array"}
+      },
+      "required": ["name", "order", "values"],
+      "type": "object"
+    },
+    "model_field": {
+      "additionalProperties": true,
+      "properties": {
+        "doc": {"type": "string"},
+        "name": {"pattern": "^[a-z][a-z0-9_]*$", "type": "string"},
+        "nullable": {"type": "boolean"},
+        "order": {"minimum": 1, "type": "integer"},
+        "required": {"type": "boolean"},
+        "type": {
+          "pattern": "^(string|integer|boolean|list<string>|(model|enum):[A-Z][A-Za-z0-9]*|list<model:[A-Z][A-Za-z0-9]*>)$",
+          "type": "string"
+        }
+      },
+      "required": ["name", "order", "type", "required", "nullable", "doc"],
+      "type": "object"
+    },
     "law_step": {
       "additionalProperties": true,
       "properties": {
@@ -117,14 +167,32 @@
         "max_plan_actions": {"type": "integer"},
         "max_policy_entries": {"type": "integer"},
         "max_request_bytes": {"type": "integer"},
-        "n3_max_iterations": {"type": "integer"}
+        "n3_max_iterations": {"type": "integer"},
+        "n3_max_derived_facts": {"type": "integer"},
+        "n3_max_total_bytes": {"type": "integer"},
+        "n3_max_term_bytes": {"type": "integer"},
+        "n3_max_match_steps": {"type": "integer"},
+        "max_plan_total_atoms": {"type": "integer"},
+        "hooks_max_rounds": {"type": "integer"},
+        "hooks_max_firings": {"type": "integer"},
+        "hooks_max_state_quads": {"type": "integer"},
+        "max_outstanding_alloc_bytes": {"type": "integer"}
       },
       "required": [
         "max_request_bytes", "max_json_depth", "max_plan_actions",
-        "max_atoms_per_field", "max_policy_entries", "n3_max_iterations"
+        "max_atoms_per_field", "max_policy_entries", "n3_max_iterations",
+        "n3_max_derived_facts", "n3_max_total_bytes", "n3_max_term_bytes",
+        "n3_max_match_steps", "max_plan_total_atoms", "hooks_max_rounds",
+        "hooks_max_firings", "hooks_max_state_quads", "max_outstanding_alloc_bytes"
       ],
       "type": "object"
     },
+    "limit_meta": {
+      "additionalProperties": {"$ref": "#/$defs/limit_meta_entry"},
+      "type": "object"
+    },
+    "model_enums": {"items": {"$ref": "#/$defs/model_enum"}, "minItems": 1, "type": "array"},
+    "models": {"items": {"$ref": "#/$defs/model"}, "minItems": 1, "type": "array"},
     "ops": {"items": {"$ref": "#/$defs/op"}, "minItems": 14, "type": "array"},
     "other_dialects": {"items": {"$ref": "#/$defs/dialect"}, "type": "array"},
     "policy_refusal_kinds": {"$ref": "#/$defs/string_list"},
@@ -141,7 +209,7 @@
     "schema", "graphlaw_version", "abi_version", "surface_sha256", "registry_sha256",
     "authorities", "engines", "refusal_kinds", "rdf_dialects", "other_dialects", "regimes",
     "lease_ceilings", "lease_reasons", "receipt_reasons", "policy_refusal_kinds", "limits",
-    "refusal_codes", "law_steps", "ops"
+    "limit_meta", "models", "model_enums", "refusal_codes", "law_steps", "ops"
   ],
   "title": "GraphLaw capability registry",
   "type": "object"

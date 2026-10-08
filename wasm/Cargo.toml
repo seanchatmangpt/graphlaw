@@ -1,6 +1,6 @@
 [package]
 name = "graphlaw-wasm"
-version = "26.9.29"
+version = "26.10.5"
 edition = "2024"
 rust-version = "1.96"
 license = "MIT"
@@ -12,3 +12,15 @@ crate-type = ["cdylib"]
 
 [dependencies]
 graphlaw = { path = "..", features = ["abi", "wasi-patched-deps"] }
+
+# Size-optimised profile for the WebAssembly module (`--profile wasm`); kept
+# separate so native release builds and tests are unaffected.
+# Rendered from the rust-wasi-wasmex-pack via ontologies/graphlaw-wasm.ttl
+# (`ggen sync run`, rules wasm-abi-meta / wasm-ffi).
+[profile.wasm]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
