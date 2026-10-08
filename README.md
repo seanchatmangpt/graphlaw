@@ -95,7 +95,9 @@ The complete upstream surfaces are intentionally re-exported. Consumers can use 
 
 Growable enums are `#[non_exhaustive]` and every public item is documented (`#![deny(missing_docs)]`);
 see [`docs/api-stability.md`](docs/api-stability.md) for the stability, deprecation, MSRV and
-`ABI_VERSION` contracts. Build plans with `Plan::builder()` and `Triple` instead of hand-written
+`ABI_VERSION` contracts. Scaffolded reference skeletons for the full public code surface live in
+[`docs/reference-generated/`](docs/reference-generated/README.md) (generated; regenerate with the
+doc-hdit `scaffold` command recorded there). Build plans with `Plan::builder()` and `Triple` instead of hand-written
 N-Triples. CI runs `cargo-semver-checks`, `cargo-deny` (`deny.toml`) and `cargo-audit`.
 
 ## Production rule
