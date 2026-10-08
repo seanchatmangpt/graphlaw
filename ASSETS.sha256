@@ -35,6 +35,7 @@ ee6e55bba8b94d4ff13af5e7c07c7d120239e0827a46487dd2b1b708b4e5eb6f  7866  RdfXml  
 c70b0d1c843c0047e4c98e0a89392e46a05752ff6365bda7f7f55303905a0392  27326  Turtle  ontologies/domain/sosa.ttl
 f8f2c1dd80b4fbacdc8ddd48e579d3b90caa6714aecabee7ca61bef9722ee845  5804  Turtle  ontologies/dublin-core-elements-1.1.ttl
 4db5eee6f999817846b7d71ab16eac627b13c8dba7b5b9747215c33fa80aa4ec  22344  Turtle  ontologies/foaf.ttl
+2107fd3912a36fa9b7631984f44363494a25117324db801c38a771692d8ade60  4379  Turtle  ontologies/graphlaw-wasm.ttl
 4eeecc843408390fc16d69a291cb2ba5454fb124eaedef24a9618f6dd40c1f9e  186700  RdfXml  ontologies/industry/ecommerce/goodrelations-v1.owl
 25e9d4c127f5579b3fee083870fcbc38e0e01502f581b587c771a327b172107e  134067  Turtle  ontologies/industry/ecommerce/qudt-2.1-schema.ttl
 e79633b8d0564816cee8a99f5c9acf9a0e6fc7257c7209acd684ecad53a89dd6  28966  RdfXml  ontologies/industry/ecommerce/skos-core-ontology.rdf
