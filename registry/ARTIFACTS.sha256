@@ -3,6 +3,6 @@
 #   observed 2026-09-30: two builds, each after `cargo clean -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`, same target dir (dependency crates cached, not rebuilt), same machine, produced identical bytes. Not verified across separate target dirs or machines.
 #   Regenerate after any src/ change; the wasm line is a pin, not a live check.
 # registry/surface: recomputed by tests/capabilities_digest.rs and tests/registry_artifacts.rs.
-wasm 8bfff66cccd1e1a4834d61a893888bb479f046c1da1152a29098be7de0fe71a8 6657549 graphlaw_wasm.wasm
+wasm fc23a2927187029ade92a4a64abd2de2cd15147be0cd95c70d89504a1aadcb38 6657708 graphlaw_wasm.wasm
 registry sha256:9bdaedd8a284e5187bd14f18251c57193809a73cf4c337093c241981e71a60d6 - capability-registry.json
 surface sha256:fcee74ee068940f9e9879ccd41371807f469d63950c8f63b095117391dbc8e28 - capability-registry.json

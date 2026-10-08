@@ -15,7 +15,8 @@ graphlaw = { path = "..", features = ["abi", "wasi-patched-deps"] }
 
 # Size-optimised profile for the WebAssembly module (`--profile wasm`); kept
 # separate so native release builds and tests are unaffected.
-# Rendered from ggen wasi-json-abi-pack generated/graphlaw/cargo-profile.toml.
+# Rendered from the rust-wasi-wasmex-pack via ontologies/graphlaw-wasm.ttl
+# (`ggen sync run`, rules wasm-abi-meta / wasm-ffi).
 [profile.wasm]
 inherits = "release"
 opt-level = "s"
