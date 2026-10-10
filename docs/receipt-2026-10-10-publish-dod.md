@@ -42,3 +42,8 @@ Source receipt: `docs/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md`.
    standing block.
 
 Standing: UNKNOWN until step 1's fresh receipt exists.
+
+Note (2026-10-10, post-landing): step 4's expectation that `release.yml` publishes to
+crates.io is superseded — publishing is local-only as of the v26.10.11 release
+(`cargo cicd publish run` from a logged-in machine; CI never holds registry credentials).
+The body above is preserved as written.

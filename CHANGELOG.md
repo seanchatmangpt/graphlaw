@@ -5,6 +5,7 @@ All notable changes to this project are documented here, in the
 
 ## [Unreleased]
 
+
 ## [26.10.11] - 2026-10-10
 
 Published as crates.io `graphlaw` 26.10.11 (`graphlaw-eyeron` remains 0.7.8; it is independently
@@ -224,3 +225,22 @@ and the claim corrected here.
 
 - Law-state layer, dialect router, differential oracle, knowledge hooks, JSON ABI and a
   self-contained WASI module; vendored Eyeron as `graphlaw-eyeron`.
+## [26.10.12] - 2026-10-10
+
+Published as crates.io `graphlaw` 26.10.12.
+
+### Fixed
+
+- README "Releasing" section corrected: CI tags and ships the GitHub release only;
+  crates.io publishing is local-only (`cargo cicd publish run`). The 26.10.11 README
+  shipped a stale CI-publish claim (docs verified before a workflow change, publish
+  after — no gate re-checked in between). crates.io pages are immutable per version,
+  so the correction ships in this release.
+- `docs/receipt-2026-10-10-publish-dod.md` carries a dated supersession footer; body
+  preserved.
+
+### Added
+
+- `tests/docs_release_claims.rs`: the README's Releasing section must match
+  `release.yml`'s actual publish behavior in either direction (runs in the CI native
+  job's existing `--all-targets` sweep).

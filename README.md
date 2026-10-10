@@ -43,9 +43,9 @@ One self-contained WASI module (imports are `wasi_snapshot_preview1` only: clock
 
 The public op surface is also published as a machine-readable registry (`registry/capability-registry.json`, its Turtle projection `registry/capability-registry.ttl`, and `registry/op-examples.json`), emitted from `src/registry.rs` by the `graphlaw-registry` binary and carried as release assets with `.sha256` files. From v26.9.29 the `capabilities` op reports `registry_schema`, `registry_sha256` and `surface_sha256`. See [`docs/capability-registry.md`](docs/capability-registry.md) for the files, the digest rule and decoder compatibility rules.
 
-### Releasing (automatic)
+### Releasing
 
-There is nothing to run. When a change that bumps the version in `Cargo.toml` reaches `main`, `.github/workflows/release.yml` builds and tests, tags `vX.Y.Z`, creates the GitHub release with `graphlaw.wasm` (plus checksum), and publishes `graphlaw-eyeron` then `graphlaw` to crates.io (each only if that version is not already there; every step is idempotent). The only one-time setup is the `CARGO_REGISTRY_TOKEN` repository secret; without it the release and tag still happen and the publish step fails loudly until it is added. Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
+CI (`.github/workflows/release.yml`) builds and tests, tags `vX.Y.Z`, and creates the GitHub release with `graphlaw.wasm` (plus checksum) whenever a change that bumps the version in `Cargo.toml` reaches `main`. It never publishes to crates.io: publishing is local-only — from a logged-in machine run `cargo cicd publish run` (gated on doc-claims verification and a `cargo publish --dry-run` fence), then `cargo publish -p graphlaw` (the registry credential is the machine's own cargo login, never a repository secret). Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
 
 ## Plan admission
 
