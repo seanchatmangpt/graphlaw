@@ -5,6 +5,22 @@ All notable changes to this project are documented here, in the
 
 ## [Unreleased]
 
+### Added
+
+- Diataxis documentation tree linked from the README: docs/index.md hub,
+  four hand-written how-tos (run-the-wasm-module, authorize-with-signed-leases,
+  verify-without-trusting-the-operator, use-knowledge-hooks), and
+  docs/explanation/receipt-fields.md. All commands in them executed against this
+  tree; all ship in the crate via the existing /docs/** include.
+- README rewritten from first principles (~120 lines): install, verified
+  first-10-minutes flows, Diataxis index, authorities, production rule; wire
+  contracts (limits, refusals, leases) moved out to the docs tree.
+
+### Fixed
+
+- README Eyeron pin wording (0.7.7 -> "0.7.8 vendored from upstream 0.7.7@d6568f65");
+  docs/api-stability.md and SECURITY.md stale version lines -> 26.10.12.
+
 
 ## [26.10.11] - 2026-10-10
 

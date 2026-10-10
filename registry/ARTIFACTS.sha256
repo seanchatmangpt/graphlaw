@@ -4,5 +4,5 @@
 #   Regenerate after any src/ change; the wasm line is a pin, not a live check.
 # registry/surface: recomputed by tests/capabilities_digest.rs and tests/registry_artifacts.rs.
 wasm 2802cede5530fb12779bf8390683ca933cd3f692b70a69a413d63a1aa640b4d0 6659724 graphlaw_wasm.wasm
-registry sha256:47a24932a7a4461f557c04568b023ef6c9d92ec2ef901a7a2f546822dd2c8348 - capability-registry.json
+registry sha256:a59acf7faf8a7038fc59e7cc5e5efbb88ba6f6fb35905ce32b16a88b5c4ad9e4 - capability-registry.json
 surface sha256:fcee74ee068940f9e9879ccd41371807f469d63950c8f63b095117391dbc8e28 - capability-registry.json

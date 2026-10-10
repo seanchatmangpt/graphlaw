@@ -1,6 +1,6 @@
 # API stability
 
-GraphLaw's workspace version is 26.10.10 (next: 26.10.11); the capability-registry schema
+GraphLaw's workspace version is 26.10.12 (latest released); the capability-registry schema
 `graphlaw.capability-registry/1` and `ABI_VERSION = 1` were frozen at v26.9.29 and remain additive-only.
 This page states what downstream crates and JSON-ABI hosts may
 rely on, how deprecations work, and how the minimum supported Rust version moves.
