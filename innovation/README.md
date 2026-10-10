@@ -76,7 +76,8 @@ DfCM winner selected upstream = false
 
 The corresponding executable tests are:
 
-- `tests/sparql_construct_projection.rs`
-- `tests/chatman_rdf_innovation_crown.rs`
+- `tests/law_state.rs` (innovation pipeline: derive, admit, project)
+- `tests/wasm_abi.rs` (innovation pack through the WASM ABI)
+- `tests/corpus_conformance.rs` (`innovation` is a conformance root)
 
 The design deliberately treats innovation as **closure + contradiction + construction + constraint + falsification + planning**, not as an inherently cognitive act.
