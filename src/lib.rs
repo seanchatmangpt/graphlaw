@@ -53,7 +53,9 @@ pub mod policy;
 #[cfg(feature = "abi")]
 pub mod qualification;
 pub mod receipt;
+pub mod receipt_chain;
 pub mod receipt_store;
+pub use receipt_chain::{ReceiptRecord, validator::ReceiptValidator};
 #[cfg(feature = "abi")]
 pub mod registry;
 #[cfg(feature = "pack-tools")]

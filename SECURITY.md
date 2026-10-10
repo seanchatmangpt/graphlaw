@@ -4,7 +4,8 @@
 
 | version | supported |
 |---|---|
-| 26.10.5 (latest released) | yes |
+| 26.10.10 (latest released) | yes |
+| 26.10.5 | no |
 | 26.9.28 | no |
 | earlier / `praxis-graphlaw` | no |
 

@@ -1,6 +1,6 @@
 [package]
 name = "graphlaw"
-version = "26.10.5"
+version = "26.10.10"
 edition = "2024"
 rust-version = "1.96"
 authors = ["Sean Chatman"]
@@ -36,16 +36,27 @@ sha2 = "0.11"
 # Ed25519 receipt/lease attestations (BSD-3-Clause). Exact pin per GOALS.md invariant 3;
 # already resolved in Cargo.lock via purrdf. No RNG: keys come from caller-supplied seeds.
 ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["std"] }
+# Receipt-chain family (src/receipt_chain.rs): BLAKE3 frame/chain hashing,
+# hex hash fields, serde wire shapes. The OcelCausalFrame primitives
+# (99-byte to_hash_bytes packing + BLAKE3 chain rule) are ported verbatim
+# into src/receipt_chain.rs::frame from bcinr-powl-receipt 26.7.28 — the
+# crates.io dep itself pulls bcinr-powl -> wasm4pm-compat, which is
+# nightly-only and cannot build under graphlaw's pinned stable toolchain.
+blake3 = "1"
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
 regex = { version = "1", optional = true }
-serde_json = { version = "1", optional = true }
+serde_json = "1"
 eyeron = { package = "graphlaw-eyeron", version = "0.7.8", path = "crates/graphlaw-eyeron" }
 
 [features]
 # Capture/rewrite tooling for packs/self-monitoring-pack (replaces the former
 # Python scripts). Off by default so the library stays dependency-light.
-pack-tools = ["dep:regex", "dep:serde_json"]
+pack-tools = ["dep:regex"]
 # JSON request/response ABI (src/abi.rs) consumed by the wasm module in ./wasm.
-abi = ["dep:serde_json"]
+# (serde_json is now a required dependency for the receipt-chain family, so the
+# former `dep:serde_json` toggles are no-ops kept for feature compatibility.)
+abi = []
 # Asserts that the build applied the vendored WASI clock patch (see
 # vendor/README.md). Only the repo workspace (crates.io ignores [patch]) sets it.
 wasi-patched-deps = []

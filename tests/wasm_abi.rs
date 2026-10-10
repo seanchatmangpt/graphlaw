@@ -90,6 +90,7 @@ impl Host {
     }
 
     /// `gl_call` on an arbitrary (ptr, len) pair; reads and frees the response.
+    #[cfg(feature = "abi")]
     fn raw_call(&mut self, ptr: u32, len: u32) -> Value {
         let packed = self.call.call(&mut self.store, (ptr, len)).unwrap();
         let (out_ptr, out_len) = ((packed >> 32) as u32, (packed & 0xffff_ffff) as u32);
@@ -712,10 +713,12 @@ fn wasm_outstanding_allocation_cap_refuses_then_recovers_after_free() {
 
 // ---- signed leases and receipts through the compiled module ----------------
 
+#[cfg(feature = "abi")]
 fn issuer() -> graphlaw::attest::SigningKey {
     graphlaw::attest::SigningKey::from_seed([3; 32])
 }
 
+#[cfg(feature = "abi")]
 fn signed_lease_json(
     key: &graphlaw::attest::SigningKey,
     expires: u64,
@@ -742,6 +745,7 @@ fn signed_lease_json(
     })
 }
 
+#[cfg(feature = "abi")]
 fn signed_req(signed_lease: Value, trusted: &graphlaw::attest::SigningKey, now: u64) -> Value {
     json!({"op": "law",
         "data": {"text": "<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .\n<urn:a:x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <urn:a:C> .\n", "dialect": "ntriples"},
@@ -759,6 +763,7 @@ fn refusal_of(r: &Value) -> (&str, &str) {
     )
 }
 
+#[cfg(feature = "abi")]
 #[test]
 fn f_wasm_signed_lease_with_trusted_keys_works_and_expiry_uses_the_module_clock() {
     let k = issuer();
@@ -785,6 +790,7 @@ fn f_wasm_signed_lease_with_trusted_keys_works_and_expiry_uses_the_module_clock(
     );
 }
 
+#[cfg(feature = "abi")]
 #[test]
 fn f_wasm_unsigned_lease_is_refused_unless_explicitly_unverified() {
     let mut req = lease_req("construct", json!(["derive:rdfs"]), 100, 50);
@@ -838,6 +844,7 @@ fn f_wasm_require_signed_receipt_step() {
     );
 }
 
+#[cfg(feature = "abi")]
 #[test]
 fn plan_negation_round_trips_in_wasm_and_matches_native() {
     let at = |o: &str| format!("<urn:p:robot> <urn:p:at> <urn:p:{o}> .\n");

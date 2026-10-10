@@ -15,6 +15,13 @@
 //! GraphLaw owns only the orchestration; every query is parsed and executed by
 //! PurRDF's SPARQL engine, and the pack itself is read by querying it.
 //!
+//! Effect vocabulary. `kh:effect "emit-delta"` merges the action's CONSTRUCT
+//! into the state; `kh:effect "refuse"` emits no delta — instead each firing
+//! surfaces a [`Verdict::Refuse`] carrying the hook's `kh:reason` (default:
+//! its `kh:name`) in [`Materialized::verdicts`]. A refuse hook is a named,
+//! pack-declared fuse: it is surfaced as a verdict, never an error, and the
+//! consumer decides what to refuse.
+//!
 //! Semantics. A hook fires once per *distinct solution row* of its trigger
 //! `SELECT`. Firing runs the action's `CONSTRUCT` with that row's variables
 //! pre-bound, and the constructed triples are merged into the state (each
@@ -51,6 +58,52 @@ pub const MAX_FIRINGS: usize = 10_000;
 /// how often hooks fire, not how much each CONSTRUCT adds.
 pub const MAX_STATE_QUADS: usize = 1_000_000;
 
+/// What a hook firing does, from `kh:effect`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Effect {
+    /// Merge the action's `CONSTRUCT` into the state (`kh:effect "emit-delta"`).
+    EmitDelta,
+    /// Emit no delta; surface a [`Verdict::Refuse`] instead
+    /// (`kh:effect "refuse"`).
+    Refuse,
+}
+
+impl Effect {
+    fn parse(iri: &str, value: &str) -> Result<Self, Refusal> {
+        match value {
+            "emit-delta" => Ok(Effect::EmitDelta),
+            "refuse" => Ok(Effect::Refuse),
+            other => Err(refuse(
+                RefusalKind::Unsupported,
+                format!("{iri}: unsupported kh:effect {other:?}"),
+            )),
+        }
+    }
+}
+
+/// The verdict one hook firing produced.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Verdict {
+    /// The firing merged its CONSTRUCT delta into the state.
+    Fired,
+    /// The firing refuses the actuation; the payload is the refuse reason
+    /// (`kh:reason`, defaulting to the hook's `kh:name`).
+    Refuse(String),
+}
+
+/// One hook firing's verdict, in firing order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HookVerdict {
+    /// IRI of the hook that fired.
+    pub hook: String,
+    /// Fixpoint round in which the hook fired.
+    pub round: usize,
+    /// The trigger row, as `(variable, term)` in projection order.
+    pub row: Vec<(String, String)>,
+    /// What the firing did.
+    pub verdict: Verdict,
+}
+
 /// One `kh:Hook` with its resolved action.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Hook {
@@ -64,6 +117,11 @@ pub struct Hook {
     pub construct: String,
     /// Firing priority; lower values fire first.
     pub priority: i64,
+    /// What a firing of this hook does.
+    pub effect: Effect,
+    /// Refuse reason for `Effect::Refuse` hooks (`kh:reason`; `None` falls
+    /// back to [`Hook::name`] in the verdict).
+    pub reason: Option<String>,
 }
 
 /// A validated, priority-ordered set of hooks.
@@ -92,6 +150,8 @@ pub struct Materialized {
     pub state: LawState,
     /// Every firing, in order.
     pub firings: Vec<Firing>,
+    /// One verdict per firing, in the same order as [`Materialized::firings`].
+    pub verdicts: Vec<HookVerdict>,
     /// Number of rounds executed.
     pub rounds: usize,
 }
@@ -153,12 +213,13 @@ impl HookPack {
         let rows = select(
             pack,
             &format!(
-                "SELECT DISTINCT ?h ?name ?kind ?q ?effect ?handler ?aq ?prio WHERE {{ \
+                "SELECT DISTINCT ?h ?name ?kind ?q ?effect ?handler ?aq ?prio ?reason WHERE {{ \
                    ?h a <{KH}Hook> ; <{KH}kind> ?kind ; <{KH}query> ?q ; \
                       <{KH}effect> ?effect ; <{KH}action> ?act . \
                    ?act a <{KH}Action> ; <{KH}handler> ?handler ; <{KH}query> ?aq . \
                    OPTIONAL {{ ?h <{KH}name> ?name }} \
-                   OPTIONAL {{ ?h <{KH}priority> ?prio }} }}"
+                   OPTIONAL {{ ?h <{KH}priority> ?prio }} \
+                   OPTIONAL {{ ?h <{KH}reason> ?reason }} }}"
             ),
             &[],
         )?;
@@ -175,12 +236,7 @@ impl HookPack {
                     format!("{iri}: unsupported kh:kind {kind:?}"),
                 ));
             }
-            if effect != "emit-delta" {
-                return Err(refuse(
-                    RefusalKind::Unsupported,
-                    format!("{iri}: unsupported kh:effect {effect:?}"),
-                ));
-            }
+            let effect = Effect::parse(&iri, &effect)?;
             if handler != HANDLER_SPARQL_CONSTRUCT {
                 return Err(refuse(
                     RefusalKind::Unsupported,
@@ -204,6 +260,8 @@ impl HookPack {
                 trigger: lexical(&r[3]).unwrap_or_default(),
                 construct: lexical(&r[6]).unwrap_or_default(),
                 priority,
+                effect,
+                reason: lexical(&r[8]),
             });
         }
         if hooks.len() != declared.len() {
@@ -247,6 +305,7 @@ impl HookPack {
         .filter_map(|r| lexical(&r[0]))
         .collect();
         let mut firings = Vec::new();
+        let mut verdicts: Vec<HookVerdict> = Vec::new();
         for round in 1..=MAX_ROUNDS {
             let mut progressed = false;
             for hook in &self.hooks {
@@ -276,23 +335,41 @@ impl HookPack {
                         ));
                     }
                     progressed = true;
-                    let delta = match NativeSparqlEngine::new()
-                        .query(
-                            current.dataset(),
-                            SparqlRequest {
-                                query: &hook.construct,
-                                base_iri: None,
-                                substitutions: &bound,
-                            },
-                        )
-                        .map_err(|e| Refusal::engine(Dialect::Sparql, e))?
-                    {
-                        SparqlResult::Graph(g) => g,
-                        other => {
-                            return Err(refuse(
-                                RefusalKind::Unsupported,
-                                format!("{}: action must be CONSTRUCT, got {other:?}", hook.iri),
-                            ));
+                    // A refuse firing merges no delta — it is a named,
+                    // pack-declared fuse: the marker alone advances the state
+                    // so the row fires once per lineage, and the verdict is
+                    // surfaced, never turned into an error here.
+                    let refuse_reason = if hook.effect == Effect::Refuse {
+                        Some(hook.reason.clone().unwrap_or_else(|| hook.name.clone()))
+                    } else {
+                        None
+                    };
+                    let delta = if refuse_reason.is_some() {
+                        RdfDatasetBuilder::new()
+                            .freeze()
+                            .map_err(|e| Refusal::engine(Dialect::NQuads, e))?
+                    } else {
+                        match NativeSparqlEngine::new()
+                            .query(
+                                current.dataset(),
+                                SparqlRequest {
+                                    query: &hook.construct,
+                                    base_iri: None,
+                                    substitutions: &bound,
+                                },
+                            )
+                            .map_err(|e| Refusal::engine(Dialect::Sparql, e))?
+                        {
+                            SparqlResult::Graph(g) => g,
+                            other => {
+                                return Err(refuse(
+                                    RefusalKind::Unsupported,
+                                    format!(
+                                        "{}: action must be CONSTRUCT, got {other:?}",
+                                        hook.iri
+                                    ),
+                                ));
+                            }
                         }
                     };
                     let mut b = RdfDatasetBuilder::new();
@@ -320,14 +397,24 @@ impl HookPack {
                             ),
                         ));
                     }
+                    let row: Vec<(String, String)> = bound
+                        .iter()
+                        .map(|(v, t)| (v.clone(), format!("{t:?}")))
+                        .collect();
                     firings.push(Firing {
                         hook: hook.iri.clone(),
                         round,
-                        row: bound
-                            .iter()
-                            .map(|(v, t)| (v.clone(), format!("{t:?}")))
-                            .collect(),
+                        row: row.clone(),
                         added: next.quad_count().saturating_sub(current.quad_count()),
+                    });
+                    verdicts.push(HookVerdict {
+                        hook: hook.iri.clone(),
+                        round,
+                        row,
+                        verdict: match refuse_reason {
+                            Some(reason) => Verdict::Refuse(reason),
+                            None => Verdict::Fired,
+                        },
                     });
                     current = next;
                 }
@@ -336,6 +423,7 @@ impl HookPack {
                 return Ok(Materialized {
                     state: current,
                     firings,
+                    verdicts,
                     rounds: round,
                 });
             }

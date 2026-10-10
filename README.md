@@ -95,7 +95,9 @@ The complete upstream surfaces are intentionally re-exported. Consumers can use 
 
 Growable enums are `#[non_exhaustive]` and every public item is documented (`#![deny(missing_docs)]`);
 see [`docs/api-stability.md`](docs/api-stability.md) for the stability, deprecation, MSRV and
-`ABI_VERSION` contracts. Build plans with `Plan::builder()` and `Triple` instead of hand-written
+`ABI_VERSION` contracts. Scaffolded reference skeletons for the full public code surface live in
+[`docs/reference-generated/`](docs/reference-generated/README.md) (generated; regenerate with the
+doc-hdit `scaffold` command recorded there). Build plans with `Plan::builder()` and `Triple` instead of hand-written
 N-Triples. CI runs `cargo-semver-checks`, `cargo-deny` (`deny.toml`) and `cargo-audit`.
 
 ## Production rule
@@ -227,3 +229,26 @@ Informal mapping only; GraphLaw does not claim conformance to any external recei
 | consequence | `step`, `added` |
 | replay | `plan_sha256`, `graphlaw-verify` replay from the start state |
 | standing | not stored: derived by the verifier (ADMITTED/REFUSED) from the receipts |
+
+## Receipt chains (praxis-compatible)
+
+`graphlaw::receipt_chain` is a praxis-compatible receipt-chaining surface: `ReceiptRecord`
+(`RECEIPT_RECORD_VERSION = 1`), frozen wire strings (`praxis-chain/base` and
+`praxis-chain/v2-fold`), byte-exact BLAKE3 frame hashing — golden-tested against the committed
+TCPS fixture (`tests/receipt_chain_golden_test.rs`, 4 tests) — a 4-stage validator, a JSONL
+`ReceiptStore`, and an `epoch` module. ggen migrates onto this to retire its vendored
+praxis-core.
+
+## Hook refuse effect
+
+A hook action may set `Effect::Refuse` instead of emitting a delta. The hook run then surfaces
+`Verdict::Refuse(reason)` / `HookVerdict` carrying the hook's `kh:reason` (default when
+absent); existing emit-delta packs are unaffected, and a refuse is never an error at
+materialize — the consumer decides what a refusal means. See `tests/knowledge_hooks.rs`
+(11 tests).
+
+## Session changes uncommitted
+
+The receipt-chain and refuse-hook surfaces above are uncommitted working-tree changes; see
+[`docs/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md`](docs/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md)
+for the recommended two-commit split (receipt chain, then hooks).
