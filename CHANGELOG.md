@@ -5,6 +5,33 @@ All notable changes to this project are documented here, in the
 
 ## [Unreleased]
 
+## [26.10.11] - 2026-10-10
+
+Published as crates.io `graphlaw` 26.10.11 (`graphlaw-eyeron` remains 0.7.8; it is independently
+versioned upstream-vendored and is not coupled to the workspace calendar version).
+
+Docs-accuracy release: 16-lane verification fan-out over every `*.md`/`*.txt` in the repo; all
+checkable claims re-verified against live code, tests actually re-run.
+
+### Fixed
+
+- README: receipt-chain and refuse-hook surfaces marked landed (`705dd6f`, `e732385`) instead of
+  uncommitted working-tree state.
+- MIGRATION: WASM module target corrected to `wasm32-wasip1` (not `wasm32-unknown-unknown`).
+- EXTRACTION: false claim that the `extract-from-praxis` workflow was deleted corrected with a
+  dated note (workflow still present; engine retirement is enforced by Cargo.toml pins).
+- capability-registry: doc now reflects the emitted registry (15 limit keys, not 6; commands
+  observed exiting 0, not UNKNOWN).
+- api-stability: version header current (workspace 26.10.10); stable module list completed with
+  the 5 missing `pub mod`s; semver-checks described as running in CI.
+- refusals: `ResourceLimit` row lists all 5 N3 limit names; aggregate-boundary section rewritten
+  after ggen deleted `crates/praxis-graphlaw` (`8e92df31f`).
+- wasm-integration: ARTIFACTS digest pin corrected to `2802cede…` and drifted line citations
+  re-anchored.
+- graphlaw-eyeron README: dead relative doc links pointed at upstream URLs (docs/examples are not
+  carried in the vendored copy).
+- innovation: dead test references (removed by revert `0a38b68`) replaced with live test coverage.
+
 ### Added
 
 - doc-hdit scaffolded reference documentation (`docs/reference-generated/{reference,how_to,explanation}.md`,

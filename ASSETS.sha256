@@ -1,5 +1,5 @@
 # sha256  bytes  dialect  path   (regenerate: UPDATE_ASSET_MANIFEST=1)
-4e71a4c0de9ac5b9182c74896c37595421a96e9d9b4d8daffaff57a503677b87  3973  -  innovation/README.md
+d8ff2fa51d339570fcfb648b9f0323c4ffaef76d5bd6fe8b5671d16d0bd3ed69  4089  -  innovation/README.md
 1026f227aaab3459a738325cf0c9e0d4b09726870110dd12c7c99e78218bb803  4963  N3  innovation/blue-ocean-triz.n3
 d253221dfc64547b4d6a0d128bdbd3e384618a7a4d9d87ee8cc892894a699c79  1123  Turtle  innovation/candidate.shacl.ttl
 6b9313e525fd443f9633e3c729a8fe25d95a2b48e1461e763adc1050aebaaaec  1431  ShExJ  innovation/candidate.shex.json

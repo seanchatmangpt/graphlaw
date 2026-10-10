@@ -5,8 +5,9 @@ name: Release
 #   1. build and test the WASI module and the whole workspace,
 #   2. tag vX.Y.Z and create the GitHub release with graphlaw.wasm, the capability
 #      registry (capability-registry.json/.ttl) and op-examples.json, each with a .sha256,
-#   3. publish graphlaw-eyeron then graphlaw to crates.io, each only if that
-#      exact version is not already on the registry.
+#   3. publish: intentionally absent. crates.io publishing is local-only
+#      (operator decision 2026-10-10): `cargo cicd publish run` from a logged-in
+#      machine actuates `cargo publish`; CI never holds registry credentials.
 # A run with nothing to release exits in seconds. All steps are idempotent.
 # To release: merge a change that bumps the version. Nothing else is required.
 # HOLD: while the repository variable RELEASE_HOLD is `true`, every step below
@@ -97,24 +98,8 @@ jobs:
             dist/op-examples.json dist/op-examples.json.sha256 \
             --target "$(git rev-parse HEAD)" --generate-notes --title "graphlaw v${{ steps.plan.outputs.graphlaw }}"
 
-      - name: Publish graphlaw-eyeron
-        if: steps.plan.outputs.eyeron_published == 'no'
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: Publish (refused in CI)
+        if: steps.plan.outputs.eyeron_published == 'no' || steps.plan.outputs.graphlaw_published == 'no'
         run: |
-          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
-            echo "::error title=crates.io credential missing::Add the CARGO_REGISTRY_TOKEN repository secret once; every later release is automatic."
-            exit 1
-          fi
-          cargo publish -p graphlaw-eyeron
-
-      - name: Publish graphlaw
-        if: steps.plan.outputs.graphlaw_published == 'no'
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        run: |
-          if [ -z "$CARGO_REGISTRY_TOKEN" ]; then
-            echo "::error title=crates.io credential missing::Add the CARGO_REGISTRY_TOKEN repository secret once; every later release is automatic."
-            exit 1
-          fi
-          cargo publish -p graphlaw
+          echo "Publishing is local-only: run 'cargo cicd publish run' from a logged-in machine."
+          echo "CI tags and ships release artifacts only. Skipping crates.io publish."
