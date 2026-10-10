@@ -4,7 +4,7 @@
 //! cross-op property is asserted.
 //!
 //! Set `GRAPHLAW_WASM` to test a prebuilt module (see `tests/common`).
-#![cfg(not(target_arch = "wasm32"))]
+#![cfg(all(feature = "abi", not(target_arch = "wasm32")))]
 
 mod common;
 

@@ -4,7 +4,7 @@
 //!
 //! Examples come from `registry/op-examples.json` (schema
 //! `graphlaw.op-examples/1`). Set `GRAPHLAW_WASM` to test a prebuilt module.
-#![cfg(not(target_arch = "wasm32"))]
+#![cfg(all(feature = "abi", not(target_arch = "wasm32")))]
 
 mod common;
 

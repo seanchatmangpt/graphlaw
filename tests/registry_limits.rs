@@ -45,7 +45,8 @@ fn registry_surfaces_all_15_engine_limits_at_their_source_values() {
             .and_then(Value::as_u64)
             .unwrap_or_else(|| panic!("missing limit `{name}`"));
         assert_eq!(
-            emitted, u64::try_from(*value).unwrap(),
+            emitted,
+            u64::try_from(*value).unwrap(),
             "limit `{name}` drifted from its source constant"
         );
     }
