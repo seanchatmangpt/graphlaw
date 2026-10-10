@@ -3,6 +3,28 @@
 All notable changes to this project are documented here, in the
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+Versioning policy (stated once, applies to every entry): `graphlaw-eyeron` keeps its own
+independent, upstream-vendored version (currently 0.7.8) and is not coupled to the
+workspace calendar version; "Published as crates.io" lines refer to the `graphlaw` crate.
+
+## [26.10.13] - 2026-10-10
+
+Published as crates.io `graphlaw` 26.10.13.
+
+ERRC release: Eliminate/Reduce/Raise pass over the repo; no semantic changes to src/.
+
+### Added
+- tests/readme_first_ten_minutes.rs pins the README's example outputs (hashes,
+  refusal text); docs_release_claims.rs pins the doc version lines to
+  CARGO_PKG_VERSION.
+### Reduced
+- ci.yml: dropped the duplicated chicago/qualification steps and the clippy-subsumed
+  check step.
+### Eliminated
+- extract-from-praxis.yml (destructive tree-replacing footgun; EXTRACTION.md updated);
+  malformed generated docs/reference-generated/{how_to,explanation}.md; orphaned
+  ggen.toml; dead .gitignore rules.
+
 ## [Unreleased]
 
 ### Added
@@ -24,8 +46,7 @@ All notable changes to this project are documented here, in the
 
 ## [26.10.11] - 2026-10-10
 
-Published as crates.io `graphlaw` 26.10.11 (`graphlaw-eyeron` remains 0.7.8; it is independently
-versioned upstream-vendored and is not coupled to the workspace calendar version).
+Published as crates.io `graphlaw` 26.10.11.
 
 Docs-accuracy release: 16-lane verification fan-out over every `*.md`/`*.txt` in the repo; all
 checkable claims re-verified against live code, tests actually re-run.
@@ -58,8 +79,7 @@ checkable claims re-verified against live code, tests actually re-run.
 
 ## [26.10.10] - 2026-10-10
 
-Published as crates.io `graphlaw` 26.10.10 (`graphlaw-eyeron` remains 0.7.8; it is independently
-versioned upstream-vendored and is not coupled to the workspace calendar version).
+Published as crates.io `graphlaw` 26.10.10.
 
 Correction: the 26.10.5 entry below claimed a crates.io publish that never happened — that release
 was `BLOCKED:crates_io_credentials`; the registry only carries 26.9.28/26.9.29. The line is removed
@@ -244,6 +264,11 @@ and the claim corrected here.
 ## [26.10.12] - 2026-10-10
 
 Published as crates.io `graphlaw` 26.10.12.
+
+### Changed
+
+- `cicd.toml`: added `[docs] verify_cmd` gate config consumed by cargo-cicd's
+  doc-drift gate (`94dfc0c`); regenerated with section preservation (`917dbcc`).
 
 ### Fixed
 

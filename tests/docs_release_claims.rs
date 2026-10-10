@@ -68,3 +68,18 @@ fn readme_release_section_matches_workflow_publish_behavior() {
         );
     }
 }
+
+#[test]
+fn doc_version_lines_match_workspace_version() {
+    let v = env!("CARGO_PKG_VERSION");
+    let api = read("docs/api-stability.md");
+    assert!(
+        api.contains(&format!("workspace version is {v}")),
+        "docs/api-stability.md version line does not match workspace version {v}"
+    );
+    let sec = read("SECURITY.md");
+    assert!(
+        sec.contains(&format!("{v} (latest released)")),
+        "SECURITY.md supported-versions table does not name {v} as latest released"
+    );
+}

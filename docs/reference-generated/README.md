@@ -27,8 +27,6 @@ python3 /Users/sac/ggen-marketplace/scripts/gen_doc_surface.py code /Users/sac/g
 ## Files
 
 - `reference.md` — per-module symbol tables (rigid body; AGENT-FORBIDDEN).
-- `how_to.md` — task skeletons.
-- `explanation.md` — concept skeletons.
 
 ## See Also
 
