@@ -247,8 +247,8 @@ absent); existing emit-delta packs are unaffected, and a refuse is never an erro
 materialize — the consumer decides what a refusal means. See `tests/knowledge_hooks.rs`
 (11 tests).
 
-## Session changes uncommitted
+## Receipt-chain and refuse-hook provenance
 
-The receipt-chain and refuse-hook surfaces above are uncommitted working-tree changes; see
-[`docs/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md`](docs/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md)
-for the recommended two-commit split (receipt chain, then hooks).
+The recommended two-commit split (receipt chain, then refuse hooks) is recorded in
+[`docs/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md`](docs/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md);
+both commits have landed (`705dd6f` receipt chain, `e732385` refuse hooks).
