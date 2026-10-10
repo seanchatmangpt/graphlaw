@@ -10,10 +10,10 @@ Schema id: `graphlaw.capability-registry/1`. The schema is frozen for v26.9.29; 
 additive only. `ABI_VERSION` stays `1`.
 
 Status of this page: written against the v26.9.29 registry contract. The emitter
-(`src/registry.rs`, `src/bin/graphlaw_registry.rs`) and the `registry/` directory were not present
-in the checkout when this page was written, so every statement about emitted files, flags and
-digests is contract text, not observed output. Where a claim depends on a command that has not
-been run, it is marked UNKNOWN.
+(`src/registry.rs`, `src/bin/graphlaw_registry.rs`), the `registry/` directory and the
+registry-vs-dispatch tests (`tests/registry_dispatch.rs`, `tests/registry_artifacts.rs`,
+`tests/op_examples.rs`) are present and green on the current tree:
+`cargo run --features abi --bin graphlaw-registry -- --check` exits 0.
 
 ## Files under `registry/`
 
@@ -43,8 +43,7 @@ cargo run --features abi --bin graphlaw-registry -- --print-digests
 ```
 
 `--write` emits `capability-registry.json` and `capability-registry.ttl`. `--check` compares the
-committed files with a fresh emission. Whether these commands succeed on the current tree is
-UNKNOWN until they are run; the flags above are the contract.
+committed files with a fresh emission and exits 0 when they match (observed on the current tree).
 
 Release assets: `capability-registry.json`, `capability-registry.ttl` and `op-examples.json`, each
 with a `.sha256` file.
@@ -54,7 +53,7 @@ with a `.sha256` file.
 ```json
 {
   "schema": "graphlaw.capability-registry/1",
-  "graphlaw_version": "26.9.29",
+  "graphlaw_version": "<CARGO_PKG_VERSION, e.g. 26.10.10>",
   "abi_version": 1,
   "surface_sha256": "sha256:<64 lowercase hex>",
   "registry_sha256": "sha256:<64 lowercase hex>",
@@ -67,8 +66,11 @@ with a `.sha256` file.
   "lease_reasons": ["expired", "out_of_scope", "ceiling", "bad_signature", "untrusted_key", "clock_skew"],
   "receipt_reasons": ["unattested", "bad_signature", "untrusted_key"],
   "policy_refusal_kinds": ["MissingEntry", "InventedOutcome", "BadMass", "DeadEnd", "Malformed"],
-  "limits": {"max_request_bytes": 16777216, "max_json_depth": 64, "max_plan_actions": 1000,
-             "max_atoms_per_field": 10000, "max_policy_entries": 100000, "n3_max_iterations": 4000},
+  "limits": {"hooks_max_firings": 10000, "hooks_max_rounds": 64, "hooks_max_state_quads": 1000000,
+             "max_atoms_per_field": 10000, "max_json_depth": 64, "max_outstanding_alloc_bytes": 268435456,
+             "max_plan_actions": 1000, "max_plan_total_atoms": 100000, "max_policy_entries": 100000,
+             "max_request_bytes": 16777216, "n3_max_derived_facts": 500000, "n3_max_iterations": 4000,
+             "n3_max_match_steps": 50000000, "n3_max_term_bytes": 65536, "n3_max_total_bytes": 268435456},
   "refusal_codes": [{"code": "...", "order": 1, "kind": null, "fields": []}],
   "law_steps": [{"name": "...", "order": 1, "ceiling": "observe", "fields": []}],
   "ops": []

@@ -1,12 +1,15 @@
 # API stability
 
-GraphLaw v26.9.29 (unreleased). This page states what downstream crates and JSON-ABI hosts may
+GraphLaw's workspace version is 26.10.10 (next: 26.10.11); the capability-registry schema
+`graphlaw.capability-registry/1` and `ABI_VERSION = 1` were frozen at v26.9.29 and remain additive-only.
+This page states what downstream crates and JSON-ABI hosts may
 rely on, how deprecations work, and how the minimum supported Rust version moves.
 
 ## What is stable
 
 - **Public types and functions** in `graphlaw::{law, plan, policy, receipt, receipt_store, attest,
-  dialect, hooks}` and, with `--features abi`, `graphlaw::abi`. Removing or changing the signature
+  dialect, hooks, capability_intake, qualification, receipt_chain, registry, smon}` and, with
+  `--features abi`, `graphlaw::abi`. Removing or changing the signature
   of any of them requires a semver-major release (`26.x` calendar versions: a change of the
   first component or an explicit CHANGELOG "Breaking" entry).
 - **Growable enums are `#[non_exhaustive]`**: `Step`, `Dialect`, `Engine`, `RefusalKind`,
@@ -72,8 +75,8 @@ a CHANGELOG line ("MSRV: 1.96 -> 1.9x"). CI builds on the pinned toolchain in
 
 ## Checks
 
-- `cargo semver-checks` runs in CI (informational while v26.9.29 is unreleased and expected to
-  differ from 26.9.28).
+- `cargo semver-checks` runs in CI on every push and PR (job `semver` in
+  `.github/workflows/ci.yml`).
 - `#![deny(missing_docs)]` and `cargo doc -D warnings` keep every public item documented.
 - `graphlaw-registry --check` keeps the committed registry files equal to the Rust table.
 - `cargo deny check` and `cargo audit` gate the dependency tree (`deny.toml`).
