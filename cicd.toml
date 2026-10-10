@@ -1,44 +1,47 @@
-[workspace]
-name = "graphlaw"
-toolchain = "1.96.0-aarch64-apple-darwin"
-target_dir = "target"
+[autonomic]
+enabled = true
+mode = "suggest"
+
+[docs]
+verify_cmd = "cargo test --test docs_release_claims"
+
+[[events]]
+kind = "status"
+verdict = "pass"
+
+[git.phase]
+commit_after_phase = false
+require_clean_tree = true
+
+[standing]
+claim_tables = []
+clients = []
+ocel_logs = []
+process_validation = []
+receipt_ledgers = []
+
+[standing.release_gates]
 
 [state]
-dirty = true
-target_size_gb = 17.25
-changed_files = 1
+changed_files = 0
 changed_tests = 0
 changed_trybuild_fixtures = 0
+dirty = true
+target_size_gb = 17.28
 
 [target]
 max_size_gb = 20
 prune_after_days = 14
 
 [test.changed]
-enabled = true
 base = "origin/main"
+enabled = true
 
 [trybuild.changed]
 enabled = true
 snapshot_mode = "changed-only"
 
-[git.phase]
-require_clean_tree = true
-commit_after_phase = false
-
-[autonomic]
-enabled = true
-mode = "suggest"
-
-[[events]]
-kind = "status"
-verdict = "pass"
-
-[standing]
-ocel_logs = []
-process_validation = []
-receipt_ledgers = []
-claim_tables = []
-clients = []
-
-[standing.release_gates]
+[workspace]
+name = "graphlaw"
+target_dir = "target"
+toolchain = "1.96.0-aarch64-apple-darwin"
