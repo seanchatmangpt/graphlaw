@@ -153,3 +153,93 @@ fn hooks_chain_by_priority_to_a_fixpoint() {
     );
     assert_eq!(m.firings.len(), 2);
 }
+
+#[test]
+fn refuse_hook_fires_with_reason_and_emits_no_delta() {
+    let doc = format!(
+        "@prefix kh: <{}> . @prefix ex: <https://e/> .\n\
+         ex:no-writes a kh:Hook ; kh:kind \"sparql\" ; kh:effect \"refuse\" ; \
+           kh:reason \"unattended writes are refused\" ; kh:action ex:a ;\n\
+           kh:query \"SELECT ?x WHERE {{ ?x a <https://e/Forbidden> }}\" .\n\
+         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ;\n\
+           kh:query \"CONSTRUCT {{ ?x <https://e/never> <https://e/emitted> }} WHERE {{ ?x a <https://e/Forbidden> }}\" .\n",
+        graphlaw::hooks::KH
+    );
+    let pack = HookPack::load(&LawState::parse(doc.as_bytes(), Dialect::Turtle, None).unwrap())
+        .expect("refuse pack loads");
+    assert_eq!(pack.hooks()[0].effect, graphlaw::hooks::Effect::Refuse);
+    let state = LawState::parse(
+        b"<https://e/x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://e/Forbidden> .\n",
+        Dialect::NTriples,
+        None,
+    )
+    .unwrap();
+    let before = state.quad_count();
+    let m = pack.materialize(&state).unwrap();
+    assert_eq!(m.firings.len(), 1);
+    assert_eq!(m.verdicts.len(), 1);
+    assert_eq!(
+        m.verdicts[0].verdict,
+        graphlaw::hooks::Verdict::Refuse("unattended writes are refused".into())
+    );
+    assert_eq!(m.verdicts[0].hook, "https://e/no-writes");
+    // marker only: no CONSTRUCT delta merged
+    assert_eq!(m.state.quad_count(), before + 2);
+    // a refuse firing is once-per-lineage like any firing: fixpoint holds
+    let again = pack.materialize(&m.state).unwrap();
+    assert!(again.firings.is_empty() && again.verdicts.is_empty());
+}
+
+#[test]
+fn refuse_hook_that_matches_nothing_produces_no_verdict() {
+    let doc = format!(
+        "@prefix kh: <{}> . @prefix ex: <https://e/> .\n\
+         ex:quiet a kh:Hook ; kh:kind \"sparql\" ; kh:effect \"refuse\" ; kh:action ex:a ;\n\
+           kh:query \"SELECT ?x WHERE {{ ?x a <https://e/Absent> }}\" .\n\
+         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ;\n\
+           kh:query \"CONSTRUCT {{ ?x ?p ?o }} WHERE {{ ?x ?p ?o }}\" .\n",
+        graphlaw::hooks::KH
+    );
+    let pack = HookPack::load(&LawState::parse(doc.as_bytes(), Dialect::Turtle, None).unwrap())
+        .expect("refuse pack loads");
+    let state = LawState::parse(
+        b"<https://e/x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://e/Unrelated> .\n",
+        Dialect::NTriples,
+        None,
+    )
+    .unwrap();
+    let m = pack.materialize(&state).unwrap();
+    assert!(m.firings.is_empty());
+    assert!(m.verdicts.is_empty());
+    // missing kh:reason falls back to kh:name in the verdict payload
+    assert_eq!(pack.hooks()[0].name, "quiet");
+    assert_eq!(pack.hooks()[0].reason, None);
+}
+
+#[test]
+fn emit_delta_firing_surfaces_a_fired_verdict() {
+    // regression: existing emit-delta packs parse and fire identically,
+    // now additionally surfacing Verdict::Fired.
+    let state = pack_file("fixtures/session-real-broad-topic.ttl");
+    let m = pack().materialize(&state).unwrap();
+    assert_eq!(m.verdicts.len(), m.firings.len());
+    assert!(
+        m.verdicts
+            .iter()
+            .all(|v| v.verdict == graphlaw::hooks::Verdict::Fired)
+    );
+}
+
+#[test]
+fn malformed_effect_value_is_a_typed_refusal() {
+    let doc = format!(
+        "@prefix kh: <{}> . @prefix ex: <https://e/> .\n\
+         ex:h a kh:Hook ; kh:kind \"sparql\" ; kh:query \"SELECT * WHERE {{?s ?p ?o}}\" ; kh:effect \"refuse-now\" ; kh:action ex:a .\n\
+         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ; kh:query \"CONSTRUCT {{?s ?p ?o}} WHERE {{?s ?p ?o}}\" .",
+        graphlaw::hooks::KH
+    );
+    let e = HookPack::load(&LawState::parse(doc.as_bytes(), Dialect::Turtle, None).unwrap())
+        .unwrap_err();
+    assert_eq!(e.kind, RefusalKind::Unsupported);
+    assert!(e.message.contains("kh:effect"), "{e}");
+}
