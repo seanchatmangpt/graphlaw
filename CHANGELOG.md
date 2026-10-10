@@ -5,7 +5,12 @@ All notable changes to this project are documented here, in the
 
 ## [Unreleased]
 
-Nothing.
+### Added
+
+- doc-hdit scaffolded reference documentation (`docs/reference-generated/{reference,how_to,explanation}.md`,
+  regen command in its `README.md`), generated from the code surface (`src/` + `crates/`; 94
+  modules, 2,097 symbol rows) with `rust-doc-hdit-pack`; re-rendered with backticked identifier
+  columns (`10b13bc`, `e1059f1`). Linked from the README API-stability section.
 
 ## [26.10.10] - 2026-10-10
 
