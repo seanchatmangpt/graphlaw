@@ -19,7 +19,7 @@ the [capability registry](capability-registry.md)).
 | `LeaseRefused` | `LawError::LeaseRefused` | `reason`, `lease_id`, `step` | See lease reasons below. |
 | `UnverifiedLeaseRefused` | ABI request check | none | A `law` request carried an unsigned `lease` without `"unverified_lease": true`. Supply `signed_lease` + `trusted_keys`, or opt in explicitly (with `now_unix`). The envelope `kind` is `Unsupported`. |
 | `NotAdmitted` | `LawError::NotAdmitted` | `violations[]`: `focus`, `path`, `component`, `message`, `severity` | Fix the data or the shapes; each entry is one SHACL result. The envelope `kind` is `EngineRejected`, dialect `Turtle`, engine `PurRdf`. |
-| `ResourceLimit` | `RefusalKind::ResourceLimit` | `limit`, `observed`, `max` (`n3_iterations` has `max` only when raised from a `law` step) | Shrink the request. Limits: `request_bytes`, `json_depth`, `atoms_per_field`, `plan_actions`, `policy_entries`, `n3_iterations` (constants `abi::MAX_*`). |
+| `ResourceLimit` | `RefusalKind::ResourceLimit` | `limit`, `observed`, `max` (N3 limits always carry `max`) | Shrink the request. Limits: `request_bytes`, `json_depth`, `atoms_per_field`, `plan_actions`, `policy_entries` (constants `abi::MAX_*`), plus the N3 reasoner limits `n3_iterations`, `n3_match_steps`, `n3_term_bytes`, `n3_total_bytes`, `n3_derived_facts` (constants `law::N3_*`). |
 | `Refused` | `LawError::Refused` | `kind` | Upstream engine or routing refusal raised inside a `law` step; `kind` is a `RefusalKind` name (below). |
 | `PolicyRefused` | `policy::PolicyRefused` | `policy_kind`, `state`, `action` | See policy kinds below. |
 
@@ -61,13 +61,14 @@ the problem's transitions), `BadMass` (outcome probabilities do not sum correctl
 
 Law-kernel materialization (N3/Datalog closure) refuses SPARQL 1.1 aggregates by design: a law
 kernel is one executable law and must be total and deterministic over the closure, so
-`GROUP_CONCAT`/`SAMPLE` in a query handed to the law path is a refusal, not a result. The praxis
-law-materialization engine (vendored in ggen as `crates/praxis-graphlaw`) converts the
-query-planning failure into a typed refusal:
-
-> `SPARQL query planning refused (unsupported construct): GROUP_CONCAT/SAMPLE ...`
-> — see `build_for_aggregate` in ggen `crates/praxis-graphlaw/src/lib.rs` (its `sparql/plan.rs`
-> catch-all returns `Err`, surfaced at each call site as `Result<_, String>`).
+`GROUP_CONCAT`/`SAMPLE` in a query handed to the law path is a refusal, not a result.
+GraphLaw's `Step` enum (`src/law.rs`) offers no aggregate-capable step — the kernel surface is
+`AdmitShacl`, `DeriveN3`, `Hooks`, `Plan`, receipt gates, and entailment closures only — so an
+aggregate simply has no admitted path through a `law` step. (Historically the praxis
+law-materialization engine, vendored in ggen as `crates/praxis-graphlaw` until its retirement
+in ggen commit `8e92df31f`, 2026-10-10, surfaced this as a typed
+`SPARQL query planning refused (unsupported construct)` error from its `build_for_aggregate`
+planner; that crate is gone and the boundary now lives in the step surface itself.)
 
 Aggregate projections (`GROUP_CONCAT`, `SAMPLE`, non-`COUNT` aggregation over groups) belong to
 the generation/projection layer instead, where the full SPARQL 1.1 engine (oxigraph in the
