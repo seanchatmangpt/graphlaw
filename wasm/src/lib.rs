@@ -62,8 +62,7 @@ mod contract {
         let response = unsafe { ffi::call_buf(core::ptr::null_mut(), 0) };
         assert_eq!(response, graphlaw::abi::missing_buffer_response());
         let oversized_len = u32::MAX;
-        let oversized =
-            unsafe { ffi::call_buf(core::ptr::dangling_mut::<u8>(), oversized_len) };
+        let oversized = unsafe { ffi::call_buf(core::ptr::dangling_mut::<u8>(), oversized_len) };
         assert_eq!(
             oversized,
             graphlaw::abi::limit_response(

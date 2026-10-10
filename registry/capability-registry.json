@@ -38,7 +38,7 @@
     "PurRdf",
     "Eyeron"
   ],
-  "graphlaw_version": "26.10.5",
+  "graphlaw_version": "26.10.10",
   "law_steps": [
     {
       "ceiling": "observe",
@@ -2359,7 +2359,7 @@
     "owl-rl",
     "d"
   ],
-  "registry_sha256": "sha256:9bdaedd8a284e5187bd14f18251c57193809a73cf4c337093c241981e71a60d6",
+  "registry_sha256": "sha256:21d2f8e04ccebd9c66564635274f6e8798b5a2eb552f01ab683609030e65f6d4",
   "schema": "graphlaw.capability-registry/1",
   "surface_sha256": "sha256:fcee74ee068940f9e9879ccd41371807f469d63950c8f63b095117391dbc8e28"
 }

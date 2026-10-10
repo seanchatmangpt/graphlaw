@@ -7,12 +7,31 @@ All notable changes to this project are documented here, in the
 
 Nothing.
 
-## [26.10.5] - 2026-10-05
+## [26.10.10] - 2026-10-10
 
-Published as crates.io `graphlaw` 26.10.5 (`graphlaw-eyeron` remains 0.7.8; it is independently
+Published as crates.io `graphlaw` 26.10.10 (`graphlaw-eyeron` remains 0.7.8; it is independently
 versioned upstream-vendored and is not coupled to the workspace calendar version).
 
-publish: BLOCKED:crates_io_credentials
+Correction: the 26.10.5 entry below claimed a crates.io publish that never happened — that release
+was `BLOCKED:crates_io_credentials`; the registry only carries 26.9.28/26.9.29. The line is removed
+and the claim corrected here.
+
+### Added
+
+- Regenerated capability registry for 26.10.10: `graphlaw_version` bumped and
+  `registry_sha256` recomputed to
+  `sha256:21d2f8e04ccebd9c66564635274f6e8798b5a2eb552f01ab683609030e65f6d4`
+  (`registry/capability-registry.{json,ttl}`, `registry/ARTIFACTS.sha256`). Consumers pinning
+  `registry_sha256` must update. `priv/graphlaw.wasm` and its `.sha256`/`ARTIFACTS.sha256` pin
+  were regenerated for the new lib (`wasm 2802cede…`, 6,659,724 B); the wasm crate version
+  remains the documented 26.10.5 pin.
+- Receipt chain + refuse hooks (`src/receipt_chain.rs`, hook integration in `src/hooks.rs`):
+  chained BLAKE3 receipts with refuse/refusal hooks (typed `Verdict::{Fired, Refuse}`,
+  `Materialized.verdicts`), per
+  `docs/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md`; 3 new integration test files
+  (workspace suite: 436 passed, 0 failed, 1 ignored).
+
+## [26.10.5] - 2026-10-05
 
 ### Added
 
