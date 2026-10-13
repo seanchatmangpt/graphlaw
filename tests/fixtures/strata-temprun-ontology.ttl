@@ -1,0 +1,57 @@
+# PINNED COPY — provenance: ggen-marketplace:packs/strata-temprun-pack/ontology.ttl
+# sha256 of the pinned body below (the complete pack file, verbatim):
+# 7c7394b1f885784fbdcfedb94e9134b0614d80b122c7b6b239cacca4e0a16b3b
+# Pinned for the temprun framing differential court (tests/temprun_framing.rs).
+# If the pack ontology changes, re-pin and update this hash line.
+# strata-temprun-pack ontology — actuation arena vocabulary.
+
+@prefix st:  <https://strata.chatman.ai/ontology#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ── Classes ──────────────────────────────────────────────────────────
+
+st:ActuationArena a rdfs:Class ; rdfs:label "ActuationArena" ;
+    rdfs:comment "A bounded execution arena in which actuations run under fuel leases." .
+
+st:FuelLease a rdfs:Class ; rdfs:label "FuelLease" ;
+    rdfs:comment "A leased budget of actuation fuel granted to a run." .
+
+st:ConformanceResult a rdfs:Class ; rdfs:label "ConformanceResult" ;
+    rdfs:comment "The verdict of an arena run against a conformance court." .
+
+# ── Properties ───────────────────────────────────────────────────────
+
+st:arenaName a rdf:Property ; rdfs:label "arena name" ;
+    rdfs:domain st:ActuationArena ; rdfs:range xsd:string .
+
+st:admissionFuel a rdf:Property ; rdfs:label "admission fuel" ;
+    rdfs:comment "Minimum fuel for admission: temprun run/2 sieve charges 1 unit each for clock, coordinates, conformance (src/lib.rs) — admitted iff fuel >= 3." ;
+    rdfs:domain st:ActuationArena ; rdfs:range xsd:integer .
+
+st:maxFuel a rdf:Property ; rdfs:label "max fuel" ;
+    rdfs:domain st:ActuationArena ; rdfs:range xsd:integer .
+
+st:leaseFuel a rdf:Property ; rdfs:label "lease fuel" ;
+    rdfs:domain st:FuelLease ; rdfs:range xsd:integer .
+
+st:leaseHolder a rdf:Property ; rdfs:label "lease holder" ;
+    rdfs:domain st:FuelLease ; rdfs:range xsd:string .
+
+st:verdict a rdf:Property ; rdfs:label "verdict" ;
+    rdfs:domain st:ConformanceResult ; rdfs:range xsd:string .
+
+st:runsIn a rdf:Property ; rdfs:label "runs in" ;
+    rdfs:domain st:FuelLease ; rdfs:range st:ActuationArena .
+
+st:producesResult a rdf:Property ; rdfs:label "produces result" ;
+    rdfs:domain st:ActuationArena ; rdfs:range st:ConformanceResult .
+
+# ── Individuals ──────────────────────────────────────────────────────
+
+st:DefaultArena a st:ActuationArena ;
+    st:arenaName "default" ;
+    st:maxFuel 1000000 ;
+    # temprun run/2 sieve admitted iff fuel >= 3 (st:admissionFuel).
+    st:admissionFuel 3 .
