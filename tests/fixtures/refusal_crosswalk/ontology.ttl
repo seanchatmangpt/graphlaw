@@ -465,3 +465,210 @@ rv:code-rate-limited a rv:A2aWireMapping ;
     rv:a2aAtom "rate_limited" ; rv:jsonRpcCode -32000 ;
     rv:ashA2aClass rv:cls-refused-bounds ;
     dct:description "Per-principal token bucket exhausted (rate_limit: {count, per_ms}): a declared admission-rate bound breached -> refused_bounds (runtime.ex atom_class mapping). ADJUDICATION (lane L162, 2026-10-13): refused_bounds chosen over blocked_resource because the token bucket is a DECLARED bound (count, per_ms), not a capacity outage; this is the same class as the valve's fuel_exhausted (admission budget exhausted before handoff). The wire code -32000 is the JSON-RPC 2.0 spec-reserved server-implementation range (-32000..-32099), admitted here AS that designated range code -- not a new per-case code -- so ash_a2a's existing wire_error/1 emission stays lawful. Relation to temprun admissionFuel: the token bucket is a lease-free rate bound; receipted admission-fuel accounting in the transport runtime (temprun) is DESIGN-NOT-YET-LANDED -- when it lands, this mapping's class placement must be re-adjudicated against the fuel-lease vocabulary (fuel_exhausted family), but the wire code -32000 is unaffected." .
+
+# ---------------------------------------------------------------------------
+# Fifth crosswalk column: ash_graphlaw refusal codes
+# (lib/ash_graphlaw/refusal.ex, generated class_of/0 + broken_term_of/1 closed
+# table, 41 codes). rv:GraphlawMapping mirrors rv:A2aWireMapping's shape: a
+# parallel mapping class keyed by the literal code atom (rv:ashGraphlawCode),
+# NOT an rv:erlmcpCode integer -- these are not erlmcp codes, so G4's macro
+# bijection deliberately does not reach this column. Each code maps onto
+# exactly one declared S42 class (rv:ashA2aClass). rv:graphlawClass and
+# rv:brokenTerm carry the code's own closed-table row (provenance).
+#
+# Mapping law: the graphlaw class determines the S42 target --
+#   refused_admission -> refused_rule   (an admissibility-level check refused)
+#   refused_authority -> refused_authority
+#   blocked_resource  -> blocked_resource
+#   refused_structure -> refused_structure
+#   refused_identity  -> refused_identity
+#   unsupported       -> unsupported_profile
+# with per-code refinements where a more specific S42 class is honest:
+# plan_refused -> refused_plan; receipt_required -> refused_receipt;
+# engine_unclassified -> blocked_unknown (an unknown variant is an
+# unclassified situation, not an unsupported profile); duplicate_admission ->
+# refused_identity (two identities that must be distinct collide, same family
+# as erlmcp 1047); missing_law_module -> refused_meta_rigor (the vacuous-
+# admission claim about rigor itself fails); unknown_capability ->
+# refused_capability (the named capability does not resolve).
+#
+# FAIL-CLOSED disposition: every live ash_graphlaw code maps to exactly one
+# honest S42 class under this law (41/41); the zero-code unmapped set is
+# pinned in tests/test_refusal_vocab_graphlaw_column.py
+# (KNOWN_UNMAPPED = empty) so a future code with no honest class MUST carry
+# rv:unmappedDisposition and NO rv:ashA2aClass -- never a forced mapping.
+# ---------------------------------------------------------------------------
+
+rv:GraphlawMapping a rdfs:Class ;
+    dct:title "ash_graphlaw crosswalk mapping" ;
+    dct:description "Maps exactly one ash_graphlaw refusal code (lib/ash_graphlaw/refusal.ex closed table) onto exactly one declared ash_a2a refusal class, or carries an explicit rv:unmappedDisposition." .
+
+rv:ashGraphlawCode a rdf:Property ; rdfs:label "ashGraphlawCode" ;
+    dct:description "The ash_graphlaw refusal code atom (refusal.ex class_of/1 table)." .
+rv:graphlawClass a rdf:Property ; rdfs:label "graphlawClass" ;
+    dct:description "The code's own closed-table class (refusal.ex class_of/1)." .
+rv:brokenTerm a rdf:Property ; rdfs:label "brokenTerm" ;
+    dct:description "The Chatman failure-taxonomy term the code witnesses (refusal.ex broken_term_of/1)." .
+rv:unmappedDisposition a rdf:Property ; rdfs:label "unmappedDisposition" ;
+    dct:description "Explicit unmapped disposition for a code with no honest S42 class; mutually exclusive with rv:ashA2aClass." .
+
+rv:gm-not-admitted a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "not_admitted" ; rv:graphlawClass "refused_admission" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-rule ;
+    dct:description "At least one admission step (SHACL, N3, RDFS, OWL-RL, hooks) refused -> refused_rule." .
+rv:gm-plan-refused a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "plan_refused" ; rv:graphlawClass "refused_admission" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-plan ;
+    dct:description "Plan step refused: precondition/goal violation -> refused_plan (same class as erlmcp 1077)." .
+rv:gm-receipt-required a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "receipt_required" ; rv:graphlawClass "refused_admission" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-receipt ;
+    dct:description "No receipt behind the required transition -> refused_receipt (same family as erlmcp 1012)." .
+rv:gm-lease-refused a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "lease_refused" ; rv:graphlawClass "refused_authority" ; rv:brokenTerm "R_missing_authority" ;
+    rv:ashA2aClass rv:cls-refused-authority ;
+    dct:description "Unsigned/expired/untrusted lease -> refused_authority (same class as erlmcp 1011/1014)." .
+rv:gm-resource-limit a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "resource_limit" ; rv:graphlawClass "blocked_resource" ; rv:brokenTerm "R_missing_consequence" ;
+    rv:ashA2aClass rv:cls-blocked-resource ;
+    dct:description "Input size/fuel/memory hit before a decision -> blocked_resource." .
+rv:gm-policy-refused a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "policy_refused" ; rv:graphlawClass "refused_admission" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-rule ;
+    dct:description "Policy refuses the ceiling/operation -> refused_rule." .
+rv:gm-engine-refused a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "engine_refused" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "Malformed op/data/steps -> refused_structure (same class as erlmcp 1066)." .
+rv:gm-engine-unclassified a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "engine_unclassified" ; rv:graphlawClass "unsupported" ; rv:brokenTerm "R_missing_standing" ;
+    rv:ashA2aClass rv:cls-blocked-unknown ;
+    dct:description "Unknown engine variant carried verbatim -> blocked_unknown (an unclassified situation; same class as erlmcp 1079). Adjudicated: unsupported_profile refused because the payload is not legible enough to call a profile." .
+rv:gm-wasm-not-vendored a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "wasm_not_vendored" ; rv:graphlawClass "blocked_resource" ; rv:brokenTerm "R_missing_consequence" ;
+    rv:ashA2aClass rv:cls-blocked-resource ;
+    dct:description "No vendored WASM binary -> blocked_resource (same family as erlmcp 1080)." .
+rv:gm-wasm-unreadable a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "wasm_unreadable" ; rv:graphlawClass "blocked_resource" ; rv:brokenTerm "R_missing_consequence" ;
+    rv:ashA2aClass rv:cls-blocked-resource ;
+    dct:description "WASM file unreadable -> blocked_resource." .
+rv:gm-wasm-invalid a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "wasm_invalid" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "R_missing_identity" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "Bytes do not compile as a module -> refused_structure." .
+rv:gm-wasm-digest-mismatch a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "wasm_digest_mismatch" ; rv:graphlawClass "refused_identity" ; rv:brokenTerm "R_missing_identity" ;
+    rv:ashA2aClass rv:cls-refused-identity ;
+    dct:description "sha256 differs from the pinned digest: not the admitted release -> refused_identity." .
+rv:gm-wasm-import-surface-mismatch a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "wasm_import_surface_mismatch" ; rv:graphlawClass "refused_identity" ; rv:brokenTerm "R_missing_identity" ;
+    rv:ashA2aClass rv:cls-refused-identity ;
+    dct:description "Non-WASI import surface: not the pinned shape -> refused_identity." .
+rv:gm-wasm-missing-export a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "wasm_missing_export" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "R_missing_identity" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "Required export absent -> refused_structure." .
+rv:gm-abi-version-mismatch a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "abi_version_mismatch" ; rv:graphlawClass "refused_identity" ; rv:brokenTerm "R_missing_identity" ;
+    rv:ashA2aClass rv:cls-refused-identity ;
+    dct:description "ABI version differs from the built-for version -> refused_identity." .
+rv:gm-instantiation-failed a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "instantiation_failed" ; rv:graphlawClass "blocked_resource" ; rv:brokenTerm "R_missing_consequence" ;
+    rv:ashA2aClass rv:cls-blocked-resource ;
+    dct:description "Module passed admission but could not instantiate -> blocked_resource." .
+rv:gm-abi-failure a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "abi_failure" ; rv:graphlawClass "blocked_resource" ; rv:brokenTerm "R_missing_consequence" ;
+    rv:ashA2aClass rv:cls-blocked-resource ;
+    dct:description "ABI contract violation, instance recycled -> blocked_resource." .
+rv:gm-call-trapped a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "call_trapped" ; rv:graphlawClass "blocked_resource" ; rv:brokenTerm "R_missing_consequence" ;
+    rv:ashA2aClass rv:cls-blocked-resource ;
+    dct:description "WASM call trapped -> blocked_resource." .
+rv:gm-call-exited a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "call_exited" ; rv:graphlawClass "blocked_resource" ; rv:brokenTerm "R_missing_consequence" ;
+    rv:ashA2aClass rv:cls-blocked-resource ;
+    dct:description "WASM program exited mid-call -> blocked_resource." .
+rv:gm-call-timeout a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "call_timeout" ; rv:graphlawClass "blocked_resource" ; rv:brokenTerm "R_missing_consequence" ;
+    rv:ashA2aClass rv:cls-blocked-resource ;
+    dct:description "Call exceeded timeout_ms -> blocked_resource (matches ash_a2a's native :timeout placement; the erlmcp 1069 deviation does not propagate here)." .
+rv:gm-saturated a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "saturated" ; rv:graphlawClass "blocked_resource" ; rv:brokenTerm "R_missing_consequence" ;
+    rv:ashA2aClass rv:cls-blocked-resource ;
+    dct:description "Host queue full, request shed -> blocked_resource." .
+rv:gm-host-not-started a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "host_not_started" ; rv:graphlawClass "blocked_resource" ; rv:brokenTerm "R_missing_consequence" ;
+    rv:ashA2aClass rv:cls-blocked-resource ;
+    dct:description "No host process under the server name -> blocked_resource (same family as erlmcp 1076)." .
+rv:gm-fuel-exhausted a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "fuel_exhausted" ; rv:graphlawClass "blocked_resource" ; rv:brokenTerm "R_missing_consequence" ;
+    rv:ashA2aClass rv:cls-blocked-resource ;
+    dct:description "Fuel budget consumed mid-execution -> blocked_resource. Adjudicated: unlike the valve's fuel_exhausted (a lease refused BEFORE handoff -> refused_bounds), this fuel is consumed DURING execution by the host -- blocked_resource is the honest class." .
+rv:gm-invalid-encoding a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "invalid_encoding" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "Non-UTF-8 string refused pre-engine -> refused_structure." .
+rv:gm-invalid-json a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "invalid_json" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "Unencodable request / non-JSON response -> refused_structure." .
+rv:gm-malformed-response a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "malformed_response" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "Response missing envelope fields -> refused_structure." .
+rv:gm-unknown-admission a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "unknown_admission" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "Admission not declared in the graphlaw section -> refused_structure." .
+rv:gm-duplicate-admission a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "duplicate_admission" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-identity ;
+    dct:description "Two admissions share one name: identity collision -> refused_identity (same class as erlmcp 1047). Adjudicated refinement of the class law." .
+rv:gm-missing-law-module a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "missing_law_module" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "admission_vacuous" ;
+    rv:ashA2aClass rv:cls-refused-meta-rigor ;
+    dct:description "Payload step with no law module would admit vacuously -> refused_meta_rigor (the rigor claim itself fails)." .
+rv:gm-invalid-runtime-option a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "invalid_runtime_option" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "timeout_ms/max_skew_secs out of range -> refused_structure." .
+rv:gm-invalid-trusted-key a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "invalid_trusted_key" ; rv:graphlawClass "refused_authority" ; rv:brokenTerm "R_missing_authority" ;
+    rv:ashA2aClass rv:cls-refused-authority ;
+    dct:description "Trusted key not 64-hex -> refused_authority." .
+rv:gm-ceiling-unmet a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "ceiling_unmet" ; rv:graphlawClass "refused_authority" ; rv:brokenTerm "R_missing_authority" ;
+    rv:ashA2aClass rv:cls-refused-authority ;
+    dct:description "Lease below the required ceiling -> refused_authority." .
+rv:gm-projection-failed a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "projection_failed" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "Projection could not produce N-Triples -> refused_structure." .
+rv:gm-law-module-failed a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "law_module_failed" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "Law module raised / returned non-steps -> refused_structure." .
+rv:gm-unsupported-step a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "unsupported_step" ; rv:graphlawClass "unsupported" ; rv:brokenTerm "admission_vacuous" ;
+    rv:ashA2aClass rv:cls-unsupported-profile ;
+    dct:description "Step unsupported by this library/engine version -> unsupported_profile." .
+rv:gm-invalid-capability-request a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "invalid_capability_request" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "Typed capability request failed client-side validation -> refused_structure." .
+rv:gm-unknown-capability a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "unknown_capability" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-capability ;
+    dct:description "Capability absent from the vendored registry -> refused_capability (the named capability does not resolve; same class as erlmcp 1048)." .
+rv:gm-capability-not-declared a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "capability_not_declared" ; rv:graphlawClass "refused_authority" ; rv:brokenTerm "R_missing_authority" ;
+    rv:ashA2aClass rv:cls-refused-authority ;
+    dct:description "Capability not declared in the graphlaw section -> refused_authority." .
+rv:gm-capability-parity-drift a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "capability_parity_drift" ; rv:graphlawClass "refused_identity" ; rv:brokenTerm "R_missing_identity" ;
+    rv:ashA2aClass rv:cls-refused-identity ;
+    dct:description "Engine/registry/module-set/DSL disagree on the capability set -> refused_identity." .
+rv:gm-capability-response-undecodable a rv:GraphlawMapping ;
+    rv:ashGraphlawCode "capability_response_undecodable" ; rv:graphlawClass "refused_structure" ; rv:brokenTerm "mu_on_O" ;
+    rv:ashA2aClass rv:cls-refused-structure ;
+    dct:description "Capability response is not a JSON object -> refused_structure." .

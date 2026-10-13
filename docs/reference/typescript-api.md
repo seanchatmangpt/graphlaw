@@ -78,7 +78,7 @@ const responseJson = await callRawJson('{"op":"sniff",...}');
 - `callRawJson(requestJson: string): Promise<string>`
 
 Raw requests must respect `LIMITS.max_request_bytes` (16 MiB) and the other
-registry limits; see the [ABI reference](abi-reference.md).
+registry limits; see the [ABI reference](../abi-reference.md).
 
 ## Types
 

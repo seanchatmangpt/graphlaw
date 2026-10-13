@@ -1,3 +1,8 @@
+// FEATURE GATE: this whole file is `#![cfg(feature = "pack-tools")]`, which is
+// OFF by default (see Cargo.toml `pack-tools = ["dep:regex"]`). Under the
+// default feature set this test target compiles to an EMPTY binary — zero
+// tests run, exit 0 — by design, not by accident. Build with
+// `--features pack-tools` to run these tests.
 #![cfg(feature = "pack-tools")]
 //! The Rust tools that replaced the Python scripts, checked against the
 //! outputs the Python scripts produced (committed fixtures) and end to end

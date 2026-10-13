@@ -1,4 +1,4 @@
-bd4993b6a947bf430627efd4604c843db573ab5142c86e379ddcba039e1d31e9  ./ontology.ttl
+08d4ee2c578588727a759b6b9d2417190b10bf7c2e2ffd0d6c59ae350d425c65  ./ontology.ttl
 3e39a9052ef34c08294a1a0f95fa2a8ef02b198188a0a347a6e6b42e37a2e2a5  ./gates/010_exactly_one_class.rq
 bb185e6ed4ba7ab2be07f47dd9e5dd185351a275d87e9e2af948f69fab019ff3  ./gates/020_class_coverage.rq
 c6ad2529dbbfbcb2b667188d141d7328dee15009cc1dd5cb9e3e755f78092751  ./gates/030_jsonrpc_law.rq
