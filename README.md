@@ -52,8 +52,13 @@ The WASM module is also wrapped as the npm package `graphlaw`, so the same law-s
 surface can be driven from Node or the browser without touching Rust. See
 [docs/how-to/use-from-javascript.md](docs/how-to/use-from-javascript.md).
 
+> **Not yet published**: the npm package is built and tested locally but has not
+> been published to the npm registry yet (publish fires on `v*` tags; none has
+> been pushed for the JS package). `npm i graphlaw` will fail until the operator
+> pushes the publish tag.
+
 ```sh
-npm i graphlaw
+npm i graphlaw  # NOT YET PUBLISHED
 ```
 
 ```js
