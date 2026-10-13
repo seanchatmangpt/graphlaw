@@ -330,3 +330,143 @@ fn divergence_witness_off_enabled_domain() {
     // On the enabled domain (m=0x0002 enables pre=0x0002) they agree.
     assert_eq!((0x0002u16 & !pre) | post, ((0x0002u16 ^ pre) | post) & 0xFFFF);
 }
+
+// ---------------------------------------------------------------------------
+// Fire-law equivalence property court (L-wave, PN64 fire law)
+//
+// Lean witness cross-anchor: `ProcInt.PN64.fire_law_equivalence_on_enabled`
+// and `ProcInt.PN64.fire_law_diverges_off_domain`, machine-checked in
+// /Users/sac/mfact/procint/ProcInt/Petri/PN64Conservation.lean
+// (sha256 3601e1bb7e6ff6e89e2ac60eb8b8d57cd72b2a4bd94d2f5b9773f778d7ac0e88,
+// mfact HEAD 92b08da5c8, toolchain leanprover/lean4:v4.31.0), receipted in
+// /Users/sac/mfact/witnesses.jsonl (lean-witness/v1 schema, axioms
+// propext/Quot.sound). The Rust property tests below mirror those theorems
+// point-for-point over the same mask tables this court already pins:
+//
+//   Rust `fire_xor`  <-> Lean `Fire pre post m = (m ^^^ pre) ||| post`
+//   Rust `fire_cts`  <-> Lean `ClearThenSet = (m &&& pre ^^^ m) ||| post`
+//   Rust `kernel_fire` (gated) <-> Lean `Enabled pre m` hypothesis
+//
+// This is Rust-side corroboration of the Lean witness, not a re-proof: the
+// finite sweep samples the same law over the pinned six-transition corpus.
+// ---------------------------------------------------------------------------
+
+/// XOR fire law (Lean `Fire`): `m' = (m ^ pre) | post`.
+fn fire_xor(pre: u16, post: u16, m: u16) -> u16 {
+    (m ^ pre) | post
+}
+
+/// Clear-then-set fire law: `m' = (m & !pre) | post`
+/// (Lean `ClearThenSet`, expressed there as `m ^ (m & pre) | post`).
+fn fire_cts(pre: u16, post: u16, m: u16) -> u16 {
+    (m & !pre) | post
+}
+
+/// The kernel's gated fire: enabled iff `(m & pre) == pre`; an off-domain
+/// request is refused and leaves the marking unchanged (Lean's `Enabled`
+/// hypothesis, enforced rather than assumed).
+fn kernel_fire(pre: u16, post: u16, m: u16) -> Option<u16> {
+    if m & pre == pre {
+        Some(fire_cts(pre, post, m))
+    } else {
+        None
+    }
+}
+
+/// Deterministic LCG so the sampled mask corpus is reproducible.
+fn lcg(state: &mut u64) -> u64 {
+    *state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+    *state >> 16
+}
+
+#[test]
+fn fire_law_equivalence_512_marking_sweep_sampled_masks() {
+    let (_pre, _post, _terminals, _pairs) = generated_transitions();
+    let ttl = ttl_transitions(&ontology_dataset());
+    assert_eq!(ttl.len(), 6);
+
+    // Sampled pre/post mask corpus: the six pinned transitions plus 42
+    // deterministic pseudo-random pairs spanning the 16-bit word.
+    let mut cases: Vec<(u16, u16)> = ttl.iter().map(|&(_, p, q)| (p, q)).collect();
+    let mut rng: u64 = 0x504E_3634_2026_1013; // "PN64 2026-10-13"
+    for _ in 0..42 {
+        cases.push((lcg(&mut rng) as u16, (lcg(&mut rng) >> 16) as u16));
+    }
+
+    for (pre_i, post_i) in &cases {
+        // 512-marking sweep over the nine-place RONR bit space (bits 0..8).
+        for m in 0u16..512 {
+            let enabled = m & pre_i == *pre_i;
+            if enabled {
+                // All three agree on the enabled domain.
+                assert_eq!(
+                    fire_cts(*pre_i, *post_i, m),
+                    fire_xor(*pre_i, *post_i, m),
+                    "cts != xor on enabled domain, pre={pre_i:#06x} post={post_i:#06x} m={m:#06x}"
+                );
+                assert_eq!(
+                    kernel_fire(*pre_i, *post_i, m),
+                    Some(fire_xor(*pre_i, *post_i, m)),
+                    "kernel gated fire disagrees, pre={pre_i:#06x} post={post_i:#06x} m={m:#06x}"
+                );
+            } else {
+                // Off-domain: gated fire refuses; marking unchanged.
+                assert_eq!(
+                    kernel_fire(*pre_i, *post_i, m),
+                    None,
+                    "kernel fired while disabled, pre={pre_i:#06x} post={post_i:#06x} m={m:#06x}"
+                );
+            }
+        }
+    }
+    assert_eq!(cases.len(), 48, "6 pinned + 42 sampled mask pairs");
+}
+
+#[test]
+fn off_domain_divergence_witness_m0_pre1_post0() {
+    // Mirrors Lean `fire_law_diverges_off_domain` exactly: at m=0, pre=1,
+    // post=0 the transition is NOT enabled, the raw xor form fabricates a
+    // token in the pre place (m'=1), while the gated kernel fire refuses and
+    // the clear-then-set form would leave the marking unchanged.
+    let (pre, post, m) = (1u16, 0u16, 0u16);
+    assert_ne!(m & pre, pre, "witness case must be off the enabled domain");
+    assert_eq!(fire_xor(pre, post, m), 1, "xor form fabricates a token");
+    assert_eq!(fire_cts(pre, post, m), 0, "clear-then-set leaves m unchanged");
+    assert_ne!(fire_xor(pre, post, m), fire_cts(pre, post, m));
+    assert_eq!(kernel_fire(pre, post, m), None, "gated kernel fire refuses");
+    // The masked bit-level xnor-free statement: Fire 1 0 0 = 1 ∧
+    // ClearThenSet 1 0 0 = 0, exactly the Lean conjunction's last three parts.
+}
+
+#[test]
+fn sabotage_twin_flipped_equivalence_fails() {
+    // Sabotage twin: a deliberately mutated equivalence comparator (one bit
+    // flipped in the checked value) must be caught by the same property the
+    // honest comparator passes. If this test ever fails, the property above
+    // is vacuous — it no longer distinguishes a broken fire law.
+    let ttl = ttl_transitions(&ontology_dataset());
+    let mut cases: Vec<(u16, u16)> = ttl.iter().map(|&(_, p, q)| (p, q)).collect();
+    let mut rng: u64 = 0x504E_3634_2026_1013;
+    for _ in 0..8 {
+        cases.push((lcg(&mut rng) as u16, (lcg(&mut rng) >> 16) as u16));
+    }
+
+    // Sabotaged comparator: xor law with one bit of the result flipped.
+    let sabotaged = |pre: u16, post: u16, m: u16| fire_xor(pre, post, m) ^ 0x0001;
+
+    let mut caught = 0usize;
+    for (pre_i, post_i) in &cases {
+        for m in 0u16..512 {
+            if m & pre_i == *pre_i {
+                assert_ne!(
+                    fire_cts(*pre_i, *post_i, m),
+                    sabotaged(*pre_i, *post_i, m),
+                    "sabotaged comparator escaped detection \
+                     (pre={pre_i:#06x} post={post_i:#06x} m={m:#06x})"
+                );
+                caught += 1;
+            }
+        }
+    }
+    assert!(caught > 0, "sabotage court never executed the comparator");
+}
