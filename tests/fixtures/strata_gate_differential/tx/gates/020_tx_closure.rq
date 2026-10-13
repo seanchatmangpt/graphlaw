@@ -1,0 +1,47 @@
+# MESSAGE: Tx model closure violated — the declared Tx field set is EXACTLY
+# {txNonce, inputCount, outputCount, valueUnit}: every property carrying
+# rdfs:domain st:Tx must be one of those four, and every one of those four
+# must be declared with rdfs:domain st:Tx (presence arms — a renamed or
+# deleted property fires, never silently shrinks the field set). The four
+# model classes (Tx, TxInput, TxOutput, TxId) must also be present. Any row
+# indicates the field surface is no longer the declared set.
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX st:   <https://strata.chatman.ai/ontology#>
+
+SELECT (COALESCE(?cls1,?cls2,?cls3,?cls4,?req1,?req2,?req3,?req4,?extraProp) AS ?member)
+       (COALESCE(?p1,?p2,?p3,?p4,?p5,?p6,?p7,?p8,?p9) AS ?problem) WHERE {
+  {
+    FILTER NOT EXISTS { ?x a rdfs:Class ; rdfs:label "Tx" }
+    BIND("Tx" AS ?cls1) BIND("missing_class_declaration" AS ?p1)
+  } UNION {
+    FILTER NOT EXISTS { ?x a rdfs:Class ; rdfs:label "TxInput" }
+    BIND("TxInput" AS ?cls2) BIND("missing_class_declaration" AS ?p2)
+  } UNION {
+    FILTER NOT EXISTS { ?x a rdfs:Class ; rdfs:label "TxOutput" }
+    BIND("TxOutput" AS ?cls3) BIND("missing_class_declaration" AS ?p3)
+  } UNION {
+    FILTER NOT EXISTS { ?x a rdfs:Class ; rdfs:label "TxId" }
+    BIND("TxId" AS ?cls4) BIND("missing_class_declaration" AS ?p4)
+  } UNION {
+    FILTER NOT EXISTS { ?decl rdfs:label "txNonce" ; rdfs:domain st:Tx }
+    BIND("txNonce" AS ?req1) BIND("missing_property_or_domain" AS ?p5)
+  } UNION {
+    FILTER NOT EXISTS { ?decl rdfs:label "inputCount" ; rdfs:domain st:Tx }
+    BIND("inputCount" AS ?req2) BIND("missing_property_or_domain" AS ?p6)
+  } UNION {
+    FILTER NOT EXISTS { ?decl rdfs:label "outputCount" ; rdfs:domain st:Tx }
+    BIND("outputCount" AS ?req3) BIND("missing_property_or_domain" AS ?p7)
+  } UNION {
+    FILTER NOT EXISTS { ?decl rdfs:label "valueUnit" ; rdfs:domain st:Tx }
+    BIND("valueUnit" AS ?req4) BIND("missing_property_or_domain" AS ?p8)
+  } UNION {
+    # Closure: any property claiming rdfs:domain st:Tx outside the declared
+    # set is an undeclared field.
+    ?q rdfs:domain st:Tx .
+    FILTER(?q != st:txNonce && ?q != st:inputCount && ?q != st:outputCount && ?q != st:valueUnit)
+    BIND(STRAFTER(STR(?q), "#") AS ?extraProp)
+    BIND("undeclared_Tx_property" AS ?p9)
+  }
+}
+ORDER BY ?member ?problem

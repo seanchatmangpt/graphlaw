@@ -1,0 +1,36 @@
+# MESSAGE: the algorithm set must close over exactly {BLAKE3, SHA-256}:
+# every st:HashAlgorithm individual must be one of the two supported
+# algorithms (by algorithmName), each must appear exactly once, each must
+# carry st:algorithmName, and no duplicate algorithmName may exist. Any row
+# returned is an out-of-closure, duplicate, or missing-name algorithm.
+PREFIX st: <https://strata.chatman.ai/ontology#>
+
+SELECT ?subject ?name ?violation WHERE {
+  {
+    ?a a st:HashAlgorithm ; st:algorithmName ?name .
+    FILTER (?name NOT IN ("BLAKE3", "SHA_256"))
+    BIND(?a AS ?subject)
+    BIND("algorithm_out_of_closure" AS ?violation)
+  } UNION {
+    ?a a st:HashAlgorithm .
+    FILTER NOT EXISTS { ?a st:algorithmName ?anyName }
+    BIND(?a AS ?subject)
+    BIND("missing_algorithmName" AS ?violation)
+  } UNION {
+    ?a a st:HashAlgorithm ; st:algorithmName ?name .
+    ?b a st:HashAlgorithm ; st:algorithmName ?name .
+    FILTER (?a != ?b)
+    BIND(?a AS ?subject)
+    BIND("duplicate_algorithmName" AS ?violation)
+  } UNION {
+    # Presence law: exactly two HashAlgorithm individuals total.
+    ?a a st:HashAlgorithm .
+    {
+      SELECT (COUNT(DISTINCT ?x) AS ?count) WHERE { ?x a st:HashAlgorithm }
+    }
+    FILTER (?count != 2)
+    BIND(?a AS ?subject)
+    BIND("closure_count_not_two" AS ?violation)
+  }
+}
+ORDER BY ?subject ?violation

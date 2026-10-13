@@ -1,0 +1,130 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix valve: <https://strata.chatman.ai/ontology/valve#> .
+@prefix wire: <https://strata.chatman.ai/ontology/wire#> .
+
+# ---------------------------------------------------------------------------
+# Strata valve refusal taxonomy. Ground truth: ~/strata/stratus/lib/stratus/
+# valve.ex — the valve's actual atom refusals (:malformed_frame,
+# :fuel_exhausted, :parent_discontinuity, :arena_failure), plus
+# ~/strata/strata_protocol/src/refusal.rs for the wire form: constant-time
+# refusal, fixed 32-byte opaque RefusalReceipt, no structure, no cause
+# channel, no error entropy on the wire.
+# ---------------------------------------------------------------------------
+
+valve:Valve a rdfs:Class ;
+    rdfs:label "Valve" ;
+    rdfs:comment "Elixir-side admission valve: intercepts candidate execution and refuses by emitting an opaque RefusalReceipt." .
+
+valve:RefusalClass a rdfs:Class ;
+    rdfs:label "RefusalClass" ;
+    rdfs:comment "Internal (non-wire) refusal class. The wire carries only the opaque digest; classes exist solely for valve-local policy and telemetry." .
+
+valve:WireFact a rdfs:Class ;
+    rdfs:label "WireFact" ;
+    rdfs:comment "A wire-level fact (e.g. receipt length) that must agree with the protocol pack's wire: vocabulary." .
+
+
+valve:MalformedFrameRefusal a valve:RefusalClass ;
+    rdfs:label "malformed_frame" ;
+    valve:atom "malformed_frame" ;
+    valve:module "Strata.Valve.Refusals.MalformedFrame" ;
+    rdfs:comment "Frame failed the strict 64-byte header pattern match: bad magic/version, non-zero reserved bytes, permutation > 5, or wrong total length (valve.ex validate/2 fall-through clause). S9 adversarial mirror: Eclipse — a subnet-capped/eclipsed topology surfaces valve-side as frames failing the strict header pattern match." .
+
+valve:FuelExhaustedRefusal a valve:RefusalClass ;
+    rdfs:label "fuel_exhausted" ;
+    valve:atom "fuel_exhausted" ;
+    valve:module "Strata.Valve.Refusals.FuelExhausted" ;
+    rdfs:comment "Header fuel lease is zero: fuel == 0 refused before arena handoff (valve.ex validate/2 cond clause). S9 adversarial mirror: SpamFlood — a slot-budget-flooding peer exhausts the frame's fuel lease." .
+
+valve:ParentDiscontinuityRefusal a valve:RefusalClass ;
+    rdfs:label "parent_discontinuity" ;
+    valve:atom "parent_discontinuity" ;
+    valve:module "Strata.Valve.Refusals.ParentDiscontinuity" ;
+    rdfs:comment "Frame's parent digest does not equal the valve's active parent_digest register (valve.ex validate/2 cond clause). S9 adversarial mirror: SelfishMining — a withheld-suffix parent surfaces as a frame whose parent digest misses the active register." .
+
+valve:ArenaFailureRefusal a valve:RefusalClass ;
+    rdfs:label "arena_failure" ;
+    valve:atom "arena_failure" ;
+    valve:module "Strata.Valve.Refusals.ArenaFailure" ;
+    rdfs:comment "Arena returned {:ok, _} without a 256-bit commit_hash status map, or propagated a non-atom error (valve.ex handle_call ingest clause). S9 adversarial mirror: InvalidBlockGossip — a gossip block failing validity re-check surfaces as an arena result without a 256-bit commit_hash status map." .
+
+valve:refusalReceiptLen a valve:WireFact ;
+    rdfs:label "refusal_receipt_len" ;
+    valve:length "32"^^xsd:integer ;
+    rdfs:comment "Wire length of the opaque refusal receipt (bytes); must match wire:RefusalReceipt fixedLen." .
+
+# ---------------------------------------------------------------------------
+# S9 adversarial mirror (comment-level, per docs/sjira/v26.10.8/
+# STRATA-BLOCKCHAIN-ROADMAP.md S9): each internal valve refusal class cites
+# the consensus-pack AdversarialCase it would surface as, by IRI literal.
+# Citation only — no owl:imports, no wire/behavior change; the wire still
+# carries only the opaque 32-byte RefusalReceipt (FM-PACK-018 house rule).
+# Gate 030_adversarial_mirror.rq fails closed unless all four consensus
+# IRIs are mirrored.
+# ---------------------------------------------------------------------------
+
+valve:adversarialMirror a rdf:Property ;
+    rdfs:label "adversarialMirror" ;
+    rdfs:comment "Comment-level citation binding a valve RefusalClass to the consensus-pack AdversarialCase IRI (string literal) whose adversarial strategy this refusal is the valve-side surface of." .
+
+valve:MalformedFrameRefusal valve:adversarialMirror "https://strata.chatman.ai/ontology#Eclipse" .
+valve:FuelExhaustedRefusal valve:adversarialMirror "https://strata.chatman.ai/ontology#SpamFlood" .
+valve:ParentDiscontinuityRefusal valve:adversarialMirror "https://strata.chatman.ai/ontology#SelfishMining" .
+valve:ArenaFailureRefusal valve:adversarialMirror "https://strata.chatman.ai/ontology#InvalidBlockGossip" .
+
+# ---------------------------------------------------------------------------
+# Window-capacity refusal class (L86, additive). knhk-side KAT fixture is
+# BLOCKED:merge-open — the knhk repo is merge-blocked at HEAD and must not be
+# touched; the RDF projection below is the deliverable and the knhk-side
+# parity fixture is deferred until that repo reopens.
+#
+# Ground truth (read-only citation, atoms verbatim):
+#   erlang/knhk_rc/src/knhk_hooks.erl:16,23 —
+#     handle_call(..., Len, ...) when Len =< 8 / when Len > 8 ->
+#       {reply, {error, {guard_violation, <<"run.len > 8">>}}, State}
+#   erlang/knhk_rc/src/knhk_epoch.erl:28 —
+#     handle_call({schedule, Tau, ...}) when Tau > 8 ->
+#       {reply, {error, {guard_violation, <<"tau > 8">>}}, State}
+#
+# Chatman constant k = 8: the sliding-window capacity shared by the run
+# length (Len) and epoch tau guards. knhk's k-law (Len =< 8, Tau =< 8) is
+# admitted here as valve admission semantics.
+# ---------------------------------------------------------------------------
+
+valve:WindowCapacityRefusal a rdfs:Class ;
+    rdfs:subClassOf valve:RefusalClass ;
+    rdfs:label "WindowCapacityRefusal" ;
+    rdfs:comment "Refusal raised when a windowed admission argument exceeds the Chatman constant k = 8 (run length or epoch tau). Subclass of the valve refusal taxonomy; individuals mirror knhk's exact guard_violation atoms verbatim." .
+
+valve:capacityConstant a rdf:Property ;
+    rdfs:label "capacityConstant" ;
+    rdfs:comment "The window capacity constant (Chatman k) this refusal enforces; every WindowCapacityRefusal individual must carry it with value 8." .
+
+valve:sourceModule a rdf:Property ;
+    rdfs:label "sourceModule" ;
+    rdfs:comment "File-level provenance: the Erlang source module whose guard produced this refusal atom." .
+
+valve:window-run-capacity a valve:WindowCapacityRefusal ;
+    rdfs:label "window_run_capacity" ;
+    valve:atom "run.len > 8" ;
+    valve:capacityConstant 8 ;
+    valve:sourceModule "knhk_hooks.erl" ;
+    rdfs:comment "Run-length window guard: hook install refused when Len > 8. Mirrors knhk_hooks.erl:16,23 guard clause verbatim — {error, {guard_violation, <<\"run.len > 8\">>}}." .
+
+valve:window-tau-capacity a valve:WindowCapacityRefusal ;
+    rdfs:label "window_tau_capacity" ;
+    valve:atom "tau > 8" ;
+    valve:capacityConstant 8 ;
+    valve:sourceModule "knhk_epoch.erl" ;
+    rdfs:comment "Epoch tau window guard: schedule refused when Tau > 8. Mirrors knhk_epoch.erl:28 guard clause verbatim — {error, {guard_violation, <<\"tau > 8\">>}}." .
+
+valve:CapacityConstant a rdfs:Class ;
+    rdfs:label "CapacityConstant" ;
+    rdfs:comment "A declared admission capacity constant (the Chatman constant)." .
+
+valve:chatman-k a valve:CapacityConstant ;
+    rdfs:label "chatman_k" ;
+    valve:capacityConstant 8 ;
+    rdfs:comment "The Chatman constant k = 8 itself: the shared window capacity declared once; every WindowCapacityRefusal capacity must equal it." .

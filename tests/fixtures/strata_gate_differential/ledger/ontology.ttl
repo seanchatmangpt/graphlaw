@@ -1,0 +1,267 @@
+# strata-ledger-pack ontology — Strata ledger state machine (roadmap slice S4).
+#
+# LAW PROVENANCE (REUSE-ADAPTED via ONTOLOGY PROJECTION ONLY):
+# The invariants projected below — zero-denial-admitted polarity (a refusal is a
+# typed, non-zero value; admission is the zero case), masked commit (a transition
+# is all-or-nothing over the whole input/output set), and receipt chaining (every
+# applied transition receipts the prior state root so the chain is replayable) —
+# are extracted from /Users/sac/unibit/crates/unibit-kernel/src/lib.rs
+# (UDenial zero=admitted polarity, commit_masked, UReceipt/verify_receipt_chain).
+# No BUSL-1.1 code is vendored; the law is re-projected as strata RDF and
+# regenerated per docs/sjira/v26.10.8/STRATA-BLOCKCHAIN-ROADMAP.md (S5/S8
+# precondition outcome, slices S2/S4 REUSE-ADAPTED).
+
+@prefix st:  <https://strata.chatman.ai/ontology#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix lg:   <https://strata.chatman.ai/ontology/ledger#> .
+
+# ── Ledger model classes ──────────────────────────────────────────────
+
+st:LedgerState a rdfs:Class ; rdfs:label "LedgerState" ;
+    rdfs:comment "Total account-based state: map from 32-byte account id to u128 balance, plus per-account replay-guard nonces and the current state root." .
+
+st:Account a rdfs:Class ; rdfs:label "Account" ;
+    rdfs:comment "One account: 32-byte id + u128 balance." .
+
+st:BalanceEntry a rdfs:Class ; rdfs:label "BalanceEntry" ;
+    rdfs:comment "One (account id, balance) binding inside a LedgerState." .
+
+st:StateTransition a rdfs:Class ; rdfs:label "StateTransition" ;
+    rdfs:comment "One masked commit attempt over a TxLike: consumes the inputs, produces the outputs, all-or-nothing; receipts the prior state root. TRANSITION LAW (duplicate-input debit accumulation, L107): same-account input rows are accumulated into one per-account debit applied once against the original balance — per-row shadow overwriting silently drops all but the last deduction and mints value from nothing (Lean counterexample, mfact procint/ProcInt/Petri/LedgerConservation.lean), so Σ conservation holds unconditionally over every gate-passing transition with no NoDupIds precondition." .
+
+st:TransitionReceipt a rdfs:Class ; rdfs:label "TransitionReceipt" ;
+    rdfs:comment "Receipt of one applied transition: transition index, prev state root, next state root, applied tx digest — chained so each receipt's prev root equals the prior state's root." .
+
+# ── Ledger properties ─────────────────────────────────────────────────
+
+st:stateRoot a rdf:Property ; rdfs:label "stateRoot" ;
+    rdfs:comment "32-byte deterministic state root (placeholder mixing digest until S1 binds the real hash); STATE_ROOT_LEN bytes." ;
+    rdfs:domain st:LedgerState ; rdfs:range xsd:string .
+
+st:accountCount a rdf:Property ; rdfs:label "accountCount" ;
+    rdfs:comment "Number of accounts currently present in the state; must not exceed MAX_ACCOUNTS." ;
+    rdfs:domain st:LedgerState ; rdfs:range xsd:integer .
+
+st:transitionIndex a rdf:Property ; rdfs:label "transitionIndex" ;
+    rdfs:comment "Monotonically increasing index of an applied transition; two applied transitions with the same index are a violation (gate 020)." ;
+    rdfs:domain st:StateTransition ; rdfs:range xsd:integer .
+
+st:appliedTxDigest a rdf:Property ; rdfs:label "appliedTxDigest" ;
+    rdfs:comment "32-byte digest of the TxLike committed by a StateTransition; recorded on its TransitionReceipt." ;
+    rdfs:domain st:StateTransition ; rdfs:range xsd:string .
+
+st:prevStateRoot a rdf:Property ; rdfs:label "prevStateRoot" ;
+    rdfs:comment "State root immediately before the transition was applied; a TransitionReceipt's prevStateRoot must equal the prior state's stateRoot (chain law)." ;
+    rdfs:domain st:StateTransition ; rdfs:range xsd:string .
+
+# ── Ledger constants (LEDGER_CONSTANTS individual) ────────────────────
+
+lg:LEDGER_CONSTANTS a lg:LedgerConstant ;
+    rdfs:label "LEDGER_CONSTANTS" ;
+    rdfs:comment "Ledger layout constants projected into generated/ledger_consts.rs. Types match the generated Rust constants exactly (fail-closed: gate 010 fires on non-integer or malformed values).";
+    lg:rustType "usize" ;
+    lg:maxAccounts "65536"^^xsd:integer ;
+    lg:transitionGas "0"^^xsd:integer ;
+    lg:stateRootLen "32"^^xsd:integer .
+
+lg:LedgerConstant a rdfs:Class ; rdfs:label "LedgerConstant" ;
+    rdfs:comment "Carrier class for the LEDGER_CONSTANTS individual: projected as Rust constants by the ledger-consts rule." .
+
+lg:maxAccounts a rdf:Property ; rdfs:label "maxAccounts" ;
+    rdfs:comment "MAX_ACCOUNTS: hard cap on account count in one LedgerState (65536)." ;
+    rdfs:domain lg:LEDGER_CONSTANTS ; rdfs:range xsd:integer .
+
+lg:transitionGas a rdf:Property ; rdfs:label "transitionGas" ;
+    rdfs:comment "TRANSITION_GAS: per-transition gas placeholder (0 until a gas schedule is admitted; counted but never charged)." ;
+    rdfs:domain lg:LEDGER_CONSTANTS ; rdfs:range xsd:integer .
+
+lg:stateRootLen a rdf:Property ; rdfs:label "stateRootLen" ;
+    rdfs:comment "STATE_ROOT_LEN: state root width in bytes (32)." ;
+    rdfs:domain lg:LEDGER_CONSTANTS ; rdfs:range xsd:integer .
+
+# ── Witness transition chain (sample individuals the law gate exercises) ──
+# Two chained transitions with receipts: the gate 020 law (presence, index
+# uniqueness, prev→next chaining) is asserted over REAL rows, never vacuously
+# over an empty class. Roots/hex values are illustrative 4-hex stand-ins for
+# the 32-byte placeholder roots the generated module computes.
+
+lg:LedgerWitnessChain a rdfs:Class ; rdfs:label "LedgerWitnessChain" ;
+    rdfs:comment "Marker class for the sample transition chain that gate 020 exercises (non-vacuity witness)." .
+
+lg:witness-chain a lg:LedgerWitnessChain ; rdfs:label "witness-chain" ;
+    rdfs:comment "Genesis → T0 → T1 chain: roots chain prev→next; each transition carries its receipt." .
+
+lg:tx-T0 a st:StateTransition ;
+    rdfs:label "T0" ;
+    st:transitionIndex "0"^^xsd:integer ;
+    st:prevStateRoot "0x0000" ;
+    st:stateRoot "0xA0A0" ;
+    st:appliedTxDigest "0xD000" ;
+    st:hasReceipt lg:rc-T0 .
+
+lg:tx-T1 a st:StateTransition ;
+    rdfs:label "T1" ;
+    st:transitionIndex "1"^^xsd:integer ;
+    st:prevStateRoot "0xA0A0" ;
+    st:stateRoot "0xA1A1" ;
+    st:appliedTxDigest "0xD001" ;
+    st:hasReceipt lg:rc-T1 .
+
+lg:rc-T0 a st:TransitionReceipt ;
+    rdfs:label "RC-T0" ;
+    st:transitionIndex "0"^^xsd:integer ;
+    st:prevStateRoot "0x0000" ;
+    st:stateRoot "0xA0A0" ;
+    st:appliedTxDigest "0xD000" .
+
+lg:rc-T1 a st:TransitionReceipt ;
+    rdfs:label "RC-T1" ;
+    st:transitionIndex "1"^^xsd:integer ;
+    st:prevStateRoot "0xA0A0" ;
+    st:stateRoot "0xA1A1" ;
+    st:appliedTxDigest "0xD001" .
+
+st:hasReceipt a rdf:Property ; rdfs:label "hasReceipt" ;
+    rdfs:comment "Links a StateTransition to its TransitionReceipt (exactly one; gate 030 enforces presence)." ;
+    rdfs:domain st:StateTransition ; rdfs:range st:TransitionReceipt .
+
+# ── OCEL-v2 event emission surface (X4 / innovation Tier-1, lane T2) ────
+# Every applied transition emits one OCEL-v2 event: event type = transition
+# name ("apply_transition"), objects = the accounts touched (inputs ∪ outputs),
+# timestamp = the transition index. Pattern source (PROVENANCE ONLY — no code
+# vendored): /Users/sac/wasm4pm (alignments.rs A*-alignment move taxonomy
+# sync/log/model; etconformance_precision.rs replay-based conformance).
+
+st:OcelEvent a rdfs:Class ; rdfs:label "OcelEvent" ;
+    rdfs:comment "One OCEL-v2 event emitted by an applied transition: event type (the transition name), timestamp (the transition index), and the touched account objects." .
+
+st:hasOcelEvent a rdf:Property ; rdfs:label "hasOcelEvent" ;
+    rdfs:comment "Links a StateTransition to the OcelEvent emitted by its commit (exactly one; gate 030 enforces presence)." ;
+    rdfs:domain st:StateTransition ; rdfs:range st:OcelEvent .
+
+st:ocelEventType a rdf:Property ; rdfs:label "ocelEventType" ;
+    rdfs:comment "OCEL-v2 event type: the transition name (\"apply_transition\"); an event whose type matches no model transition is a log move (gate 030 / verify_conformance refusal)." ;
+    rdfs:domain st:OcelEvent ; rdfs:range xsd:string .
+
+st:ocelTimestamp a rdf:Property ; rdfs:label "ocelTimestamp" ;
+    rdfs:comment "OCEL-v2 event timestamp: the emitting transition's transitionIndex; must mirror it exactly (gate 030 mirror arm)." ;
+    rdfs:domain st:OcelEvent ; rdfs:range xsd:integer .
+
+st:eventObject a rdf:Property ; rdfs:label "eventObject" ;
+    rdfs:comment "Links an OcelEvent to an account it touched (inputs ∪ outputs, deduplicated); every object must resolve to a real st:Account (gate 030 dangling-object arm)." ;
+    rdfs:domain st:OcelEvent ; rdfs:range st:Account .
+
+st:gallEventType a rdf:Property ; rdfs:label "gallEventType" ;
+    rdfs:comment "GALL-lifecycle projection of the OCEL-v2 event type: the beam4pm GallOcel vocabulary name (\"candidate_committed\") the event admits into, WITHOUT renaming the model transition (ocelEventType stays \"apply_transition\"). Court-side (beam4pm) final-marking truth consumes this projection; the PN64 net itself stays a cyclic service net." ;
+    rdfs:domain st:OcelEvent ; rdfs:range xsd:string .
+
+# ── PN64 normative model (witness individuals gate 030 / verify_conformance
+#    replay against) ─────────────────────────────────────────────────────
+# A one-transition, two-place Petri net: p_ready --[apply_transition]--> {p_settled, p_ready}
+# (self-reproducing: every accepted transition leaves p_ready re-tokenized, so
+# any length of apply_transition log is enabled step-by-step; any event whose
+# type is NOT a model transition is a log move and refuses).
+
+lg:PN64_MODEL a lg:Pn64Model ; rdfs:label "PN64_MODEL" ;
+    rdfs:comment "Normative model for ledger-transition conformance: one transition (apply_transition), two places, self-reproducing marking." .
+
+lg:Pn64Model a rdfs:Class ; rdfs:label "Pn64Model" ;
+    rdfs:comment "Carrier class for the PN64 normative Petri-net model individual." .
+
+lg:pn-p-ready a lg:Pn64Place ; rdfs:label "p_ready" ;
+    rdfs:comment "Holds the token that enables apply_transition; re-tokenized by every firing (self-reproducing marking)." .
+lg:pn-p-settled a lg:Pn64Place ; rdfs:label "p_settled" ;
+    rdfs:comment "Produced by every apply_transition firing." .
+lg:Pn64Place a rdfs:Class ; rdfs:label "Pn64Place" ;
+    rdfs:comment "One place of the PN64 normative model." .
+
+lg:pn-t-apply a lg:Pn64Transition ; rdfs:label "apply_transition" ;
+    rdfs:comment "The single model transition: consumes p_ready, produces p_settled and re-produces p_ready." .
+lg:Pn64Transition a rdfs:Class ; rdfs:label "Pn64Transition" ;
+    rdfs:comment "One transition of the PN64 normative model." .
+
+lg:pn-arc-1 a lg:Pn64Arc ;
+    lg:arcFrom lg:pn-p-ready ; lg:arcTo lg:pn-t-apply .
+lg:pn-arc-2 a lg:Pn64Arc ;
+    lg:arcFrom lg:pn-t-apply ; lg:arcTo lg:pn-p-settled .
+lg:pn-arc-3 a lg:Pn64Arc ;
+    lg:arcFrom lg:pn-t-apply ; lg:arcTo lg:pn-p-ready .
+lg:Pn64Arc a rdfs:Class ; rdfs:label "Pn64Arc" ;
+    rdfs:comment "One arc of the PN64 normative model (place→transition or transition→place)." .
+lg:arcFrom a rdf:Property ; rdfs:label "arcFrom" ;
+    rdfs:comment "Arc source (a place for input arcs, a transition for output arcs)." .
+lg:arcTo a rdf:Property ; rdfs:label "arcTo" ;
+    rdfs:comment "Arc target (a transition for input arcs, a place for output arcs)." .
+
+lg:pn-marking-ready a lg:Pn64Marking ; lg:markingPlace lg:pn-p-ready ; lg:markingTokens "1"^^xsd:integer .
+lg:Pn64Marking a rdfs:Class ; rdfs:label "Pn64Marking" ;
+    rdfs:comment "Initial-marking entry: place + token count." .
+lg:markingPlace a rdf:Property ; rdfs:label "markingPlace" ;
+    rdfs:comment "The place an initial-marking entry tokenizes." .
+lg:markingTokens a rdf:Property ; rdfs:label "markingTokens" ;
+    rdfs:comment "Initial token count on markingPlace." .
+
+# ── OCEL witness individuals (non-vacuity witness for gate 030) ─────────
+# Real accounts + the events emitted by the witness chain T0→T1, so gate 030
+# asserts over REAL rows, never vacuously over an empty class.
+
+lg:acct-A a st:Account ; rdfs:label "A" ;
+    rdfs:comment "Witness account touched by both witness transitions." .
+lg:acct-B a st:Account ; rdfs:label "B" ;
+    rdfs:comment "Witness account produced by both witness transitions." .
+
+lg:ev-T0 a st:OcelEvent ;
+    rdfs:label "EV-T0" ;
+    st:ocelEventType "apply_transition" ;
+    st:gallEventType "candidate_committed" ;
+    st:ocelTimestamp "0"^^xsd:integer ;
+    st:eventObject lg:acct-A , lg:acct-B .
+
+lg:ev-T1 a st:OcelEvent ;
+    rdfs:label "EV-T1" ;
+    st:ocelEventType "apply_transition" ;
+    st:gallEventType "candidate_committed" ;
+    st:ocelTimestamp "1"^^xsd:integer ;
+    st:eventObject lg:acct-B , lg:acct-A .
+
+lg:tx-T0 st:hasOcelEvent lg:ev-T0 .
+lg:tx-T1 st:hasOcelEvent lg:ev-T1 .
+
+# ── Unibit kernel laws (deepening slice, lane L99) ────────────────────
+# LAW PROVENANCE (REUSE-ADAPTED via ONTOLOGY PROJECTION ONLY — no BUSL-1.1
+# code vendored): the three law classes below are extracted from
+# /Users/sac/unibit/crates/unibit-kernel/src/lib.rs @ 3bb4347f (kernel tests
+# green at 20 per L64/L69 receipts) and re-projected as strata RDF.
+
+st:SparseDelta a rdfs:Class ; rdfs:label "SparseDelta" ;
+    rdfs:comment "Sparse word-delta law: a delta records only the (index, XOR) pairs of words that actually changed (unibit UDelta, lib.rs:275-474 @ 3bb4347f — UDelta struct lib.rs:283-290, emit_delta lib.rs:390-412, apply_delta lib.rs:437-441, word_delta lib.rs:467-474). Applying a delta to a cell is ALL-OR-NOTHING (cf. commit_masked lib.rs:259-268 allow-mask: an empty/denied delta must be a no-op, never a partial write); applying twice is the XOR self-inverse identity." .
+
+st:BitfenwickSum a rdfs:Class ; rdfs:label "BitfenwickSum" ;
+    rdfs:comment "Carry-safe 8-lane Fenwick law: additions update exactly 3 tree points in constant time and prefix sums probe exactly 3 points, all with wrapping (lane-local) arithmetic so carries never borrow across lanes (unibit bitfenwick_add_8 lib.rs:796-817, update_element lib.rs:738-760, select_element lib.rs:769-788, bitfenwick_sum_8 lib.rs:825-843 @ 3bb4347f)." .
+
+st:MultiStepExecution a rdfs:Class ; rdfs:label "MultiStepExecution" ;
+    rdfs:comment "Multi-step work-accumulation law: work executes as N atomic steps over a tier-typed word plane (unibit Work<BITS> lib.rs:879-896, ActiveWord lib.rs:909-922, execute_step_multi lib.rs:992-1041 @ 3bb4347f); each step is globally atomic across the active word set (deny_acc lib.rs:1004-1012: any failing word suppresses every word), and admitted work accumulates monotonically — a denied step leaves both the plane and the work counter untouched." .
+
+# Carrier individual the kernel-laws rule projects (LEDGER_CONSTANTS pattern).
+lg:KernelLaw a rdfs:Class ; rdfs:label "KernelLaw" ;
+    rdfs:comment "Carrier class for the KERNEL_LAWS individual: projected as generated/kernel_laws.rs by the kernel-laws rule." .
+
+lg:KERNEL_LAWS a lg:KernelLaw ; rdfs:label "KERNEL_LAWS" ;
+    rdfs:comment "Unibit kernel-law manifest carrier (gate-visible label; the three law rows are separate individuals so the projection stays row-per-law)." .
+
+lg:law-sparse-delta a lg:KernelLaw ;
+    rdfs:label "KERNEL_LAWS" ;
+    lg:lawName "SPARSE_DELTA" ;
+    lg:lawBody "sparse word-delta: emit records only changed words (index, XOR); apply is no-op-on-empty and total-on-apply; all-or-nothing per cell; apply twice = identity" .
+
+lg:law-bitfenwick a lg:KernelLaw ;
+    rdfs:label "KERNEL_LAWS" ;
+    lg:lawName "BITFENWICK_SUM" ;
+    lg:lawBody "carry-safe 8-lane Fenwick: add updates exactly 3 points, prefix sum probes exactly 3 points, wrapping lane-local arithmetic; matches a naive prefix-sum reference over every (lane, delta) case" .
+
+lg:law-multistep a lg:KernelLaw ;
+    rdfs:label "KERNEL_LAWS" ;
+    lg:lawName "MULTI_STEP_EXECUTION" ;
+    lg:lawBody "work over N atomic steps: each step is globally atomic across the active word set; admitted steps accumulate work monotonically; denied steps mutate nothing" .

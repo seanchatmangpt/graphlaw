@@ -1,0 +1,202 @@
+# strata-governance-pack ontology — Strata governance layer (X5 candidate 1,
+# construction lane T11).
+#
+# LAW PROVENANCE (X5 GREENFIELD for the constitutional-diff law, REUSE-ADAPTED
+# for the gate arms — fail-closed presence + typed/malformed arms follow the
+# strata family V7 gate pattern, reused by S2/S4/S5/S8).
+# The constitutional-diff law: consensus constants are SEALED in a governance
+# commitment (the constitution); any sync whose projected constants drift from
+# the sealed commitment is REFUSED — the gate emits violation rows citing the
+# commitment. Sealed values here match strata-chain-pack's GENESIS_CONSTANTS
+# exactly (read from packs/strata-chain-pack/ontology.ttl at pack-authoring
+# time); the gate passes iff projection agrees with the seal.
+#
+# FALSIFIER (documented, exercised by the generated test and by the rdflib
+# mutation witness in README): an out-of-constitution edit — changing any
+# projected constant value away from its sealed value — MUST fire a gate
+# violation row citing the commitment.
+
+@prefix st:  <https://strata.chatman.ai/ontology#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# ── Governance model classes ──────────────────────────────────────────
+
+st:GovernanceCommitment a rdfs:Class ; rdfs:label "GovernanceCommitment" ;
+    rdfs:comment "A sealed constitution: a governance act binding a set of consensus constants to exact values. Any projected constant that drifts from its sealed value is an out-of-constitution edit and is refused by the constitutional-diff gate." .
+
+st:SealedConstant a rdfs:Class ; rdfs:label "SealedConstant" ;
+    rdfs:comment "The authority side of the constitution: one consensus constant with the exact value sealed in a GovernanceCommitment (st:sealedIn). The seal is the sole authority for the constant's value." .
+
+st:ProjectedConstant a rdfs:Class ; rdfs:label "ProjectedConstant" ;
+    rdfs:comment "The projection side of the constitution: a constant as it would be projected into generated Rust by the family packs (mirror of strata-chain-pack's st:GENESIS_CONSTANTS at authoring time). The constitutional-diff gate compares every ProjectedConstant against its SealedConstant." .
+
+st:ConstantDiff a rdfs:Class ; rdfs:label "ConstantDiff" ;
+    rdfs:comment "One row of the constants-vs-commitments diff table projected into generated/governance_report.rs: (commitment, constant, sealed value, projected value, match status). Derived, not asserted: the report rule derives the diff over SealedConstant x ProjectedConstant." .
+
+# ── Governance properties ─────────────────────────────────────────────
+
+st:sealedIn a rdf:Property ; rdfs:label "sealedIn" ;
+    rdfs:comment "Links a SealedConstant to the GovernanceCommitment that seals it." ;
+    rdfs:domain st:SealedConstant ; rdfs:range st:GovernanceCommitment .
+
+st:sealedName a rdf:Property ; rdfs:label "sealedName" ;
+    rdfs:comment "The constant identifier as sealed (e.g. GENESIS_HEIGHT); the join key to the projection side." ;
+    rdfs:domain st:SealedConstant ; rdfs:range xsd:string .
+
+st:sealedValue a rdf:Property ; rdfs:label "sealedValue" ;
+    rdfs:comment "The exact value sealed by the commitment (xsd:integer or string matching the family projection datatype)." ;
+    rdfs:domain st:SealedConstant ; rdfs:range rdfs:Literal .
+
+st:sealedDigest a rdf:Property ; rdfs:label "sealedDigest" ;
+    rdfs:comment "SHA-256 over the lexical form 'NAME=value' at seal time — the commitment's tamper-evident fingerprint; the generated report re-derives and asserts it." ;
+    rdfs:domain st:SealedConstant ; rdfs:range xsd:string .
+
+st:projectedName a rdf:Property ; rdfs:label "projectedName" ;
+    rdfs:comment "The constant identifier on the projection side; must equal exactly one sealedName." ;
+    rdfs:domain st:ProjectedConstant ; rdfs:range xsd:string .
+
+st:projectedValue a rdf:Property ; rdfs:label "projectedValue" ;
+    rdfs:comment "The value the projection manufactures; must equal sealedValue or the constitutional-diff gate refuses." ;
+    rdfs:domain st:ProjectedConstant ; rdfs:range rdfs:Literal .
+
+st:commitmentSubject a rdf:Property ; rdfs:label "commitmentSubject" ;
+    rdfs:comment "Human-readable subject of the commitment (e.g. the pack surface whose constants are sealed)." ;
+    rdfs:domain st:GovernanceCommitment ; rdfs:range xsd:string .
+
+# ── Commitment individuals (the constitution; 2 commitments) ──────────
+
+st:Commitment-GenesisLayout a st:GovernanceCommitment ;
+    rdfs:label "GenesisLayout" ;
+    rdfs:comment "Seals the strata-chain-pack genesis layout constants: GENESIS_HEIGHT, GENESIS_PREV, INITIAL_DIFFICULTY_TARGET." ;
+    st:commitmentSubject "strata-chain-pack GENESIS_CONSTANTS (genesis layout)" .
+
+st:Commitment-BlockBudget a st:GovernanceCommitment ;
+    rdfs:label "BlockBudget" ;
+    rdfs:comment "Seals the strata-chain-pack block budget constant: MAX_BLOCK_TXS." ;
+    st:commitmentSubject "strata-chain-pack GENESIS_CONSTANTS (block budget)" .
+
+# ── Sealed constants (authority side; values = sealed commitment) ─────
+
+st:seal-GENESIS_HEIGHT a st:SealedConstant ;
+    rdfs:label "seal-GENESIS_HEIGHT" ;
+    st:sealedIn st:Commitment-GenesisLayout ;
+    st:sealedName "GENESIS_HEIGHT" ;
+    st:sealedValue "0"^^xsd:integer ;
+    st:sealedDigest "09bd17f575a65d0f173606db3780a8fe3cc61e2f0d30d5f3d631a3187b1e4e25" .
+
+st:seal-GENESIS_PREV a st:SealedConstant ;
+    rdfs:label "seal-GENESIS_PREV" ;
+    st:sealedIn st:Commitment-GenesisLayout ;
+    st:sealedName "GENESIS_PREV" ;
+    st:sealedValue "0x0000000000000000000000000000000000000000000000000000000000000000" ;
+    st:sealedDigest "40c0fa32d6c43ee1fb60f9fa3056034324e23c0edb92b28c8f46df170cdf3c63" .
+
+st:seal-INITIAL_DIFFICULTY_TARGET a st:SealedConstant ;
+    rdfs:label "seal-INITIAL_DIFFICULTY_TARGET" ;
+    st:sealedIn st:Commitment-GenesisLayout ;
+    st:sealedName "INITIAL_DIFFICULTY_TARGET" ;
+    st:sealedValue "12"^^xsd:integer ;
+    st:sealedDigest "0c7899b7e76d2f01dde391300de3d666ef2601d50aa27704eea9a757eacda968" .
+
+st:seal-MAX_BLOCK_TXS a st:SealedConstant ;
+    rdfs:label "seal-MAX_BLOCK_TXS" ;
+    st:sealedIn st:Commitment-BlockBudget ;
+    st:sealedName "MAX_BLOCK_TXS" ;
+    st:sealedValue "256"^^xsd:integer ;
+    st:sealedDigest "8d2b174d7f12d3c0dedf7d69d525f1c0e4ca310cb2dec89f1b2d96e99d2b7d77" .
+
+# ── Projected constants (projection side; mirror of the family packs) ─
+
+st:proj-GENESIS_HEIGHT a st:ProjectedConstant ;
+    rdfs:label "proj-GENESIS_HEIGHT" ;
+    st:projectedName "GENESIS_HEIGHT" ;
+    st:projectedValue "0"^^xsd:integer .
+
+st:proj-GENESIS_PREV a st:ProjectedConstant ;
+    rdfs:label "proj-GENESIS_PREV" ;
+    st:projectedName "GENESIS_PREV" ;
+    st:projectedValue "0x0000000000000000000000000000000000000000000000000000000000000000" .
+
+st:proj-INITIAL_DIFFICULTY_TARGET a st:ProjectedConstant ;
+    rdfs:label "proj-INITIAL_DIFFICULTY_TARGET" ;
+    st:projectedName "INITIAL_DIFFICULTY_TARGET" ;
+    st:projectedValue "12"^^xsd:integer .
+
+st:proj-MAX_BLOCK_TXS a st:ProjectedConstant ;
+    rdfs:label "proj-MAX_BLOCK_TXS" ;
+    st:projectedName "MAX_BLOCK_TXS" ;
+    st:projectedValue "256"^^xsd:integer .
+
+# ── Commitment individuals (extended, lane L16: 2 new surfaces) ───────
+
+st:Commitment-NetRateLimits a st:GovernanceCommitment ;
+    rdfs:label "NetRateLimits" ;
+    rdfs:comment "Seals the strata-net-pack wire rate-limit constants: ECLIPSE_SUBNET_CAP, MAX_MSGS_PER_SLOT (read from packs/strata-net-pack/ontology.ttl)." ;
+    st:commitmentSubject "strata-net-pack NET_CONSTANTS (rate limits)" .
+
+st:Commitment-LedgerConstants a st:GovernanceCommitment ;
+    rdfs:label "LedgerConstants" ;
+    rdfs:comment "Seals the strata-ledger-pack ledger layout constants: MAX_ACCOUNTS, TRANSITION_GAS, STATE_ROOT_LEN (read from packs/strata-ledger-pack/ontology.ttl)." ;
+    st:commitmentSubject "strata-ledger-pack LEDGER_CONSTANTS (ledger layout)" .
+
+st:seal-ECLIPSE_SUBNET_CAP a st:SealedConstant ;
+    rdfs:label "seal-ECLIPSE_SUBNET_CAP" ;
+    st:sealedIn st:Commitment-NetRateLimits ;
+    st:sealedName "ECLIPSE_SUBNET_CAP" ;
+    st:sealedValue "8"^^xsd:integer ;
+    st:sealedDigest "9ad4678244864dde3f527ce5c33313ece456dae84d96514e3d582ca991c980a3" .
+
+st:seal-MAX_MSGS_PER_SLOT a st:SealedConstant ;
+    rdfs:label "seal-MAX_MSGS_PER_SLOT" ;
+    st:sealedIn st:Commitment-NetRateLimits ;
+    st:sealedName "MAX_MSGS_PER_SLOT" ;
+    st:sealedValue "32"^^xsd:integer ;
+    st:sealedDigest "5feb70397e7dc776db6e01eebeb371ccc4b6793c5c7ea33821aabe4ec19cf05e" .
+
+st:seal-MAX_ACCOUNTS a st:SealedConstant ;
+    rdfs:label "seal-MAX_ACCOUNTS" ;
+    st:sealedIn st:Commitment-LedgerConstants ;
+    st:sealedName "MAX_ACCOUNTS" ;
+    st:sealedValue "65536"^^xsd:integer ;
+    st:sealedDigest "d12e4580ae7e7f8efff5a9ba5e34395f1a36cca23be8f04c9647d871108e565f" .
+
+st:seal-TRANSITION_GAS a st:SealedConstant ;
+    rdfs:label "seal-TRANSITION_GAS" ;
+    st:sealedIn st:Commitment-LedgerConstants ;
+    st:sealedName "TRANSITION_GAS" ;
+    st:sealedValue "0"^^xsd:integer ;
+    st:sealedDigest "91343636186a30724931390a2fe987b4bfcdaf0adeaf4ab3502225b535e40722" .
+
+st:seal-STATE_ROOT_LEN a st:SealedConstant ;
+    rdfs:label "seal-STATE_ROOT_LEN" ;
+    st:sealedIn st:Commitment-LedgerConstants ;
+    st:sealedName "STATE_ROOT_LEN" ;
+    st:sealedValue "32"^^xsd:integer ;
+    st:sealedDigest "e7d83e3850980c47e04abdb213393077096e080db6198275f36477ecf16f7f53" .
+
+st:proj-ECLIPSE_SUBNET_CAP a st:ProjectedConstant ;
+    rdfs:label "proj-ECLIPSE_SUBNET_CAP" ;
+    st:projectedName "ECLIPSE_SUBNET_CAP" ;
+    st:projectedValue "8"^^xsd:integer .
+
+st:proj-MAX_MSGS_PER_SLOT a st:ProjectedConstant ;
+    rdfs:label "proj-MAX_MSGS_PER_SLOT" ;
+    st:projectedName "MAX_MSGS_PER_SLOT" ;
+    st:projectedValue "32"^^xsd:integer .
+
+st:proj-MAX_ACCOUNTS a st:ProjectedConstant ;
+    rdfs:label "proj-MAX_ACCOUNTS" ;
+    st:projectedName "MAX_ACCOUNTS" ;
+    st:projectedValue "65536"^^xsd:integer .
+
+st:proj-TRANSITION_GAS a st:ProjectedConstant ;
+    rdfs:label "proj-TRANSITION_GAS" ;
+    st:projectedName "TRANSITION_GAS" ;
+    st:projectedValue "0"^^xsd:integer .
+
+st:proj-STATE_ROOT_LEN a st:ProjectedConstant ;
+    rdfs:label "proj-STATE_ROOT_LEN" ;
+    st:projectedName "STATE_ROOT_LEN" ;
+    st:projectedValue "32"^^xsd:integer .

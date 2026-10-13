@@ -1,0 +1,54 @@
+# MESSAGE: commitment closure violated — fail-closed presence + typed/
+# malformed arms (V7 family pattern) over the governance graph. Every
+# commitment must seal at least one constant; every SealedConstant must
+# carry sealedIn/sealedName/sealedValue/sealedDigest; every ProjectedConstant
+# must carry projectedName/projectedValue; integer-typed seals/projections
+# must be well-formed integers; GENESIS_PREV must be well-formed 32-byte hex.
+# Any row indicates a broken commitment structure (a gate cannot be vacuously
+# green over a malformed graph).
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+PREFIX st:   <https://strata.chatman.ai/ontology#>
+
+SELECT DISTINCT (COALESCE(?f1,?f2,?f3,?f4,?f5,?f6,?f7) AS ?field)
+       (COALESCE(?p1,?p2,?p3,?p4,?p5,?p6,?p7) AS ?problem)
+WHERE {
+  {
+    ?c a st:GovernanceCommitment .
+    FILTER NOT EXISTS { ?s st:sealedIn ?c }
+    BIND(CONCAT("empty_commitment: ", STR(?c)) AS ?f1)
+    BIND("commitment seals no SealedConstant" AS ?p1)
+  } UNION {
+    ?s a st:SealedConstant .
+    FILTER NOT EXISTS { ?s st:sealedIn ?c }
+    BIND(CONCAT("seal_without_commitment: ", STR(?s)) AS ?f2)
+    BIND("SealedConstant carries no st:sealedIn" AS ?p2)
+  } UNION {
+    ?s a st:SealedConstant .
+    FILTER NOT EXISTS { ?s st:sealedName ?n }
+    BIND(CONCAT("seal_missing_name: ", STR(?s)) AS ?f3)
+    BIND("no st:sealedName" AS ?p3)
+  } UNION {
+    ?s a st:SealedConstant .
+    FILTER NOT EXISTS { ?s st:sealedValue ?v }
+    BIND(CONCAT("seal_missing_value: ", STR(?s)) AS ?f4)
+    BIND("no st:sealedValue" AS ?p4)
+  } UNION {
+    ?s a st:SealedConstant ; st:sealedName ?n ; st:sealedValue ?v .
+    FILTER(datatype(?v) = xsd:integer && !REGEX(STR(?v), "^[0-9]+$"))
+    BIND(CONCAT("seal_malformed_integer: ", ?n) AS ?f5)
+    BIND("malformed_integer" AS ?p5)
+  } UNION {
+    ?p a st:ProjectedConstant ; st:projectedName ?n ; st:projectedValue ?v .
+    FILTER(datatype(?v) = xsd:integer && !REGEX(STR(?v), "^[0-9]+$"))
+    BIND(CONCAT("projection_malformed_integer: ", ?n) AS ?f6)
+    BIND("malformed_integer" AS ?p6)
+  } UNION {
+    ?p a st:ProjectedConstant ; st:projectedName "GENESIS_PREV" ;
+       st:projectedValue ?v .
+    FILTER(!REGEX(STR(?v), "^0x[0-9a-fA-F]{64}$"))
+    BIND("projection_malformed_prev_hash" AS ?f7)
+    BIND("GENESIS_PREV is not 0x + 64 hex chars" AS ?p7)
+  }
+}
+ORDER BY ?field ?problem

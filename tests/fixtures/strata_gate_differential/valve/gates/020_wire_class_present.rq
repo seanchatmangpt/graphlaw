@@ -1,0 +1,25 @@
+# MESSAGE: the valve wire-length fact must assert exactly 32 bytes, matching the
+# protocol pack's wire:RefusalReceipt / wire:fixedLen contract
+# (<https://strata.chatman.ai/ontology/wire#RefusalReceipt>, <https://strata.chatman.ai/ontology/wire#fixedLen>).
+# NOTE: the in-pack ontology does not declare the wire: class itself — the wire
+# vocabulary lives in the protocol pack's graph. This gate therefore cannot
+# fail-closed-check cross-graph presence of wire:RefusalReceipt + wire:fixedLen
+# in-pack; instead (per lane instruction) it asserts the in-pack branch exactly:
+# a valve:WireFact labelled "refusal_receipt_len" must exist with valve:length 32.
+# Any row returned is a violation (missing fact or wrong length) — fail closed.
+PREFIX valve: <https://strata.chatman.ai/ontology/valve#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?fact ?length ?violation WHERE {
+  BIND(<https://strata.chatman.ai/ontology/valve#refusalReceiptLen> AS ?fact)
+  {
+    BIND("missing_wire_fact" AS ?violation)
+    FILTER NOT EXISTS {
+      ?fact valve:length ?l .
+    }
+  } UNION {
+    OPTIONAL { ?fact valve:length ?len }
+    BIND("wrong_length" AS ?violation)
+    FILTER (BOUND(?len) && ?len != "32"^^xsd:integer)
+  }
+}

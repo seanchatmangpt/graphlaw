@@ -1,0 +1,41 @@
+# MESSAGE: LEDGER_CONSTANTS layout violated — fail-closed presence + typed/
+# malformed-integer arms (V7 pattern, packs/strata-pn64-pack/gates/
+# 010_place_offset_bounds.rq): every required constant property must be present
+# on the LEDGER_CONSTANTS individual with an xsd:integer, decimal-digit value;
+# any missing, string-typed, or malformed value fires a violation row instead of
+# silently passing (engine-dependent fail-open; cast errors exclude rows).
+# Any row indicates a broken LEDGER_CONSTANTS layout.
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX lg:   <https://strata.chatman.ai/ontology/ledger#>
+
+SELECT DISTINCT (COALESCE(?f1,?f2,?f3,?f4,?f5,?f6) AS ?field)
+       (COALESCE(?p1,?p2,?p3,?p4,?p5,?p6) AS ?problem)
+WHERE {
+  {
+    ?c a lg:LedgerConstant ; rdfs:label "LEDGER_CONSTANTS" .
+    FILTER NOT EXISTS { ?c lg:maxAccounts ?anyMax }
+    BIND("MAX_ACCOUNTS" AS ?f1) BIND("missing_constant: no lg:maxAccounts on LEDGER_CONSTANTS" AS ?p1)
+  } UNION {
+    ?c a lg:LedgerConstant ; rdfs:label "LEDGER_CONSTANTS" .
+    FILTER NOT EXISTS { ?c lg:transitionGas ?anyGas }
+    BIND("TRANSITION_GAS" AS ?f2) BIND("missing_constant: no lg:transitionGas on LEDGER_CONSTANTS" AS ?p2)
+  } UNION {
+    ?c a lg:LedgerConstant ; rdfs:label "LEDGER_CONSTANTS" .
+    FILTER NOT EXISTS { ?c lg:stateRootLen ?anyLen }
+    BIND("STATE_ROOT_LEN" AS ?f3) BIND("missing_constant: no lg:stateRootLen on LEDGER_CONSTANTS" AS ?p3)
+  } UNION {
+    ?c a lg:LedgerConstant ; rdfs:label "LEDGER_CONSTANTS" ; lg:maxAccounts ?v .
+    FILTER(datatype(?v) != xsd:integer || !REGEX(STR(?v), "^[0-9]+$"))
+    BIND("MAX_ACCOUNTS" AS ?f4) BIND("malformed_integer" AS ?p4)
+  } UNION {
+    ?c a lg:LedgerConstant ; rdfs:label "LEDGER_CONSTANTS" ; lg:transitionGas ?v .
+    FILTER(datatype(?v) != xsd:integer || !REGEX(STR(?v), "^[0-9]+$"))
+    BIND("TRANSITION_GAS" AS ?f5) BIND("malformed_integer" AS ?p5)
+  } UNION {
+    ?c a lg:LedgerConstant ; rdfs:label "LEDGER_CONSTANTS" ; lg:stateRootLen ?v .
+    FILTER(datatype(?v) != xsd:integer || !REGEX(STR(?v), "^[0-9]+$"))
+    BIND("STATE_ROOT_LEN" AS ?f6) BIND("malformed_integer" AS ?p6)
+  }
+}
+ORDER BY ?field ?problem

@@ -1,0 +1,51 @@
+# MESSAGE: every st:HashAlgorithm must CARRY st:digestLength, that length
+# must be 32 (the family digest width per the ontology individuals — BLAKE3
+# default 256-bit output, FIPS 180-4 §6.2 SHA-256), the length must be a
+# well-formed xsd:integer (typed-malformed closed two ways: an explicit
+# datatype() arm catches wrong-typed values, and a REGEX lexical arm catches
+# malformed integer lexicals that a cast would silently exclude — the
+# pn64/temprun fail-open pattern), and the family Digest individual must
+# carry a length at all. Any row returned is a wrong-typed, malformed,
+# out-of-family, or missing digest length.
+PREFIX st:  <https://strata.chatman.ai/ontology#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?subject ?length ?violation WHERE {
+  {
+    ?a a st:HashAlgorithm ;
+       st:digestLength ?length .
+    FILTER (datatype(?length) != xsd:integer)
+    BIND(?a AS ?subject)
+    BIND("non_integer_length" AS ?violation)
+  } UNION {
+    ?a a st:HashAlgorithm ; st:digestLength ?length .
+    FILTER (datatype(?length) = xsd:integer && !REGEX(STR(?length), "^[0-9]+$"))
+    BIND(?a AS ?subject)
+    BIND("malformed_integer_length" AS ?violation)
+  } UNION {
+    ?a a st:HashAlgorithm ; st:digestLength ?length .
+    FILTER (datatype(?length) = xsd:integer
+            && REGEX(STR(?length), "^[0-9]+$")
+            && xsd:integer(?length) != 32)
+    BIND(?a AS ?subject)
+    BIND("length_not_32" AS ?violation)
+  } UNION {
+    ?a a st:HashAlgorithm .
+    FILTER NOT EXISTS { ?a st:digestLength ?anyLength }
+    BIND(?a AS ?subject)
+    BIND("missing_digestLength" AS ?violation)
+  } UNION {
+    ?d a st:Digest .
+    FILTER NOT EXISTS { ?d st:digestLength ?anyLength }
+    BIND(?d AS ?subject)
+    BIND("digest_individual_missing_length" AS ?violation)
+  } UNION {
+    ?d a st:Digest ; st:digestLength ?length .
+    FILTER (datatype(?length) != xsd:integer
+            || !REGEX(STR(?length), "^[0-9]+$")
+            || xsd:integer(?length) != 32)
+    BIND(?d AS ?subject)
+    BIND("digest_individual_not_32" AS ?violation)
+  }
+}
+ORDER BY ?subject ?violation

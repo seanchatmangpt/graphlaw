@@ -1,0 +1,46 @@
+# MESSAGE: valve refusal taxonomy is exactly the 4 canonical atoms
+# {malformed_frame, fuel_exhausted, parent_discontinuity, arena_failure} —
+# each atom MUST be carried by at least one valve:RefusalClass individual
+# (presence), no atom may be carried by two distinct individuals
+# (exclusivity), and no RefusalClass may carry any other atom (off-enum).
+# Any row indicates a violation — fail closed on the refusal taxonomy closure.
+PREFIX valve: <https://strata.chatman.ai/ontology/valve#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?class ?atom ?violation WHERE {
+  {
+    ?class a valve:RefusalClass .
+    BIND("missing_atom" AS ?violation)
+    FILTER NOT EXISTS { ?class valve:atom ?a }
+  } UNION {
+    ?class a valve:RefusalClass ;
+           valve:atom ?atom .
+    BIND("off_enum_atom" AS ?violation)
+    FILTER (?atom NOT IN ("malformed_frame", "fuel_exhausted", "parent_discontinuity", "arena_failure"))
+  } UNION {
+    # Presence: each canonical atom must be carried by at least one individual.
+    BIND(<https://strata.chatman.ai/ontology/valve#RefusalClass> AS ?class)
+    BIND("absent_canonical_atom" AS ?violation)
+    VALUES ?atom { "malformed_frame" "fuel_exhausted" "parent_discontinuity" "arena_failure" }
+    FILTER NOT EXISTS {
+      ?c a valve:RefusalClass ;
+         valve:atom ?atom .
+    }
+  } UNION {
+    # Exclusivity: two distinct individuals carrying the same atom.
+    ?c1 a valve:RefusalClass ; valve:atom ?atom .
+    ?c2 a valve:RefusalClass ; valve:atom ?atom .
+    BIND("duplicate_atom" AS ?violation)
+    FILTER (STR(?c1) < STR(?c2))
+  } UNION {
+    # Distinctness: two distinct RefusalClass individuals with the same
+    # rdfs:label are refused, closing the ORDER BY ?label tie class in
+    # refusals.rq (duplicate labels would render document-order-dependent
+    # output).
+    ?class a valve:RefusalClass ; rdfs:label ?lab .
+    ?l2 a valve:RefusalClass ; rdfs:label ?lab .
+    BIND("duplicate_label" AS ?violation)
+    FILTER (STR(?class) < STR(?l2))
+  }
+}
+ORDER BY ?violation ?class ?atom

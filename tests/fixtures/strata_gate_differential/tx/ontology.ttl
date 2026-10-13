@@ -1,0 +1,120 @@
+# strata-tx-pack ontology — Strata transaction model (roadmap slice S2).
+#
+# Wire-format ground truth: packs/strata-protocol-pack/ontology.ttl
+# (CLAP/1.0 64-byte PDU header). The Tx header constants below DERIVE from
+# those CLAP-PDU conventions (fixed-width big-endian fields, offset/len
+# abutment, magic+version leading pair, reserved-must-be-zero). This is a
+# documentation-only citation — no owl:imports — per FM-PACK-018 house
+# remediation (see pack.toml).
+
+@prefix st:  <https://strata.chatman.ai/ontology#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix tx:   <https://strata.chatman.ai/ontology/tx#> .
+
+# ── Transaction model classes ─────────────────────────────────────────
+
+st:Tx a rdfs:Class ; rdfs:label "Tx" ;
+    rdfs:comment "One Strata transaction: framed header (CLAP-PDU conventions) + inputs + outputs." .
+
+st:TxInput a rdfs:Class ; rdfs:label "TxInput" ;
+    rdfs:comment "Spending side: previous TxId + output index, fixed 36 bytes on the wire." .
+
+st:TxOutput a rdfs:Class ; rdfs:label "TxOutput" ;
+    rdfs:comment "Paying side: u64 value + value-unit tag byte, fixed 9 bytes on the wire." .
+
+st:TxId a rdfs:Class ; rdfs:label "TxId" ;
+    rdfs:comment "32-byte transaction identifier (S1 strata-hash-pack digest placeholder until S3 binds the real hash)." .
+
+# ── Tx field properties (exact declared field set; see gate 020) ─────
+
+st:txNonce a rdf:Property ; rdfs:label "txNonce" ;
+    rdfs:comment "replay-guard field: u64 nonce; replay_guard() rejects reuse of the same nonce over the same input set." ;
+    rdfs:domain st:Tx ; rdfs:range xsd:integer .
+
+st:inputCount a rdf:Property ; rdfs:label "inputCount" ;
+    rdfs:comment "u32 count of TxInput entries carried in the frame body." ;
+    rdfs:domain st:Tx ; rdfs:range xsd:integer .
+
+st:outputCount a rdf:Property ; rdfs:label "outputCount" ;
+    rdfs:comment "u32 count of TxOutput entries carried in the frame body." ;
+    rdfs:domain st:Tx ; rdfs:range xsd:integer .
+
+st:valueUnit a rdf:Property ; rdfs:label "valueUnit" ;
+    rdfs:comment "unit tag carried with every output value (u8 wire tag; unit semantics live outside this pack)." ;
+    rdfs:domain st:Tx ; rdfs:range xsd:string .
+
+# ── Tx header wire constants (derived from CLAP-PDU conventions) ─────
+# Same FrameConstant shape as packs/strata-protocol-pack/ontology.ttl.
+
+tx:TxFrameConstant a rdfs:Class ;
+    rdfs:label "TxFrameConstant" ;
+    rdfs:comment "One generated wire constant of the Strata Tx framed header." .
+
+tx:TX_MAGIC a tx:TxFrameConstant ;
+    rdfs:label "TX_MAGIC" ; tx:rustType "u32" ; tx:value "0x5354_5831" ;
+    rdfs:comment "Magic bytes \"STX1\", big-endian; bytes 0..4 (CLAP-PDU magic convention)." .
+
+tx:TX_VERSION a tx:TxFrameConstant ;
+    rdfs:label "TX_VERSION" ; tx:rustType "u8" ; tx:value "0x01" ;
+    rdfs:comment "Tx framing version; byte 4 (CLAP-PDU version convention)." .
+
+tx:TX_RESERVED_LEN a tx:TxFrameConstant ;
+    rdfs:label "TX_RESERVED_LEN" ; tx:rustType "usize" ; tx:value "3"^^xsd:integer ;
+    rdfs:comment "Reserved bytes length; must be zero on the wire (CLAP-PDU reserved convention)." .
+
+tx:TX_HEADER_LEN a tx:TxFrameConstant ;
+    rdfs:label "TX_HEADER_LEN" ; tx:rustType "usize" ; tx:value "56"^^xsd:integer ;
+    rdfs:comment "Fixed Tx header length in bytes." .
+
+# --- Header field offsets (big-endian layout; offset+len abuts next offset) ---
+
+tx:MAGIC_OFFSET a tx:TxFrameConstant ;
+    rdfs:label "MAGIC_OFFSET" ; tx:rustType "usize" ; tx:value "0"^^xsd:integer ;
+    rdfs:comment "Magic field offset; length 4." .
+tx:MAGIC_LEN a tx:TxFrameConstant ;
+    rdfs:label "MAGIC_LEN" ; tx:rustType "usize" ; tx:value "4"^^xsd:integer ;
+    rdfs:comment "Magic field length." .
+tx:VERSION_OFFSET a tx:TxFrameConstant ;
+    rdfs:label "VERSION_OFFSET" ; tx:rustType "usize" ; tx:value "4"^^xsd:integer ;
+    rdfs:comment "Version field offset; length 1." .
+tx:VERSION_LEN a tx:TxFrameConstant ;
+    rdfs:label "VERSION_LEN" ; tx:rustType "usize" ; tx:value "1"^^xsd:integer ;
+    rdfs:comment "Version field length." .
+tx:RESERVED_OFFSET a tx:TxFrameConstant ;
+    rdfs:label "RESERVED_OFFSET" ; tx:rustType "usize" ; tx:value "5"^^xsd:integer ;
+    rdfs:comment "Reserved bytes offset; must be zero." .
+tx:NONCE_OFFSET a tx:TxFrameConstant ;
+    rdfs:label "NONCE_OFFSET" ; tx:rustType "usize" ; tx:value "8"^^xsd:integer ;
+    rdfs:comment "u64 replay-guard nonce offset." .
+tx:NONCE_LEN a tx:TxFrameConstant ;
+    rdfs:label "NONCE_LEN" ; tx:rustType "usize" ; tx:value "8"^^xsd:integer ;
+    rdfs:comment "u64 replay-guard nonce length." .
+tx:INPUT_COUNT_OFFSET a tx:TxFrameConstant ;
+    rdfs:label "INPUT_COUNT_OFFSET" ; tx:rustType "usize" ; tx:value "16"^^xsd:integer ;
+    rdfs:comment "u32 input count offset." .
+tx:INPUT_COUNT_LEN a tx:TxFrameConstant ;
+    rdfs:label "INPUT_COUNT_LEN" ; tx:rustType "usize" ; tx:value "4"^^xsd:integer ;
+    rdfs:comment "u32 input count length." .
+tx:OUTPUT_COUNT_OFFSET a tx:TxFrameConstant ;
+    rdfs:label "OUTPUT_COUNT_OFFSET" ; tx:rustType "usize" ; tx:value "20"^^xsd:integer ;
+    rdfs:comment "u32 output count offset." .
+tx:OUTPUT_COUNT_LEN a tx:TxFrameConstant ;
+    rdfs:label "OUTPUT_COUNT_LEN" ; tx:rustType "usize" ; tx:value "4"^^xsd:integer ;
+    rdfs:comment "u32 output count length." .
+tx:PAYLOAD_DIGEST_OFFSET a tx:TxFrameConstant ;
+    rdfs:label "PAYLOAD_DIGEST_OFFSET" ; tx:rustType "usize" ; tx:value "24"^^xsd:integer ;
+    rdfs:comment "32B BLAKE3-256 payload digest offset (BLAKE3 over the FULL canonical serialization, digest slot zeroed; L125 upgrade from FNV-1a)." .
+tx:PAYLOAD_DIGEST_LEN a tx:TxFrameConstant ;
+    rdfs:label "PAYLOAD_DIGEST_LEN" ; tx:rustType "usize" ; tx:value "32"^^xsd:integer ;
+    rdfs:comment "32B payload digest length (exactly the BLAKE3-256 output, written directly into the slot)." .
+
+# --- Fixed-width body element sizes ---
+
+tx:TX_INPUT_LEN a tx:TxFrameConstant ;
+    rdfs:label "TX_INPUT_LEN" ; tx:rustType "usize" ; tx:value "36"^^xsd:integer ;
+    rdfs:comment "Fixed TxInput wire length: 32B prev TxId + u32 output index." .
+tx:TX_OUTPUT_LEN a tx:TxFrameConstant ;
+    rdfs:label "TX_OUTPUT_LEN" ; tx:rustType "usize" ; tx:value "9"^^xsd:integer ;
+    rdfs:comment "Fixed TxOutput wire length: u64 value + u8 value-unit tag." .
