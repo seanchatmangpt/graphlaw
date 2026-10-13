@@ -29,10 +29,12 @@ const PACK_DIR: &str = concat!(
     "/../ggen-marketplace/packs/strata-pn64-pack"
 );
 
-/// Pinned sha256 of the ontology subject (computed 2026-10-13, lane L4).
-const ONTOLOGY_SHA256: &str = "e3b4caa85744aed854be494ff8bce714997693a6b35218e344a3e3d27d1bdd09";
+/// Pinned sha256 of the ontology subject (re-pinned 2026-10-13, lane L147;
+/// prior pin e3b4caa8… drifted by comment-only edits — L38/L86/L103 — no
+/// mask/ordinal semantics changed, verified by the court's own cross-checks).
+const ONTOLOGY_SHA256: &str = "1ded0f0421c32a28f387fde2ae8a9c6acbdd433408b8adc1269741012c692c65";
 /// Pinned sha256 of the generated projection subject.
-const GENERATED_SHA256: &str = "aebb4149a711b2b988aae50af6a2a003ff5c45a22d8716fe530d56f7b57c1f1c";
+const GENERATED_SHA256: &str = "0c9a641f11b792051a23e11d11ad3bebe473ca5667a30cdce3a811bd21457b32";
 
 fn read_pack_file(rel: &str) -> String {
     std::fs::read_to_string(format!("{PACK_DIR}/{rel}"))
