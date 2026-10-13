@@ -1,0 +1,59 @@
+# MESSAGE: any returned row refuses manufacture. G1: every erlmcp code maps
+# to EXACTLY ONE ash_a2a class, and every mapping is total (code, macro,
+# class, httpStatus, severity all present); no two mappings share a code.
+PREFIX rv:  <urn:refusal-vocabulary:>
+PREFIX dct: <http://purl.org/dc/terms/>
+SELECT ?s (COALESCE(?p1, ?p2, ?p3, ?p4, ?p5, ?p6, ?p7) AS ?problem) WHERE {
+  {
+    ?s a rv:RefusalMapping .
+    FILTER NOT EXISTS { ?s rv:ashA2aClass ?c }
+    BIND("mapping-without-ashA2aClass" AS ?p1)
+  }
+  UNION
+  {
+    ?s a rv:RefusalMapping .
+    FILTER NOT EXISTS { ?s rv:erlmcpCode ?n }
+    BIND("mapping-without-erlmcpCode" AS ?p2)
+  }
+  UNION
+  {
+    ?s a rv:RefusalMapping .
+    FILTER NOT EXISTS { ?s rv:severity ?sev }
+    BIND("mapping-without-severity" AS ?p3)
+  }
+  UNION
+  {
+    ?s a rv:RefusalMapping .
+    FILTER NOT EXISTS { ?s rv:httpStatus ?h }
+    BIND("mapping-without-httpStatus" AS ?p4)
+  }
+  UNION
+  {
+    ?s a rv:RefusalMapping .
+    FILTER NOT EXISTS { ?s dct:description ?d }
+    BIND("mapping-without-description" AS ?p5)
+  }
+  UNION
+  {
+    ?s a rv:RefusalMapping .
+    {
+      SELECT ?s (COUNT(DISTINCT ?c) AS ?n) WHERE {
+        ?s rv:ashA2aClass ?c .
+      } GROUP BY ?s
+    }
+    FILTER (?n > 1)
+    BIND("mapping-with-multiple-classes" AS ?p6)
+  }
+  UNION
+  {
+    {
+      SELECT ?code (COUNT(DISTINCT ?m) AS ?k) WHERE {
+        ?m a rv:RefusalMapping ; rv:erlmcpCode ?code .
+      } GROUP BY ?code
+    }
+    FILTER (?k > 1)
+    BIND("duplicate-erlmcp-code" AS ?p7)
+    BIND(?code AS ?s)
+  }
+}
+ORDER BY ?s ?problem

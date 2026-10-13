@@ -1,0 +1,18 @@
+# MESSAGE: any returned row refuses manufacture. G2: every ash_a2a refusal
+# class (18) is targeted by >= 1 erlmcp code, and every ashA2aClass IRI
+# resolves to a declared RefusalClass.
+PREFIX rv:  <urn:refusal-vocabulary:>
+SELECT ?cls (COALESCE(?p1, ?p2) AS ?problem) WHERE {
+  {
+    ?cls a rv:RefusalClass .
+    FILTER NOT EXISTS { ?m rv:ashA2aClass ?cls . ?m a rv:RefusalMapping }
+    BIND("class-targeted-by-zero-codes" AS ?p1)
+  }
+  UNION
+  {
+    ?m a rv:RefusalMapping ; rv:ashA2aClass ?cls .
+    FILTER NOT EXISTS { ?cls a rv:RefusalClass }
+    BIND("mapping-to-undeclared-class" AS ?p2)
+  }
+}
+ORDER BY ?cls ?problem

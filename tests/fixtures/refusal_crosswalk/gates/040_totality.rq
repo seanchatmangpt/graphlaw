@@ -1,0 +1,43 @@
+# MESSAGE: any returned row refuses manufacture. G4 (generalized, closure-style):
+# totality without hardcoded literal counts. Two closure checks over declared
+# individuals:
+#   (a) macro bijection: every rv:RefusalMapping's rv:macro string is declared
+#       exactly once in the rv:DeclaredMacro universe -- undeclared macro,
+#       unused declared macro, or a declared macro used twice all refuse;
+#   (b) class closure: every rv:RefusalMapping targets a declared
+#       rv:RefusalClass, and every declared class is targeted (count-of-
+#       declared both directions).
+# Adding a fake mapping (fresh or duplicate macro) or deleting one both
+# produce a violation row.
+PREFIX rv:  <urn:refusal-vocabulary:>
+SELECT ?s (COALESCE(?p1, ?p2, ?p3, ?p4) AS ?problem) WHERE {
+  {
+    ?m a rv:RefusalMapping ; rv:macro ?mac .
+    FILTER NOT EXISTS { ?dm a rv:DeclaredMacro ; rv:macroName ?mac }
+    BIND(?m AS ?s) BIND("mapping-macro-not-in-declared-universe" AS ?p1)
+  }
+  UNION
+  {
+    ?dm a rv:DeclaredMacro ; rv:macroName ?mac .
+    FILTER NOT EXISTS { ?m a rv:RefusalMapping ; rv:macro ?mac }
+    BIND(?dm AS ?s) BIND("declared-macro-with-zero-mappings" AS ?p2)
+  }
+  UNION
+  {
+    ?dm a rv:DeclaredMacro ; rv:macroName ?mac .
+    {
+      SELECT ?mac (COUNT(DISTINCT ?m) AS ?k) WHERE {
+        ?m a rv:RefusalMapping ; rv:macro ?mac .
+      } GROUP BY ?mac
+    }
+    FILTER (?k > 1)
+    BIND(?dm AS ?s) BIND("declared-macro-used-more-than-once" AS ?p3)
+  }
+  UNION
+  {
+    ?c a rv:RefusalClass .
+    FILTER NOT EXISTS { ?m2 a rv:RefusalMapping ; rv:ashA2aClass ?c }
+    BIND(?c AS ?s) BIND("declared-class-targeted-by-zero-mappings" AS ?p4)
+  }
+}
+ORDER BY ?s ?problem

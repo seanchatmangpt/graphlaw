@@ -1,0 +1,50 @@
+# MESSAGE: any returned row refuses manufacture. G5 valve totality (both
+# directions): every declared rv:ValveClass is mapped by EXACTLY ONE
+# rv:ValveMapping, and every rv:ValveMapping is complete (valveClass +
+# ashA2aClass present, ashA2aClass declared, valveClass declared). An
+# unmapped valve class, a doubly-mapped valve class, or a ValveMapping
+# pointing at an undeclared class all refuse.
+PREFIX rv:  <urn:refusal-vocabulary:>
+SELECT ?s (COALESCE(?p1, ?p2, ?p3, ?p4, ?p5, ?p6) AS ?problem) WHERE {
+  {
+    ?vc a rv:ValveClass .
+    FILTER NOT EXISTS { ?vm a rv:ValveMapping ; rv:valveClass ?vc }
+    BIND(?vc AS ?s) BIND("valve-class-with-zero-mappings" AS ?p1)
+  }
+  UNION
+  {
+    ?vc a rv:ValveClass .
+    {
+      SELECT ?vc (COUNT(DISTINCT ?vm) AS ?k) WHERE {
+        ?vm a rv:ValveMapping ; rv:valveClass ?vc .
+      } GROUP BY ?vc
+    }
+    FILTER (?k > 1)
+    BIND(?vc AS ?s) BIND("valve-class-mapped-more-than-once" AS ?p2)
+  }
+  UNION
+  {
+    ?vm a rv:ValveMapping .
+    FILTER NOT EXISTS { ?vm rv:valveClass ?vc }
+    BIND(?vm AS ?s) BIND("valve-mapping-without-valveClass" AS ?p3)
+  }
+  UNION
+  {
+    ?vm a rv:ValveMapping .
+    FILTER NOT EXISTS { ?vm rv:ashA2aClass ?cls }
+    BIND(?vm AS ?malformed) BIND("valve-mapping-without-ashA2aClass" AS ?p4)
+  }
+  UNION
+  {
+    ?vm a rv:ValveMapping ; rv:ashA2aClass ?cls .
+    FILTER NOT EXISTS { ?cls a rv:RefusalClass }
+    BIND(?vm AS ?s) BIND("valve-mapping-to-undeclared-class" AS ?p5)
+  }
+  UNION
+  {
+    ?vm a rv:ValveMapping ; rv:valveClass ?vc .
+    FILTER NOT EXISTS { ?vc a rv:ValveClass }
+    BIND(?vm AS ?s) BIND("valve-mapping-to-undeclared-valve-class" AS ?p6)
+  }
+}
+ORDER BY ?s ?problem
