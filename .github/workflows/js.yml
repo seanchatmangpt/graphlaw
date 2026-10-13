@@ -148,14 +148,33 @@ jobs:
     if: vars.RELEASE_HOLD != 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.96.0
+          targets: wasm32-wasip1
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: js/npm/package-lock.json
       - name: package.json version matches workspace
         run: |
           set -euo pipefail
           node js/npm/scripts/sync-version.mjs
           git diff --exit-code -- js/npm/package.json
+      - name: artifact-meta.ts is current (rebuild wasm, repin, diff)
+        run: |
+          set -euo pipefail
+          # Build-health gate: the tree must still produce the wasm artifact.
+          # NOTE: the rebuild's bytes are NOT digest-compared here — the wasm
+          # build is not byte-reproducible across host platforms (macOS and
+          # Linux rebuilds of the same source/lock differ), so the artifact pin
+          # (priv/graphlaw.wasm + priv/graphlaw.wasm.sha256) is the authority.
+          cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm --locked
+          # Re-pin artifact-meta.ts from the committed, pinned artifact; any
+          # hand edit or stale digest in js/npm/src/generated fails the job.
+          node js/npm/scripts/build.mjs
+          git diff --exit-code -- js/npm/src/generated
       - name: generated types are current
         working-directory: js/npm
         run: |

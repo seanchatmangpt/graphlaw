@@ -222,3 +222,194 @@ fn router_refuses_non_semantic_and_ambiguous_input() {
         Dialect::NTriples
     );
 }
+
+// ---------------------------------------------------------------------------
+// Vector-gen examples as consumed corpus (af3c169 orphans)
+//
+// The seven vector generators are bins (required-features = ["abi"]); each
+// test below RUNS one for real into a fresh temp GL_VECDIR, re-runs its
+// --verify mode where it has one (re-evaluating every emitted vector through
+// the engine), asserts the emitted JSON vectors carry the shared envelope
+// (vector_id / provenance / expected), and routes the emitted semantic files
+// (.n3) through the same dialect sniff/check the committed corpus gets.
+// ---------------------------------------------------------------------------
+
+#[cfg(feature = "abi")]
+mod vecgen {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::process::Command;
+
+    const BASE: &str = super::BASE;
+
+    /// Fresh output dir for generator `name`, stable across calls within one
+    /// test process so generate -> --verify sees the same vectors.
+    fn gen_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "graphlaw-vecgen-{}-{}",
+            name,
+            std::process::id()
+        ));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("create temp vecdir");
+        dir
+    }
+
+    /// Runs generator `name` (with `args`) with GL_VECDIR at `dir`.
+    fn run_gen(name: &str, args: &[&str], dir: &PathBuf) -> String {
+        let exe = std::env::var(format!("CARGO_BIN_EXE_{name}")).unwrap_or_else(|_| {
+            panic!("{name} binary not built; the corpus tests require --features abi")
+        });
+        let out = Command::new(exe)
+            .args(args)
+            .env("GL_VECDIR", dir)
+            .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")))
+            .output()
+            .expect("spawn generator");
+        assert!(
+            out.status.success(),
+            "{name} {args:?} failed:\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr)
+        );
+        String::from_utf8_lossy(&out.stdout).into_owned()
+    }
+
+    /// Every emitted vector must be well-formed JSON carrying provenance and a
+    /// case id (`vector_id`, or `vector` for the naive-physics fixtures);
+    /// emitted .n3 goes through the same dialect court as committed assets.
+    fn assert_emitted(dir: &PathBuf) -> usize {
+        let mut n = 0;
+        let mut entries: Vec<_> = fs::read_dir(dir).unwrap().map(|e| e.unwrap()).collect();
+        entries.sort_by_key(|e| e.file_name());
+        for e in entries {
+            let path = e.path();
+            match path.extension().and_then(|x| x.to_str()) {
+                Some("json") => {
+                    let text = fs::read_to_string(&path).unwrap();
+                    let v: serde_json::Value = serde_json::from_str(&text)
+                        .unwrap_or_else(|e| panic!("{}: not valid JSON: {e}", path.display()));
+                    assert!(
+                        v.get("vector_id").is_some() || v.get("vector").is_some(),
+                        "{}: missing case id (vector_id/vector) in vector envelope",
+                        path.display()
+                    );
+                    assert!(
+                        v.get("provenance").is_some(),
+                        "{}: missing `provenance` in vector envelope",
+                        path.display()
+                    );
+                    n += 1;
+                }
+                Some("n3") => {
+                    let bytes = fs::read(&path).unwrap();
+                    let d = super::sniff(&bytes, Some("n3")).unwrap_or_else(|e| {
+                        panic!("{}: routing refused: {e}", path.display())
+                    });
+                    assert!(
+                        matches!(
+                            d,
+                            super::Dialect::N3 | super::Dialect::Turtle | super::Dialect::NTriples
+                        ),
+                        "{}: routed as {d:?}",
+                        path.display()
+                    );
+                    super::check(&bytes, d, Some(BASE))
+                        .unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+                    n += 1
+                }
+                _ => {} // SCHEMA.md / ENCODERS.md: markdown companions, not semantic
+            }
+        }
+        n
+    }
+
+    /// Generates, then re-evaluates every emitted vector via `--verify`.
+    fn generate_and_verify(name: &str) -> usize {
+        let dir = gen_dir(name);
+        let stdout = run_gen(name, &[], &dir);
+        let n = assert_emitted(&dir);
+        assert!(n > 0, "{name}: emitted no vectors (stdout: {stdout})");
+        run_gen(name, &["--verify"], &dir);
+        let _ = fs::remove_dir_all(&dir);
+        n
+    }
+
+    /// Generates only (self-checks run inside generation: differential courts,
+    /// dual-route agreement, brute-force oracles).
+    fn generate_only(name: &str) -> usize {
+        let dir = gen_dir(name);
+        let stdout = run_gen(name, &[], &dir);
+        let n = assert_emitted(&dir);
+        assert!(n > 0, "{name}: emitted no vectors (stdout: {stdout})");
+        let _ = fs::remove_dir_all(&dir);
+        n
+    }
+
+    #[test]
+    fn vecgen_allen_datalog_transcription_matches_oracle_and_n3_roundtrips() {
+        // Runs the full in-binary pipeline: 169-entry transcription-vs-oracle
+        // court, engine case runs, and idempotent re-emission of the committed
+        // examples/allen_comp_table.n3 (byte-identical by construction; any
+        // drift dirties the tree and the drift test below fails).
+        let stdout = run_gen("allen_datalog", &[], &gen_dir("allen_datalog"));
+        assert!(
+            stdout.contains("169/169 entries match"),
+            "allen table-check did not report full agreement:\n{stdout}"
+        );
+    }
+
+    #[test]
+    fn vecgen_allen_committed_comp_table_is_byte_current() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        static LOCK: AtomicU32 = AtomicU32::new(0);
+        while LOCK.compare_exchange(0, 1, Ordering::SeqCst, Ordering::SeqCst).is_err() {
+            std::thread::yield_now();
+        }
+        let committed = fs::read_to_string("examples/allen_comp_table.n3").unwrap();
+        run_gen("allen_datalog", &[], &gen_dir("allen_datalog"));
+        let after = fs::read_to_string("examples/allen_comp_table.n3").unwrap();
+        LOCK.store(0, Ordering::SeqCst);
+        assert_eq!(
+            committed, after,
+            "examples/allen_comp_table.n3 is stale relative to the oracle in examples/allen_datalog.rs"
+        );
+    }
+
+    #[test]
+    fn vecgen_asp_tableaux_generate_then_verify() {
+        let n = generate_and_verify("asp_tableaux_vector_gen");
+        assert!(n >= 4, "asp/tableaux emitted only {n} files");
+    }
+
+    #[test]
+    fn vecgen_bayes_pop_generate_then_verify() {
+        let n = generate_and_verify("bayes_pop_vectors");
+        assert!(n >= 4, "bayes/pop emitted only {n} files");
+    }
+
+    #[test]
+    fn vecgen_breed_oracle_generate_then_verify() {
+        let n = generate_and_verify("breed_oracle_gen");
+        assert!(n >= 4, "breed emitted only {n} files");
+    }
+
+    #[test]
+    fn vecgen_event_calculus_dual_route_agrees() {
+        let n = generate_only("event_calculus_vectors");
+        assert!(n >= 1, "event calculus emitted only {n} files");
+    }
+
+    #[test]
+    fn vecgen_naive_physics_fixtures() {
+        let n = generate_only("naive_physics_vectors");
+        // 4 scene vectors + SCHEMA.md + ENCODERS.md; envelope counts the 4 JSONs.
+        assert!(n >= 4, "naive physics emitted only {n} vectors");
+    }
+
+    #[test]
+    fn vecgen_plan_replay_generate_then_verify() {
+        let n = generate_and_verify("plan_replay_oracle_gen");
+        assert!(n >= 4, "plan replay emitted only {n} files");
+    }
+}

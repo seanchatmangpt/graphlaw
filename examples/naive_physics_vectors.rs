@@ -91,7 +91,12 @@ fn scenes() -> Vec<Scene> {
 }
 
 fn main() {
-    let out_dir = PathBuf::from(OUT_DIR);
+    // GL_VECDIR overrides the output dir (same convention as the other vector
+    // generators); the wasm4pm fixture path remains the default.
+    let out_dir = std::env::var_os("GL_VECDIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(OUT_DIR));
+    let shown = out_dir.display();
     fs::create_dir_all(&out_dir).expect("create fixture dir");
     for s in scenes() {
         let vector = build_vector(&s);
@@ -99,9 +104,9 @@ fn main() {
         fs::write(&path, vector).expect("write vector");
         println!("wrote {}", path.display());
     }
-    println!("wrote {OUT_DIR}/SCHEMA.md");
+    println!("wrote {shown}/SCHEMA.md");
     fs::write(out_dir.join("SCHEMA.md"), schema_doc()).expect("write SCHEMA.md");
-    println!("wrote {OUT_DIR}/ENCODERS.md");
+    println!("wrote {shown}/ENCODERS.md");
     fs::write(out_dir.join("ENCODERS.md"), encoders_doc()).expect("write ENCODERS.md");
 }
 
