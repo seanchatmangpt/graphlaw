@@ -36,7 +36,7 @@ jobs:
           targets: wasm32-wasip1
       - name: Build WASI module (wasm profile)
         run: cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm --locked
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -179,7 +179,7 @@ jobs:
         with:
           toolchain: 1.96.0
           targets: wasm32-wasip1
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
