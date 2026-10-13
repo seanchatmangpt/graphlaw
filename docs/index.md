@@ -19,6 +19,8 @@ Documentation is organized by Diataxis: [tutorials](#tutorials) teach,
   `graphlaw-verify` offline replay: flags, exit codes, tamper refusals.
 - [Use knowledge hooks](how-to/use-knowledge-hooks.md) — `kh:` packs, fixpoint
   materialization, the refuse effect.
+- [Use from JavaScript](how-to/use-from-javascript.md) — install the npm package,
+  load the WASM module in Node and browsers.
 
 ## Reference
 
@@ -30,6 +32,8 @@ Documentation is organized by Diataxis: [tutorials](#tutorials) teach,
 - [WASM integration](wasm-integration.md) — generated shell vs hand-written safe core.
 - [Full generated reference](reference-generated/reference.md) — machine-rendered
   module/symbol tables (regen: [instructions](reference-generated/README.md)).
+- [TypeScript API](reference/typescript-api.md) — the npm package's exported
+  functions, types, and error mapping.
 
 ## Explanation
 

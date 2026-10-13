@@ -29,6 +29,11 @@ ERRC release: Eliminate/Reduce/Raise pass over the repo; no semantic changes to 
 
 ### Added
 
+- Initial JavaScript/TypeScript distribution: npm package `graphlaw` wrapping the
+  pinned wasm32-wasip1 artifact (js/ tree) — typed client for all 14 ops,
+  graphlaw/raw passthrough, types generated from registry/capability-registry.json,
+  vitest golden-vector suite over registry/op-examples.json, and a Trusted-Publishing
+  publish workflow. Unreleased; npm publish happens later.
 - Diataxis documentation tree linked from the README: docs/index.md hub,
   four hand-written how-tos (run-the-wasm-module, authorize-with-signed-leases,
   verify-without-trusting-the-operator, use-knowledge-hooks), and

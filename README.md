@@ -42,9 +42,23 @@ Organized Diataxis-style; the hub is [docs/index.md](docs/index.md).
 | | |
 |---|---|
 | **Tutorial** | [Quickstart](docs/quickstart.md) |
-| **How-to** | [Run the WASM module](docs/how-to/run-the-wasm-module.md) · [Signed leases](docs/how-to/authorize-with-signed-leases.md) · [Offline verification](docs/how-to/verify-without-trusting-the-operator.md) · [Knowledge hooks](docs/how-to/use-knowledge-hooks.md) |
+| **How-to** | [Run the WASM module](docs/how-to/run-the-wasm-module.md) · [Signed leases](docs/how-to/authorize-with-signed-leases.md) · [Offline verification](docs/how-to/verify-without-trusting-the-operator.md) · [Knowledge hooks](docs/how-to/use-knowledge-hooks.md) · [Use from JavaScript](docs/how-to/use-from-javascript.md) |
 | **Reference** | [ABI reference](docs/abi-reference.md) · [Capability registry](docs/capability-registry.md) · [Refusals](docs/refusals.md) · [API stability](docs/api-stability.md) · [WASM integration](docs/wasm-integration.md) · [Full generated reference](docs/reference-generated/reference.md) |
 | **Explanation** | [Qualification algebra](docs/QUALIFICATION_ALGEBRA.md) · [Chicago courts](docs/CHICAGO_N3_DATALOG.md) ([FIBO](docs/CHICAGO_FIBO.md), [cross-authority](docs/CHICAGO_CROSS_AUTHORITY.md)) · [Receipt fields](docs/explanation/receipt-fields.md) |
+
+## JavaScript / TypeScript
+
+The WASM module is also wrapped as the npm package `graphlaw`, so the same law-state
+surface can be driven from Node or the browser without touching Rust. See
+[docs/how-to/use-from-javascript.md](docs/how-to/use-from-javascript.md).
+
+```sh
+npm i graphlaw
+```
+
+```js
+import { createClient } from 'graphlaw'
+```
 
 ## The law-state loop
 

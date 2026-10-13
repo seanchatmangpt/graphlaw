@@ -9,3 +9,15 @@ target-mutants/
 .ggen/
 .ggen-v2/
 .clap-noun-verb/
+
+.DS_Store
+
+js/npm/node_modules/
+js/npm/dist-nodejs/
+js/npm/dist-web/
+js/npm/dist-bundler/
+js/npm/tsc-out/
+js/npm/wasm/graphlaw.wasm
+js/npm/*.tgz
+js/npm/test-results/
+js/npm/playwright-report/

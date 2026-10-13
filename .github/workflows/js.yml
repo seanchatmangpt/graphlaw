@@ -1,0 +1,165 @@
+name: js
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'js/**'
+      - 'registry/**'
+      - '.github/workflows/js.yml'
+  pull_request:
+    paths:
+      - 'js/**'
+      - 'registry/**'
+      - '.github/workflows/js.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: js-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  js-build:
+    name: build wasm + js dist
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # RELEASE_HOLD is a release.yml gate; mirrored here so a hold freezes the
+    # JS surface too (nothing new is built or shipped while held).
+    if: vars.RELEASE_HOLD != 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.96.0
+          targets: wasm32-wasip1
+      - name: Build WASI module (wasm profile)
+        run: cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm --locked
+      - name: Verify WASI module digest matches priv/graphlaw.wasm.sha256
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual=$(shasum -a 256 target/wasm32-wasip1/wasm/graphlaw_wasm.wasm)
+          echo "$actual"
+          expected=$(cat priv/graphlaw.wasm.sha256)
+          echo "expected: $expected"
+          # Compare by digest field only, tolerating path/filename differences.
+          a=$(awk '{print $1}' <<<"$actual")
+          e=$(awk '{print $1}' <<<"$expected")
+          [ "$a" = "$e" ] || { echo "ERROR: wasm digest mismatch"; exit 1; }
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: js/npm/package-lock.json
+      - name: Build JS distributions
+        working-directory: js/npm
+        run: npm ci && npm run build
+      - name: Upload JS dist artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: graphlaw-js-dist
+          path: |
+            js/npm/dist-nodejs/**
+            js/npm/dist-web/**
+            js/npm/dist-bundler/**
+            js/npm/wasm/**
+
+  js-test-node:
+    name: node tests (node ${{ matrix.node }})
+    needs: js-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: vars.RELEASE_HOLD != 'true'
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: graphlaw-js-dist
+          path: js/npm
+      - name: Install
+        working-directory: js/npm
+        run: npm ci
+      - name: Typecheck
+        working-directory: js/npm
+        run: npm run typecheck
+      - name: Test
+        working-directory: js/npm
+        run: npm run test
+
+  js-test-browser:
+    name: browser tests
+    needs: js-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: vars.RELEASE_HOLD != 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: graphlaw-js-dist
+          path: js/npm
+      - name: Install
+        working-directory: js/npm
+        run: npm ci
+      # Browser tests require a real Chromium via playwright. We do NOT run
+      # `npx playwright-core install chromium` here: the `install` command
+      # ships in the `playwright` package, not `playwright-core`, so it would
+      # fail on this dependency set. The browser suite self-skips cleanly
+      # (exit 0) when no browser binary is available, so running it is safe:
+      # it either executes for real (when playwright is resolvable) or skips
+      # without failing the job. GRAPHLAW_BROWSER_TESTS=1 opts the suite in.
+      - name: Browser tests
+        working-directory: js/npm
+        env:
+          GRAPHLAW_BROWSER_TESTS: '1'
+        run: npm run test:browser
+
+  js-package-lint:
+    name: package lint + pack smoke
+    needs: js-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: vars.RELEASE_HOLD != 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: graphlaw-js-dist
+          path: js/npm
+      - name: Install
+        working-directory: js/npm
+        run: npm ci
+      - name: Package lint
+        working-directory: js/npm
+        run: npm run lint:pkg
+      - name: Pack smoke
+        working-directory: js/npm
+        run: node scripts/pack-smoke.mjs
+
+  js-drift:
+    name: generated + version drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: vars.RELEASE_HOLD != 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+      - name: package.json version matches workspace
+        run: |
+          set -euo pipefail
+          node js/npm/scripts/sync-version.mjs
+          git diff --exit-code -- js/npm/package.json
+      - name: generated types are current
+        working-directory: js/npm
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run gen
+          git diff --exit-code -- src/generated

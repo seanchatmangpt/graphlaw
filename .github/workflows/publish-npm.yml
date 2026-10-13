@@ -1,0 +1,193 @@
+name: publish-npm
+
+# npm Trusted Publishing (OIDC) — NO NPM_TOKEN secret exists or may be added.
+# Doctrine (mirrors release.yml, operator decision 2026-10-10): CI never holds
+# registry credentials. Publication authenticates via GitHub OIDC against npm
+# Trusted Publishing, so no token is stored anywhere.
+#
+# One-time operator configuration required before this workflow can publish:
+#   1. On npmjs.com, configure a Trusted Publisher for the `graphlaw` package:
+#        repository: seanchatmangpt/graphlaw
+#        workflow:   publish-npm.yml
+#        environment: npm
+#   2. Create a GitHub environment named `npm` on this repository
+#      (optionally with protection rules / required reviewers).
+#
+# Provenance: under OIDC trusted publishing, provenance is generated
+# automatically by npm — plain `npm publish` suffices. Do NOT pass
+# `--provenance` (that flag applies to token-based flows). The repository must
+# be public for provenance to be visible.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  # npm Trusted Publishing requires OIDC; id-token is declared here AND on the
+  # publish job so the publish surface cannot be reached without it.
+  id-token: write
+
+jobs:
+  validate:
+    name: validate and pack
+    # HOLD semantics mirror release.yml: while the repository variable
+    # RELEASE_HOLD is `true`, nothing runs (nothing is validated or published).
+    # Job-level guard (rather than release.yml's step-level env check) is the
+    # strictest equivalent: on a held tag push both jobs skip before any step
+    # executes. Release = delete/unset the variable, then re-run this workflow.
+    if: vars.RELEASE_HOLD != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.versions.outputs.version }}
+      artifact_name: ${{ steps.pack.outputs.artifact_name }}
+      tarball: ${{ steps.pack.outputs.tarball }}
+      sha256: ${{ steps.pack.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.96.0
+          targets: wasm32-wasip1
+
+      - name: Verify tag matches package and crate versions (fail closed)
+        id: versions
+        run: |
+          set -euo pipefail
+          expected="v$(node -p "JSON.parse(require('fs').readFileSync('js/npm/package.json','utf8')).version")"
+          crate_ver=$(python3 -c "import tomllib; print(tomllib.load(open('Cargo.toml','rb'))['package']['version'])")
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Tag push: ref_name IS the tag — compare all three.
+            if [ "$expected" != "${{ github.ref_name }}" ]; then
+              echo "Tag ${{ github.ref_name }} does not match js/npm/package.json version ($expected)." >&2
+              exit 1
+            fi
+            if [ "v$crate_ver" != "${{ github.ref_name }}" ]; then
+              echo "Tag ${{ github.ref_name }} does not match root Cargo.toml version (v$crate_ver)." >&2
+              exit 1
+            fi
+          else
+            # workflow_dispatch from a branch: no tag to compare — still fail
+            # closed unless the package and crate versions agree with each other.
+            if [ "$expected" != "v$crate_ver" ]; then
+              echo "package.json ($expected) != Cargo.toml (v$crate_ver); refusing to publish a drifted tree." >&2
+              exit 1
+            fi
+          fi
+          echo "version=$crate_ver" >> "$GITHUB_OUTPUT"
+
+      - name: Build wasm artifact and verify digest against pinned sha256
+        run: |
+          set -euo pipefail
+          cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+          WASM=target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
+          [ -f "$WASM" ] || { echo "wasm artifact missing: $WASM" >&2; exit 1; }
+          got=$(sha256sum "$WASM" | cut -d' ' -f1)
+          pinned=$(cut -d' ' -f1 priv/graphlaw.wasm.sha256)
+          if [ "$got" != "$pinned" ]; then
+            echo "wasm digest drift: built $got, pinned $pinned" >&2
+            exit 1
+          fi
+          echo "GRAPHLAW_WASM_SOURCE=$PWD/$WASM" >> "$GITHUB_ENV"
+
+      - name: Install, build, and test the npm package
+        working-directory: js/npm
+        run: |
+          npm ci
+          npm run build
+          npm test
+
+      - name: Pack (real, not dry-run) with tarball drift check
+        id: pack
+        working-directory: js/npm
+        env:
+          VERSION: ${{ steps.versions.outputs.version }}
+        run: |
+          set -euo pipefail
+          tgz="graphlaw-$VERSION.tgz"
+          npm pack --pack-destination .
+          [ -f "$tgz" ] || { echo "expected tarball $tgz not produced" >&2; exit 1; }
+          # Drift check: pack a second time and compare file lists.
+          npm pack --pack-destination /tmp/pack2 >/dev/null
+          if ! diff <(tar -tzf "$tgz" | sort) <(tar -tzf "/tmp/pack2/$tgz" | sort) >/dev/null; then
+            echo "tarball drift: two packs of the same tree differ in file list" >&2
+            exit 1
+          fi
+          sha=$(sha256sum "$tgz" | cut -d' ' -f1)
+          echo "sha256 of $tgz: $sha"
+          echo "artifact_name=npm-tarball-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+          echo "tarball=$tgz" >> "$GITHUB_OUTPUT"
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Upload tarball artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: npm-tarball-${{ github.run_id }}
+          path: js/npm/graphlaw-*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: publish to npm (OIDC)
+    needs: validate
+    # Same HOLD semantics: nothing is published while RELEASE_HOLD is `true`.
+    if: vars.RELEASE_HOLD != 'true' && needs.validate.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          # npm Trusted Publishing requires Node >= 22.14 (latest 22.x satisfies it).
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      # npm Trusted Publishing requires npm CLI >= 11.5.1; Node 22 bundles
+      # npm 10.x, so upgrade npm before publishing.
+      - name: Upgrade npm to Trusted-Publishing-capable version (>= 11.5.1)
+        run: npm install -g npm@latest
+
+      - name: Download validated tarball
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ needs.validate.outputs.artifact_name }}
+          path: dist
+
+      - name: Re-verify tarball sha256
+        env:
+          EXPECTED_SHA256: ${{ needs.validate.outputs.sha256 }}
+          TARBALL: ${{ needs.validate.outputs.tarball }}
+        run: |
+          set -euo pipefail
+          [ -f "dist/$TARBALL" ] || { echo "tarball missing: dist/$TARBALL" >&2; exit 1; }
+          got=$(sha256sum "dist/$TARBALL" | cut -d' ' -f1)
+          if [ "$got" != "$EXPECTED_SHA256" ]; then
+            echo "sha256 mismatch across jobs: $got != $EXPECTED_SHA256" >&2
+            exit 1
+          fi
+
+      # Provenance is automatic under OIDC trusted publishing; do not pass
+      # --provenance (token-based-flow flag). Plain publish suffices.
+      - name: Publish to npm
+        working-directory: dist
+        run: npm publish "${{ needs.validate.outputs.tarball }}" --access public --tag latest
