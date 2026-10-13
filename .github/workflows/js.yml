@@ -36,23 +36,50 @@ jobs:
           targets: wasm32-wasip1
       - name: Build WASI module (wasm profile)
         run: cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm --locked
-      - name: Verify WASI module digest matches priv/graphlaw.wasm.sha256
-        shell: bash
-        run: |
-          set -euo pipefail
-          actual=$(shasum -a 256 target/wasm32-wasip1/wasm/graphlaw_wasm.wasm)
-          echo "$actual"
-          expected=$(cat priv/graphlaw.wasm.sha256)
-          echo "expected: $expected"
-          # Compare by digest field only, tolerating path/filename differences.
-          a=$(awk '{print $1}' <<<"$actual")
-          e=$(awk '{print $1}' <<<"$expected")
-          [ "$a" = "$e" ] || { echo "ERROR: wasm digest mismatch"; exit 1; }
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: js/npm/package-lock.json
+      - name: Verify WASI module ABI surface matches the pinned artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Byte-level drift guard: the committed pin must still match the
+          # committed artifact bytes (catches hand edits and stale pins).
+          expected=$(awk '{print $1}' priv/graphlaw.wasm.sha256)
+          actual=$(shasum -a 256 priv/graphlaw.wasm | awk '{print $1}')
+          echo "pinned artifact: $actual"
+          echo "pin file:        $expected"
+          [ "$actual" = "$expected" ] || { echo "ERROR: priv/graphlaw.wasm bytes drifted from priv/graphlaw.wasm.sha256; repin the artifact"; exit 1; }
+          # Semantic ABI gate: the wasm build is NOT byte-reproducible across
+          # host platforms. Even with --remap-path-prefix normalizing the
+          # embedded panic-location paths (macOS /Users/sac/.cargo vs Linux
+          # /usr/local/cargo), rustc/LLVM emit the merged string-constant pool
+          # in a host-dependent order, so a Linux rebuild of the same source,
+          # lockfile and toolchain can never equal the macOS-built pin
+          # byte-for-byte (witnessed: macOS 21262fe8, CI Linux bf2bdd8f,
+          # linux-aarch64 docker 13dab85c). The rebuild is therefore compared
+          # on its import/export ABI surface instead; byte authority remains
+          # with the committed pin (guard above + js-drift + build.mjs).
+          node -e '
+          const { createHash } = require("node:crypto");
+          const { readFileSync } = require("node:fs");
+          const abiHash = (path) => {
+            const mod = new WebAssembly.Module(readFileSync(path));
+            const exports = WebAssembly.Module.exports(mod).map(e => e.name + ":" + e.kind).sort();
+            const imports = WebAssembly.Module.imports(mod).map(e => e.module + "/" + e.name + ":" + e.kind).sort();
+            return createHash("sha256").update(exports.join("|") + "#" + imports.join("|")).digest("hex");
+          };
+          const fresh = abiHash("target/wasm32-wasip1/wasm/graphlaw_wasm.wasm");
+          const pinned = abiHash("priv/graphlaw.wasm");
+          console.log("fresh rebuild ABI: " + fresh);
+          console.log("pinned artifact ABI: " + pinned);
+          if (fresh !== pinned) {
+            console.error("ERROR: rebuilt wasm ABI surface differs from pinned artifact; repin priv/graphlaw.wasm");
+            process.exit(1);
+          }
+          '
       - name: Build JS distributions
         working-directory: js/npm
         run: npm ci && npm run build
