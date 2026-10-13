@@ -11,7 +11,7 @@ the source of truth for everything else.
 
 | File | Generated? | Source of truth |
 | --- | --- | --- |
-| `npm/src/generated/` (types.ts, artifact-meta.ts) | GENERATED | Committed and CI drift-guarded via `git diff --exit-code` after regeneration (`gen-types.mjs --check` / `build.mjs`) |
+| `npm/src/generated/` (types.ts, artifact-meta.ts) | GENERATED | Committed and CI drift-guarded: the `js-drift` job in `.github/workflows/js.yml` rebuilds the wasm, re-pins via `build.mjs`, regenerates types via `gen-types.mjs`, and fails on any `git diff` in `npm/src/generated/` or `npm/package.json` |
 | `npm/src/generated/types.ts` | GENERATED | `registry/capability-registry.json` via `npm/scripts/gen-types.mjs`; drift check fails CI on hand edit |
 | `npm/src/generated/artifact-meta.ts` | GENERATED | `priv/graphlaw.wasm` via `npm/scripts/build.mjs` (artifact hash + ABI metadata) |
 | `npm/src/limits.ts` | GENERATED-ADJACENT | Mirror of the limits in `registry/capability-registry.json`; kept in sync by test (`test/limits.test.ts`), not re-rendered |

@@ -25,7 +25,8 @@ jobs:
       - name: Format
         run: cargo fmt --check
       - name: Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        # castle-diff excluded: pulls nightly-only wasm4pm-compat (E0554 on stable).
+        run: cargo clippy --all-targets --features pack-tools,abi,wasi-patched-deps -- -D warnings
       - name: Build WASI module
         run: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
       - name: Capability registry is current (graphlaw-registry --check)
@@ -33,7 +34,7 @@ jobs:
       - name: Test backend authorities
         env:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
-        run: cargo test --locked --all-targets --all-features
+        run: cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps
       - name: Upload WASI module
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -42,7 +43,24 @@ jobs:
       - name: Package both crates together (publish readiness)
         run: cargo package -p graphlaw-eyeron -p graphlaw
       - name: Docs
-        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features pack-tools,abi,wasi-patched-deps
+
+  # Nightly-only cross-engine court (L41). Lives in a workspace-excluded crate
+  # because ggen-engine -> wasm4pm-compat 26.8.7 is nightly-only (E0554 on
+  # stable) and a git dep in the root manifest would trip the publishability
+  # manifest check (tests/authority_manifest.rs).
+  castle-diff:
+    name: castle hash-unification court (nightly)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: nightly
+      - name: Run castle-diff court
+        working-directory: courts/castle-diff
+        run: cargo +nightly test
 
   wasm:
     name: library-backed wasm32
