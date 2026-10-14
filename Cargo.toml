@@ -32,6 +32,15 @@ path = "src/lib.rs"
 
 [dependencies]
 purrdf = "=2.0.2"
+# SECURITY (supply-chain note): the tree carries BOTH sha2 0.10.9 and sha2 0.11.0.
+# graphlaw itself uses 0.11; sha2 0.10.9 is pulled transitively by the purrdf family
+# (purrdf-core 2.0.2 declares sha2 = "0.10") and by ed25519-dalek 2.2.0 (also
+# sha2 = "0.10", exact-pinned per GOALS.md invariant 3). Both are crates.io deps,
+# not vendored here, so they cannot be [patch]ed without forking upstream.
+# Dual-major is thus unavoidable at this pin set; revisit if purrdf or
+# ed25519-dalek publishes sha2-0.11-compatible releases. Verified via:
+#   cargo tree -i sha2@0.10.9   (purrdf-core/ed25519-dalek roots)
+#   cargo tree -i sha2@0.11.0   (graphlaw only)
 sha2 = "0.11"
 # Ed25519 receipt/lease attestations (BSD-3-Clause). Exact pin per GOALS.md invariant 3;
 # already resolved in Cargo.lock via purrdf. No RNG: keys come from caller-supplied seeds.
