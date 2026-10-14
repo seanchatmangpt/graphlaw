@@ -817,6 +817,30 @@ impl LawState {
     pub fn transition(&self, step: &Step<'_>) -> Result<(LawState, Receipt), LawError> {
         let child = match step {
             Step::AdmitShacl { shapes_ttl } => {
+                // Bound shape-nesting depth BEFORE the purrdf evaluator
+                // recurses: crossing the cap is a typed SHACL violation, not
+                // a stack overflow (see shacl_guard module doc). Rendered as
+                // a non-conforms result with an empty message so downstream
+                // reporters keep the "constraint violated" fallback shape.
+                if let Err(over) = crate::shacl_guard::check_shape_depth(shapes_ttl) {
+                    return Err(LawError::NotAdmitted {
+                        violations: 1,
+                        results: vec![Violation {
+                            focus: "<shapes-graph>".to_string(),
+                            path: None,
+                            component: format!(
+                                "shacl_validation_depth: maximum safe validation depth \
+                                 exceeded: observed shape nesting depth {} > max \
+                                 {} (failing closed instead of recursing toward a stack \
+                                 overflow)",
+                                over.observed,
+                                crate::shacl_guard::MAX_SHACL_VALIDATION_DEPTH
+                            ),
+                            message: String::new(),
+                            severity: "Violation".to_string(),
+                        }],
+                    });
+                }
                 let shapes = purrdf::shapes::engine::parse_shapes(shapes_ttl, None)
                     .map_err(|e| Refusal::engine(Dialect::Turtle, e))?;
                 let report = purrdf::shapes::engine::validate_dataset(&self.dataset, &shapes)

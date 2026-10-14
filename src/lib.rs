@@ -57,6 +57,7 @@ pub mod receipt_store;
 pub use receipt_chain::{ReceiptRecord, validator::ReceiptValidator};
 #[cfg(feature = "abi")]
 pub mod registry;
+pub mod shacl_guard;
 #[cfg(feature = "pack-tools")]
 pub mod smon;
 
