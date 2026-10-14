@@ -29,10 +29,14 @@ const PACK_DIR: &str = concat!(
     "/../ggen-marketplace/packs/strata-pn64-pack"
 );
 
-/// Pinned sha256 of the ontology subject (re-pinned 2026-10-13, lane L147;
-/// prior pin e3b4caa8… drifted by comment-only edits — L38/L86/L103 — no
-/// mask/ordinal semantics changed, verified by the court's own cross-checks).
-const ONTOLOGY_SHA256: &str = "1ded0f0421c32a28f387fde2ae8a9c6acbdd433408b8adc1269741012c692c65";
+/// Pinned sha256 of the ontology subject (re-pinned for ggen-marketplace
+/// 8a9949c49: the documented legacy st: -> pn: schema reconciliation — the six
+/// canonical RONR transition masks are carried over value-identical
+/// (0x0081/0x0082, 0x0002/0x000C, 0x0008/0x0010, 0x0010/0x0008, 0x0008/0x0060,
+/// 0x0024/0x0101); the legacy st: RonrTransition/Place/DaoVerb vocabulary is
+/// superseded by the pn: individuals, per that commit's reconcile note).
+/// Prior pin 1ded0f04… (itself re-pinned 2026-10-13, lane L147, from e3b4caa8…).
+const ONTOLOGY_SHA256: &str = "5feaf3824cc031dff7715e46e02d8d74412de5a1658cc8a47badd1d496d31f3b";
 /// Pinned sha256 of the generated projection subject.
 const GENERATED_SHA256: &str = "0c9a641f11b792051a23e11d11ad3bebe473ca5667a30cdce3a811bd21457b32";
 
