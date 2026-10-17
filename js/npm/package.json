@@ -1,6 +1,6 @@
 {
-  "name": "graphlaw",
-  "version": "26.10.13",
+  "name": "@seanchatmangpt/graphlaw",
+  "version": "26.10.14",
   "description": "GraphLaw: library-backed RDF law-state composition (parse, SPARQL, SHACL, ShEx, N3, entailment, datalog, hooks, law, policy) over a WASM ABI",
   "license": "MIT",
   "type": "module",
@@ -12,7 +12,8 @@
     "wasm/",
     "LICENSE",
     "README.md",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "THESIS.md"
   ],
   "main": "./dist-nodejs/index.js",
   "exports": {
@@ -71,5 +72,8 @@
     "reasoning",
     "wasm",
     "webassembly"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }
