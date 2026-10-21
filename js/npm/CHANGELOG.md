@@ -6,6 +6,14 @@ entries are copied verbatim from the root CHANGELOG.
 
 ## [Unreleased]
 
+### Changed
+
+- sha256->BLAKE3 migration: artifact integrity is now BLAKE3 (`WASM_BLAKE3` in
+  `src/generated/artifact-meta.ts`, re-pinned by `scripts/build.mjs` via `b3sum`
+  cross-checked against the new dependency-free pure-TypeScript implementation
+  `src/blake3.ts`; validated against the `b3sum` CLI in `test/blake3.test.ts`).
+  `initGraphlaw` option renamed `skipShaCheck` -> `skipDigestCheck`.
+
 ### Added
 
 - Initial JavaScript/TypeScript distribution: npm package `graphlaw` wrapping
@@ -28,6 +36,6 @@ ERRC release: Eliminate/Reduce/Raise pass over the repo; no semantic changes to 
 - ci.yml: dropped the duplicated chicago/qualification steps and the clippy-subsumed
   check step.
 ### Eliminated
-- extract-from-praxis.yml (destructive tree-replacing footgun; EXTRACTION.md updated);
+- extract-from-graphlaw.yml (destructive tree-replacing footgun; EXTRACTION.md updated);
   malformed generated docs/reference-generated/{how_to,explanation}.md; orphaned
   ggen.toml; dead .gitignore rules.

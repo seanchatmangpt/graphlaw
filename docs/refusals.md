@@ -64,8 +64,8 @@ kernel is one executable law and must be total and deterministic over the closur
 `GROUP_CONCAT`/`SAMPLE` in a query handed to the law path is a refusal, not a result.
 GraphLaw's `Step` enum (`src/law.rs`) offers no aggregate-capable step — the kernel surface is
 `AdmitShacl`, `DeriveN3`, `Hooks`, `Plan`, receipt gates, and entailment closures only — so an
-aggregate simply has no admitted path through a `law` step. (Historically the praxis
-law-materialization engine, vendored in ggen as `crates/praxis-graphlaw` until its retirement
+aggregate simply has no admitted path through a `law` step. (Historically the graphlaw
+law-materialization engine, vendored in ggen as `crates/graphlaw` until its retirement
 in ggen commit `8e92df31f`, 2026-10-10, surfaced this as a typed
 `SPARQL query planning refused (unsupported construct)` error from its `build_for_aggregate`
 planner; that crate is gone and the boundary now lives in the step surface itself.)

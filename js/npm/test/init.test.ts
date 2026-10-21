@@ -3,7 +3,7 @@
 // priv/graphlaw.wasm artifact (copied to wasm/ by scripts/build.mjs), no mocks.
 import { describe, expect, it } from 'vitest';
 import { initGraphlaw, GraphlawInitError, GraphlawIntegrityError } from '../src/init.js';
-import { WASM_SHA256 } from '../src/generated/artifact-meta.js';
+import { WASM_BLAKE3 } from '../src/generated/artifact-meta.js';
 
 // Not a wasm module: WebAssembly.compile rejects it, so the sha-skipped path
 // fails inside instantiateFromBytes with GraphlawInitError (compile error cause).
@@ -20,10 +20,10 @@ const TAMPERED_BYTES = (() => {
 
 describe('initGraphlaw', () => {
   it(
-    'resolves with skipShaCheck and serves capabilities over the real artifact',
+    'resolves with skipDigestCheck and serves capabilities over the real artifact',
     { timeout: 60_000 },
     async () => {
-      const abi = await initGraphlaw({ skipShaCheck: true });
+      const abi = await initGraphlaw({ skipDigestCheck: true });
       const res = (await abi.call({ op: 'capabilities' })) as {
         ok: boolean;
         abi_version?: number;
@@ -55,7 +55,7 @@ describe('initGraphlaw cache', () => {
 });
 
 describe('initGraphlaw failure paths', () => {
-  // The digest gate is `if (!options.skipShaCheck)` — custom bytes are checked
+  // The digest gate is `if (!options.skipDigestCheck)` — custom bytes are checked
   // against the pin unless the caller opts out explicitly.
   it('rejects with GraphlawIntegrityError on digest mismatch (wasmBytes, no skip)', async () => {
     await expect(initGraphlaw({ wasmBytes: GARBAGE_BYTES })).rejects.toBeInstanceOf(
@@ -65,11 +65,11 @@ describe('initGraphlaw failure paths', () => {
 
   it('reports the pinned digest in the mismatch error', async () => {
     const err = await initGraphlaw({ wasmBytes: GARBAGE_BYTES }).catch((e: unknown) => e);
-    expect((err as GraphlawIntegrityError).expected).toBe(WASM_SHA256);
+    expect((err as GraphlawIntegrityError).expected).toBe(WASM_BLAKE3);
   });
 
-  it('fails in instantiate, not the digest gate, for tampered bytes with skipShaCheck', async () => {
-    const err = await initGraphlaw({ wasmBytes: TAMPERED_BYTES, skipShaCheck: true }).catch(
+  it('fails in instantiate, not the digest gate, for tampered bytes with skipDigestCheck', async () => {
+    const err = await initGraphlaw({ wasmBytes: TAMPERED_BYTES, skipDigestCheck: true }).catch(
       (e: unknown) => e,
     );
     expect(err).toBeInstanceOf(GraphlawInitError);

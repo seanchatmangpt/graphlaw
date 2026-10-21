@@ -6,7 +6,7 @@ Byte-identical pinned copies of ggen-marketplace strata-pack sources, copied
 - `<pack>/ontology.ttl` from `/Users/sac/ggen-marketplace/packs/strata-<pack>-pack/ontology.ttl`
 - `<pack>/gates/*.rq` from the same pack's `gates/` directory
 
-`manifest.sha256` is the pin of record; the court
+`manifest.blake3` is the pin of record; the court
 (`tests/strata_gate_differential.rs::pinned_fixtures_match_manifest`) refuses to
 evaluate against drifted pins.
 

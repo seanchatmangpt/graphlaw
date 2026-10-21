@@ -36,7 +36,7 @@ fn hook_query() -> String {
     let hook = load("hook.ttl");
     let r = rows(
         &hook,
-        "SELECT ?q WHERE { <http://seanchatmangpt.github.io/packs/self-monitoring#derive_escalation_obligation> <http://seanchatmangpt.github.io/praxis/kh#query> ?q }",
+        "SELECT ?q WHERE { <http://seanchatmangpt.github.io/packs/self-monitoring#derive_escalation_obligation> <http://seanchatmangpt.github.io/graphlaw/kh#query> ?q }",
     );
     assert_eq!(r.len(), 1, "exactly one kh:query");
     match r[0][0].as_ref().expect("bound") {

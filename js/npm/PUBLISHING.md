@@ -41,10 +41,10 @@ Trusted Publishing.
    manual tag drives `publish-npm.yml`, which triggers on `v*` tags).
 5. `publish-npm.yml` then: verifies the tag matches BOTH `js/npm/package.json`
    and root `Cargo.toml` (fails closed), rebuilds the wasm artifact and
-   checks its sha256 against `priv/graphlaw.wasm.sha256`, installs/builds/
+   checks its blake3 against `priv/graphlaw.wasm.blake3`, installs/builds/
    tests the package, packs twice and diffs the file lists (tarball drift
    check), uploads the tarball, then the `publish` job re-verifies the
-   sha256 and publishes with OIDC (`--tag latest`, `--access public`).
+   blake3 and publishes with OIDC (`--tag latest`, `--access public`).
 6. `RELEASE_HOLD` gate: while the repository variable `RELEASE_HOLD` is
    `true`, nothing is validated or published (both jobs' `if:` conditions).
    Set it to `false`/unset to release.

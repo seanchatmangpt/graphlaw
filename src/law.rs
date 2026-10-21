@@ -1,6 +1,6 @@
 //! Content-addressed law states and receipted transitions.
 //!
-//! A [`LawState`] is an immutable RDF dataset identified by the SHA-256 of its
+//! A [`LawState`] is an immutable RDF dataset identified by the BLAKE3 of its
 //! RDFC-1.0 canonical form, so two states with the same statements have the same
 //! id regardless of blank-node labels or statement order. A transition is
 //! `admit -> derive -> receipt`: every step names the upstream authority that
@@ -8,7 +8,6 @@
 
 use std::sync::Arc;
 
-use sha2::{Digest, Sha256};
 
 use crate::dialect::{Dialect, Refusal, RefusalKind, parse_rdf};
 use crate::{BACKEND_AUTHORITIES, BackendAuthority};
@@ -58,6 +57,12 @@ pub enum Step<'a> {
     DeriveN3 {
         /// Notation3 rules text.
         rules: &'a str,
+        /// Eyeron-validated rule set for `rules` (from
+        /// [`crate::tier::validate_n3_rules`]). Re-checked at admission: the
+        /// rules text must validate as N3 and the carried [`crate::tier::RuleSet`]
+        /// must agree with it in rule count, otherwise the transition is
+        /// refused as [`crate::dialect::RefusalKind::TierMismatch`].
+        ruleset: &'a crate::tier::RuleSet,
     },
     /// Run a knowledge-hook pack to a fixpoint.
     Hooks {
@@ -141,8 +146,8 @@ impl Step<'_> {
 /// assert_eq!(receipt.parent, s.id());
 /// assert_eq!(receipt.child, child.id());
 /// assert_eq!(receipt.step, "derive:rdfs");
-/// let bound = receipt.with_subject("sha256:abc");
-/// assert_eq!(bound.subject_sha256.as_deref(), Some("sha256:abc"));
+/// let bound = receipt.with_subject("blake3:abc");
+/// assert_eq!(bound.subject_blake3.as_deref(), Some("blake3:abc"));
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -159,17 +164,17 @@ pub struct Receipt {
     pub added: usize,
     /// Id of the [`Lease`] the step ran under (`None` for unleased steps).
     pub lease_id: Option<String>,
-    /// SHA-256 digest of the admitted plan (plan-action receipts only).
-    pub plan_sha256: Option<String>,
+    /// BLAKE3 digest of the admitted plan (plan-action receipts only).
+    pub plan_blake3: Option<String>,
     /// Caller-provided digest of the external subject this receipt is about
     /// (e.g. a git commit or artifact); included in the signed payload.
-    pub subject_sha256: Option<String>,
+    pub subject_blake3: Option<String>,
 }
 
 impl Receipt {
     /// Bind this receipt to an external subject digest (set before signing).
-    pub fn with_subject(mut self, subject_sha256: impl Into<String>) -> Self {
-        self.subject_sha256 = Some(subject_sha256.into());
+    pub fn with_subject(mut self, subject_blake3: impl Into<String>) -> Self {
+        self.subject_blake3 = Some(subject_blake3.into());
         self
     }
 }
@@ -732,10 +737,10 @@ impl LawState {
             engine: Some(crate::dialect::Engine::PurRdf),
             message: format!("canonicalization refused: {e:?}"),
         })?;
-        let digest = Sha256::digest(canon.nquads.as_bytes());
+        let digest = blake3::hash(canon.nquads.as_bytes());
         let id = format!(
-            "sha256:{}",
-            digest
+            "blake3:{}",
+            digest.as_bytes()
                 .iter()
                 .map(|b| format!("{b:02x}"))
                 .collect::<String>()
@@ -748,7 +753,7 @@ impl LawState {
         Self::from_dataset(parse_rdf(bytes, dialect, base)?)
     }
 
-    /// `sha256:` of the RDFC-1.0 canonical N-Quads.
+    /// `blake3:` of the RDFC-1.0 canonical N-Quads.
     pub fn id(&self) -> &str {
         &self.id
     }
@@ -883,7 +888,31 @@ impl LawState {
                     .map_err(|e| Refusal::engine(Dialect::Turtle, e))?;
                 LawState::from_dataset(closure)?
             }
-            Step::DeriveN3 { rules } => {
+            Step::DeriveN3 { rules, ruleset } => {
+                // Admission gate: the rules text must validate as N3 (counted,
+                // Eyeron-validated) and the carried RuleSet must correspond,
+                // before any derivation runs.
+                let validated = crate::tier::validate_n3_rules(rules.as_bytes(), None).map_err(
+                    |r| LawError::Refused(Refusal {
+                        kind: RefusalKind::TierMismatch,
+                        dialect: Some(Dialect::N3),
+                        engine: Some(Dialect::N3.engine()),
+                        message: format!("DeriveN3 rules failed N3 admission: {}", r.message),
+                    }),
+                )?;
+                if validated.rule_count() != ruleset.rule_count() {
+                    return Err(LawError::Refused(Refusal {
+                        kind: RefusalKind::TierMismatch,
+                        dialect: Some(Dialect::N3),
+                        engine: Some(Dialect::N3.engine()),
+                        message: format!(
+                            "carried RuleSet does not match the rules text: {} rules \
+                             admitted vs {} rules in the text",
+                            ruleset.rule_count(),
+                            validated.rule_count()
+                        ),
+                    }));
+                }
                 let base = self.nquads()?;
                 if self.dataset.quads().any(|q| q.g.is_some()) {
                     return Err(unsupported(
@@ -944,8 +973,8 @@ impl LawState {
             authority,
             added: child.quad_count().saturating_sub(self.quad_count()),
             lease_id: None,
-            plan_sha256: None,
-            subject_sha256: None,
+            plan_blake3: None,
+            subject_blake3: None,
         };
         Ok((child, receipt))
     }

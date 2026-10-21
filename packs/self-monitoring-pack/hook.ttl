@@ -4,7 +4,7 @@
 # actual run." This is the real, tested `kh:` hook-pack mechanism this repo
 # already uses in production-shaped form (same `kh:kind "sparql"` trigger +
 # `kh:action` -> `kh:handler <.../handler#sparql-construct>` shape exercised
-# by crates/praxis-graphlaw/tests/soc2_hook_actuation.rs and, closer to this
+# by crates/graphlaw/tests/soc2_hook_actuation.rs and, closer to this
 # pack's own domain, crates/multifractal-workflow/fixtures/bribery-case/
 # hook.ttl's obligation-derivation hook), run here via
 # `graphlaw::hooks::HookPack::load` + `.materialize()` -- not a
@@ -65,12 +65,12 @@
 # derives... it does not classify raw natural-language text itself").
 #
 # ENGINE LIMITATION FOUND AND FIXED (was: process-global blank-node label
-# interning in `crates/praxis-graphlaw/src/hooks/construct.rs::
+# interning in `crates/graphlaw/src/hooks/construct.rs::
 # instantiate_term_pattern`, which echoed a CONSTRUCT template's blank-node
 # LABEL verbatim -- worse than per-solution-row aliasing, the literal string
 # was interned in a process-wide encoder for the whole process lifetime).
 # Fixed via content-addressed per-row interning (`CONSTRUCT_BNODE_INTERN` in
-# `crates/praxis-graphlaw/src/registry.rs`, keyed by query text + label +
+# `crates/graphlaw/src/registry.rs`, keyed by query text + label +
 # canonical row bindings): different solution rows now mint distinct blank
 # nodes; the same row re-evaluated on a later `materialize()` fixpoint round
 # still gets the same node, preserving convergence and determinism. This
@@ -107,7 +107,7 @@
 # are all declared and disclosed in ontology.ttl.
 
 @prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix kh:      <http://seanchatmangpt.github.io/praxis/kh#> .
+@prefix kh:      <http://seanchatmangpt.github.io/graphlaw/kh#> .
 @prefix smon:    <http://seanchatmangpt.github.io/packs/self-monitoring#> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 
@@ -122,5 +122,5 @@ smon:derive_escalation_obligation
 
 smon:derive_escalation_obligation_action
     a kh:Action ;
-    kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ;
+    kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;
     kh:query """CONSTRUCT { _:esc <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://seanchatmangpt.github.io/packs/self-monitoring#EscalationObligation> . _:esc <http://seanchatmangpt.github.io/packs/self-monitoring#hasPriorGroundingQuestion> ?q1 . _:esc <http://seanchatmangpt.github.io/packs/self-monitoring#hasGroundingQuestion> ?q2 . _:esc <http://seanchatmangpt.github.io/packs/self-monitoring#reason> 'same grounding_topic asked twice by a GroundingQuestion turn, and the turn immediately following the first GroundingQuestion was only a SurveyResponse (not a RunResponse/BlockerResponse) -- escalate to an actual build/run rather than another survey' . } WHERE { ?q1 a <http://seanchatmangpt.github.io/packs/self-monitoring#Turn> ; <http://seanchatmangpt.github.io/packs/self-monitoring#turnKind> <http://seanchatmangpt.github.io/packs/self-monitoring#GroundingQuestion> ; <http://purl.org/dc/terms/subject> ?topic ; <http://seanchatmangpt.github.io/packs/self-monitoring#sequenceIndex> ?i1 ; <http://purl.org/dc/terms/isPartOf> ?session . ?q2 a <http://seanchatmangpt.github.io/packs/self-monitoring#Turn> ; <http://seanchatmangpt.github.io/packs/self-monitoring#turnKind> <http://seanchatmangpt.github.io/packs/self-monitoring#GroundingQuestion> ; <http://purl.org/dc/terms/subject> ?topic ; <http://seanchatmangpt.github.io/packs/self-monitoring#sequenceIndex> ?i2 ; <http://purl.org/dc/terms/isPartOf> ?session . ?resp a <http://seanchatmangpt.github.io/packs/self-monitoring#Turn> ; <http://seanchatmangpt.github.io/packs/self-monitoring#turnKind> <http://seanchatmangpt.github.io/packs/self-monitoring#SurveyResponse> ; <http://seanchatmangpt.github.io/packs/self-monitoring#immediatelyFollows> ?q1 ; <http://purl.org/dc/terms/isPartOf> ?session . FILTER(?i2 > ?i1) FILTER(?q1 != ?q2) }""" .

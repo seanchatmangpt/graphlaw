@@ -86,10 +86,13 @@ cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 
 `wasm/Cargo.toml:20-28` defines `[profile.wasm]` (inherits release,
 `opt-level = "s"`, lto, one codegen unit, strip, `panic = "abort"`), kept
-separate so native release builds and tests are unaffected. The module's only
-imports are `wasi_snapshot_preview1` (clock, random, stdio) — no JavaScript
-glue; `wasm32-unknown-unknown` is not a supported target
-(`tests/wasm_abi.rs:56-64` asserts the import set at runtime). The host-side
+separate so native release builds and tests are unaffected. The `wasm32-wasip1`
+module imports only `wasi_snapshot_preview1` (clock, random, stdio) — no
+JavaScript glue; the lib facade also builds clean under
+`wasm32-unknown-unknown` with **zero WASI imports** (clock routed through a
+wasm-bindgen `Date.now()` extern in `graphlaw-eyeron`; verified by
+`scripts/wasm_unknown_unknown_smoke.sh`, and the import set asserted at
+runtime by `tests/wasm_abi.rs:56-64`). The host-side
 integration test `tests/wasm_abi.rs` builds the module (into
 `target/wasm-abi` by default, or `$GRAPHLAW_WASM` to test a prebuilt module)
 and drives all fourteen ops in a real wasmi runtime
@@ -99,28 +102,31 @@ and drives all fourteen ops in a real wasmi runtime
 
 The shipped artifact is pinned by digest and size:
 
-- digest `2802cede5530fb12779bf8390683ca933cd3f692b70a69a413d63a1aa640b4d0`,
-  6,659,724 bytes — `registry/ARTIFACTS.sha256:6` and
-  `priv/graphlaw.wasm.sha256:1` (dual pin: registry pin + sidecar next to the
-  tracked `priv/graphlaw.wasm`).
+- digest `cbc80f07346f025d4e1cd001f21d15474928cb055d4b1a9c0ac7c31c5938dc6a`
+  (BLAKE3, verified with `b3sum priv/graphlaw.wasm`), 6,654,496 bytes —
+  `registry/ARTIFACTS.blake3` (`wasm` row) and `priv/graphlaw.wasm.blake3`
+  (dual pin: registry pin + sidecar next to the tracked
+  `priv/graphlaw.wasm`). Minted at the **26.10.13** source state (W09
+  re-pin, 2026-10-20); the pin header records `pin-source=26.10.13`.
 - Reproducibility was witnessed 2026-09-30: two builds, each after
   `cargo clean -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` in the
   same target dir (dependency crates cached), same machine, produced identical
-  bytes. Not verified across separate target dirs or machines
-  (`registry/ARTIFACTS.sha256:2-3`).
+  bytes. Not verified across separate target dirs or machines.
 - The wasm line is a **pin, not a live check** — regenerate after any `src/`
-  change (`registry/ARTIFACTS.sha256:4`).
+  change.
 
 **Superseded claims**: 2026-10-07 — lane W637's build claim
 `b7664a5e…` (6,657,549 B) was rejected. 2026-10-10 — the earlier pin
-`fc23a292…` (6,657,708 B) is superseded; the pinned artifact
-`2802cede…` (6,659,724 B) is authoritative (registry pin notes it is the
-working-tree build at crate version 26.10.5, distinct from the v26.9.29
-release digest `b4cf5dd1…`).
+`fc23a292…` (6,657,708 B) is superseded; `2802cede…` (6,659,724 B) and the
+26.10.5-era pin `02a54c48…` (6,648,473 B) are superseded by the current
+BLAKE3 pin `cbc80f07…` (6,654,496 B, built from the 26.10.13 source state,
+distinct from the v26.9.29 release digest `b4cf5dd1…`).
 
-## Intentional 26.10.5 version
+## Pinned 26.10.13 source state
 
-`wasm/Cargo.toml:4` reads `version = "26.10.5"` deliberately: the wasm pin
-(`fc23a292…`) was minted against that source state, and a version bump would
-invalidate the pin — the digest is of the bytes built from 26.10.5 sources.
-Regenerate the artifact and re-pin (both files) before/with any version bump.
+`wasm/Cargo.toml` reads `version = "26.10.13"`: the wasm pin (`cbc80f07…`)
+was minted at that source state, and any version bump invalidates the pin —
+the digest is of the bytes built from 26.10.13 sources. At the next rebuild
+the coordinator MUST re-pin both `registry/ARTIFACTS.blake3` (row + header)
+and `priv/graphlaw.wasm.blake3` in the same commit as the version bump.
+Never hand-write a digest.

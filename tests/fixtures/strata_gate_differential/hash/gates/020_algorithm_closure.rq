@@ -1,4 +1,4 @@
-# MESSAGE: the algorithm set must close over exactly {BLAKE3, SHA-256}:
+# MESSAGE: the algorithm set must close over exactly {BLAKE3, SHA_256}:
 # every st:HashAlgorithm individual must be one of the two supported
 # algorithms (by algorithmName), each must appear exactly once, each must
 # carry st:algorithmName, and no duplicate algorithmName may exist. Any row

@@ -1,14 +1,13 @@
 //! Capabilities-digest court (feature `abi`, Chicago: real `graphlaw::abi::call_json`).
 //!
-//! The `capabilities` response exposes `registry_schema`, `registry_sha256`, `surface_sha256`.
+//! The `capabilities` response exposes `registry_schema`, `registry_blake3`, `surface_blake3`.
 //! The surface digest is recomputed here independently from the live response with a local
-//! canonical-JSON encoder and SHA-256, so the court does not trust the registry's own helper.
+//! canonical-JSON encoder and BLAKE3, so the court does not trust the registry's own helper.
 #![cfg(feature = "abi")]
 
 use graphlaw::abi::call_json;
 use graphlaw::registry;
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 
 /// Canonical JSON per the registry contract: sorted keys, compact, RFC 8259 minimal escapes,
 /// raw UTF-8, integers decimal.
@@ -63,12 +62,12 @@ fn canonical(v: &Value) -> String {
     }
 }
 
-fn sha256(v: &Value) -> String {
-    let mut h = Sha256::new();
+fn blake3(v: &Value) -> String {
+    let mut h = blake3::Hasher::new();
     h.update(canonical(v).as_bytes());
     let d = h.finalize();
-    let hex: String = d.iter().map(|b| format!("{b:02x}")).collect();
-    format!("sha256:{hex}")
+    let hex: String = d.as_bytes().iter().map(|b| format!("{b:02x}")).collect();
+    format!("blake3:{hex}")
 }
 
 fn surface_of(caps: &Value) -> Value {
@@ -104,16 +103,16 @@ fn positive_control_capabilities_carries_registry_fields_equal_to_registry() {
         caps["registry_schema"],
         json!("graphlaw.capability-registry/1")
     );
-    let reg = registry::registry_sha256().to_string();
-    let surf = registry::surface_sha256().to_string();
-    assert_eq!(caps["registry_sha256"], json!(reg));
-    assert_eq!(caps["surface_sha256"], json!(surf));
+    let reg = registry::registry_blake3().to_string();
+    let surf = registry::surface_blake3().to_string();
+    assert_eq!(caps["registry_blake3"], json!(reg));
+    assert_eq!(caps["surface_blake3"], json!(surf));
     assert!(
-        reg.starts_with("sha256:") && reg.len() == 7 + 64,
+        reg.starts_with("blake3:") && reg.len() == 7 + 64,
         "bad registry digest {reg}"
     );
     assert!(
-        surf.starts_with("sha256:") && surf.len() == 7 + 64,
+        surf.starts_with("blake3:") && surf.len() == 7 + 64,
         "bad surface digest {surf}"
     );
 }
@@ -121,17 +120,17 @@ fn positive_control_capabilities_carries_registry_fields_equal_to_registry() {
 #[test]
 fn surface_digest_recomputed_independently_from_live_response_matches() {
     let caps = live();
-    let recomputed = sha256(&surface_of(&caps));
-    assert_eq!(recomputed, registry::surface_sha256().to_string());
-    assert_eq!(json!(recomputed), caps["surface_sha256"]);
+    let recomputed = blake3(&surface_of(&caps));
+    assert_eq!(recomputed, registry::surface_blake3().to_string());
+    assert_eq!(json!(recomputed), caps["surface_blake3"]);
 }
 
 #[test]
 fn emitted_registry_digests_recompute_and_match_live() {
     let caps = live();
     let mut reg = registry_doc();
-    assert_eq!(reg["surface_sha256"], caps["surface_sha256"]);
-    assert_eq!(reg["registry_sha256"], caps["registry_sha256"]);
+    assert_eq!(reg["surface_blake3"], caps["surface_blake3"]);
+    assert_eq!(reg["registry_blake3"], caps["registry_blake3"]);
     // The registry document carries op and dialect *objects*; the surface document is
     // their wire names in order, exactly as the live `capabilities` response lists them.
     let names = |key: &str| {
@@ -155,16 +154,16 @@ fn emitted_registry_digests_recompute_and_match_live() {
         surface_of(&caps),
         "registry names differ from live surface"
     );
-    assert_eq!(sha256(&surface), reg["surface_sha256"].as_str().unwrap());
+    assert_eq!(blake3(&surface), reg["surface_blake3"].as_str().unwrap());
     let claimed = reg
         .as_object_mut()
         .unwrap()
-        .remove("registry_sha256")
+        .remove("registry_blake3")
         .unwrap();
     assert_eq!(
-        json!(sha256(&reg)),
+        json!(blake3(&reg)),
         claimed,
-        "registry_sha256 is not the digest of the canonical document"
+        "registry_blake3 is not the digest of the canonical document"
     );
 }
 
@@ -209,29 +208,29 @@ fn existing_capabilities_fields_are_unchanged() {
 #[test]
 fn negative_mutating_an_op_name_changes_surface_and_registry_digests() {
     let caps = live();
-    let base_surface = sha256(&surface_of(&caps));
-    assert_eq!(base_surface, registry::surface_sha256().to_string());
+    let base_surface = blake3(&surface_of(&caps));
+    assert_eq!(base_surface, registry::surface_blake3().to_string());
 
     let mut mutated_caps = caps.clone();
     mutated_caps["ops"][2] = json!("parse_mutated");
-    let mutated_surface = sha256(&surface_of(&mutated_caps));
+    let mutated_surface = blake3(&surface_of(&mutated_caps));
     assert_ne!(mutated_surface, base_surface);
 
     let mut reg = registry_doc();
-    reg.as_object_mut().unwrap().remove("registry_sha256");
-    let base_reg = sha256(&reg);
-    assert_eq!(json!(base_reg), caps["registry_sha256"]);
+    reg.as_object_mut().unwrap().remove("registry_blake3");
+    let base_reg = blake3(&reg);
+    assert_eq!(json!(base_reg), caps["registry_blake3"]);
     reg["ops"][2]["name"] = json!("parse_mutated");
-    reg["surface_sha256"] = json!(mutated_surface);
-    assert_ne!(sha256(&reg), base_reg);
+    reg["surface_blake3"] = json!(mutated_surface);
+    assert_ne!(blake3(&reg), base_reg);
 }
 
 #[test]
 fn negative_reordering_ops_changes_surface_digest() {
     let caps = live();
-    let base = sha256(&surface_of(&caps));
+    let base = blake3(&surface_of(&caps));
     let mut swapped = caps.clone();
     let ops = swapped["ops"].as_array_mut().unwrap();
     ops.swap(0, 1);
-    assert_ne!(sha256(&surface_of(&swapped)), base);
+    assert_ne!(blake3(&surface_of(&swapped)), base);
 }

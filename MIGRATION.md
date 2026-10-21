@@ -22,3 +22,19 @@ from acquiring different semantics depending on which internal path happened to
 accept it.
 
 GraphLaw-specific ontology, pack and query assets remain in the repository.
+
+## Artifact digest migration: sha256 -> BLAKE3 (26.10.14)
+
+Artifact pins have moved from SHA-256 to BLAKE3 (b3sum format
+`<64-hex>  <filename>`):
+
+- `priv/graphlaw.wasm.blake3` (was a sha256 pin; now a b3sum pin)
+- release-asset sidecars `*.blake3` produced by `b3sum` in `release.yml`
+- `registry/ARTIFACTS.blake3`
+
+Consumers and scripts must switch `shasum -a 256` / `sha256sum` to `b3sum`.
+`b3sum` installs from crates.io: `cargo install b3sum --locked`. Node and
+WebCrypto have no blake3, so Node-side verification uses the same b3sum binary
+(CI installs it via cargo); `node:crypto#createHash("blake3")` is invalid and
+must not be used. The only remaining sha256 use is an internal wasm ABI-surface
+comparison in `js.yml`, which never touches the artifact pin.

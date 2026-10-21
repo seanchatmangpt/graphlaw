@@ -1,6 +1,6 @@
 {
   "name": "@seanchatmangpt/graphlaw",
-  "version": "26.10.14",
+  "version": "26.10.13",
   "description": "GraphLaw: library-backed RDF law-state composition (parse, SPARQL, SHACL, ShEx, N3, entailment, datalog, hooks, law, policy) over a WASM ABI",
   "license": "MIT",
   "type": "module",

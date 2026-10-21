@@ -3,7 +3,7 @@ PREFIX powl2: <https://truex.io/ontology/powl2#>
 # Rail A Projection (PRD.md sec.7.4), vocabulary-corrected -- PROJ-751.
 #
 # Deterministically projects an admitted POWL 2.0 graph region (W) -- emitted
-# by crates/praxis-graphlaw/src/chatman/powl_projection.rs::powl_to_turtle,
+# by crates/graphlaw/src/chatman/powl_projection.rs::powl_to_turtle,
 # conforming to the powl2: vocabulary described in that module's doc comment
 # (wasm4pm-compat/ontologies/powlv2.ttl) -- into a flat relational model
 # (Q(W)) for the Tera renderer (T, PROJ-752) to manufacture an Arazzo
@@ -14,7 +14,7 @@ PREFIX powl2: <https://truex.io/ontology/powl2#>
 # powl:budgetDepth, wf:retryPolicy, wf:timeout) that the real emitter never
 # produces -- zero overlap, the query matched nothing when run. Every
 # predicate below is read directly from
-# crates/praxis-graphlaw/src/chatman/powl_projection.rs::emit_powl_node.
+# crates/graphlaw/src/chatman/powl_projection.rs::emit_powl_node.
 #
 # PROJ-751 remediation (Choice-routing gap): an adversarial review found this
 # query's first vocabulary-correction pass covered powl2:Leaf/PartialOrder/

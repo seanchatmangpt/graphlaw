@@ -79,7 +79,7 @@ Fourteen ops, in registry order.
 
 Request: none. Response: `abi`, `abi_version`, `crate`, `authorities[]` (`capability`,
 `authority`, `revision`), `rdf_dialects[]`, `other_dialects[]`, `ops[]`. From v26.9.29 also
-`registry_schema`, `registry_sha256`, `surface_sha256` (see
+`registry_schema`, `registry_blake3`, `surface_blake3` (see
 [capability registry](capability-registry.md)). In the pre-v26.9.29 source the lists are literals
 in `abi.rs`; the contract moves them to `src/registry.rs`.
 
@@ -101,7 +101,7 @@ Response: `text` (serialization of the dataset), `id`.
 
 ### 5. `canonical`
 
-Request: `data`* (data spec). Response: `id` (`sha256:` of the RDFC-1.0 canonical form), `nquads`,
+Request: `data`* (data spec). Response: `id` (`blake3:` of the RDFC-1.0 canonical form), `nquads`,
 `quads`.
 
 ### 6. `sparql`
@@ -154,7 +154,7 @@ Request: `data`* (data spec), `steps`* (list of step objects), lease fields (bel
 `states` (state ids: input first, then one per step), `receipts[]`, `nquads` (final state).
 
 Receipt objects carry `step`, `parent`, `child`, `added`, `authority`, `revision`, and
-`lease_id` when a lease is in force. Plan-action receipts also carry `plan_sha256` and `index`.
+`lease_id` when a lease is in force. Plan-action receipts also carry `plan_blake3` and `index`.
 
 Steps, with the ceiling a lease must grant (from `Step::required_ceiling`) and the lease scope
 name (from `Step::name`):
@@ -178,7 +178,7 @@ by one of the step's trusted keys. `plan` yields one receipt per action.
 Lease request fields (all optional; give at most one of `signed_lease` and `lease`):
 
 - `signed_lease`: `{"lease": {id, holder, ceiling, scope[], expires_unix, issued_unix?},
-  "attestation": {key_id, payload_sha256, signature}}` plus `trusted_keys` (hex Ed25519 public
+  "attestation": {key_id, payload_blake3, signature}}` plus `trusted_keys` (hex Ed25519 public
   keys) and optional `max_skew_secs` (default 60). Verified offline; expiry is judged by the
   module's own clock and any `now_unix` is ignored.
 - `lease` with `unverified_lease: true` and `now_unix`: an unsigned lease at a caller-chosen time.

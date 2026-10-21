@@ -1,4 +1,4 @@
-PREFIX inv: <https://praxis.chatman.io/innovation#>
+PREFIX inv: <https://graphlaw.chatman.io/innovation#>
 SELECT ?subject ?action
 WHERE {
   ?subject inv:errcAction ?action .

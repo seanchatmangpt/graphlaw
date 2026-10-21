@@ -1,6 +1,6 @@
 //! Bounded SHACL shape-nesting guard for [`crate::law::Step::AdmitShacl`].
 //!
-//! The retired `praxis-graphlaw` path dependency carried
+//! The retired `graphlaw` path dependency carried
 //! `MAX_SHACL_VALIDATION_DEPTH` inside its own SHACL evaluator; when the
 //! crates.io `graphlaw` crate replaced it, SHACL evaluation became a pure
 //! re-export of `purrdf::shapes` — whose validator recurses over `sh:node` /
@@ -34,7 +34,7 @@ use purrdf::{RdfDataset, TermId, TermValue};
 /// overflows — hence 16 edges ≈ 32 levels).
 ///
 /// (Historical note: this constant name restores the guard of the same name
-/// from the retired `praxis-graphlaw` path dependency, where it lived inside
+/// from the retired `graphlaw` path dependency, where it lived inside
 /// the SHACL evaluator itself. The crates.io `graphlaw` line never carried
 /// it — the bound was lost in the path-dep → crates.io migration.)
 pub const MAX_SHACL_VALIDATION_DEPTH: usize = 16;

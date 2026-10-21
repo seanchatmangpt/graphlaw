@@ -1096,7 +1096,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1139> a smon:Turn ;
-    dcterms:description "[assistant] That's 53 pre-existing clippy errors in `praxis-graphlaw` (a dependency crate), entirely unrelated to my change — my diff touches only `cng_multi_engine.rs` (89 pure insertions). Checking whether clippy flagged anything ..." ;
+    dcterms:description "[assistant] That's 53 pre-existing clippy errors in `graphlaw` (a dependency crate), entirely unrelated to my change — my diff touches only `cng_multi_engine.rs` (89 pure insertions). Checking whether clippy flagged anything ..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-that's-pre-existing" ;
     smon:sequenceIndex 1139 ;
@@ -1110,7 +1110,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1140> a smon:Turn ;
-    dcterms:description "[assistant] The clippy failure means `praxis-graphlaw` (a dependency) never finished compiling — clippy never even reached linting `cng` itself, so this run gives zero signal about my actual change. Trying `--no-deps` to isolate the..." ;
+    dcterms:description "[assistant] The clippy failure means `graphlaw` (a dependency) never finished compiling — clippy never even reached linting `cng` itself, so this run gives zero signal about my actual change. Trying `--no-deps` to isolate the..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "cng" ;
     smon:sequenceIndex 1140 ;
@@ -1278,7 +1278,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1162> a smon:Turn ;
-    dcterms:description "[assistant] Same pre-existing 53 `praxis-graphlaw` errors blocking the pipeline before it reaches my crate — already confirmed unrelated last cycle. Adding a `--no-deps` variant, matching the established pattern." ;
+    dcterms:description "[assistant] Same pre-existing 53 `graphlaw` errors blocking the pipeline before it reaches my crate — already confirmed unrelated last cycle. Adding a `--no-deps` variant, matching the established pattern." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-same-pre-existing" ;
     smon:sequenceIndex 1162 ;
@@ -1292,7 +1292,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1164> a smon:Turn ;
-    dcterms:description "[assistant] `crown_local_test.rs` (my other touched file) has zero clippy mentions. This is pre-existing, disclosed debt spread across 13 files — consistent with last cycle's `cng`/`praxis-graphlaw` findings. Proceeding to commit." ;
+    dcterms:description "[assistant] `crown_local_test.rs` (my other touched file) has zero clippy mentions. This is pre-existing, disclosed debt spread across 13 files — consistent with last cycle's `cng`/`graphlaw` findings. Proceeding to commit." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "cng" ;
     smon:sequenceIndex 1164 ;
@@ -2076,7 +2076,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1265> a smon:Turn ;
-    dcterms:description "[assistant] Rather than force a low-value cleanup, I'll apply this session's established methodology (hunt for genuine panics on external input) to a crate neither running workflow is touching: `praxis-graphlaw`, the foundational RD..." ;
+    dcterms:description "[assistant] Rather than force a low-value cleanup, I'll apply this session's established methodology (hunt for genuine panics on external input) to a crate neither running workflow is touching: `graphlaw`, the foundational RD..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "workflow" ;
     smon:sequenceIndex 1265 ;
@@ -2090,7 +2090,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1267> a smon:Turn ;
-    dcterms:description "[assistant] Confirmed: extensive production reach across `cng`, `praxis-graphlaw-wasm` (the WASM/browser-facing boundary!), and `praxis-graphlaw`'s own `lib.rs`/`pipeline.rs`. This is a real, high-severity, well-scoped bug. Verifyin..." ;
+    dcterms:description "[assistant] Confirmed: extensive production reach across `cng`, `graphlaw-wasm` (the WASM/browser-facing boundary!), and `graphlaw`'s own `lib.rs`/`pipeline.rs`. This is a real, high-severity, well-scoped bug. Verifyin..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "cng" ;
     smon:sequenceIndex 1267 ;
@@ -2132,9 +2132,9 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1272> a smon:Turn ;
-    dcterms:description "[assistant] `praxis-graphlaw` has no isolated test recipe yet. Adding one matching the established pattern, then running my test." ;
+    dcterms:description "[assistant] `graphlaw` has no isolated test recipe yet. Adding one matching the established pattern, then running my test." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
-    dcterms:subject "kw-praxis-graphlaw-isolated" ;
+    dcterms:subject "kw-graphlaw-isolated" ;
     smon:sequenceIndex 1272 ;
     smon:turnKind smon:Other .
 
@@ -2181,7 +2181,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1279> a smon:Turn ;
-    dcterms:description "[assistant] Round-trip confirmed. Now running the full `praxis-graphlaw` lib test suite for regressions." ;
+    dcterms:description "[assistant] Round-trip confirmed. Now running the full `graphlaw` lib test suite for regressions." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-round-trip-confirmed" ;
     smon:sequenceIndex 1279 ;
@@ -2307,7 +2307,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1295> a smon:Turn ;
-    dcterms:description "[assistant] Both areas from last cycle's dogfood findings (`apps/arazzo_atomvm` and `crates/cng`) are disjoint from the currently-running workflow's scope (`praxis-graphlaw`). Prioritizing task #91 — a currently-failing regression t..." ;
+    dcterms:description "[assistant] Both areas from last cycle's dogfood findings (`apps/arazzo_atomvm` and `crates/cng`) are disjoint from the currently-running workflow's scope (`graphlaw`). Prioritizing task #91 — a currently-failing regression t..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "cng-dogfood-workflow" ;
     smon:sequenceIndex 1295 ;
@@ -2902,7 +2902,7 @@
     smon:turnKind smon:BlockerResponse .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1371> a smon:Turn ;
-    dcterms:description "[assistant] Yes — TWOSTEP's architecture maps almost one-to-one onto seams that already exist in this repo, and it validates the exact discipline praxis already enforces. The key insights:  ## The core insight: Claude proposes goals..." ;
+    dcterms:description "[assistant] Yes — TWOSTEP's architecture maps almost one-to-one onto seams that already exist in this repo, and it validates the exact discipline graphlaw already enforces. The key insights:  ## The core insight: Claude proposes goals..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "cng-crown-pddl-powl-receipt-swarm-agents-togaf" ;
     smon:sequenceIndex 1371 ;
@@ -3000,7 +3000,7 @@
     smon:turnKind smon:SurveyResponse .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1384> a smon:Turn ;
-    dcterms:description "[assistant] Both other workflows are clear of the scope I'll use here. Launching a 10-agent workflow now: 4 discovery agents scan the F01–F30 atlas (`crates/multifractal-workflow`) and the chatman engine (`crates/praxis-graphlaw/src..." ;
+    dcterms:description "[assistant] Both other workflows are clear of the scope I'll use here. Launching a 10-agent workflow now: 4 discovery agents scan the F01–F30 atlas (`crates/multifractal-workflow`) and the chatman engine (`crates/graphlaw/src..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "cng-crown-dogfood-swarm-agents-workflow" ;
     smon:sequenceIndex 1384 ;
@@ -3028,7 +3028,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1388> a smon:Turn ;
-    dcterms:description "[assistant] That's pasted terminal output from a different Claude Code session working in a sibling repo (`~/mfact` or `mfact-core`) — not something I ran here in praxis. Let me reflect back what I read from it before acting, since ..." ;
+    dcterms:description "[assistant] That's pasted terminal output from a different Claude Code session working in a sibling repo (`~/mfact` or `mfact-core`) — not something I ran here in graphlaw. Let me reflect back what I read from it before acting, since ..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "erlang-mfact-soc2" ;
     smon:sequenceIndex 1388 ;
@@ -3238,7 +3238,7 @@
     smon:turnKind smon:SurveyResponse .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1414> a smon:Turn ;
-    dcterms:description "[assistant] Launched (`w3qap075l`). Given the two other workflows (`wotuccuqs` gap-closing, `wjozb05kl` SOC2 testbed) are both still actively mid-edit in `crates/multifractal-workflow`, `crates/praxis-graphlaw/chatman`, and `crates/..." ;
+    dcterms:description "[assistant] Launched (`w3qap075l`). Given the two other workflows (`wotuccuqs` gap-closing, `wjozb05kl` SOC2 testbed) are both still actively mid-edit in `crates/multifractal-workflow`, `crates/graphlaw/chatman`, and `crates/..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "cng-dogfood-erlang-progress-soc2-workflow" ;
     smon:sequenceIndex 1414 ;
@@ -3280,7 +3280,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-142> a smon:Turn ;
-    dcterms:description "[assistant] `justfile`'s change is from the unrelated concurrent Lean/praxis-lean work (axiom disclosure gate) — excluding it, same as the other out-of-scope files." ;
+    dcterms:description "[assistant] `justfile`'s change is from the unrelated concurrent Lean/graphlaw-lean work (axiom disclosure gate) — excluding it, same as the other out-of-scope files." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-justfile-change-unrelated" ;
     smon:sequenceIndex 142 ;
@@ -3420,7 +3420,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1438> a smon:Turn ;
-    dcterms:description "[assistant] All 4 tests pass. Now let's confirm no broader regression from the `strip_comments` fix by running the full praxis-graphlaw lib + relevant integration test suites." ;
+    dcterms:description "[assistant] All 4 tests pass. Now let's confirm no broader regression from the `strip_comments` fix by running the full graphlaw lib + relevant integration test suites." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-all-tests-pass" ;
     smon:sequenceIndex 1438 ;
@@ -3910,14 +3910,14 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1500> a smon:Turn ;
-    dcterms:description "[assistant] The dogfood audit (`wenuq1y1h`) is actively running — live processes show it mid-adversarial-mutation on `crates/praxis-graphlaw/src/hooks/quads.rs` (currently dirty, expected: revert → confirm failure → restore). I must..." ;
+    dcterms:description "[assistant] The dogfood audit (`wenuq1y1h`) is actively running — live processes show it mid-adversarial-mutation on `crates/graphlaw/src/hooks/quads.rs` (currently dirty, expected: revert → confirm failure → restore). I must..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "dogfood-hook-progress-workflow" ;
     smon:sequenceIndex 1500 ;
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1501> a smon:Turn ;
-    dcterms:description "[assistant] **Step 0**: cleaned 5 stale isolated dirs, carefully left the two currently held by the live dogfood audit (`wenuq1y1h`) untouched — it's mid-adversarial-mutation on `crates/praxis-graphlaw/src/hooks/quads.rs` right now ..." ;
+    dcterms:description "[assistant] **Step 0**: cleaned 5 stale isolated dirs, carefully left the two currently held by the live dogfood audit (`wenuq1y1h`) untouched — it's mid-adversarial-mutation on `crates/graphlaw/src/hooks/quads.rs` right now ..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "dogfood-hook-progress-workflow" ;
     smon:sequenceIndex 1501 ;
@@ -3938,7 +3938,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1504> a smon:Turn ;
-    dcterms:description "[assistant] There's real precedent here — `docs/PUBLISH_ALL_PRAXIS_PLAN.md` and v26.7.6's `ARXIV_READINESS.md`/`FINAL_STATUS.md` suggest a prior publish attempt already happened. Let me ground this properly before designing anything..." ;
+    dcterms:description "[assistant] There's real precedent here — `docs/PUBLISH_ALL_GRAPHLAW_PLAN.md` and v26.7.6's `ARXIV_READINESS.md`/`FINAL_STATUS.md` suggest a prior publish attempt already happened. Let me ground this properly before designing anything..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-there's-real-precedent" ;
     smon:sequenceIndex 1504 ;
@@ -3959,7 +3959,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1507> a smon:Turn ;
-    dcterms:description "[assistant] All 5 research agents complete. Reusable primitives confirmed: `praxis-core::ReceiptRecord`/`ReceiptStore` (the generic chain-of-custody envelope, already used by ggen's own sync receipt), `chatman::abi::StageSeal` (gene..." ;
+    dcterms:description "[assistant] All 5 research agents complete. Reusable primitives confirmed: `graphlaw-core::ReceiptRecord`/`ReceiptStore` (the generic chain-of-custody envelope, already used by ggen's own sync receipt), `chatman::abi::StageSeal` (gene..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "receipt-swarm-agents" ;
     smon:sequenceIndex 1507 ;
@@ -4162,14 +4162,14 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1533> a smon:Turn ;
-    dcterms:description "[assistant] Now I understand the ggen architecture precisely: `crates/ggen/src/verbs/graph.rs` is **generated** from `schema/praxis.ttl` (`praxis:CliCommand` instances, Overwrite mode) — so I can't hand-edit the route durably; the a..." ;
+    dcterms:description "[assistant] Now I understand the ggen architecture precisely: `crates/ggen/src/verbs/graph.rs` is **generated** from `schema/graphlaw.ttl` (`graphlaw:CliCommand` instances, Overwrite mode) — so I can't hand-edit the route durably; the a..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "cli" ;
     smon:sequenceIndex 1533 ;
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1534> a smon:Turn ;
-    dcterms:description "[assistant] The generation path is now fully mapped: - `schema/praxis.ttl` → `praxis:CmdGgenGraphValidate` (no args today); `praxis:flag` encodes **boolean-only** flags as `name::help`. - `verbs_l4.rs.tmpl` already proves **typed** ..." ;
+    dcterms:description "[assistant] The generation path is now fully mapped: - `schema/graphlaw.ttl` → `graphlaw:CmdGgenGraphValidate` (no args today); `graphlaw:flag` encodes **boolean-only** flags as `name::help`. - `verbs_l4.rs.tmpl` already proves **typed** ..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-generation-path-now" ;
     smon:sequenceIndex 1534 ;
@@ -4351,7 +4351,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1558> a smon:Turn ;
-    dcterms:description "[assistant] Two commits landed this turn, both verified:  | Commit | What | Verification | |---|---|---| | `37019fdc` | **ggen multi-file `graph validate`** (your \"ggen must support multiple files\" directive — real Rust: `praxis:arg..." ;
+    dcterms:description "[assistant] Two commits landed this turn, both verified:  | Commit | What | Verification | |---|---|---| | `37019fdc` | **ggen multi-file `graph validate`** (your \"ggen must support multiple files\" directive — real Rust: `graphlaw:arg..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "cng-dogfood-hook-receipt-swarm-agents" ;
     smon:sequenceIndex 1558 ;
@@ -5263,7 +5263,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1677> a smon:Turn ;
-    dcterms:description "[assistant] Here's v26.7.13, explained like you're five.  ## The big picture: a robot that has to show its work  Imagine you have a very capable robot helper. Most robots just *do things* and tell you \"done!\" This project (Praxis / ..." ;
+    dcterms:description "[assistant] Here's v26.7.13, explained like you're five.  ## The big picture: a robot that has to show its work  Imagine you have a very capable robot helper. Most robots just *do things* and tell you \"done!\" This project (GraphLaw / ..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "arazzo-cli-mfact-receipt-swarm-swarm-agents-workflow" ;
     smon:sequenceIndex 1677 ;
@@ -5277,7 +5277,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1679> a smon:Turn ;
-    dcterms:description "[assistant] Identified: `81694fbe8`=swarmRoadmap, `720684de5`=praxisRelation, `40b895ba6`=standingGaps, `e95c75b3a`=selfImproveLoop. Pulling full detail on each, especially the swarm one — it directly resolves your original question..." ;
+    dcterms:description "[assistant] Identified: `81694fbe8`=swarmRoadmap, `720684de5`=graphlawRelation, `40b895ba6`=standingGaps, `e95c75b3a`=selfImproveLoop. Pulling full detail on each, especially the swarm one — it directly resolves your original question..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "swarm" ;
     smon:sequenceIndex 1679 ;
@@ -5291,7 +5291,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1680> a smon:Turn ;
-    dcterms:description "[assistant] That's the story, exactly — and now that I have the full picture (all 5 mfact findings plus everything about praxis), I can tell you precisely which parts of that story are real today and which part is still the horizon...." ;
+    dcterms:description "[assistant] That's the story, exactly — and now that I have the full picture (all 5 mfact findings plus everything about graphlaw), I can tell you precisely which parts of that story are real today and which part is still the horizon...." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "hook-mfact-pddl-powl-receipt-soc2-swarm-workflow" ;
     smon:sequenceIndex 1680 ;
@@ -5684,7 +5684,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-183> a smon:Turn ;
-    dcterms:description "[assistant] Pushed — `58e1873c..5c778846`, 23 commits, all clean. Now launching the 10-agent Explore workflow on publishing all of praxis." ;
+    dcterms:description "[assistant] Pushed — `58e1873c..5c778846`, 23 commits, all clean. Now launching the 10-agent Explore workflow on publishing all of graphlaw." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "swarm-agents-workflow" ;
     smon:sequenceIndex 183 ;
@@ -5740,7 +5740,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-190> a smon:Turn ;
-    dcterms:description "[assistant] ## Summary — `docs/PUBLISH_ALL_PRAXIS_PLAN.md` (commit `ecb3ad9d`)  The 10-agent research found something more consequential than the mechanical version-pinning issue I found earlier: **public crates.io isn't the realist..." ;
+    dcterms:description "[assistant] ## Summary — `docs/PUBLISH_ALL_GRAPHLAW_PLAN.md` (commit `ecb3ad9d`)  The 10-agent research found something more consequential than the mechanical version-pinning issue I found earlier: **public crates.io isn't the realist..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "crown-mfact-swarm-agents-workflow" ;
     smon:sequenceIndex 190 ;
@@ -6482,9 +6482,9 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-286> a smon:Turn ;
-    dcterms:description "[assistant] Good — `praxis_graphlaw::tripleindex::TripleIndex`. Now let's add all the imports and the new SHACL constant:" ;
+    dcterms:description "[assistant] Good — `graphlaw::tripleindex::TripleIndex`. Now let's add all the imports and the new SHACL constant:" ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
-    dcterms:subject "kw-good-praxis-graphlaw" ;
+    dcterms:subject "kw-good-graphlaw" ;
     smon:sequenceIndex 286 ;
     smon:turnKind smon:Other .
 
@@ -7931,7 +7931,7 @@
     smon:turnKind smon:SurveyResponse .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-472> a smon:Turn ;
-    dcterms:description "[assistant] All remaining dirty/untracked files are the pre-identified out-of-scope Lean-track session artifacts (`crates/praxis-lean/*`, `tools/paper-factory/*`, `docs/releases/v26.7.6/*`, `docs/diataxis-math/*`, root `src/*`, `tes..." ;
+    dcterms:description "[assistant] All remaining dirty/untracked files are the pre-identified out-of-scope Lean-track session artifacts (`crates/graphlaw-lean/*`, `tools/paper-factory/*`, `docs/releases/v26.7.6/*`, `docs/diataxis-math/*`, root `src/*`, `tes..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "crown-erlang-status-swarm-agents" ;
     smon:sequenceIndex 472 ;
@@ -8001,7 +8001,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-481> a smon:Turn ;
-    dcterms:description "[assistant] The 10-agent Explore team is running in the background against `~/mfact`. While that surveys, continuing the praxis v26.7.12 cron cycle." ;
+    dcterms:description "[assistant] The 10-agent Explore team is running in the background against `~/mfact`. While that surveys, continuing the graphlaw v26.7.12 cron cycle." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "mfact-swarm-agents" ;
     smon:sequenceIndex 481 ;
@@ -8309,7 +8309,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-520> a smon:Turn ;
-    dcterms:description "[assistant] This is directly relevant — it's a kernel-checked (sorry-free) Lean formalization of exactly praxis's own domain (POWL 2.0, multifractal-workflow, executable correspondence to Rust/Erlang/AtomVM). Let me read the actual ..." ;
+    dcterms:description "[assistant] This is directly relevant — it's a kernel-checked (sorry-free) Lean formalization of exactly graphlaw's own domain (POWL 2.0, multifractal-workflow, executable correspondence to Rust/Erlang/AtomVM). Let me read the actual ..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "atomvm-erlang-powl-workflow" ;
     smon:sequenceIndex 520 ;
@@ -8694,7 +8694,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-570> a smon:Turn ;
-    dcterms:description "[assistant] This REALITY_INDEX.md change references things I don't recognize (`crates/mfact-core` inside praxis?, a `tmp_sparql2` crate) — not part of jira-cli scope. Let me check what's actually there before deciding whether to tou..." ;
+    dcterms:description "[assistant] This REALITY_INDEX.md change references things I don't recognize (`crates/mfact-core` inside graphlaw?, a `tmp_sparql2` crate) — not part of jira-cli scope. Let me check what's actually there before deciding whether to tou..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "cli-mfact" ;
     smon:sequenceIndex 570 ;
@@ -9149,7 +9149,7 @@
     smon:turnKind smon:BlockerResponse .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-629> a smon:Turn ;
-    dcterms:description "[assistant] Parsing: leading token `30m` matches the interval pattern (rule 1) → interval `30m`, prompt \"launch a dynamic workflow to apply praxis to yourself to eat our dog food\". Not ≥60min, no daily phrasing, so no cloud-offer ne..." ;
+    dcterms:description "[assistant] Parsing: leading token `30m` matches the interval pattern (rule 1) → interval `30m`, prompt \"launch a dynamic workflow to apply graphlaw to yourself to eat our dog food\". Not ≥60min, no daily phrasing, so no cloud-offer ne..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "workflow" ;
     smon:sequenceIndex 629 ;
@@ -9191,7 +9191,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-634> a smon:Turn ;
-    dcterms:description "[assistant] Cycle 1 complete — found 2 real overclaims in praxis's own self-reporting and fixed both (one doc correction, one actual behavioral repair adding real test coverage). Let me get the full F22 result (it was truncated) bef..." ;
+    dcterms:description "[assistant] Cycle 1 complete — found 2 real overclaims in graphlaw's own self-reporting and fixed both (one doc correction, one actual behavioral repair adding real test coverage). Let me get the full F22 result (it was truncated) bef..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-cycle-complete-found" ;
     smon:sequenceIndex 634 ;
@@ -9233,7 +9233,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-64> a smon:Turn ;
-    dcterms:description "[assistant] Confirmed — all clippy errors are pre-existing in `praxis-graphlaw` (a dependency, untouched by this work), not in any file I changed. My changes are clean." ;
+    dcterms:description "[assistant] Confirmed — all clippy errors are pre-existing in `graphlaw` (a dependency, untouched by this work), not in any file I changed. My changes are clean." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-confirmed-all-clippy" ;
     smon:sequenceIndex 64 ;
@@ -9842,7 +9842,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-718> a smon:Turn ;
-    dcterms:description "[assistant] Disk is healthy; a concurrent `cargo` process in an unrelated repo (`~/mfact`) is correctly making `clean-stale-isolated` refuse to touch praxis's own isolated dirs — conservative behavior, not a bug, so leaving it be.  ..." ;
+    dcterms:description "[assistant] Disk is healthy; a concurrent `cargo` process in an unrelated repo (`~/mfact`) is correctly making `clean-stale-isolated` refuse to touch graphlaw's own isolated dirs — conservative behavior, not a bug, so leaving it be.  ..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "crown-dogfood-mfact-swarm" ;
     smon:sequenceIndex 718 ;
@@ -10122,7 +10122,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-754> a smon:Turn ;
-    dcterms:description "[assistant] Good, there are dedicated recipes. Let me run the full lib test suite, then clippy, scoped to praxis-graphlaw." ;
+    dcterms:description "[assistant] Good, there are dedicated recipes. Let me run the full lib test suite, then clippy, scoped to graphlaw." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-good-there-dedicated" ;
     smon:sequenceIndex 754 ;
@@ -11809,7 +11809,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-971> a smon:Turn ;
-    dcterms:description "[assistant] The test passes on the first try, and it compiled fine against praxis-graphlaw's current WIP state (praxis-graphlaw's lib itself must still be compiling cleanly). Now the mandatory adversarial self-check: revert the `f03..." ;
+    dcterms:description "[assistant] The test passes on the first try, and it compiled fine against graphlaw's current WIP state (graphlaw's lib itself must still be compiling cleanly). Now the mandatory adversarial self-check: revert the `f03..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-test-passes-first" ;
     smon:sequenceIndex 971 ;
@@ -11837,7 +11837,7 @@
     smon:turnKind smon:Other .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-975> a smon:Turn ;
-    dcterms:description "[assistant] No findings in `crown_local_test.rs` — the pre-existing 53-error baseline is entirely in unrelated `praxis-graphlaw` files. Committing now, scoped strictly to my own file." ;
+    dcterms:description "[assistant] No findings in `crown_local_test.rs` — the pre-existing 53-error baseline is entirely in unrelated `graphlaw` files. Committing now, scoped strictly to my own file." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "kw-findings-crown-local" ;
     smon:sequenceIndex 975 ;
@@ -12040,7 +12040,7 @@
     smon:turnKind smon:GroundingQuestion .
 
 <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#turn-1703> a smon:Turn ;
-    dcterms:description "[user] Two separate points, both fair.  **How ~/mfact's math clarifies the miscommunication itself:** mfact's core doctrine — \"Praxis ⊥_epistemic mfact,\" the No Ambient Theorem Authority law — is a formal statement that a proof..." ;
+    dcterms:description "[user] Two separate points, both fair.  **How ~/mfact's math clarifies the miscommunication itself:** mfact's core doctrine — \"GraphLaw ⊥_epistemic mfact,\" the No Ambient Theorem Authority law — is a formal statement that a proof..." ;
     dcterms:isPartOf <http://seanchatmangpt.github.io/packs/self-monitoring/sessions/1f9798ec-f62d-48bb-80a0-e9817fafdb71#session> ;
     dcterms:subject "e2e-capability-grounding" ;
     smon:sequenceIndex 1703 ;

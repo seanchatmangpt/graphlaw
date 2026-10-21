@@ -66,7 +66,7 @@ pub fn record(state: &LawState, receipt: &Receipt) -> Result<LawState, LawError>
     record_facts(state, receipt, None)
 }
 
-/// [`record`] plus the receipt's [`Attestation`] (`attest_payload_sha256`,
+/// [`record`] plus the receipt's [`Attestation`] (`attest_payload_blake3`,
 /// `attest_key_id`, `attest_signature`). Recording does not verify; the gate
 /// [`require_signed`] does, against the verifier's trusted keys.
 pub fn record_signed(
@@ -95,14 +95,14 @@ fn record_facts(
     if let Some(id) = &receipt.lease_id {
         facts.push(("lease_id", id.clone()));
     }
-    if let Some(d) = &receipt.plan_sha256 {
-        facts.push(("plan_sha256", d.clone()));
+    if let Some(d) = &receipt.plan_blake3 {
+        facts.push(("plan_blake3", d.clone()));
     }
-    if let Some(d) = &receipt.subject_sha256 {
-        facts.push(("subject_sha256", d.clone()));
+    if let Some(d) = &receipt.subject_blake3 {
+        facts.push(("subject_blake3", d.clone()));
     }
     if let Some(a) = att {
-        facts.push(("attest_payload_sha256", a.payload_sha256.clone()));
+        facts.push(("attest_payload_blake3", a.payload_blake3.clone()));
         facts.push(("attest_key_id", a.key_id.clone()));
         facts.push(("attest_signature", a.signature.clone()));
     }
@@ -215,14 +215,14 @@ fn check_attested(
 ) -> Result<(), ReceiptReason> {
     let one = |name: &str| single(ls, subj, name);
     let (Some(payload), Some(key_id), Some(signature)) = (
-        one("attest_payload_sha256"),
+        one("attest_payload_blake3"),
         one("attest_key_id"),
         one("attest_signature"),
     ) else {
         return Err(ReceiptReason::Unattested);
     };
     let att = Attestation {
-        payload_sha256: payload.to_string(),
+        payload_blake3: payload.to_string(),
         key_id: key_id.to_string(),
         signature: signature.to_string(),
     };
@@ -246,8 +246,8 @@ fn check_attested(
         revision: field("revision")?,
         added,
         lease_id: opt("lease_id")?,
-        plan_sha256: opt("plan_sha256")?,
-        subject_sha256: opt("subject_sha256")?,
+        plan_blake3: opt("plan_blake3")?,
+        subject_blake3: opt("subject_blake3")?,
     };
     verify_bytes(receipt_payload(&fields).as_bytes(), &att, trusted).map_err(|e| match e {
         AttestError::UnknownKey => ReceiptReason::UntrustedKey,

@@ -19,8 +19,8 @@ Every command below was executed against this exact tree; expected outputs are r
 
 ```sh
 cargo run --example quickstart_plan
-# plan-action -> sha256:e51e3e15…, 01c373ea…, 77b8d7c9… (one per action)
-# final state: sha256:77b8d7c9…  (last receipt child == final state id)
+# plan-action -> blake3:8a0d0202…, c66ea90e…, 3be6530b… (one per action)
+# final state: blake3:3be6530b…  (last receipt child == final state id)
 
 cargo run --example refused_plan
 # REFUSED at index 1, action `paint` + the unmet triple
@@ -43,7 +43,7 @@ Organized Diataxis-style; the hub is [docs/index.md](docs/index.md).
 |---|---|
 | **Tutorial** | [Quickstart](docs/quickstart.md) |
 | **How-to** | [Run the WASM module](docs/how-to/run-the-wasm-module.md) · [Signed leases](docs/how-to/authorize-with-signed-leases.md) · [Offline verification](docs/how-to/verify-without-trusting-the-operator.md) · [Knowledge hooks](docs/how-to/use-knowledge-hooks.md) · [Use from JavaScript](docs/how-to/use-from-javascript.md) |
-| **Reference** | [ABI reference](docs/abi-reference.md) · [Capability registry](docs/capability-registry.md) · [Refusals](docs/refusals.md) · [API stability](docs/api-stability.md) · [WASM integration](docs/wasm-integration.md) · [Full generated reference](docs/reference-generated/reference.md) |
+| **Reference** | [ABI reference](docs/abi-reference.md) · [Capability registry](docs/capability-registry.md) · [Refusals](docs/refusals.md) · [API stability](docs/api-stability.md) · [WASM integration](docs/wasm-integration.md) · [WASM runbook](docs/WASM.md) · [Dialects](docs/DIALECTS.md) · [Full generated reference](docs/reference-generated/reference.md) |
 | **Explanation** | [Qualification algebra](docs/QUALIFICATION_ALGEBRA.md) · [Chicago courts](docs/CHICAGO_N3_DATALOG.md) ([FIBO](docs/CHICAGO_FIBO.md), [cross-authority](docs/CHICAGO_CROSS_AUTHORITY.md)) · [Receipt fields](docs/explanation/receipt-fields.md) |
 
 ## JavaScript / TypeScript
@@ -68,7 +68,7 @@ import { createClient } from 'graphlaw'
 ## The law-state loop
 
 `dialect::sniff` routes a document to its owning engine by content. `LawState` is an
-immutable dataset identified by the sha256 of its RDFC-1.0 canonical form.
+immutable dataset identified by the blake3 of its RDFC-1.0 canonical form.
 `LawState::transition(&Step)` runs an upstream-owned step (SHACL admission, N3
 derivation, RDFS/OWL-RL entailment) and returns the child state with a `Receipt` naming
 the authority; a refused step yields no state. `receipt::record` writes a receipt into
@@ -76,6 +76,31 @@ the state, changing its id — so verification loops can require prior receipts
 (`Step::RequireReceipt`). `Plan::admit` replays a candidate plan action-by-action into a
 chain of content-addressed states; the first violated precondition refuses with
 `PlanRefused { index, action, unmet, violated_absent }`.
+
+## Dialects and tiers
+
+`dialect::sniff` recognizes 13 dialects under a two-tier model: dataset
+syntaxes (Turtle, TriG, N-Triples, N-Quads, RDF/XML, JSON-LD, YAML-LD, TriX,
+HexTuples) route to PurRDF; Notation3 routes to Eyeron as a separate logic
+tier (`n3` op, never silently down-converted to a dataset). Ambiguous content
+(TriG vs ShExC) is refused with `Ambiguous` demanding a hint rather than
+guessed. The parse surface is pinned by the vendored W3C RDF 1.1 syntax
+conformance court (`cargo test --test w3c_conformance`). Full matrix:
+[docs/DIALECTS.md](docs/DIALECTS.md).
+
+## WebAssembly module
+
+The `graphlaw-wasm` member builds one artifact for `wasm32-wasip1` (the lib
+facade also compiles clean under `wasm32-unknown-unknown`, WASI-import-free).
+The artifact is pinned by BLAKE3 digest and byte size
+(`registry/ARTIFACTS.blake3` `wasm` row + the `priv/graphlaw.wasm.blake3`
+sidecar; checked by `tests/registry_artifacts.rs` and
+`scripts/wasm_audit.sh`). The wire surface is pinned by
+`contracts/abi-manifest.json`, byte-compared against live constants by
+`tests/abi_manifest_court`. A differential court
+(`tests/wasm_native_differential.rs`) replays canonical inputs natively
+and through the module in a real wasm runtime, asserting byte-identical
+results. Build and embed details: [docs/WASM.md](docs/WASM.md).
 
 ## Engines and authorities
 
@@ -92,7 +117,7 @@ queries) and the decision about which upstream implementation has standing.
 
 The public op surface is published as a machine-readable registry
 (`registry/capability-registry.json` + Turtle + `op-examples.json`), emitted by the
-`graphlaw-registry` binary and carried as release assets with `.sha256` files. See
+`graphlaw-registry` binary and carried as release assets with `.blake3` files. See
 [docs/capability-registry.md](docs/capability-registry.md).
 
 ## Verifying without trusting the operator

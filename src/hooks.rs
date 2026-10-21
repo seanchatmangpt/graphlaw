@@ -8,7 +8,7 @@
 //!     kh:effect "emit-delta" ;
 //!     kh:action smon:a ; kh:priority 1 .
 //! smon:a a kh:Action ;
-//!     kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ;
+//!     kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;
 //!     kh:query "CONSTRUCT ... WHERE ..." .
 //! ```
 //!
@@ -28,7 +28,7 @@
 //! firing mints its own blank nodes). Hooks run in ascending `kh:priority`
 //! (ties by IRI) and rounds repeat until no new row appears, so the result is a
 //! fixpoint. Each firing also records a deterministic marker
-//! (`<urn:graphlaw:hook-firing:SHA256> a kh:Firing ; kh:hook <hook>`) in the
+//! (`<urn:graphlaw:hook-firing:blake3> a kh:Firing ; kh:hook <hook>`) in the
 //! state, so a row fires at most once *per state lineage*: materializing an
 //! already-saturated state changes nothing, and blank-node minting cannot make
 //! a stable pack diverge or duplicate. Unknown `kh:kind`, `kh:effect` or handler is refused
@@ -37,7 +37,6 @@
 
 use std::collections::BTreeSet;
 
-use sha2::{Digest, Sha256};
 
 use purrdf::{RdfDatasetBuilder, SparqlEngine, SparqlRequest, SparqlResult, TermValue};
 
@@ -46,10 +45,10 @@ use crate::law::LawState;
 use purrdf::sparql::NativeSparqlEngine;
 
 /// The `kh:` vocabulary namespace.
-pub const KH: &str = "http://seanchatmangpt.github.io/praxis/kh#";
+pub const KH: &str = "http://seanchatmangpt.github.io/graphlaw/kh#";
 /// The only supported action handler.
 pub const HANDLER_SPARQL_CONSTRUCT: &str =
-    "http://seanchatmangpt.github.io/praxis/handler#sparql-construct";
+    "http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct";
 /// Hard ceiling on fixpoint rounds.
 pub const MAX_ROUNDS: usize = 64;
 /// Hard ceiling on total hook firings.
@@ -317,10 +316,10 @@ impl HookPack {
                         .zip(row)
                         .filter_map(|(v, t)| t.map(|t| (v.clone(), t)))
                         .collect();
-                    let digest = Sha256::digest(format!("{}\0{bound:?}", hook.iri).as_bytes());
+                    let digest = blake3::hash(format!("{}\0{bound:?}", hook.iri).as_bytes());
                     let marker = format!(
                         "urn:graphlaw:hook-firing:{}",
-                        digest
+                        digest.as_bytes()
                             .iter()
                             .map(|b| format!("{b:02x}"))
                             .collect::<String>()

@@ -97,14 +97,14 @@
 #     express "the turn immediately following turn X" as a plain graph-
 #     pattern join (?resp smon:immediatelyFollows ?x) instead of SPARQL
 #     arithmetic on sequenceIndex (?ir = ?i1 + 1) -- confirmed by reading
-#     crates/praxis-graphlaw/src/sparql/plan.rs::extract_expression this
+#     crates/graphlaw/src/sparql/plan.rs::extract_expression this
 #     session: `Expression::Add`/`Subtract` are NOT matched by that function
 #     (they fall through to the `_ => PlanExpression::Done` catch-all), so
 #     arithmetic FILTER expressions are NOT a proven capability of this
 #     engine. Using a direct adjacency edge instead of `+1` arithmetic keeps
 #     hook.ttl within confirmed-supported SPARQL (BGP joins + Greater/
 #     NotEqual comparisons, both exercised live by
-#     crates/praxis-graphlaw/tests/soc2_hook_actuation.rs and
+#     crates/graphlaw/tests/soc2_hook_actuation.rs and
 #     crates/multifractal-workflow/fixtures/bribery-case/hook.ttl already).
 #   smon:turnKind + smon:TurnKind  a turn's classification, drawn from the
 #     CLOSED 5-concept vocabulary below (smon:TurnKindScheme). No public
@@ -140,7 +140,7 @@
 #   smon:reason  EscalationObligation -> an xsd:string literal explaining
 #     the derivation. Mirrors kh:reason's already-established, repo-wide
 #     "a literal naming why a governed fact was produced" pattern
-#     (crates/praxis-graphlaw/src/hooks/mod.rs's kh:reason on refusing
+#     (crates/graphlaw/src/hooks/mod.rs's kh:reason on refusing
 #     hooks), scoped to this pack's derived-fact node rather than a hook
 #     definition (different domain, same rationale). dcterms:description was
 #     checked and rejected: it is a generic "account of the resource," not
@@ -191,7 +191,7 @@ smon:immediatelyFollows
     rdfs:label   "immediatelyFollows" ;
     rdfs:domain  smon:Turn ;
     rdfs:range   smon:Turn ;
-    rdfs:comment "The subject turn is the very next turn, in session order, after the object turn. Exists so hook.ttl's CONSTRUCT query can express turn-adjacency as a plain graph-pattern join instead of SPARQL arithmetic on smon:sequenceIndex -- see this file's header for the confirmed engine-capability finding (Expression::Add is not implemented in crates/praxis-graphlaw/src/sparql/plan.rs::extract_expression) that this property exists to work around." .
+    rdfs:comment "The subject turn is the very next turn, in session order, after the object turn. Exists so hook.ttl's CONSTRUCT query can express turn-adjacency as a plain graph-pattern join instead of SPARQL arithmetic on smon:sequenceIndex -- see this file's header for the confirmed engine-capability finding (Expression::Add is not implemented in crates/graphlaw/src/sparql/plan.rs::extract_expression) that this property exists to work around." .
 
 smon:turnKind
     a            rdf:Property ;

@@ -63,8 +63,8 @@ fn receipt_reason(r: Result<LawState, LawError>) -> ReceiptReason {
 #[test]
 fn a_hand_written_receipt_triples_pass_require_but_not_require_signed() {
     let forged = LawState::parse(
-        b"<urn:graphlaw:receipt:sha256:ff> <urn:graphlaw:p:step> \"admit:shacl\" .\n\
-          <urn:graphlaw:receipt:sha256:ff> <urn:graphlaw:p:child> \"sha256:ff\" .\n",
+        b"<urn:graphlaw:receipt:blake3:ff> <urn:graphlaw:p:step> \"admit:shacl\" .\n\
+          <urn:graphlaw:receipt:blake3:ff> <urn:graphlaw:p:child> \"blake3:ff\" .\n",
         Dialect::NTriples,
         None,
     )
@@ -146,7 +146,7 @@ fn d_tampering_a_signed_receipt_payload_fails_verification() {
         attest::verify_receipt(&m, &att, &trusted),
         Err(AttestError::BadSignature)
     );
-    let m = r.clone().with_subject("sha256:aa");
+    let m = r.clone().with_subject("blake3:aa");
     assert_eq!(
         attest::verify_receipt(&m, &att, &trusted),
         Err(AttestError::BadSignature)
@@ -186,7 +186,7 @@ fn d_tampering_a_signed_receipt_payload_fails_verification() {
 #[test]
 fn subject_digest_is_part_of_the_signed_payload_and_survives_the_state() {
     let (child, r) = real_receipt();
-    let r = r.with_subject("sha256:0123");
+    let r = r.with_subject("blake3:0123");
     let k = key(1);
     let recorded = receipt::record_signed(&child, &r, &attest::sign_receipt(&k, &r)).unwrap();
     receipt::require_signed(&recorded, "derive:rdfs", &trusting(&k)).unwrap();

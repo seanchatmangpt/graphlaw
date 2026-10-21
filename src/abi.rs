@@ -21,7 +21,7 @@
 //! forbidden atom).
 //!
 //! Leases: a `law` request may carry `"signed_lease": {"lease": {id, holder, ceiling,
-//! scope, expires_unix, issued_unix?}, "attestation": {key_id, payload_sha256,
+//! scope, expires_unix, issued_unix?}, "attestation": {key_id, payload_blake3,
 //! signature}}` plus `"trusted_keys"` (hex) and optional `"max_skew_secs"` (default 60).
 //! The signature is verified offline and expiry is judged by the module's own clock;
 //! any `now_unix` in the request is ignored. An unsigned `"lease"` is refused
@@ -54,6 +54,12 @@ pub const MAX_PLAN_ACTIONS: usize = 1_000;
 pub const MAX_ATOMS_PER_FIELD: usize = 10_000;
 /// Most entries accepted in one FOND policy.
 pub const MAX_POLICY_ENTRIES: usize = 100_000;
+/// Most steps accepted in one `law` request.
+pub const MAX_LAW_STEPS: usize = 1_000;
+/// Most datalog rules accepted in one `datalog` request.
+pub const MAX_DATALOG_RULES: usize = 10_000;
+/// Most datalog facts accepted in one `datalog` request.
+pub const MAX_DATALOG_FACTS: usize = 100_000;
 /// Ceiling, in bytes, on host-visible buffers (`gl_alloc` buffers and `gl_call`
 /// responses) the wasm module holds at once; `gl_alloc` returns null beyond it.
 pub const MAX_OUTSTANDING_ALLOC_BYTES: usize = 256 * 1024 * 1024;
@@ -455,8 +461,8 @@ fn capabilities() -> Value {
         "other_dialects": crate::registry::other_dialect_names(),
         "ops": crate::registry::op_names(),
         "registry_schema": crate::registry::REGISTRY_SCHEMA,
-        "registry_sha256": crate::registry::registry_sha256(),
-        "surface_sha256": crate::registry::surface_sha256(),
+        "registry_blake3": crate::registry::registry_blake3(),
+        "surface_blake3": crate::registry::surface_blake3(),
     })
 }
 
@@ -518,7 +524,18 @@ fn op_sparql(v: &Value) -> Res<Value> {
 
 fn op_shacl(v: &Value) -> Res<Value> {
     let data = state_field(v, "data")?;
-    let shapes = crate::shacl::engine::parse_shapes(str_field(v, "shapes")?, opt_str(v, "base"))
+    let shapes_text = str_field(v, "shapes")?;
+    // Bound shape-nesting depth BEFORE the evaluator recurses (see law.rs
+    // Step::AdmitShacl for the same guard, rendered there as a SHACL result);
+    // here it surfaces as the typed ResourceLimit refusal.
+    if let Err(over) = crate::shacl_guard::check_shape_depth(shapes_text) {
+        return Err(limit(
+            "shacl_validation_depth",
+            over.observed,
+            crate::shacl_guard::MAX_SHACL_VALIDATION_DEPTH,
+        ));
+    }
+    let shapes = crate::shacl::engine::parse_shapes(shapes_text, opt_str(v, "base"))
         .map_err(|e| Refusal::engine(Dialect::Turtle, e))?;
     let report = crate::shacl::engine::validate_dataset(data.dataset(), &shapes)
         .map_err(|e| Refusal::engine(Dialect::Turtle, e))?;
@@ -647,11 +664,12 @@ fn op_datalog(v: &Value) -> Res<Value> {
         message: format!("datalog: {e:?}"),
     };
     let mut rules = Vec::new();
-    for r in v
+    let rules_arr = v
         .get("rules")
         .and_then(Value::as_array)
-        .ok_or_else(|| bad("missing `rules` array"))?
-    {
+        .ok_or_else(|| bad("missing `rules` array"))?;
+    check_limit("datalog_rules", rules_arr.len(), MAX_DATALOG_RULES)?;
+    for r in rules_arr {
         let body = r
             .get("body")
             .and_then(Value::as_array)
@@ -666,11 +684,12 @@ fn op_datalog(v: &Value) -> Res<Value> {
     }
     let exe = compile(rules).map_err(|e| dl(&e))?;
     let mut facts = RelationStore::new();
-    for f in v
+    let facts_arr = v
         .get("facts")
         .and_then(Value::as_array)
-        .ok_or_else(|| bad("missing `facts` array"))?
-    {
+        .ok_or_else(|| bad("missing `facts` array"))?;
+    check_limit("datalog_facts", facts_arr.len(), MAX_DATALOG_FACTS)?;
+    for f in facts_arr {
         let [s, p, o] = triple(f)?;
         facts.insert(
             &surface(s)?,
@@ -854,7 +873,7 @@ fn lease_auth_of(v: &Value) -> Res<LeaseAuth> {
             let attestation = Attestation::from_json(
                 &json!({
                     "key_id": str_field(a, "key_id")?,
-                    "payload_sha256": str_field(a, "payload_sha256")?,
+                    "payload_blake3": str_field(a, "payload_blake3")?,
                     "signature": str_field(a, "signature")?,
                 })
                 .to_string(),
@@ -962,11 +981,12 @@ fn op_law(v: &Value) -> Res<Value> {
     let mut receipts = Vec::new();
     let mut produced: Vec<crate::law::Receipt> = Vec::new();
     let mut recorded = 0usize;
-    for step in v
+    let steps = v
         .get("steps")
         .and_then(Value::as_array)
-        .ok_or_else(|| bad("missing `steps` array"))?
-    {
+        .ok_or_else(|| bad("missing `steps` array"))?;
+    for (n, step) in steps.iter().enumerate() {
+        check_limit("law_steps", n + 1, MAX_LAW_STEPS)?;
         if str_field(step, "step")? == "plan" {
             let plan = plan_field(step)?;
             lease
@@ -977,7 +997,7 @@ fn op_law(v: &Value) -> Res<Value> {
                 let mut rj = json!({
                     "step": r.step, "parent": r.parent, "child": r.child, "added": r.added,
                     "authority": r.authority.authority, "revision": r.authority.revision,
-                    "plan_sha256": admitted.plan_digest, "index": index,
+                    "plan_blake3": admitted.plan_digest, "index": index,
                 });
                 if let Some(id) = &lease_id {
                     rj["lease_id"] = json!(id);
@@ -1002,6 +1022,7 @@ fn op_law(v: &Value) -> Res<Value> {
         let pack;
         let shapes;
         let rules;
+        let ruleset;
         let step_name;
         let step_trusted;
         let step_ref = match str_field(step, "step")? {
@@ -1013,7 +1034,12 @@ fn op_law(v: &Value) -> Res<Value> {
             }
             "n3" => {
                 rules = str_field(step, "rules")?.to_string();
-                Step::DeriveN3 { rules: &rules }
+                ruleset = crate::tier::validate_n3_rules(rules.as_bytes(), None)
+                    .map_err(|r| law_err(LawError::Refused(r)))?;
+                Step::DeriveN3 {
+                    rules: &rules,
+                    ruleset: &ruleset,
+                }
             }
             "rdfs" => Step::EntailRdfs,
             "owl-rl" => Step::EntailOwlRl,

@@ -57,21 +57,36 @@ a CHANGELOG line ("MSRV: 1.96 -> 1.9x"). CI builds on the pinned toolchain in
 
 `registry/capability-registry.json` (schema `graphlaw.capability-registry/1`) is emitted from
 `src/registry.rs` and described by the `capabilities` response fields `registry_schema`,
-`registry_sha256` and `surface_sha256`.
+`registry_blake3` and `surface_blake3`.
 
 - **Additive-field rule**: registry fields, ops, dialects, refusal codes, limits and enum
   values may be added without bumping `ABI_VERSION` or the schema id. Removing or retyping a
   registry field, or changing the meaning of an existing name, is an ABI break and bumps
   `ABI_VERSION`. `enum` lists are informational; hosts must not reject values outside them.
-- **Surface digest**: `surface_sha256` is SHA-256 over the canonical JSON (sorted keys, compact) of
+- **Surface digest**: `surface_blake3` is BLAKE3 over the canonical JSON (sorted keys, compact) of
   `{abi_version, ops, other_dialects, rdf_dialects}` with ops and dialects in registry order. It
   changes only when the public op or dialect surface changes.
 - **Older engines**: engines older than v26.9.29 do not report `registry_schema`,
-  `registry_sha256` or `surface_sha256`. Consumers must tolerate their absence: compute
-  `surface_sha256` host-side from the live `capabilities` response and treat `registry_sha256`
+  `registry_blake3` or `surface_blake3`. Consumers must tolerate their absence: compute
+  `surface_blake3` host-side from the live `capabilities` response and treat `registry_blake3`
   as unknown.
 - **Emission**: the JSON and Turtle files are generated; `graphlaw-registry --check` fails when the
   committed files differ from the Rust table.
+
+### Digest pins vs versions (W09, 2026-10-20)
+
+The wasm artifact digest pins (`registry/ARTIFACTS.blake3`, `priv/graphlaw.wasm.blake3`) and the
+crate versions move on independent axes:
+
+- **`ABI_VERSION` bumps only on wire-incompatible changes** to the JSON-over-linear-memory
+  contract (removed or retyped field, changed meaning of an existing code). Calendar version
+  changes and digest re-pins are never, by themselves, an ABI bump.
+- **A crate calendar break without an ABI break ships a new digest pin, not an `ABI_VERSION`
+  bump.** Rebuild the wasm artifact, then the coordinator re-pins both `registry/ARTIFACTS.blake3`
+  and `priv/graphlaw.wasm.blake3` in the same commit as the version bump.
+- **Never ship a crate release whose digest pin predates its own version.** If the pins carry
+  `pin-source=<older>` (as the current header does: minted at 26.10.5, crate now 26.10.13), the
+  release is blocked until a rebuild produces a fresh digest at the released source state.
 
 ## Checks
 

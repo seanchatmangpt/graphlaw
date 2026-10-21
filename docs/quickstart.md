@@ -31,10 +31,10 @@ cargo run --example quickstart_plan
 Expected output:
 
 ```text
-plan-action -> sha256:e51e3e15db993169ecf5d2171f5bc81b5febb81b2c5b8771a26c6537c11782a2
-plan-action -> sha256:01c373eab6e2c7078f39ed3d16d267c7349a6ee747dac8abb2b4e05c75376b72
-plan-action -> sha256:77b8d7c989b2717c1300a597db07c2a60722156183ce7e14017aec23e8d033d7
-final state: sha256:77b8d7c989b2717c1300a597db07c2a60722156183ce7e14017aec23e8d033d7
+plan-action -> blake3:e51e3e15db993169ecf5d2171f5bc81b5febb81b2c5b8771a26c6537c11782a2
+plan-action -> blake3:01c373eab6e2c7078f39ed3d16d267c7349a6ee747dac8abb2b4e05c75376b72
+plan-action -> blake3:77b8d7c989b2717c1300a597db07c2a60722156183ce7e14017aec23e8d033d7
+final state: blake3:77b8d7c989b2717c1300a597db07c2a60722156183ce7e14017aec23e8d033d7
 ```
 
 Each line is a receipt's child state id; the last equals the final state id.

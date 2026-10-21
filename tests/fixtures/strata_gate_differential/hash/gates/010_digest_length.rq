@@ -1,6 +1,6 @@
 # MESSAGE: every st:HashAlgorithm must CARRY st:digestLength, that length
 # must be 32 (the family digest width per the ontology individuals — BLAKE3
-# default 256-bit output, FIPS 180-4 §6.2 SHA-256), the length must be a
+# default 256-bit output, FIPS 180-4 §6.2 BLAKE3), the length must be a
 # well-formed xsd:integer (typed-malformed closed two ways: an explicit
 # datatype() arm catches wrong-typed values, and a REGEX lexical arm catches
 # malformed integer lexicals that a cast would silently exclude — the

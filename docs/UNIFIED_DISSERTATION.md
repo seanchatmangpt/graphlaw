@@ -290,7 +290,7 @@ Let $R = \mathbb{Z}[X]/(X^d + 1)$ with $d = 256$, and $R_q = \mathbb{Z}_q[X]/(X^
 
 #### 4.4.2 Stateless Hash-Based Signatures ($\mathsf{SLH\text{-}DSA}$)
 
-For long-term archival century-proof affidavits, $\mathsf{SLH\text{-}DSA}$ (SPHINCS+) relies solely on the collision resistance of BLAKE3 and SHA-256 over hypertree structures of one-time (WOTS+) and few-time (FORS) signatures:
+For long-term archival century-proof affidavits, $\mathsf{SLH\text{-}DSA}$ (SPHINCS+) relies solely on the collision resistance of BLAKE3 and BLAKE3 over hypertree structures of one-time (WOTS+) and few-time (FORS) signatures:
 $$\text{Security Level} \ge 128 \text{ bits against quantum adaptive chosen-message attacks } (\mathsf{EUF\text{-}CMA})$$
 
 ---

@@ -117,7 +117,7 @@ const json = await callRawJson('{"op":"capabilities"}');
   no-op, `random_get` via `node:crypto` entropy, `fd_write` discard,
   `clock_time_get` via a `performance.now` monotonic clock, `proc_exit` typed
   throw) — identical on Node and browsers.
-- **Integrity**: at load, the artifact's SHA-256 is computed with
+- **Integrity**: at load, the artifact's BLAKE3 is computed with
   `crypto.subtle` and compared against the pinned digest in
   `generated/artifact-meta.js`; a mismatch throws `GraphlawIntegrityError`
   with `expected`/`actual` digests before any code runs. For local

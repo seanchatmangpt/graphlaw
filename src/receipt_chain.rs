@@ -1,13 +1,13 @@
-//! Receipt chain: verbatim port of praxis-core's receipt-chain family so
-//! `praxis-core` can retire (see ggen `docs/v26_10_10_praxis_retirement_plan.md`).
+//! Receipt chain: verbatim port of graphlaw-core's receipt-chain family so
+//! `graphlaw-core` can retire (see ggen `docs/v26_10_10_graphlaw_retirement_plan.md`).
 //!
 //! Sources ported verbatim (wire shapes are frozen; hashes are byte-exact):
-//! - `praxis-core::law` — [`Andon`], [`Obligation`], [`ReceiptMeta`],
+//! - `graphlaw-core::law` — [`Andon`], [`Obligation`], [`ReceiptMeta`],
 //!   [`build_admission_frame`], [`chain_from_frame`].
-//! - `praxis-core::refusal` — [`RefusalScenario`], [`RefusalCategory`].
-//! - `praxis-core::receipt_record` — [`ReceiptRecord`], [`ChainRule`],
+//! - `graphlaw-core::refusal` — [`RefusalScenario`], [`RefusalCategory`].
+//! - `graphlaw-core::receipt_record` — [`ReceiptRecord`], [`ChainRule`],
 //!   [`ChainStanding`], [`ChainVerification`], [`ChainRuleMonotonicity`].
-//! - `praxis-core::receipt_epoch` — the `epoch` submodule.
+//! - `graphlaw-core::receipt_epoch` — the `epoch` submodule.
 //! - the `CoreError` variants the family uses.
 //!
 //! The 99-byte `OcelCausalFrame::to_hash_bytes` layout, the `DenialPolarity`
@@ -234,11 +234,11 @@ pub mod frame {
 }
 
 // ---------------------------------------------------------------------------
-// Errors (subset of praxis-core::error::CoreError used by the family)
+// Errors (subset of graphlaw-core::error::CoreError used by the family)
 // ---------------------------------------------------------------------------
 
 /// Error type for the receipt-chain family (the `CoreError` variants the ported
-/// family produces; names match praxis-core's `name()` strings exactly).
+/// family produces; names match graphlaw-core's `name()` strings exactly).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CoreError {
     /// Payload/epoch serialization failed.
@@ -268,7 +268,7 @@ pub enum CoreError {
 }
 
 impl CoreError {
-    /// Stable machine label, matching praxis-core's `CoreError::name()`.
+    /// Stable machine label, matching graphlaw-core's `CoreError::name()`.
     #[must_use]
     pub fn name(&self) -> &'static str {
         match self {
@@ -310,7 +310,7 @@ impl std::fmt::Display for CoreError {
 impl std::error::Error for CoreError {}
 
 // ---------------------------------------------------------------------------
-// Obligation + Andon (port of praxis-core::law)
+// Obligation + Andon (port of graphlaw-core::law)
 // ---------------------------------------------------------------------------
 
 /// Precondition or blocking constraint a LawObject must satisfy before admission.
@@ -367,7 +367,7 @@ pub enum Andon {
 }
 
 // ---------------------------------------------------------------------------
-// Refusal taxonomy (port of praxis-core::refusal)
+// Refusal taxonomy (port of graphlaw-core::refusal)
 // ---------------------------------------------------------------------------
 
 /// 8-bucket refusal classification.
@@ -391,7 +391,7 @@ pub enum RefusalCategory {
     Reserved,
 }
 
-/// Praxis-native refusal scenarios: obligation-driven halts and the 7
+/// GraphLaw-native refusal scenarios: obligation-driven halts and the 7
 /// non-`ADMITTED` `DenialPolarity` lanes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RefusalScenario {
@@ -523,7 +523,7 @@ pub fn compose_denials<'a>(
 }
 
 // ---------------------------------------------------------------------------
-// ReceiptMeta + frame construction (port of praxis-core::law)
+// ReceiptMeta + frame construction (port of graphlaw-core::law)
 // ---------------------------------------------------------------------------
 
 /// Parameters that bind a receipt to its position in an OCEL run.
@@ -628,7 +628,7 @@ pub fn chain_from_frame(prev_chain_hash: &[u8; 32], frame: &OcelCausalFrame) -> 
 }
 
 // ---------------------------------------------------------------------------
-// Receipt epoch v2 (port of praxis-core::receipt_epoch)
+// Receipt epoch v2 (port of graphlaw-core::receipt_epoch)
 // ---------------------------------------------------------------------------
 
 /// Receipt schema epoch v2: an itemized admission ledger, a monotonic
@@ -856,6 +856,23 @@ pub mod epoch {
         /// Obligation identifiers this item created.
         #[serde(default)]
         pub obligations_created: Vec<String>,
+        /// Monotonic generation counter recorded by the producer, read back
+        /// verbatim on the wire. Receipts that predate generation tracking
+        /// deserialize as `0` via the serde default — never synthesized from
+        /// timestamps (same fail-closed discipline as the `LegacyUnrecorded`
+        /// → `Yellow` precedent in [`derive_andon`]).
+        ///
+        /// Serialization skips `0` so every pre-generation wire payload (and
+        /// therefore every pinned chain-hash golden) stays byte-identical.
+        #[serde(default, skip_serializing_if = "generation_is_legacy")]
+        pub generation: u64,
+    }
+
+    /// Serde `skip_serializing_if` predicate: true at the legacy `0`
+    /// generation sentinel, so pre-generation payloads serialize
+    /// byte-identically to before the field existed.
+    fn generation_is_legacy(generation: &u64) -> bool {
+        *generation == 0
     }
 
     /// The admission ledger: either a genuine v2 itemization (possibly empty)
@@ -953,6 +970,18 @@ pub mod epoch {
         pub andon: AndonLevel,
         /// Whether this generation is eligible for promotion.
         pub promotion_eligible: bool,
+        /// Monotonic generation counter for this epoch, read back verbatim.
+        /// Legacy receipts that predate generation tracking deserialize as
+        /// `0` via the serde default — never synthesized from timestamps.
+        /// This is the same fail-closed migration shape as the admission
+        /// ledger: missing evidence reads as an explicit sentinel
+        /// (`LegacyUnrecorded` → `Yellow`, generation absent → `0`), not as
+        /// invented evidence.
+        ///
+        /// Serialization skips `0` so pre-generation v2 payloads (and their
+        /// pinned fold-rule chain hashes) stay byte-identical.
+        #[serde(default, skip_serializing_if = "generation_is_legacy")]
+        pub generation: u64,
     }
 
     impl ReceiptEpochV2 {
@@ -970,6 +999,7 @@ pub mod epoch {
                 obligation_count,
                 andon,
                 promotion_eligible: false,
+                generation: 0,
             }
         }
     }
@@ -1073,6 +1103,9 @@ pub mod epoch {
         explicit_ceiling: Option<CeilingLevel>,
         /// Set only by [`Self::with_verified_promotion`].
         promoted: bool,
+        /// Monotonic generation counter; defaults to `0` (legacy-equivalent)
+        /// unless set via [`Self::with_generation`].
+        generation: u64,
     }
 
     impl ReceiptEpochV2Builder {
@@ -1087,7 +1120,17 @@ pub mod epoch {
                 equivalence: EquivalenceMap::all_unknown(),
                 explicit_ceiling: None,
                 promoted: false,
+                generation: 0,
             }
+        }
+
+        /// Record the monotonic generation counter for the epoch being
+        /// built. The value is stored verbatim; the default of `0` is the
+        /// legacy-equivalent sentinel, never a timestamp-derived guess.
+        #[must_use]
+        pub fn with_generation(mut self, generation: u64) -> Self {
+            self.generation = generation;
+            self
         }
 
         /// Append one admission item.
@@ -1160,6 +1203,7 @@ pub mod epoch {
                 obligation_count,
                 andon,
                 promotion_eligible,
+                generation: self.generation,
             })
         }
     }
@@ -1303,7 +1347,7 @@ pub mod epoch {
 }
 
 // ---------------------------------------------------------------------------
-// ReceiptRecord (port of praxis-core::receipt_record)
+// ReceiptRecord (port of graphlaw-core::receipt_record)
 // ---------------------------------------------------------------------------
 
 /// Current schema version for [`ReceiptRecord`].
@@ -1312,11 +1356,11 @@ pub const RECEIPT_RECORD_VERSION: u32 = 1;
 /// Chain-rule discriminator value for the v2-fold rule (the F1 fix): the
 /// base admission-frame chain hash, then `schema` and the full `v2` payload
 /// folded in by `fold_in_v2_epoch` (a strict no-op when `v2` is `None`).
-pub const CHAIN_RULE_V2_FOLD: &str = "praxis-chain/v2-fold";
+pub const CHAIN_RULE_V2_FOLD: &str = "graphlaw-chain/v2-fold";
 
 /// Chain-rule discriminator value for the pre-F1 base rule: the admission
 /// frame chain hash alone, with no `v2` fold.
-pub const CHAIN_RULE_BASE: &str = "praxis-chain/base";
+pub const CHAIN_RULE_BASE: &str = "graphlaw-chain/base";
 
 /// A persisted snapshot of one receipt: enough to append to a JSONL
 /// ledger, re-verify its chain hash later without the original law object,
@@ -1702,15 +1746,15 @@ fn fold_in_v2_epoch(
 }
 
 // ---------------------------------------------------------------------------
-// ReceiptValidator (port of praxis-core::receipt_validator)
+// ReceiptValidator (port of graphlaw-core::receipt_validator)
 // ---------------------------------------------------------------------------
 
 /// Staged, replayable verification of a receipt ledger (port of
-/// `praxis-core::receipt_validator`). Runs every stage and reports all
+/// `graphlaw-core::receipt_validator`). Runs every stage and reports all
 /// outcomes rather than short-circuiting.
 ///
 /// Stages, in order: `schema`, `chain_recompute` (tamper detection),
-/// `chain_linkage`, `monotonic`. The praxis `token_replay` stage is
+/// `chain_linkage`, `monotonic`. The graphlaw `token_replay` stage is
 /// intentionally absent: it depends on `replay_adapter`/POWL lifecycle
 /// machinery that is not part of this port.
 pub mod validator {
@@ -1968,11 +2012,11 @@ pub mod validator {
 }
 
 // ---------------------------------------------------------------------------
-// ReceiptStore (port of praxis-core::receipt_store — append-only JSONL)
+// ReceiptStore (port of graphlaw-core::receipt_store — append-only JSONL)
 // ---------------------------------------------------------------------------
 
 /// Append-only JSONL persistence for [`ReceiptRecord`]s (port of
-/// `praxis-core::receipt_store`). One JSON object per line, opened in
+/// `graphlaw-core::receipt_store`). One JSON object per line, opened in
 /// append+create mode, no in-place rewrites.
 pub mod store {
     use std::fs::OpenOptions;

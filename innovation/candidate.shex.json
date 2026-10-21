@@ -4,41 +4,41 @@
   "shapes": [
     {
       "type": "Shape",
-      "id": "https://praxis.chatman.io/innovation#CandidateFutureShape",
+      "id": "https://graphlaw.chatman.io/innovation#CandidateFutureShape",
       "expression": {
         "type": "EachOf",
         "expressions": [
           {
             "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#replaces"
+            "predicate": "https://graphlaw.chatman.io/innovation#replaces"
           },
           {
             "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#serves"
+            "predicate": "https://graphlaw.chatman.io/innovation#serves"
           },
           {
             "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#buyerValue"
+            "predicate": "https://graphlaw.chatman.io/innovation#buyerValue"
           },
           {
             "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#deliveryMechanism"
+            "predicate": "https://graphlaw.chatman.io/innovation#deliveryMechanism"
           },
           {
             "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#economicExchange"
+            "predicate": "https://graphlaw.chatman.io/innovation#economicExchange"
           },
           {
             "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#humanMediation"
+            "predicate": "https://graphlaw.chatman.io/innovation#humanMediation"
           },
           {
             "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#agentMediation"
+            "predicate": "https://graphlaw.chatman.io/innovation#agentMediation"
           },
           {
             "type": "TripleConstraint",
-            "predicate": "https://praxis.chatman.io/innovation#planningFrontier"
+            "predicate": "https://graphlaw.chatman.io/innovation#planningFrontier"
           }
         ]
       }

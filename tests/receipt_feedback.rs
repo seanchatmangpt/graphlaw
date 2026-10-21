@@ -86,7 +86,7 @@ fn plan_digest_is_stable_and_sensitive_to_actions_and_goal() {
     let b = plan("b").admit(&start).unwrap();
     assert_eq!(a.plan_digest, b.plan_digest);
     assert_eq!(a.plan_digest, plan("b").digest());
-    assert!(a.plan_digest.starts_with("sha256:") && a.plan_digest.len() == 71);
+    assert!(a.plan_digest.starts_with("blake3:") && a.plan_digest.len() == 71);
     let mutated = plan("c");
     assert_ne!(a.plan_digest, mutated.digest());
     let mut goal_only = plan("b");
@@ -143,12 +143,12 @@ mod abi {
         assert_eq!(x["ok"], true, "{x}");
         assert_eq!(x["receipts"][0]["index"], 0);
         assert_eq!(
-            x["receipts"][0]["plan_sha256"],
-            x2["receipts"][0]["plan_sha256"]
+            x["receipts"][0]["plan_blake3"],
+            x2["receipts"][0]["plan_blake3"]
         );
         assert_ne!(
-            x["receipts"][0]["plan_sha256"],
-            y["receipts"][0]["plan_sha256"]
+            x["receipts"][0]["plan_blake3"],
+            y["receipts"][0]["plan_blake3"]
         );
     }
 

@@ -9,7 +9,7 @@
 # ── Classes ──────────────────────────────────────────────────────────
 
 st:HashAlgorithm a rdfs:Class ; rdfs:label "HashAlgorithm" ;
-    rdfs:comment "A concrete cryptographic hash function (e.g. BLAKE3, SHA-256) with a fixed digest output length." .
+    rdfs:comment "A concrete cryptographic hash function (e.g. BLAKE3, SHA_256) with a fixed digest output length." .
 
 st:Digest a rdfs:Class ; rdfs:label "Digest" ;
     rdfs:comment "The fixed-length output of a HashAlgorithm; every digest this family uses is 32 bytes." .
@@ -52,7 +52,7 @@ st:BLAKE3 a st:HashAlgorithm ;
     st:digestLength 32 .
 
 st:SHA_256 a st:HashAlgorithm ;
-    rdfs:label "SHA-256" ;
+    rdfs:label "SHA_256" ;
     rdfs:seeAlso <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf> ;
     st:algorithmName "SHA_256" ;
     st:digestLength 32 .
@@ -70,7 +70,7 @@ st:merkle_rule_duplicate_last a st:MerkleNode ;
     st:merkleRule "duplicate-last" ;
     rdfs:comment "Odd-width level: the last node is hashed with itself, matching the Bitcoin duplication rule." .
 
-# ── praxis-chain/v2-fold receipt chain law (L51 seam 1, rank 1) ──────
+# ── graphlaw-chain/v2-fold receipt chain law (L51 seam 1, rank 1) ──────
 # Spec provenance: /Users/sac/graphlaw/src/receipt_chain.rs —
 # build_admission_frame (blake3 fold of payload_hash || meta_json, mixed
 # into 8 PackedObjRef slots as little-endian u32 words),
@@ -78,7 +78,7 @@ st:merkle_rule_duplicate_last a st:MerkleNode ;
 # OcelCausalReceipt::chain (chain_hash(t+1) = BLAKE3(chain_hash(t) ||
 # frame_bytes(t+1))), and fold_in_v2_epoch (BLAKE3 over base || schema ||
 # epoch bytes; strict no-op when the v2 payload is absent). Discriminator
-# CHAIN_RULE_V2_FOLD = "praxis-chain/v2-fold" (receipt_chain.rs L1315).
+# CHAIN_RULE_V2_FOLD = "graphlaw-chain/v2-fold" (receipt_chain.rs L1315).
 # Consumed by ggen-engine receipt_chain_seam.rs (re-export, L49-50) and
 # emitted at sync.rs (~L4005) with chain_rule declared on every new v2
 # record. KAT court: templates/hash_merkle.rs.tera tests module.
@@ -112,8 +112,8 @@ st:chainRuleId a rdf:Property ; rdfs:label "chain rule id" ;
     rdfs:domain st:ChainRuleV2Fold ; rdfs:range xsd:string .
 
 st:chain_rule_v2_fold a st:ChainRuleV2Fold ;
-    rdfs:label "praxis-chain/v2-fold" ;
-    st:chainRuleId "praxis-chain/v2-fold" ;
+    rdfs:label "graphlaw-chain/v2-fold" ;
+    st:chainRuleId "graphlaw-chain/v2-fold" ;
     st:foldBase st:digest32 ;
     st:foldSchema "ggen-receipt/v2" ;
     rdfs:comment "The v2-fold law individual: chain_hash(t+1) = BLAKE3(chain_hash(t) || frame_bytes(t+1)) at the base, then BLAKE3(base || schema || epoch_bytes). meta_json = compact serde_json of (andon, object_ids, obligation_count), e.g. [\"Green\",[\"law:<hex16>\"],0]; frame body is 99 bytes: instruction_id:u64le, fired_mask:u64le, denial:u64le, 8x obj_ref:u32le, ts_ns:u64le, activity_idx:u16le, node_kind:u8, prior_hash:32 bytes." .

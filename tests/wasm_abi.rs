@@ -271,8 +271,8 @@ fn shex_validates_shexc_and_shexj() {
     let shexj = read("innovation/candidate.shex.json");
     let j = ok(
         json!({"op": "shex", "schema_dialect": "shexj", "schema": shexj,
-        "data": {"text": "@prefix i: <https://praxis.chatman.io/innovation#> . <https://e/c> i:replaces <https://e/a> ."},
-        "map": "<https://e/c>@<https://praxis.chatman.io/innovation#CandidateFutureShape>"}),
+        "data": {"text": "@prefix i: <https://graphlaw.chatman.io/innovation#> . <https://e/c> i:replaces <https://e/a> ."},
+        "map": "<https://e/c>@<https://graphlaw.chatman.io/innovation#CandidateFutureShape>"}),
     );
     assert_eq!(
         j["conforms"], false,
@@ -353,7 +353,7 @@ fn law_pipeline_runs_end_to_end_in_wasm() {
     );
 
     let refused = call(json!({"op": "law",
-        "data": {"text": "<https://e/c> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://praxis.chatman.io/innovation#CandidateFuture> .", "dialect": "ntriples"},
+        "data": {"text": "<https://e/c> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://graphlaw.chatman.io/innovation#CandidateFuture> .", "dialect": "ntriples"},
         "steps": [{"step": "shacl", "shapes": read("innovation/candidate.shacl.ttl")}]}));
     assert_eq!(refused["ok"], false);
     assert!(
@@ -426,7 +426,7 @@ fn native_and_wasm_law_plan_responses_are_byte_identical() {
     assert_eq!(native, wasm, "native and wasm responses diverge");
     let v: Value = serde_json::from_slice(&native).unwrap();
     assert_eq!(v["ok"], true, "{v}");
-    assert!(v["receipts"][0]["plan_sha256"].is_string());
+    assert!(v["receipts"][0]["plan_blake3"].is_string());
     assert_eq!(ok(json!({"op": "capabilities"}))["abi_version"], 1);
 }
 
@@ -740,7 +740,7 @@ fn signed_lease_json(
         "lease": {"id": "L1", "holder": "h", "ceiling": "construct", "scope": ["derive:rdfs"],
                   "expires_unix": tamper_expires.unwrap_or(expires), "issued_unix": 0},
         "attestation": {"key_id": signed.attestation.key_id,
-                        "payload_sha256": signed.attestation.payload_sha256,
+                        "payload_blake3": signed.attestation.payload_blake3,
                         "signature": signed.attestation.signature},
     })
 }

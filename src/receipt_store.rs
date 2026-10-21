@@ -1,11 +1,11 @@
 //! Out-of-subject receipt store (composition C21).
 //!
 //! Receipts for a subject (e.g. a commit SHA) live in a directory *outside* the
-//! subject's tree: `<dir>/<subject>/<sha256-of-file>.json`. A commit cannot
+//! subject's tree: `<dir>/<subject>/<blake3-of-file>.json`. A commit cannot
 //! contain its own hash, so receipts keyed by subject are the only way exact-head
 //! standing becomes reachable. No dependency on git or the subject tree.
 //!
-//! Files are canonical JSON, content-addressed by the SHA-256 of their bytes;
+//! Files are canonical JSON, content-addressed by the BLAKE3 of their bytes;
 //! [`ReceiptStore::verify`] refuses a file whose bytes no longer hash to its
 //! name, that is not in canonical form, or a set of receipts that does not form
 //! one linear `parent -> child` chain.
@@ -15,7 +15,6 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use sha2::{Digest, Sha256};
 
 use crate::attest::{AttestError, Attestation, TrustedKeys, verify_receipt};
 use crate::law::Receipt;
@@ -131,7 +130,7 @@ fn hex(bytes: &[u8]) -> String {
 }
 
 fn digest_of(bytes: &[u8]) -> String {
-    hex(&Sha256::digest(bytes))
+    hex(blake3::hash(bytes).as_bytes())
 }
 
 fn esc(s: &str) -> String {
@@ -168,17 +167,17 @@ fn encode(r: &Receipt) -> String {
     // keep their historical bytes (and content addresses).
     let mut body = body;
     body.pop(); // closing brace
-    if let Some(p) = &r.plan_sha256 {
-        body.push_str(&format!(",\"plan_sha256\":{}", esc(p)));
+    if let Some(p) = &r.plan_blake3 {
+        body.push_str(&format!(",\"plan_blake3\":{}", esc(p)));
     }
-    if let Some(p) = &r.subject_sha256 {
-        body.push_str(&format!(",\"subject_sha256\":{}", esc(p)));
+    if let Some(p) = &r.subject_blake3 {
+        body.push_str(&format!(",\"subject_blake3\":{}", esc(p)));
     }
     body.push('}');
     body
 }
 
-/// Receipt digest: SHA-256 of the canonical serialization.
+/// Receipt digest: BLAKE3 of the canonical serialization.
 pub fn receipt_digest(r: &Receipt) -> String {
     digest_of(encode(r).as_bytes())
 }
@@ -297,13 +296,13 @@ fn decode(bytes: &[u8]) -> Option<Receipt> {
     } else {
         Some(c.string()?)
     };
-    let mut plan_sha256 = None;
-    if c.eat(",\"plan_sha256\":").is_some() {
-        plan_sha256 = Some(c.string()?);
+    let mut plan_blake3 = None;
+    if c.eat(",\"plan_blake3\":").is_some() {
+        plan_blake3 = Some(c.string()?);
     }
-    let mut subject_sha256 = None;
-    if c.eat(",\"subject_sha256\":").is_some() {
-        subject_sha256 = Some(c.string()?);
+    let mut subject_blake3 = None;
+    if c.eat(",\"subject_blake3\":").is_some() {
+        subject_blake3 = Some(c.string()?);
     }
     c.eat("}")?;
     if c.i != c.b.len() {
@@ -316,8 +315,8 @@ fn decode(bytes: &[u8]) -> Option<Receipt> {
         authority: authority_of(&auth, &rev)?,
         added,
         lease_id,
-        plan_sha256,
-        subject_sha256,
+        plan_blake3,
+        subject_blake3,
     })
 }
 

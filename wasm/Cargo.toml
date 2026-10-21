@@ -1,6 +1,11 @@
 [package]
 name = "graphlaw-wasm"
-version = "26.10.5"
+# The digest pins in registry/ARTIFACTS.blake3 (cbc80f07…, 6,654,496 B) were minted
+# at the 26.10.13 source state; they remain valid only until the next artifact
+# rebuild. At that rebuild the coordinator MUST re-pin both registry/ARTIFACTS.blake3
+# and priv/graphlaw.wasm.blake3 in the same commit as any further version bump.
+# Do NOT fabricate a new digest without a real rebuild.
+version = "26.10.13"
 edition = "2024"
 rust-version = "1.96"
 license = "MIT"

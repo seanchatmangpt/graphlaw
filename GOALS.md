@@ -16,7 +16,7 @@
 
 ## Non-goals
 
-- Maintaining the historical RoXi/Praxis engine as a hidden fallback.
+- Maintaining a hidden fallback of the retired historical standards engine.
 - Preserving internal implementation APIs whose purpose was to implement a standard now owned upstream.
 - Recreating DRed/RSP/window/query algorithms locally when no production-grade admitted library has standing. Such capabilities stay absent or external until an authority is admitted.
 

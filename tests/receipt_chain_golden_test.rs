@@ -19,7 +19,7 @@ use graphlaw::receipt_chain::{
 /// The committed fixture's `record` object, verbatim JSON. Canonical copy:
     /// `tests/fixtures/fm_chain_009.json`; this pin makes any one-sided edit
     /// fail loudly (shared-fixture drift guard, seam #28).
-    const FIXTURE_SHA256: &str = "b5eccba4090f4a13bfa188c87b8699efe5c73b9be0da0086b5932c0b9522f457";
+    const FIXTURE_BLAKE3: &str = "d52282d8c48e9021ff6f78e413d8a79dbffbc6b28e28db9a9d855f5810bb3185";
 
     /// Path of the canonical fixture, relative to CARGO_MANIFEST_DIR.
     const FIXTURE_PATH: &str = "tests/fixtures/fm_chain_009.json";
@@ -28,9 +28,8 @@ use graphlaw::receipt_chain::{
     fn fixture_bytes() -> Vec<u8> {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(FIXTURE_PATH);
         let bytes = std::fs::read(&path).expect("fixture file readable");
-        use sha2::{Digest as _, Sha256};
-        let got = hex::encode(Sha256::digest(&bytes));
-        assert_eq!(got, FIXTURE_SHA256, "fixture drift: {FIXTURE_PATH} changed; if intentional, re-pin FIXTURE_SHA256 AND mirror the byte-identical copy in affidavit-core/tests/fixtures/fm_chain_009.json");
+        let got = hex::encode(blake3::hash(&bytes).as_bytes());
+        assert_eq!(got, FIXTURE_BLAKE3, "fixture drift: {FIXTURE_PATH} changed; if intentional, re-pin FIXTURE_BLAKE3 AND mirror the byte-identical copy in affidavit-core/tests/fixtures/fm_chain_009.json");
         bytes
     }
 
@@ -45,10 +44,9 @@ use graphlaw::receipt_chain::{
         // regression is a distinct, named failure.
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(FIXTURE_PATH);
         let bytes = std::fs::read(&path).expect("fixture file readable");
-        use sha2::{Digest as _, Sha256};
         assert_eq!(
-            hex::encode(Sha256::digest(&bytes)),
-            FIXTURE_SHA256,
+            hex::encode(blake3::hash(&bytes).as_bytes()),
+            FIXTURE_BLAKE3,
             "FM-CHAIN-009 fixture edited without re-pinning in both repos"
         );
     }

@@ -17,7 +17,7 @@ const pkgRoot = resolve(here, '..');
 const repoRoot = resolve(pkgRoot, '..', '..');
 const registryPath = join(repoRoot, 'registry', 'capability-registry.json');
 const registry = JSON.parse(readFileSync(registryPath, 'utf8')) as {
-  registry_sha256: string;
+  registry_blake3: string;
   ops: { name: string }[];
   models: { name: string }[];
   refusal_kinds: string[];
@@ -31,8 +31,8 @@ const generated = readFileSync(
 );
 
 describe('generated types vs capability registry', () => {
-  it('header carries the current registry_sha256', () => {
-    const headerLine = `// registry_sha256: ${registry.registry_sha256}`;
+  it('header carries the current registry_blake3', () => {
+    const headerLine = `// registry_blake3: ${registry.registry_blake3}`;
     expect(generated).toContain(headerLine);
     expect(generated.split('\n')[1]).toBe(headerLine);
   });
@@ -112,7 +112,7 @@ describe('ABI-critical runtime exports', () => {
     // SignedLease composes the two models it must (compile-time shape check).
     const signed: SignedLease = {
       lease,
-      attestation: { payload_sha256: 'x', key_id: 'k', signature: 'sig' },
+      attestation: { payload_blake3: 'x', key_id: 'k', signature: 'sig' },
     };
     expect(signed.lease.holder).toBe('h');
   });

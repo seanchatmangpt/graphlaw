@@ -29,15 +29,15 @@ gl:unrdf
     eco:projectionTarget gl:intake ;
     eco:falsifier "UNRDF becomes a second semantic-law owner beside GraphLaw." .
 
-gl:praxis
+gl:graphlaw
     a eco:ProjectedCapability ;
-    eco:sourceRepository "seanchatmangpt/praxis" ;
+    eco:sourceRepository "seanchatmangpt/graphlaw" ;
     eco:sourceSha "c78783b4ea3124fc9d1179a9e47d43c522b529f2" ;
     eco:capability "HISTORICAL_SEMANTIC_SOURCE" ;
     eco:disposition "ABSORB" ;
     eco:runtimePlacement "HISTORICAL_SOURCE_ONLY" ;
     eco:projectionTarget gl:intake ;
-    eco:falsifier "Praxis remains a second semantic implementation after GraphLaw extraction." .
+    eco:falsifier "GraphLaw remains a second semantic implementation after the graphlaw extraction." .
 
 gl:mfw
     a eco:ProjectedCapability ;

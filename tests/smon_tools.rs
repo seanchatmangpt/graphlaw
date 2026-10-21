@@ -34,7 +34,7 @@ mod pack_tools {
             .query(
                 &hook,
                 SparqlRequest {
-                    query: "SELECT ?q WHERE { <http://seanchatmangpt.github.io/packs/self-monitoring#derive_escalation_obligation> <http://seanchatmangpt.github.io/praxis/kh#query> ?q }",
+                    query: "SELECT ?q WHERE { <http://seanchatmangpt.github.io/packs/self-monitoring#derive_escalation_obligation> <http://seanchatmangpt.github.io/graphlaw/kh#query> ?q }",
                     base_iri: None,
                     substitutions: &[],
                 },

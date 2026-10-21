@@ -18,24 +18,22 @@
 //!          earlier step's edge != fromState of the later step's edge)
 //!          EXISTS for the transposition and NOT EXISTS for the good trace.
 //!
-//! The sha256 of the pack ontology is pinned in-header; any drift in the pack
+//! The blake3 of the pack ontology is pinned in-header; any drift in the pack
 //! fails loudly here before any consumer trusts the chain.
 
-use sha2::{Digest, Sha256};
 
 use graphlaw::dialect::Dialect;
 use graphlaw::law::{LawState, Step};
+use graphlaw::tier::validate_n3_rules;
 use graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult};
 use graphlaw::sparql::NativeSparqlEngine;
-
-const INS: &str = "urn:insa-law:";
 
 /// Path to the pack ontology (canonical checkout; override for other workspaces).
 const ONTOLOGY_PATH: &str = "/Users/sac/ggen-marketplace/packs/insa-law-pack/ontology.ttl";
 
-/// sha256 of packs/insa-law-pack/ontology.ttl (raw file bytes), computed at
+/// blake3 of packs/insa-law-pack/ontology.ttl (raw file bytes), computed at
 /// pin time from the canonical file.
-const ONTOLOGY_SHA256: &str = "ce4db5d9a4cbf1a40bf152fd5300fc2f87198b8520a9f09e06f06ceaab083f45";
+const ONTOLOGY_BLAKE3: &str = "19d9ec90cb861e8b1e320ef01e5e0d8a54022b19357f2b4856f379417dcc79d7";
 
 /// Vow chain edges in lawful order (ontology ordinals 1..8).
 const LAWFUL_EDGES: [&str; 8] = [
@@ -57,13 +55,13 @@ fn ontology_bytes() -> Vec<u8> {
 
 fn pinned_ontology() -> LawState {
     let bytes = ontology_bytes();
-    let mut h = Sha256::new();
+    let mut h = blake3::Hasher::new();
     h.update(&bytes);
-    let digest: [u8; 32] = h.finalize().into();
+    let digest: [u8; 32] = *h.finalize().as_bytes();
     let got: String = digest.iter().map(|b| format!("{b:02x}")).collect();
     assert_eq!(
-        got, ONTOLOGY_SHA256,
-        "insa-law-pack ontology.ttl drifted from the pinned sha256"
+        got, ONTOLOGY_BLAKE3,
+        "insa-law-pack ontology.ttl drifted from the pinned blake3"
     );
     LawState::parse(&bytes, Dialect::Turtle, None).expect("ontology parses as Turtle")
 }
@@ -141,7 +139,8 @@ const LINK_RULES: &str = "\
 ?b insa:edge ?tb . ?tb insa:fromState ?m . } => { ?a insa:linkOk insa:true . } .";
 
 fn derive_link_ok(state: &LawState) -> LawState {
-    match state.transition(&Step::DeriveN3 { rules: LINK_RULES }) {
+    let ruleset = validate_n3_rules(LINK_RULES.as_bytes(), None).expect("LINK_RULES validate");
+    match state.transition(&Step::DeriveN3 { rules: LINK_RULES, ruleset: &ruleset }) {
         Ok((child, _receipt)) => child,
         Err(e) => panic!("DeriveN3 refused: {e}"),
     }
@@ -152,7 +151,7 @@ fn derive_link_ok(state: &LawState) -> LawState {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn ontology_matches_pinned_sha256() {
+fn ontology_matches_pinned_blake3() {
     let _ = pinned_ontology();
 }
 

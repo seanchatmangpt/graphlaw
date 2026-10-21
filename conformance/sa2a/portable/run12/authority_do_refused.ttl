@@ -7,12 +7,12 @@
   sa2a:consequence "EVIDENCE_ONLY" ;
   sa2a:canonicalization "RDFC-1.0" ;
   sa2a:exactSubject "urn:customer:42" ;
-  sa2a:sourceDigest "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ;
-  sa2a:graphDigest "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" ;
-  sa2a:mappingDigest "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" ;
-  sa2a:shapeDigest "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" ;
-  sa2a:queryDigest "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ;
-  sa2a:templateDigest "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" ;
+  sa2a:sourceDigest "blake3:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ;
+  sa2a:graphDigest "blake3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" ;
+  sa2a:mappingDigest "blake3:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" ;
+  sa2a:shapeDigest "blake3:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" ;
+  sa2a:queryDigest "blake3:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee" ;
+  sa2a:templateDigest "blake3:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" ;
   sa2a:contractRevision "v26.9.29" ;
   sa2a:mappingRevision "1" ;
   sa2a:sourceRevision "1" ;
@@ -21,6 +21,6 @@
   sa2a:consumerIdentity "urn:consumer:sa2a" ;
   sa2a:replayIdentity "replay:customer:42" ;
   sa2a:receiptIdentity "receipt:customer:42" ;
-  sa2a:provenanceDigest "sha256:1111111111111111111111111111111111111111111111111111111111111111" ;
+  sa2a:provenanceDigest "blake3:1111111111111111111111111111111111111111111111111111111111111111" ;
   sa2a:violation "authority" ;
   sa2a:expected "REFUSE" .

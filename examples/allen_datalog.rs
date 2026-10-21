@@ -172,11 +172,11 @@ fn mask_str(mask: u16) -> String {
 
 fn compose_cell(a: u16, b: u16, table: &[[u16; 13]; 13]) -> u16 {
     let mut res = 0u16;
-    for i in 0..13usize {
+    for (i, row) in table.iter().enumerate() {
         if a & (1 << i) != 0 {
-            for j in 0..13usize {
+            for (j, cell) in row.iter().enumerate() {
                 if b & (1 << j) != 0 {
-                    res |= table[i][j];
+                    res |= cell;
                 }
             }
         }
@@ -186,9 +186,9 @@ fn compose_cell(a: u16, b: u16, table: &[[u16; 13]; 13]) -> u16 {
 
 fn inverse_mask(m: u16) -> u16 {
     let mut res = 0u16;
-    for i in 0..13 {
+    for (i, inv) in INVERSE.iter().enumerate() {
         if m & (1 << i) != 0 {
-            res |= 1 << INVERSE[i];
+            res |= 1 << inv;
         }
     }
     res
@@ -200,13 +200,11 @@ fn path_consistency(
     names: &[String],
 ) -> Result<Vec<Vec<u16>>, (String, String)> {
     let mut q: VecDeque<(usize, usize)> = VecDeque::new();
-    for i in 0..n {
-        for j in 0..n {
-            if i != j {
-                q.push_back((i, j));
-            }
-        }
-    }
+    q.extend(
+        (0..n)
+            .flat_map(|i| (0..n).map(move |j| (i, j)))
+            .filter(|(i, j)| i != j),
+    );
     while let Some((i, j)) = q.pop_front() {
         for k in 0..n {
             if k != i && k != j {
@@ -232,8 +230,8 @@ fn path_consistency(
 
 fn seed_matrix(n: usize, edges: &[(usize, usize, &str)]) -> Vec<Vec<u16>> {
     let mut matrix = vec![vec![FULL; n]; n];
-    for i in 0..n {
-        matrix[i][i] = 1 << 12;
+    for (i, row) in matrix.iter_mut().enumerate().take(n) {
+        row[i] = 1 << 12;
     }
     for (i, j, spec) in edges {
         let m = mask_of(spec);
@@ -309,14 +307,14 @@ fn main() {
     n3.push_str("#   comp(r1, r2) = set   encoded as   :r1 :comp_<r2> ( :rA :rB ... ) .\n");
     n3.push_str("# Verified against the wasm4pm-cognition allen_temporal breed's brute-force\n");
     n3.push_str("# composer (allen_temporal.rs:40-71) on all 169 entries (see generator output).\n");
-    n3.push_str("\n");
+    n3.push('\n');
     n3.push_str("# Path-consistency transitive refinement rules (applied to fixpoint by the\n");
     n3.push_str("# generator's engine loop; forward N3 is monotone, refinement is not):\n");
     n3.push_str("#   refine: M[k][j] := M[k][j] INTERSECT compose(M[k][i], M[i][j])\n");
     n3.push_str("#   compose(A, B) = UNION comp(a, b) over a in A, b in B\n");
     n3.push_str("#   inconsistent :- M[k][j] refines to EMPTY\n");
     n3.push_str("@prefix : <urn:allen:> .\n");
-    n3.push_str("\n");
+    n3.push('\n');
     for r1 in 0..13usize {
         for r2 in 0..13usize {
             let list = mask_str(COMPOSE_TABLE[r1][r2])

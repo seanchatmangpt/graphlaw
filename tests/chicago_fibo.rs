@@ -408,7 +408,7 @@ fn fibo_identity_base_plan_admits() {
     case(
         "fibo_identity_base_plan_admits",
         r####"{"op":"law","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-globex ; rea:transactedUnder id:contract-c1 ; tx:consideration id:amt-1 . id:contract-c1 fin:partOfMasterAgreement id:ma-1 . id:amt-1 cur:hasCurrency iso:USD ; fin:amountMicros 25000000000000 .","dialect":"turtle"},"steps":[{"step":"plan","plan":{"actions":[{"name":"prepare-settlement-tx-usd-25m","pre":"<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasCounterparty> <https://chicago.graphlaw.dev/fin/id#party-globex> .\n<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/transactedUnder> <https://chicago.graphlaw.dev/fin/id#contract-c1> .\n<https://chicago.graphlaw.dev/fin/id#contract-c1> <https://chicago.graphlaw.dev/fin#partOfMasterAgreement> <https://chicago.graphlaw.dev/fin/id#ma-1> .\n<https://chicago.graphlaw.dev/fin/id#amt-1> <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/hasCurrency> <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/USD> .\n<https://chicago.graphlaw.dev/fin/id#amt-1> <https://chicago.graphlaw.dev/fin#amountMicros> \"25000000000000\"^^<http://www.w3.org/2001/XMLSchema#integer> .","add":"<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://chicago.graphlaw.dev/fin#status> <https://chicago.graphlaw.dev/fin#settlementPrepared> .","del":""}],"goal":"<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://chicago.graphlaw.dev/fin#status> <https://chicago.graphlaw.dev/fin#settlementPrepared> ."}}],"unverified_lease":true,"now_unix":1000,"lease":{"id":"lease-fin-1","holder":"agent-fin","ceiling":"select","scope":["admit:plan"],"expires_unix":2000}}"####,
-        r####"[{"ptr":"/ok","eq":true},{"ptr":"/receipts","len":1},{"ptr":"/receipts/0/lease_id","eq":"lease-fin-1"},{"ptr":"/receipts/0/step","eq":"plan-action"},{"ptr":"/receipts/0/parent","eq":"sha256:1f14f1340d1e251ebc8ebd2cfece8b4345976444ac82a171a342db044ef45f53"},{"ptr":"/nquads","contains":"<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://chicago.graphlaw.dev/fin#status> <https://chicago.graphlaw.dev/fin#settlementPrepared> ."}]"####,
+        r####"[{"ptr":"/ok","eq":true},{"ptr":"/receipts","len":1},{"ptr":"/receipts/0/lease_id","eq":"lease-fin-1"},{"ptr":"/receipts/0/step","eq":"plan-action"},{"ptr":"/receipts/0/parent","eq":"blake3:1164d064afff884c980548343a4cae1fd94ff6298d5281857eb73b615afb8773"},{"ptr":"/nquads","contains":"<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://chicago.graphlaw.dev/fin#status> <https://chicago.graphlaw.dev/fin#settlementPrepared> ."}]"####,
         None,
         None,
         None,
@@ -510,12 +510,12 @@ fn fibo_identity_counterparty_change_moves_rdfc_digest() {
     case(
         "fibo_identity_counterparty_change_moves_rdfc_digest",
         r####"{"op":"canonical","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-globex ; rea:transactedUnder id:contract-c1 ; tx:consideration id:amt-1 . id:contract-c1 fin:partOfMasterAgreement id:ma-1 . id:amt-1 cur:hasCurrency iso:USD ; fin:amountMicros 25000000000000 .","dialect":"turtle"}}"####,
-        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:1f14f1340d1e251ebc8ebd2cfece8b4345976444ac82a171a342db044ef45f53"}]"####,
+        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:1164d064afff884c980548343a4cae1fd94ff6298d5281857eb73b615afb8773"}]"####,
         Some(
             r####"{"op":"canonical","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-initech ; rea:transactedUnder id:contract-c1 ; tx:consideration id:amt-1 . id:contract-c1 fin:partOfMasterAgreement id:ma-1 . id:amt-1 cur:hasCurrency iso:USD ; fin:amountMicros 25000000000000 .","dialect":"turtle"}}"####,
         ),
         Some(
-            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:2d090dd5047388120c1ca7ab034e66a2dc6591e0d7a6d0aa5891c7d054c29caf"}]"####,
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:70a38bcf972c9af27ffdf8a7db71f12007d2887d747822980e694fc6f2639c38"}]"####,
         ),
         Some(r####"[{"a":"/id","b":"/id","rel":"neq"}]"####),
         false,
@@ -531,12 +531,12 @@ fn fibo_identity_currency_change_moves_rdfc_digest() {
     case(
         "fibo_identity_currency_change_moves_rdfc_digest",
         r####"{"op":"canonical","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-globex ; rea:transactedUnder id:contract-c1 ; tx:consideration id:amt-1 . id:contract-c1 fin:partOfMasterAgreement id:ma-1 . id:amt-1 cur:hasCurrency iso:USD ; fin:amountMicros 25000000000000 .","dialect":"turtle"}}"####,
-        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:1f14f1340d1e251ebc8ebd2cfece8b4345976444ac82a171a342db044ef45f53"}]"####,
+        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:1164d064afff884c980548343a4cae1fd94ff6298d5281857eb73b615afb8773"}]"####,
         Some(
             r####"{"op":"canonical","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-globex ; rea:transactedUnder id:contract-c1 ; tx:consideration id:amt-1 . id:contract-c1 fin:partOfMasterAgreement id:ma-1 . id:amt-1 cur:hasCurrency iso:EUR ; fin:amountMicros 25000000000000 .","dialect":"turtle"}}"####,
         ),
         Some(
-            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:edc9b9d0b2a27c774291be71b2f31d1e1a728f210aeb642ea3315ad29a2af7b1"}]"####,
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:d73deea5a3f31e405a1c0849b34d2cb091a75ebcfa2d6261da193ee112c87310"}]"####,
         ),
         Some(r####"[{"a":"/id","b":"/id","rel":"neq"}]"####),
         false,
@@ -552,12 +552,12 @@ fn fibo_identity_contract_change_moves_rdfc_digest() {
     case(
         "fibo_identity_contract_change_moves_rdfc_digest",
         r####"{"op":"canonical","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-globex ; rea:transactedUnder id:contract-c1 ; tx:consideration id:amt-1 . id:contract-c1 fin:partOfMasterAgreement id:ma-1 . id:amt-1 cur:hasCurrency iso:USD ; fin:amountMicros 25000000000000 .","dialect":"turtle"}}"####,
-        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:1f14f1340d1e251ebc8ebd2cfece8b4345976444ac82a171a342db044ef45f53"}]"####,
+        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:1164d064afff884c980548343a4cae1fd94ff6298d5281857eb73b615afb8773"}]"####,
         Some(
             r####"{"op":"canonical","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-globex ; rea:transactedUnder id:contract-c2 ; tx:consideration id:amt-1 . id:contract-c2 fin:partOfMasterAgreement id:ma-1 . id:amt-1 cur:hasCurrency iso:USD ; fin:amountMicros 25000000000000 .","dialect":"turtle"}}"####,
         ),
         Some(
-            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:b9c8c6a1685a5e6f14998a462a0ebb01b419808c9eb4ee82249e776482acabc0"}]"####,
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:30893816851829321e221ff103c5b5e8c810414d1e8d660d86f97a92f545c29f"}]"####,
         ),
         Some(r####"[{"a":"/id","b":"/id","rel":"neq"}]"####),
         false,
@@ -573,12 +573,12 @@ fn fibo_identity_amount_change_moves_rdfc_digest() {
     case(
         "fibo_identity_amount_change_moves_rdfc_digest",
         r####"{"op":"canonical","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-globex ; rea:transactedUnder id:contract-c1 ; tx:consideration id:amt-1 . id:contract-c1 fin:partOfMasterAgreement id:ma-1 . id:amt-1 cur:hasCurrency iso:USD ; fin:amountMicros 25000000000000 .","dialect":"turtle"}}"####,
-        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:1f14f1340d1e251ebc8ebd2cfece8b4345976444ac82a171a342db044ef45f53"}]"####,
+        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:1164d064afff884c980548343a4cae1fd94ff6298d5281857eb73b615afb8773"}]"####,
         Some(
             r####"{"op":"canonical","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-globex ; rea:transactedUnder id:contract-c1 ; tx:consideration id:amt-1 . id:contract-c1 fin:partOfMasterAgreement id:ma-1 . id:amt-1 cur:hasCurrency iso:USD ; fin:amountMicros 25000000000001 .","dialect":"turtle"}}"####,
         ),
         Some(
-            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:a6ea11c8b078e9f64a1d787bf21feb360f081410509e81e9cbc4e91c3d1ba5ca"}]"####,
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:63c910ca2be36f65583c266fa0a52f66743208e3bf741f6447b97b8b9a9fb21d"}]"####,
         ),
         Some(r####"[{"a":"/id","b":"/id","rel":"neq"}]"####),
         false,
@@ -594,12 +594,12 @@ fn fibo_master_agreement_change_moves_digest_not_verdict() {
     case(
         "fibo_master_agreement_change_moves_digest_not_verdict",
         r####"{"op":"canonical","data":{"text":"$FILE:tests/fixtures/fibo/tx_usd_25m.ttl","dialect":"turtle"}}"####,
-        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:080b4b09292c53d64c650bfbbbe88787495c93a0bc4b5d8cc90cc0da47c1bfb4"}]"####,
+        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:50d91da20c01d2fbaa1ff7f28e5125e13ec0a88c1b36e8d3dff771f26b280e54"}]"####,
         Some(
             r####"{"op":"canonical","data":{"text":"$FILE:tests/fixtures/fibo/tx_usd_25m_masterM2.ttl","dialect":"turtle"}}"####,
         ),
         Some(
-            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:026fcc179d67276fc416f10f9f92d3ba5d352565b2282e15b8c88866e82bff65"}]"####,
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:9dda69cf934dac4d53ba7b3fb2d68e74e51bff6965abefcc67f84d0ef1f5d7e5"}]"####,
         ),
         Some(r####"[{"a":"/id","b":"/id","rel":"neq"}]"####),
         true,
@@ -607,7 +607,7 @@ fn fibo_master_agreement_change_moves_digest_not_verdict() {
 }
 
 // kind: boundary-mutation | op: law | ceiling: select | ordinal: 541
-// The receipt plan_sha256 for the prepared plan differs when the pinned master agreement differs
+// The receipt plan_blake3 for the prepared plan differs when the pinned master agreement differs
 // covers: https://chicago.graphlaw.dev/court#ax_fin_identity_rdfc,https://chicago.graphlaw.dev/court#ax_fin_prepared_effect
 // mutates: https://chicago.graphlaw.dev/court#case_fibo_identity_base_plan_admits
 #[test]
@@ -615,15 +615,15 @@ fn fibo_master_agreement_change_moves_plan_digest() {
     case(
         "fibo_master_agreement_change_moves_plan_digest",
         r####"{"op":"law","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-globex ; rea:transactedUnder id:contract-c1 ; tx:consideration id:amt-1 . id:contract-c1 fin:partOfMasterAgreement id:ma-1 . id:amt-1 cur:hasCurrency iso:USD ; fin:amountMicros 25000000000000 .","dialect":"turtle"},"steps":[{"step":"plan","plan":{"actions":[{"name":"prepare-settlement-tx-usd-25m","pre":"<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasCounterparty> <https://chicago.graphlaw.dev/fin/id#party-globex> .\n<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/transactedUnder> <https://chicago.graphlaw.dev/fin/id#contract-c1> .\n<https://chicago.graphlaw.dev/fin/id#contract-c1> <https://chicago.graphlaw.dev/fin#partOfMasterAgreement> <https://chicago.graphlaw.dev/fin/id#ma-1> .\n<https://chicago.graphlaw.dev/fin/id#amt-1> <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/hasCurrency> <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/USD> .\n<https://chicago.graphlaw.dev/fin/id#amt-1> <https://chicago.graphlaw.dev/fin#amountMicros> \"25000000000000\"^^<http://www.w3.org/2001/XMLSchema#integer> .","add":"<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://chicago.graphlaw.dev/fin#status> <https://chicago.graphlaw.dev/fin#settlementPrepared> .","del":""}],"goal":"<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://chicago.graphlaw.dev/fin#status> <https://chicago.graphlaw.dev/fin#settlementPrepared> ."}}],"unverified_lease":true,"now_unix":1000,"lease":{"id":"lease-fin-1","holder":"agent-fin","ceiling":"select","scope":["admit:plan"],"expires_unix":2000}}"####,
-        r####"[{"ptr":"/ok","eq":true},{"ptr":"/receipts/0/plan_sha256","contains":"sha256:"}]"####,
+        r####"[{"ptr":"/ok","eq":true},{"ptr":"/receipts/0/plan_blake3","contains":"blake3:"}]"####,
         Some(
             r####"{"op":"law","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-globex ; rea:transactedUnder id:contract-c1 ; tx:consideration id:amt-1 . id:contract-c1 fin:partOfMasterAgreement id:ma-2 . id:amt-1 cur:hasCurrency iso:USD ; fin:amountMicros 25000000000000 .","dialect":"turtle"},"steps":[{"step":"plan","plan":{"actions":[{"name":"prepare-settlement-tx-usd-25m","pre":"<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasCounterparty> <https://chicago.graphlaw.dev/fin/id#party-globex> .\n<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/transactedUnder> <https://chicago.graphlaw.dev/fin/id#contract-c1> .\n<https://chicago.graphlaw.dev/fin/id#amt-1> <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/hasCurrency> <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/USD> .\n<https://chicago.graphlaw.dev/fin/id#amt-1> <https://chicago.graphlaw.dev/fin#amountMicros> \"25000000000000\"^^<http://www.w3.org/2001/XMLSchema#integer> .\n<https://chicago.graphlaw.dev/fin/id#contract-c1> <https://chicago.graphlaw.dev/fin#partOfMasterAgreement> <https://chicago.graphlaw.dev/fin/id#ma-2> .","add":"<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://chicago.graphlaw.dev/fin#status> <https://chicago.graphlaw.dev/fin#settlementPrepared> .","del":""}],"goal":"<https://chicago.graphlaw.dev/fin/id#tx-usd-25m> <https://chicago.graphlaw.dev/fin#status> <https://chicago.graphlaw.dev/fin#settlementPrepared> ."}}],"unverified_lease":true,"now_unix":1000,"lease":{"id":"lease-fin-1","holder":"agent-fin","ceiling":"select","scope":["admit:plan"],"expires_unix":2000}}"####,
         ),
         Some(
-            r####"[{"ptr":"/ok","eq":true},{"ptr":"/receipts/0/plan_sha256","contains":"sha256:"}]"####,
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/receipts/0/plan_blake3","contains":"blake3:"}]"####,
         ),
         Some(
-            r####"[{"a":"/receipts/0/plan_sha256","b":"/receipts/0/plan_sha256","rel":"neq"}]"####,
+            r####"[{"a":"/receipts/0/plan_blake3","b":"/receipts/0/plan_blake3","rel":"neq"}]"####,
         ),
         false,
     );
@@ -657,7 +657,7 @@ fn fibo_eur_plan_admitted_with_admitted_rate() {
     case(
         "fibo_eur_plan_admitted_with_admitted_rate",
         r####"{"op":"law","data":{"text":"$FILE:tests/fixtures/fibo/tx_eur_20m.ttl","dialect":"turtle"},"steps":[{"step":"plan","plan":{"actions":[{"name":"prepare-settlement-tx-eur-20m","pre":"<https://chicago.graphlaw.dev/fin/id#rate-eurusd-1> <https://chicago.graphlaw.dev/fin#rateValue> \"1100000\"^^<http://www.w3.org/2001/XMLSchema#integer> .\n<https://chicago.graphlaw.dev/fin/id#rate-eurusd-1> <https://chicago.graphlaw.dev/fin#admittedBy> <https://chicago.graphlaw.dev/fin/id#fx-desk> .\n<https://chicago.graphlaw.dev/fin/id#amt-tx-eur-20m> <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/hasCurrency> <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/EUR> .\n<https://chicago.graphlaw.dev/fin/id#amt-tx-eur-20m> <https://chicago.graphlaw.dev/fin#amountMicros> \"20000000000000\"^^<http://www.w3.org/2001/XMLSchema#integer> .","add":"<https://chicago.graphlaw.dev/fin/id#tx-eur-20m> <https://chicago.graphlaw.dev/fin#status> <https://chicago.graphlaw.dev/fin#settlementPrepared> .","del":""}],"goal":"<https://chicago.graphlaw.dev/fin/id#tx-eur-20m> <https://chicago.graphlaw.dev/fin#status> <https://chicago.graphlaw.dev/fin#settlementPrepared> ."}}],"unverified_lease":true,"now_unix":1000,"lease":{"id":"lease-fin-1","holder":"agent-fin","ceiling":"select","scope":["admit:plan"],"expires_unix":2000}}"####,
-        r####"[{"ptr":"/ok","eq":true},{"ptr":"/receipts","len":1},{"ptr":"/receipts/0/plan_sha256","contains":"sha256:"}]"####,
+        r####"[{"ptr":"/ok","eq":true},{"ptr":"/receipts","len":1},{"ptr":"/receipts/0/plan_blake3","contains":"blake3:"}]"####,
         None,
         None,
         None,
@@ -711,7 +711,7 @@ fn fibo_eur_rate_1_05_stays_high_value_but_new_identity() {
             r####"{"op":"canonical","data":{"text":"$FILE:tests/fixtures/fibo/tx_eur_20m_rate_1_05.ttl","dialect":"turtle"}}"####,
         ),
         Some(
-            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:d00a2dcd593f899f0639c004d15186ac1e2dad01a48c37266895dc8ce219dc60"}]"####,
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:5be5c07068e294da78918a2c1c4500c94cf8acff518e338335817b0ea02e0f4e"}]"####,
         ),
         None,
         false,
@@ -1019,12 +1019,12 @@ fn fibo_xauth_decimal_lexical_forms_distinct_digests() {
     case(
         "fibo_xauth_decimal_lexical_forms_distinct_digests",
         r####"{"op":"canonical","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:t tx:consideration id:a . id:a cur:hasCurrency iso:USD ; cur:hasAmount 25000000.0 .","dialect":"turtle"}}"####,
-        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:c1039ecdf93e6a6de747ea89b331338e930badf7e4fc8d6b2838f05cc05f0c72"}]"####,
+        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:fda46129c01b93cb2f194961ee831db85876f7ff24ac6140eaac1d80bb9b0368"}]"####,
         Some(
             r####"{"op":"canonical","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:t tx:consideration id:a . id:a cur:hasCurrency iso:USD ; cur:hasAmount 25000000.000000 .","dialect":"turtle"}}"####,
         ),
         Some(
-            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:10967160cbf3208a9145fb49aa47f2000b95928e3e496a89c37d4e4a79660673"}]"####,
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:063d0a133ac7d5bfce00f2eeec14f8ebd7c95ca24fa0bc6d85debbf66c1874a6"}]"####,
         ),
         Some(r####"[{"a":"/id","b":"/id","rel":"neq"}]"####),
         false,
@@ -1039,12 +1039,12 @@ fn fibo_identity_statement_order_and_prefix_invariant() {
     case(
         "fibo_identity_statement_order_and_prefix_invariant",
         r####"{"op":"canonical","data":{"text":"@prefix tx: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix ctr: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix rea: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . @prefix cur: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix iso: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix fin: <https://chicago.graphlaw.dev/fin#> . @prefix id: <https://chicago.graphlaw.dev/fin/id#> . id:tx-usd-25m ctr:hasCounterparty id:party-globex ; rea:transactedUnder id:contract-c1 ; tx:consideration id:amt-1 . id:contract-c1 fin:partOfMasterAgreement id:ma-1 . id:amt-1 cur:hasCurrency iso:USD ; fin:amountMicros 25000000000000 .","dialect":"turtle"}}"####,
-        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:1f14f1340d1e251ebc8ebd2cfece8b4345976444ac82a171a342db044ef45f53"}]"####,
+        r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:1164d064afff884c980548343a4cae1fd94ff6298d5281857eb73b615afb8773"}]"####,
         Some(
             r####"{"op":"canonical","data":{"text":"@prefix i: <https://chicago.graphlaw.dev/fin/id#> . @prefix f: <https://chicago.graphlaw.dev/fin#> . @prefix c: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/> . @prefix o: <https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/ISO4217-CurrencyCodes/> . @prefix t: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/MarketTransactions/> . @prefix k: <https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/> . @prefix r: <https://spec.edmcouncil.org/fibo/ontology/FND/TransactionsExt/REATransactions/> . i:amt-1 f:amountMicros 25000000000000 ; c:hasCurrency o:USD . i:contract-c1 f:partOfMasterAgreement i:ma-1 . i:tx-usd-25m t:consideration i:amt-1 ; r:transactedUnder i:contract-c1 ; k:hasCounterparty i:party-globex .","dialect":"turtle"}}"####,
         ),
         Some(
-            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"sha256:1f14f1340d1e251ebc8ebd2cfece8b4345976444ac82a171a342db044ef45f53"}]"####,
+            r####"[{"ptr":"/ok","eq":true},{"ptr":"/id","eq":"blake3:1164d064afff884c980548343a4cae1fd94ff6298d5281857eb73b615afb8773"}]"####,
         ),
         Some(r####"[{"a":"/id","b":"/id","rel":"eq"}]"####),
         false,

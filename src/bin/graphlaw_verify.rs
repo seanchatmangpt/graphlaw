@@ -162,7 +162,7 @@ fn run(a: Args) -> Result<ExitCode, String> {
             && s.step == r.step
             && s.authority == r.authority
             && s.added == r.added
-            && s.plan_sha256 == r.plan_sha256;
+            && s.plan_blake3 == r.plan_blake3;
         if !same {
             return Ok(refused(
                 "ReceiptMismatch",

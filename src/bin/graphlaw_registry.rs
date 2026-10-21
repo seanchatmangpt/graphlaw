@@ -11,7 +11,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use graphlaw::registry::{registry_json_pretty, registry_sha256, registry_turtle, surface_sha256};
+use graphlaw::registry::{registry_json_pretty, registry_blake3, registry_turtle, surface_blake3};
 
 fn registry_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("registry")
@@ -101,8 +101,8 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         [a] if a == "--print-digests" => {
-            println!("surface_sha256  {}", surface_sha256());
-            println!("registry_sha256 {}", registry_sha256());
+            println!("surface_blake3  {}", surface_blake3());
+            println!("registry_blake3 {}", registry_blake3());
             ExitCode::SUCCESS
         }
         _ => usage(

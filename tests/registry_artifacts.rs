@@ -9,7 +9,6 @@ use std::process::Command;
 
 use graphlaw::abi::call_json;
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 
 const OPS: [&str; 14] = [
     "capabilities",
@@ -75,10 +74,10 @@ fn canonical(v: &Value, out: &mut String) {
     }
 }
 
-fn sha256_of(v: &Value) -> String {
+fn blake3_of(v: &Value) -> String {
     let mut s = String::new();
     canonical(v, &mut s);
-    format!("sha256:{}", hex(&Sha256::digest(s.as_bytes())))
+    format!("blake3:{}", hex(blake3::hash(s.as_bytes()).as_bytes()))
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -171,11 +170,11 @@ fn b_emitter_check_flag_accepts_committed_files() {
 fn c_registry_digest_and_surface_digest_recompute() {
     let doc = json_doc();
     let mut without = doc.clone();
-    without.as_object_mut().unwrap().remove("registry_sha256");
+    without.as_object_mut().unwrap().remove("registry_blake3");
     assert_eq!(
-        doc["registry_sha256"],
-        json!(sha256_of(&without)),
-        "registry_sha256"
+        doc["registry_blake3"],
+        json!(blake3_of(&without)),
+        "registry_blake3"
     );
 
     let names = |v: &Value| -> Vec<Value> {
@@ -192,9 +191,9 @@ fn c_registry_digest_and_surface_digest_recompute() {
         "rdf_dialects": names(&doc["rdf_dialects"]),
     });
     assert_eq!(
-        doc["surface_sha256"],
-        json!(sha256_of(&surface)),
-        "surface_sha256"
+        doc["surface_blake3"],
+        json!(blake3_of(&surface)),
+        "surface_blake3"
     );
 }
 
@@ -232,7 +231,7 @@ fn schema() -> Value {
 
 fn is_sha(s: &Value) -> bool {
     s.as_str().is_some_and(|s| {
-        s.strip_prefix("sha256:").is_some_and(|h| {
+        s.strip_prefix("blake3:").is_some_and(|h| {
             h.len() == 64 && h.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'))
         })
     })
@@ -305,7 +304,7 @@ fn e_schema_file_is_2020_12_and_pins_the_contract() {
         "graphlaw.capability-registry/1"
     );
     assert_eq!(s["properties"]["ops"]["minItems"], 14);
-    assert_eq!(s["$defs"]["sha256"]["pattern"], "^sha256:[0-9a-f]{64}$");
+    assert_eq!(s["$defs"]["blake3"]["pattern"], "^blake3:[0-9a-f]{64}$");
     assert_eq!(type_vocab(&s).len(), 14, "closed type vocabulary size");
 }
 
@@ -318,8 +317,8 @@ fn f_registry_json_satisfies_schema_rules() {
     assert_eq!(doc["schema"], s["properties"]["schema"]["const"]);
     assert_eq!(doc["abi_version"], 1);
     assert!(
-        is_sha(&doc["surface_sha256"]) && is_sha(&doc["registry_sha256"]),
-        "sha256 pattern"
+        is_sha(&doc["surface_blake3"]) && is_sha(&doc["registry_blake3"]),
+        "blake3 pattern"
     );
     assert_eq!(doc["graphlaw_version"], env!("CARGO_PKG_VERSION"));
 
@@ -411,10 +410,10 @@ fn g_negative_controls_for_schema_rules_reject_mutations() {
     let vocab = type_vocab(&s);
     let doc = json_doc();
     check_fields(&doc["ops"][0]["request"]["fields"], &s, &vocab, "control");
-    assert!(is_sha(&doc["registry_sha256"]));
+    assert!(is_sha(&doc["registry_blake3"]));
 
     // A bad digest string and an out-of-vocabulary type are both rejected by the rules.
-    assert!(!is_sha(&json!("sha256:ABC")));
+    assert!(!is_sha(&json!("blake3:ABC")));
     assert!(!is_sha(&json!("md5:00")));
     let bad = json!([{"name":"x","order":1,"type":"quaternion","required":true,
                       "nullable":false,"doc":"d","enum":null,"default":null}]);
@@ -587,7 +586,7 @@ fn m_inconsistent_variant_tagging_is_non_conforming() {
 
 #[test]
 fn artifacts_pin_file_carries_the_live_registry_and_surface_digests() {
-    let text = read("ARTIFACTS.sha256");
+    let text = read("ARTIFACTS.blake3");
     let rows: Vec<Vec<&str>> = text
         .lines()
         .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
@@ -596,24 +595,24 @@ fn artifacts_pin_file_carries_the_live_registry_and_surface_digests() {
     let find = |kind: &str| {
         rows.iter()
             .find(|r| r[0] == kind)
-            .unwrap_or_else(|| panic!("ARTIFACTS.sha256 has no `{kind}` row"))
+            .unwrap_or_else(|| panic!("ARTIFACTS.blake3 has no `{kind}` row"))
     };
-    assert_eq!(find("registry")[1], graphlaw::registry::registry_sha256());
-    assert_eq!(find("surface")[1], graphlaw::registry::surface_sha256());
+    assert_eq!(find("registry")[1], graphlaw::registry::registry_blake3());
+    assert_eq!(find("surface")[1], graphlaw::registry::surface_blake3());
     let wasm = find("wasm");
     assert_eq!(wasm[1].len(), 64, "wasm digest is 64 hex chars");
     assert!(wasm[1].bytes().all(|b| b.is_ascii_hexdigit()));
     assert!(wasm[2].parse::<u64>().unwrap() > 0);
     // Negative control: a stale registry digest must not equal the live one.
     assert_ne!(
-        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-        graphlaw::registry::registry_sha256()
+        "blake3:0000000000000000000000000000000000000000000000000000000000000000",
+        graphlaw::registry::registry_blake3()
     );
     // When the pinned build itself is under test, the pin must match its bytes.
     if std::env::var_os("GRAPHLAW_REQUIRE_WASM_PIN").is_some() {
         let path = std::env::var("GRAPHLAW_WASM").expect("GRAPHLAW_WASM set with the pin check");
         let bytes = std::fs::read(path).expect("wasm readable");
-        assert_eq!(hex(&Sha256::digest(&bytes)), wasm[1], "wasm pin is stale");
+        assert_eq!(hex(blake3::hash(&bytes).as_bytes()), wasm[1], "wasm pin is stale");
     }
 }
 

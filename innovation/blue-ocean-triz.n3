@@ -1,4 +1,4 @@
-@prefix inv: <https://praxis.chatman.io/innovation#> .
+@prefix inv: <https://graphlaw.chatman.io/innovation#> .
 
 # GraphLaw's rule IR is deliberately one-head-triple per rule. Keep every
 # consequence explicit rather than hiding multi-head semantics in parser sugar.

@@ -5,7 +5,7 @@ ex:case a sa2a:SemanticEvidenceCourt ;
   sa2a:courtId "template_digest_drift" ;
   sa2a:exactSubject "seanchatmangpt/graphlaw@3983c64db205931d27f87bbd144e1b5d8c5a3402" ;
   sa2a:sourceLocator "github:seanchatmangpt/graphlaw" ;
-  sa2a:sourceDigest "sha256:3983c64db205931d27f87bbd144e1b5d8c5a3402" ;
+  sa2a:sourceDigest "blake3:3983c64db205931d27f87bbd144e1b5d8c5a3402" ;
   sa2a:canonicalization "RDFC-1.0" ;
   sa2a:authority "NONE" ;
   sa2a:consequence "EVIDENCE_ONLY" ;

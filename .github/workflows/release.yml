@@ -4,7 +4,7 @@ name: Release
 # declares if that version is not released yet:
 #   1. build and test the WASI module and the whole workspace,
 #   2. tag vX.Y.Z and create the GitHub release with graphlaw.wasm, the capability
-#      registry (capability-registry.json/.ttl) and op-examples.json, each with a .sha256,
+#      registry (capability-registry.json/.ttl) and op-examples.json, each with a .blake3,
 #   3. publish: intentionally absent. crates.io publishing is local-only
 #      (operator decision 2026-10-10): `cargo cicd publish run` from a logged-in
 #      machine actuates `cargo publish`; CI never holds registry credentials.
@@ -42,6 +42,10 @@ jobs:
         with:
           toolchain: 1.96.0
           targets: wasm32-wasip1
+      # Release assets carry .blake3 sidecars (b3sum format). The runner has
+      # rust, so the canonical tool is `cargo install b3sum --locked`.
+      - name: Install b3sum (cargo install b3sum --locked)
+        run: cargo install b3sum --locked
 
       - name: Decide what is unreleased
         id: plan
@@ -90,12 +94,12 @@ jobs:
           for f in capability-registry.json capability-registry.ttl op-examples.json; do
             cp "registry/$f" "dist/$f"
           done
-          (cd dist && for f in graphlaw.wasm capability-registry.json capability-registry.ttl op-examples.json; do sha256sum "$f" > "$f.sha256"; done)
+          (cd dist && for f in graphlaw.wasm capability-registry.json capability-registry.ttl op-examples.json; do b3sum "$f" > "$f.blake3"; done)
           gh release create "v${{ steps.plan.outputs.graphlaw }}" \
-            dist/graphlaw.wasm dist/graphlaw.wasm.sha256 \
-            dist/capability-registry.json dist/capability-registry.json.sha256 \
-            dist/capability-registry.ttl dist/capability-registry.ttl.sha256 \
-            dist/op-examples.json dist/op-examples.json.sha256 \
+            dist/graphlaw.wasm dist/graphlaw.wasm.blake3 \
+            dist/capability-registry.json dist/capability-registry.json.blake3 \
+            dist/capability-registry.ttl dist/capability-registry.ttl.blake3 \
+            dist/op-examples.json dist/op-examples.json.blake3 \
             --target "$(git rev-parse HEAD)" --generate-notes --title "graphlaw v${{ steps.plan.outputs.graphlaw }}"
 
       - name: Publish (refused in CI)

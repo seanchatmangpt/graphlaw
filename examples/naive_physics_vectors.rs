@@ -140,7 +140,7 @@ fn edb_facts(scene: &Scene) -> Vec<Value> {
             panic!("unrecognized fact key {key}");
         }
     }
-    facts.sort_by(|a, b| a.to_string().cmp(&b.to_string()));
+    facts.sort_by_key(|a| a.to_string());
     facts
 }
 

@@ -16,7 +16,7 @@ use graphlaw::sparql::NativeSparqlEngine;
 
 const ST: &str = "https://strata.chatman.ai/ontology#";
 const PINNED: &str = "tests/fixtures/strata-temprun-ontology.ttl";
-const PIN_SHA256: &str = "7c7394b1f885784fbdcfedb94e9134b0614d80b122c7b6b239cacca4e0a16b3b";
+const PIN_BLAKE3: &str = "cd3cde66a2a9a3440240e8ff005ca7258dfd995744f36b061102db522e33f30e";
 
 /// The arena constants, read from the loaded RDF graph (not hardcoded).
 #[derive(Debug, Clone, Copy)]
@@ -30,8 +30,8 @@ fn load_pinned_ontology() -> LawState {
     let text = String::from_utf8(bytes).expect("fixture is UTF-8");
     // Provenance: the pinned copy's own header must still name the pin hash.
     assert!(
-        text.contains(PIN_SHA256),
-        "pinned fixture header is missing sha256 {PIN_SHA256}"
+        text.contains(PIN_BLAKE3),
+        "pinned fixture header is missing blake3 {PIN_BLAKE3}"
     );
     // And the body after the header must hash to the pin.
     const HEADER_LINES: usize = 5;
@@ -44,12 +44,11 @@ fn load_pinned_ontology() -> LawState {
         b.push('\n');
         b
     };
-    use sha2::{Digest, Sha256};
-    let digest = Sha256::digest(body.as_bytes());
-    let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+    let digest = blake3::hash(body.as_bytes());
+    let hex: String = digest.as_bytes().iter().map(|b| format!("{b:02x}")).collect();
     assert_eq!(
-        hex, PIN_SHA256,
-        "pinned ontology body drifted from the documented sha256"
+        hex, PIN_BLAKE3,
+        "pinned ontology body drifted from the documented blake3"
     );
     LawState::parse(text.as_bytes(), Dialect::Turtle, None)
         .expect("pinned temprun ontology parses as Turtle")

@@ -6,8 +6,8 @@
 //! verification needs only the payload, the attestation and a caller-supplied
 //! [`TrustedKeys`] set: no network, no clock.
 //!
-//! Attestation fields (all lowercase hex): `payload_sha256` is the SHA-256 of
-//! the canonical payload, `key_id` is the SHA-256 of the 32-byte public key,
+//! Attestation fields (all lowercase hex): `payload_blake3` is the BLAKE3 of
+//! the canonical payload, `key_id` is the BLAKE3 of the 32-byte public key,
 //! `signature` is the 64-byte Ed25519 signature over the payload bytes.
 
 use std::collections::BTreeMap;
@@ -16,7 +16,6 @@ use std::fmt;
 use ed25519_dalek::{
     Signature, Signer, SigningKey as DalekSigning, VerifyingKey as DalekVerifying,
 };
-use sha2::{Digest, Sha256};
 
 use crate::law::{Lease, Receipt, SignedLease};
 
@@ -75,8 +74,8 @@ pub fn hex_decode(s: &str) -> Option<Vec<u8>> {
         .collect()
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
-    hex_encode(&Sha256::digest(bytes))
+fn blake3_hex(bytes: &[u8]) -> String {
+    hex_encode(blake3::hash(bytes).as_bytes())
 }
 
 fn malformed(m: impl Into<String>) -> AttestError {
@@ -139,9 +138,9 @@ impl VerifyingKey {
         hex_encode(self.0.as_bytes())
     }
 
-    /// SHA-256 of the public key bytes, lowercase hex.
+    /// BLAKE3 of the public key bytes, lowercase hex.
     pub fn key_id(&self) -> String {
-        sha256_hex(self.0.as_bytes())
+        blake3_hex(self.0.as_bytes())
     }
 }
 
@@ -209,8 +208,8 @@ impl TrustedKeys {
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Attestation {
-    /// Lowercase hex SHA-256 of the canonical payload.
-    pub payload_sha256: String,
+    /// Lowercase hex BLAKE3 of the canonical payload.
+    pub payload_blake3: String,
     /// Identifier of the signing key.
     pub key_id: String,
     /// Lowercase hex Ed25519 signature over the payload bytes.
@@ -218,11 +217,11 @@ pub struct Attestation {
 }
 
 impl Attestation {
-    /// Canonical JSON: `{"key_id":..,"payload_sha256":..,"signature":..}`.
+    /// Canonical JSON: `{"key_id":..,"payload_blake3":..,"signature":..}`.
     pub fn to_json(&self) -> String {
         format!(
-            "{{\"key_id\":\"{}\",\"payload_sha256\":\"{}\",\"signature\":\"{}\"}}",
-            self.key_id, self.payload_sha256, self.signature
+            "{{\"key_id\":\"{}\",\"payload_blake3\":\"{}\",\"signature\":\"{}\"}}",
+            self.key_id, self.payload_blake3, self.signature
         )
     }
 
@@ -232,16 +231,16 @@ impl Attestation {
             .strip_prefix("{\"key_id\":\"")
             .ok_or_else(|| malformed("not a canonical attestation"))?;
         let (key_id, rest) = rest
-            .split_once("\",\"payload_sha256\":\"")
-            .ok_or_else(|| malformed("missing payload_sha256"))?;
-        let (payload_sha256, rest) = rest
+            .split_once("\",\"payload_blake3\":\"")
+            .ok_or_else(|| malformed("missing payload_blake3"))?;
+        let (payload_blake3, rest) = rest
             .split_once("\",\"signature\":\"")
             .ok_or_else(|| malformed("missing signature"))?;
         let signature = rest
             .strip_suffix("\"}")
             .ok_or_else(|| malformed("trailing content"))?;
         let a = Attestation {
-            payload_sha256: payload_sha256.to_string(),
+            payload_blake3: payload_blake3.to_string(),
             key_id: key_id.to_string(),
             signature: signature.to_string(),
         };
@@ -251,7 +250,7 @@ impl Attestation {
 
     fn check_shape(&self) -> Result<(), AttestError> {
         let hexlen = |s: &str, n: usize| s.len() == n && s.bytes().all(|b| b.is_ascii_hexdigit());
-        if hexlen(&self.payload_sha256, 64)
+        if hexlen(&self.payload_blake3, 64)
             && hexlen(&self.key_id, 64)
             && hexlen(&self.signature, 128)
         {
@@ -268,7 +267,7 @@ impl Attestation {
 pub fn sign_bytes(key: &SigningKey, payload: &[u8]) -> Attestation {
     let sig = key.0.sign(payload);
     Attestation {
-        payload_sha256: sha256_hex(payload),
+        payload_blake3: blake3_hex(payload),
         key_id: key.verifying_key().key_id(),
         signature: hex_encode(&sig.to_bytes()),
     }
@@ -283,8 +282,8 @@ pub fn verify_bytes(
 ) -> Result<(), AttestError> {
     att.check_shape()?;
     if !att
-        .payload_sha256
-        .eq_ignore_ascii_case(&sha256_hex(payload))
+        .payload_blake3
+        .eq_ignore_ascii_case(&blake3_hex(payload))
     {
         return Err(AttestError::BadSignature);
     }
@@ -338,9 +337,9 @@ pub struct ReceiptFields<'a> {
     /// Lease id, when the step ran under a lease.
     pub lease_id: Option<&'a str>,
     /// Plan digest, for plan steps.
-    pub plan_sha256: Option<&'a str>,
+    pub plan_blake3: Option<&'a str>,
     /// Subject digest, when the receipt is bound to a subject.
-    pub subject_sha256: Option<&'a str>,
+    pub subject_blake3: Option<&'a str>,
 }
 
 impl<'a> From<&'a Receipt> for ReceiptFields<'a> {
@@ -353,8 +352,8 @@ impl<'a> From<&'a Receipt> for ReceiptFields<'a> {
             revision: r.authority.revision,
             added: r.added as u64,
             lease_id: r.lease_id.as_deref(),
-            plan_sha256: r.plan_sha256.as_deref(),
-            subject_sha256: r.subject_sha256.as_deref(),
+            plan_blake3: r.plan_blake3.as_deref(),
+            subject_blake3: r.subject_blake3.as_deref(),
         }
     }
 }
@@ -362,16 +361,16 @@ impl<'a> From<&'a Receipt> for ReceiptFields<'a> {
 /// Canonical receipt payload: keys sorted, no whitespace, absent options `null`.
 pub fn receipt_payload(f: &ReceiptFields<'_>) -> String {
     format!(
-        "{{\"added\":{},\"authority\":{},\"child\":{},\"lease_id\":{},\"parent\":{},\"plan_sha256\":{},\"revision\":{},\"step\":{},\"subject_sha256\":{}}}",
+        "{{\"added\":{},\"authority\":{},\"child\":{},\"lease_id\":{},\"parent\":{},\"plan_blake3\":{},\"revision\":{},\"step\":{},\"subject_blake3\":{}}}",
         f.added,
         json_str(f.authority),
         json_str(f.child),
         opt(f.lease_id),
         json_str(f.parent),
-        opt(f.plan_sha256),
+        opt(f.plan_blake3),
         json_str(f.revision),
         json_str(f.step),
-        opt(f.subject_sha256),
+        opt(f.subject_blake3),
     )
 }
 

@@ -50,7 +50,7 @@ st:sealedValue a rdf:Property ; rdfs:label "sealedValue" ;
     rdfs:domain st:SealedConstant ; rdfs:range rdfs:Literal .
 
 st:sealedDigest a rdf:Property ; rdfs:label "sealedDigest" ;
-    rdfs:comment "SHA-256 over the lexical form 'NAME=value' at seal time — the commitment's tamper-evident fingerprint; the generated report re-derives and asserts it." ;
+    rdfs:comment "BLAKE3 over the lexical form 'NAME=value' at seal time — the commitment's tamper-evident fingerprint; the generated report re-derives and asserts it." ;
     rdfs:domain st:SealedConstant ; rdfs:range xsd:string .
 
 st:projectedName a rdf:Property ; rdfs:label "projectedName" ;

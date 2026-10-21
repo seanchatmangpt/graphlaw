@@ -561,13 +561,12 @@ impl Plan {
         )
     }
 
-    /// `sha256:` of [`Plan::canonical_json`].
+    /// `blake3:` of [`Plan::canonical_json`].
     pub fn digest(&self) -> String {
-        use sha2::{Digest, Sha256};
-        let d = Sha256::digest(self.canonical_json().as_bytes());
+        let d = blake3::hash(self.canonical_json().as_bytes());
         format!(
-            "sha256:{}",
-            d.iter().map(|b| format!("{b:02x}")).collect::<String>()
+            "blake3:{}",
+            d.as_bytes().iter().map(|b| format!("{b:02x}")).collect::<String>()
         )
     }
 
@@ -610,8 +609,8 @@ impl Plan {
                 authority: authority(),
                 added: child.quad_count().saturating_sub(state.quad_count()),
                 lease_id: None,
-                plan_sha256: Some(plan_digest.clone()),
-                subject_sha256: None,
+                plan_blake3: Some(plan_digest.clone()),
+                subject_blake3: None,
             });
             state = child;
             have = next;

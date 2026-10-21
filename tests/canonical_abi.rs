@@ -1,4 +1,4 @@
-//! Pins the `canonical` ABI op contract: RDFC-1.0 canonical form + SHA-256
+//! Pins the `canonical` ABI op contract: RDFC-1.0 canonical form + BLAKE3
 //! identity through `graphlaw::abi::call` — the same surface the wasm kernel
 //! (`gl_call`) exposes to hosts.
 use serde_json::{Value, json};
@@ -29,8 +29,8 @@ p:alice p:knows p:bob .
 fn canonical_returns_rdfc_id_and_canonical_nquads() {
     let r = ok(json!({"op": "canonical", "data": {"text": DOC_TTL, "dialect": "turtle"}}));
     let id = r["id"].as_str().expect("id is a string");
-    assert!(id.starts_with("sha256:"), "id is sha256:-prefixed: {id}");
-    assert_eq!(id.len(), 7 + 64, "id is a full sha256 hex digest");
+    assert!(id.starts_with("blake3:"), "id is blake3:-prefixed: {id}");
+    assert_eq!(id.len(), 7 + 64, "id is a full blake3 hex digest");
     let nq = r["nquads"].as_str().expect("nquads is a string");
     assert!(nq.contains("<http://example.org/alice>"), "canonical form present: {nq}");
     assert_eq!(r["quads"], json!(2));

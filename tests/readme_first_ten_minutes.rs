@@ -23,11 +23,11 @@ fn run_example(name: &str) -> String {
 #[test]
 fn quickstart_plan_matches_readme_hashes() {
     let out = run_example("quickstart_plan");
-    assert!(out.contains("plan-action -> sha256:e51e3e15"), "{out}");
-    assert!(out.contains("plan-action -> sha256:01c373ea"), "{out}");
-    assert!(out.contains("plan-action -> sha256:77b8d7c9"), "{out}");
+    assert!(out.contains("plan-action -> blake3:8a0d0202"), "{out}");
+    assert!(out.contains("plan-action -> blake3:c66ea90e"), "{out}");
+    assert!(out.contains("plan-action -> blake3:3be6530b"), "{out}");
     assert!(
-        out.contains("final state: sha256:77b8d7c989b2717c1300a597db07c2a60722156183ce7e14017aec23e8d033d7"),
+        out.contains("final state: blake3:3be6530bdf3597afdcc5f60a2a7a0c15a952a1e8f8dd440e0a0bf49082e05896"),
         "{out}"
     );
 }

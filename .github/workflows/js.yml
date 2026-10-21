@@ -36,6 +36,11 @@ jobs:
           targets: wasm32-wasip1
       - name: Build WASI module (wasm profile)
         run: cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm --locked
+      # BLAKE3 is the artifact-digest algorithm (priv/graphlaw.wasm.blake3,
+      # b3sum format). Node/WebCrypto have no blake3; the runner has rust
+      # (step above), so the canonical tool is `cargo install b3sum --locked`.
+      - name: Install b3sum (cargo install b3sum --locked)
+        run: cargo install b3sum --locked
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22
@@ -47,11 +52,11 @@ jobs:
           set -euo pipefail
           # Byte-level drift guard: the committed pin must still match the
           # committed artifact bytes (catches hand edits and stale pins).
-          expected=$(awk '{print $1}' priv/graphlaw.wasm.sha256)
-          actual=$(shasum -a 256 priv/graphlaw.wasm | awk '{print $1}')
+          expected=$(awk '{print $1}' priv/graphlaw.wasm.blake3)
+          actual=$(b3sum priv/graphlaw.wasm | awk '{print $1}')
           echo "pinned artifact: $actual"
           echo "pin file:        $expected"
-          [ "$actual" = "$expected" ] || { echo "ERROR: priv/graphlaw.wasm bytes drifted from priv/graphlaw.wasm.sha256; repin the artifact"; exit 1; }
+          [ "$actual" = "$expected" ] || { echo "ERROR: priv/graphlaw.wasm bytes drifted from priv/graphlaw.wasm.blake3; repin the artifact"; exit 1; }
           # Semantic ABI gate: the wasm build is NOT byte-reproducible across
           # host platforms. Even with --remap-path-prefix normalizing the
           # embedded panic-location paths (macOS /Users/sac/.cargo vs Linux
@@ -65,6 +70,10 @@ jobs:
           node -e '
           const { createHash } = require("node:crypto");
           const { readFileSync } = require("node:fs");
+          // NOTE: this hash is an internal ABI-surface comparison only (fresh
+          // rebuild vs pinned artifact, both hashed the same way here). It is
+          // NOT the artifact digest and never compared to the .blake3 pin.
+          // Node crypto has no blake3, so sha256 is used for this comparison.
           const abiHash = (path) => {
             const mod = new WebAssembly.Module(readFileSync(path));
             const exports = WebAssembly.Module.exports(mod).map(e => e.name + ":" + e.kind).sort();
@@ -196,7 +205,7 @@ jobs:
           # NOTE: the rebuild's bytes are NOT digest-compared here — the wasm
           # build is not byte-reproducible across host platforms (macOS and
           # Linux rebuilds of the same source/lock differ), so the artifact pin
-          # (priv/graphlaw.wasm + priv/graphlaw.wasm.sha256) is the authority.
+          # (priv/graphlaw.wasm + priv/graphlaw.wasm.blake3) is the authority.
           cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm --locked
           # Re-pin artifact-meta.ts from the committed, pinned artifact; any
           # hand edit or stale digest in js/npm/src/generated fails the job.

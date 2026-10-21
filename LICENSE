@@ -1,9 +1,7 @@
 The MIT License (MIT)
 
-graphlaw (formerly named praxis-graphlaw) is a fork of the RoXi reasoning engine
-(https://github.com/pbonte/roxi). The upstream copyright and permission
-notice is preserved below, as the MIT license requires; modifications made
-for the Praxis workspace are Copyright (c) 2026 Sean Chatman and are offered
+graphlaw is a sovereign reasoning engine. Modifications made
+for the graphlaw workspace are Copyright (c) 2026 Sean Chatman and are offered
 under the same MIT terms.
 
 Copyright (c) 2022-now Pieter Bonte

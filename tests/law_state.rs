@@ -6,6 +6,7 @@ use graphlaw::dialect::{Dialect, RefusalKind};
 use graphlaw::law::{LawError, LawState, Step};
 use graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult};
 use graphlaw::sparql::NativeSparqlEngine;
+use graphlaw::tier::validate_n3_rules;
 
 fn read(path: &str) -> String {
     std::fs::read_to_string(format!("{}/{path}", env!("CARGO_MANIFEST_DIR"))).unwrap()
@@ -40,12 +41,13 @@ fn select_count(state: &LawState, q: &str) -> usize {
 #[test]
 fn innovation_pipeline_derives_admits_and_projects() {
     let rules = read("innovation/blue-ocean-triz.n3");
+    let ruleset = validate_n3_rules(rules.as_bytes(), None).expect("rules validate");
     let shapes = read("innovation/candidate.shacl.ttl");
     let s0 = fixture();
     assert_eq!(select_count(&s0, &read("innovation/opportunities.rq")), 0);
 
     let (s1, r1) = s0
-        .transition(&Step::DeriveN3 { rules: &rules })
+        .transition(&Step::DeriveN3 { rules: &rules, ruleset: &ruleset })
         .expect("derive");
     assert_eq!(r1.step, "derive:n3");
     assert_eq!(r1.authority.authority, "eyeron");
@@ -90,10 +92,13 @@ fn innovation_pipeline_derives_admits_and_projects() {
 #[test]
 fn derivation_is_idempotent_and_content_addressed() {
     let rules = read("innovation/blue-ocean-triz.n3");
+    let ruleset = validate_n3_rules(rules.as_bytes(), None).expect("rules validate");
     let (s1, _) = fixture()
-        .transition(&Step::DeriveN3 { rules: &rules })
+        .transition(&Step::DeriveN3 { rules: &rules, ruleset: &ruleset })
         .unwrap();
-    let (s2, r) = s1.transition(&Step::DeriveN3 { rules: &rules }).unwrap();
+    let (s2, r) = s1
+        .transition(&Step::DeriveN3 { rules: &rules, ruleset: &ruleset })
+        .unwrap();
     assert_eq!(r.added, 0);
     assert_eq!(s1.id(), s2.id());
 }
@@ -126,7 +131,7 @@ fn identity_ignores_statement_order_and_blank_labels() {
 fn shacl_gate_refuses_incomplete_candidate_without_creating_state() {
     let shapes = read("innovation/candidate.shacl.ttl");
     let bad = LawState::parse(
-        b"<https://e/c> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://praxis.chatman.io/innovation#CandidateFuture> .\n",
+        b"<https://e/c> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://graphlaw.chatman.io/innovation#CandidateFuture> .\n",
         Dialect::NTriples,
         None,
     )
@@ -172,8 +177,11 @@ fn engine_refusals_are_typed_and_name_the_engine() {
         LawState::parse(b"<https://e/s> <https://e/p> .\n", Dialect::Turtle, None).unwrap_err();
     assert_eq!(err.kind, RefusalKind::EngineRejected);
     assert_eq!(err.dialect, Some(Dialect::Turtle));
+    let empty_ruleset =
+        validate_n3_rules(b"", None).expect("empty rule set validates");
     let bad_rules = fixture().transition(&Step::DeriveN3 {
         rules: "{ ?x <p> ?y } => ",
+        ruleset: &empty_ruleset,
     });
     match bad_rules {
         Err(LawError::Refused(r)) => assert_eq!(r.dialect, Some(Dialect::N3)),

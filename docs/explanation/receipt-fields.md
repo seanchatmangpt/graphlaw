@@ -6,20 +6,20 @@ conformance to any external receipt schema.
 
 | portfolio R field | GraphLaw field |
 |---|---|
-| identity | `parent`, `child` (state ids), `subject_sha256` (external subject digest) |
+| identity | `parent`, `child` (state ids), `subject_blake3` (external subject digest) |
 | authority | `authority`, `revision` (upstream engine), `lease_id`, attestation `key_id` |
 | consequence | `step`, `added` |
-| replay | `plan_sha256`, and `graphlaw-verify` replay from the start state |
+| replay | `plan_blake3`, and `graphlaw-verify` replay from the start state |
 | standing | not stored — derived by the verifier (`ADMITTED`/`REFUSED`) from the receipts |
 
-## Receipt chains (praxis-compatible)
+## Receipt chains (graphlaw-compatible)
 
-`graphlaw::receipt_chain` is a praxis-compatible receipt-chaining surface:
+`graphlaw::receipt_chain` is a graphlaw-compatible receipt-chaining surface:
 `ReceiptRecord` (`RECEIPT_RECORD_VERSION = 1`), frozen wire strings
-(`praxis-chain/base`, `praxis-chain/v2-fold`), byte-exact BLAKE3 frame hashing —
+(`graphlaw-chain/base`, `graphlaw-chain/v2-fold`), byte-exact BLAKE3 frame hashing —
 golden-tested against the committed TCPS fixture (`tests/receipt_chain_golden_test.rs`,
 4 tests) — a 4-stage validator, a JSONL `ReceiptStore`, and an epoch module. ggen
-migrates onto this to retire its vendored praxis-core.
+migrates onto this to retire its vendored graphlaw-core.
 
 ## History
 

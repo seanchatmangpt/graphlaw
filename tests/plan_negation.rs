@@ -92,9 +92,9 @@ fn unmet_goal_not_is_refused_after_the_last_action_and_met_is_admitted() {
 }
 
 /// Digest of the positive-only plan `a-b` computed independently from the
-/// pre-negation canonical JSON (sha256 of the bytes, outside this crate).
+/// pre-negation canonical JSON (blake3 of the bytes, outside this crate).
 const POSITIVE_DIGEST: &str =
-    "sha256:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc";
+    "blake3:e16c63901ed5012208d71405fd179ad947da8f849d8c3cb083c26d0ff6e31803";
 
 #[test]
 fn digest_of_an_existing_positive_plan_is_unchanged() {

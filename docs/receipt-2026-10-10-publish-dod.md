@@ -37,7 +37,7 @@ Source receipt: `docs/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md`.
 4. `release.yml` fires on push to main: builds WASI + workspace, tags
    `v26.10.10`, publishes `graphlaw-eyeron` then `graphlaw`. Confirm
    `RELEASE_HOLD` repo variable is unset (HOLD skips all steps).
-5. Verify on crates.io: `graphlaw` 26.10.10 present with `.sha256`-attested
+5. Verify on crates.io: `graphlaw` 26.10.10 present with `.blake3`-attested
    release artifacts; record the release run URL in this receipt's final
    standing block.
 

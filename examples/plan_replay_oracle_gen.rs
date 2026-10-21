@@ -32,6 +32,7 @@
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 
 use graphlaw::abi::call_json;
@@ -292,6 +293,9 @@ struct Vector {
 }
 
 struct Op {
+    // Not read by the engine; kept as self-documenting labels at each
+    // construction site in the vector definitions below.
+    #[allow(dead_code)]
     id: &'static str,
     pre: &'static [&'static str],
     adds: &'static [&'static str],
@@ -519,7 +523,7 @@ fn contingent_case_two_unknowns() -> Vector {
     // pre "!A" is not a positive hold — the generator's exec_branch asserts
     // positive preconds only; gf's !A guard is enforced by construction
     // (gf runs only in the A=false branch), so assert it explicitly here.
-    for (label, _) in &verdicts {
+    for label in verdicts.keys() {
         assert!(label.contains("A=false") || label.contains("A=true"));
     }
     let tree_str = "(sense check-A A (act gt (done)) (act gf (done)))";
@@ -537,7 +541,7 @@ fn contingent_case_two_unknowns() -> Vector {
         fact_json("cp:act:gf:add", "G"),
         fact_json("cp:sense:check-A", "A"),
     ]);
-    let mut v = Vector {
+    Vector {
         vector_id: "contingent-plan-four-worlds-sense-split".into(),
         breed: "contingent_plan",
         breed_input: input,
@@ -551,8 +555,7 @@ fn contingent_case_two_unknowns() -> Vector {
             per-world verdicts in expected.verdicts. Negative control: the \
             breed refuses when the same problem drops cp:sense:check-A."
             .into(),
-    };
-    v
+    }
 }
 
 // ------------------------------------------------------- htn_planning vector
@@ -769,7 +772,7 @@ fn frames_case_cycle() -> Vector {
 
 // --------------------------------------------------------------------- main
 
-fn write_vector(dir: &PathBuf, v: &Vector) -> PathBuf {
+fn write_vector(dir: &Path, v: &Vector) -> PathBuf {
     let vector = json!({
         "vector_id": v.vector_id,
         "breed": v.breed,

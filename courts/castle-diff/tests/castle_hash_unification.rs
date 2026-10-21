@@ -8,13 +8,13 @@
 //! 162e466d8f07d0a75a468b4441b4bc8b1aad369b — the exact rev castle pins).
 //!
 //! Side B (graphlaw): `op=canonical` (`src/abi.rs` `dispatch "canonical"`)
-//! yields `LawState::id` = `sha256:` over purrdf RDFC-1.0 canonical N-Quads
+//! yields `LawState::id` = `blake3:` over purrdf RDFC-1.0 canonical N-Quads
 //! WITH trailing ` .` (`src/law.rs` `from_dataset`).
 //!
 //! OBSERVED VERDICT (2026-10-13): byte-identity does NOT hold — 0/3 corpus
 //! inputs match. The divergence is decomposed and pinned below:
 //!
-//! 1. Digest algorithm: castle = BLAKE3, graphlaw = SHA-256. Not a config
+//! 1. Digest algorithm: castle = BLAKE3, graphlaw = BLAKE3. Not a config
 //!    delta; closed only by an algorithm change on one side.
 //! 2. Serialization framing: even on identical canonical orderings, graphlaw
 //!    hashes lines ending ` .` while castle hashes lines without it, so the
@@ -29,7 +29,7 @@
 //! A minimal sort/flag alignment does NOT close the gap: layer 1 is an
 //! algorithm change and layer 3 is a canonicalizer semantic difference, not
 //! a sort order or flag. Unification requires either castle adopting
-//! SHA-256 over RDFC-1.0 output (including ` .`) or graphlaw adopting the
+//! BLAKE3 over RDFC-1.0 output (including ` .`) or graphlaw adopting the
 //! ggen scheme — a real change on one side, not configuration.
 
 use serde_json::json;
@@ -107,21 +107,21 @@ fn court_digests_remain_divergent_until_unification_is_admitted() {
     for (name, ttl) in corpus() {
         let (gl_id, _) = graphlaw_canonical(ttl);
         let (castle_hex, _) = castle_canonical(ttl);
-        let gl_hex = gl_id.trim_start_matches("sha256:");
+        let gl_hex = gl_id.trim_start_matches("blake3:");
         assert_ne!(
             gl_hex, castle_hex,
             "{name}: digests now match — the hash-unification seam has moved; \
              re-run the identity probe and re-decide this court"
         );
         // Digest namespaces stay disjoint by algorithm prefix on the wire.
-        assert!(gl_id.starts_with("sha256:"), "{name}: graphlaw id lost sha256: prefix");
+        assert!(gl_id.starts_with("blake3:"), "{name}: graphlaw id lost blake3: prefix");
         assert_eq!(castle_hex.len(), 64, "{name}: castle state_hash no longer 32 bytes");
     }
 }
 
 /// Layer 1+2 receipts: even where the canonical ORDER agrees exactly, the
 /// hashed byte streams differ (` .` framing) and the algorithms differ
-/// (SHA-256 vs BLAKE3).
+/// (BLAKE3 vs BLAKE3).
 #[test]
 fn divergence_layer_framing_and_algorithm() {
     for (name, ttl) in corpus() {
@@ -142,21 +142,21 @@ fn divergence_layer_framing_and_algorithm() {
             );
         }
 
-        // Algorithm: SHA-256 of graphlaw's own canonical form equals
+        // Algorithm: BLAKE3 of graphlaw's own canonical form equals
         // graphlaw's id (self-consistent), and never equals castle's digest.
-        use sha2::{Digest, Sha256};
-        let sha_of_gl: String = Sha256::digest(gl_nq.as_bytes())
+        let sha_of_gl: String = blake3::hash(gl_nq.as_bytes())
+            .as_bytes()
             .iter()
             .map(|b| format!("{b:02x}"))
             .collect();
         assert_eq!(
             sha_of_gl,
-            gl_id.trim_start_matches("sha256:"),
-            "{name}: graphlaw id is not sha256 over its canonical form"
+            gl_id.trim_start_matches("blake3:"),
+            "{name}: graphlaw id is not blake3 over its canonical form"
         );
         assert_ne!(
             sha_of_gl, castle_hex,
-            "{name}: castle hash now equals sha256 over graphlaw's canonical form"
+            "{name}: castle hash now equals blake3 over graphlaw's canonical form"
         );
     }
 }

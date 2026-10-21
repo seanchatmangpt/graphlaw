@@ -92,7 +92,7 @@ pub fn generate_falsifier(law: &Value, seed: &Value) -> Result<Value, String> {
         "replace_with_distinct_digest" => {
             object.insert(
                 dimension.to_string(),
-                Value::String(format!("sha256:{}", "f".repeat(64))),
+                Value::String(format!("blake3:{}", "f".repeat(64))),
             );
         }
         "substitute_collaborator" => {
@@ -104,7 +104,7 @@ pub fn generate_falsifier(law: &Value, seed: &Value) -> Result<Value, String> {
         "alter_replay_digest" => {
             object.insert(
                 dimension.to_string(),
-                Value::String(format!("sha256:{}", "e".repeat(64))),
+                Value::String(format!("blake3:{}", "e".repeat(64))),
             );
         }
         "omit_attempt" => {

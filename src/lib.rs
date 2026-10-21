@@ -43,6 +43,8 @@ compile_error!(
 
 #[cfg(feature = "abi")]
 pub mod abi;
+#[cfg(feature = "abi")]
+pub mod abi_manifest;
 pub mod attest;
 pub mod dialect;
 pub mod hooks;
@@ -60,6 +62,7 @@ pub mod registry;
 pub mod shacl_guard;
 #[cfg(feature = "pack-tools")]
 pub mod smon;
+pub mod tier;
 
 /// Unstable escape hatch: the whole PurRDF crate. Not covered by GraphLaw's own
 /// API stability; prefer the curated modules below.

@@ -23,7 +23,7 @@ export class GraphlawInitError extends GraphlawError {
   }
 }
 
-/** The wasm artifact's SHA-256 did not match the pinned digest. */
+/** The wasm artifact's BLAKE3 did not match the pinned digest. */
 export class GraphlawIntegrityError extends GraphlawError {
   readonly expected: string;
   readonly actual: string;

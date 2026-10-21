@@ -1,4 +1,4 @@
-//! Chicago-TDD tests for the ported praxis-core validator + JSONL store
+//! Chicago-TDD tests for the ported graphlaw-core validator + JSONL store
 //! (`graphlaw::receipt_chain::{validator, store}`). Real filesystem (temp
 //! dirs), real chain hashes — no doubles.
 
@@ -73,10 +73,10 @@ fn round_trip_write_load_verify_chain() {
     std::fs::remove_dir_all(&dir).expect("cleanup");
 }
 
-/// A version-2 record is refused by the schema stage with the exact praxis
+/// A version-2 record is refused by the schema stage with the exact graphlaw
 /// error text (error-naming parity).
 #[test]
-fn version_2_record_refused_with_praxis_error_text() {
+fn version_2_record_refused_with_graphlaw_error_text() {
     let mut records = chained_records(1);
     records[0].version = 2;
     let verdict = ReceiptValidator::validate(&records, &FixedClock(u64::MAX));

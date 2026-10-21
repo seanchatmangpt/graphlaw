@@ -8,7 +8,7 @@ working tree but **uncommitted and unpushed**.
 Two independent changes, one tree:
 
 1. **Receipt-chain family** (`src/receipt_chain.rs`, new): verbatim port of
-   praxis-core's receipt-chain family so praxis-core can retire. Public API:
+   graphlaw-core's receipt-chain family so graphlaw-core can retire. Public API:
    `Andon`, `Obligation`, `ReceiptMeta`, `build_admission_frame`,
    `chain_from_frame`, `RefusalScenario`, `RefusalCategory`, `ReceiptRecord`,
    `ChainRule`, `ChainStanding`, `ChainVerification`, `ChainRuleMonotonicity`,
@@ -35,7 +35,7 @@ Two independent changes, one tree:
 
 ## Wire-format compatibility
 
-- The `praxis-chain/*` frozen strings (record `version`, `schema`
+- The `graphlaw-chain/*` frozen strings (record `version`, `schema`
   `"ggen-receipt/v2"`, frame byte layout, chain rule) are ported
   byte-exact; the FM-CHAIN-009 golden test pins this against ggen's
   committed TCPS fixture (`chain_hash` `d04c6d08…`, pre-fold, sealed
@@ -54,9 +54,9 @@ Two independent changes, one tree:
 The migration-epoch port landed in `src/receipt_chain.rs`'s `epoch`
 submodule (~line 1192 onward): `ReceiptRecordV1Legacy` (pre-migration
 v1-only reader), `MigrationReceipt` (fixed law identity
-`MIGRATION_LAW_1_TO_2` = `"M_1_to_2"`), and the differential-vs-praxis
+`MIGRATION_LAW_1_TO_2` = `"M_1_to_2"`), and the differential-vs-graphlaw
 proof in `tests/receipt_epoch_migration_port_test.rs` — **4/4 passed**.
-This closes the last seam gap for praxis-core retirement.
+This closes the last seam gap for graphlaw-core retirement.
 
 ## Verification (final tallies)
 
@@ -81,13 +81,13 @@ remains a known pre-existing condition, not hit at crate scope.)
 ## Consumers
 
 - ggen seam rewire to `graphlaw::receipt_chain` is in flight (the port's
-  stated purpose is praxis-core retirement; see ggen
-  `docs/v26_10_10_praxis_retirement_plan.md`).
+  stated purpose is graphlaw-core retirement; see ggen
+  `docs/v26_10_10_graphlaw_retirement_plan.md`).
 - FM-LAW-016 closure depends on this landing.
 
 ## Recommended commit split (revised 2026-10-10 — now three)
 
-1. `feat(receipt-chain): verbatim port of praxis-core receipt-chain family
+1. `feat(receipt-chain): verbatim port of graphlaw-core receipt-chain family
    (FM-CHAIN-009 golden, validator, store)` — `src/receipt_chain.rs`
    (2,083 lines: core family + `ReceiptValidator` at ~line 1803),
    `tests/receipt_chain_golden_test.rs` (4),

@@ -50,7 +50,7 @@ jobs:
       version: ${{ steps.versions.outputs.version }}
       artifact_name: ${{ steps.pack.outputs.artifact_name }}
       tarball: ${{ steps.pack.outputs.tarball }}
-      sha256: ${{ steps.pack.outputs.sha256 }}
+      blake3: ${{ steps.pack.outputs.blake3 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -65,6 +65,10 @@ jobs:
         with:
           toolchain: 1.96.0
           targets: wasm32-wasip1
+      # BLAKE3 digests (priv/graphlaw.wasm.blake3 pin + tarball digest) are
+      # computed with b3sum; Node crypto has no blake3. This job has rust.
+      - name: Install b3sum (cargo install b3sum --locked)
+        run: cargo install b3sum --locked
 
       - name: Verify tag matches package and crate versions (fail closed)
         id: versions
@@ -92,14 +96,14 @@ jobs:
           fi
           echo "version=$crate_ver" >> "$GITHUB_OUTPUT"
 
-      - name: Build wasm artifact and verify digest against pinned sha256
+      - name: Build wasm artifact and verify digest against pinned blake3
         run: |
           set -euo pipefail
           cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
           WASM=target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
           [ -f "$WASM" ] || { echo "wasm artifact missing: $WASM" >&2; exit 1; }
-          got=$(sha256sum "$WASM" | cut -d' ' -f1)
-          pinned=$(cut -d' ' -f1 priv/graphlaw.wasm.sha256)
+          got=$(b3sum "$WASM" | cut -d' ' -f1)
+          pinned=$(cut -d' ' -f1 priv/graphlaw.wasm.blake3)
           if [ "$got" != "$pinned" ]; then
             echo "wasm digest drift: built $got, pinned $pinned" >&2
             exit 1
@@ -129,11 +133,11 @@ jobs:
             echo "tarball drift: two packs of the same tree differ in file list" >&2
             exit 1
           fi
-          sha=$(sha256sum "$tgz" | cut -d' ' -f1)
-          echo "sha256 of $tgz: $sha"
+          sha=$(b3sum "$tgz" | cut -d' ' -f1)
+          echo "blake3 of $tgz: $sha"
           echo "artifact_name=npm-tarball-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
           echo "tarball=$tgz" >> "$GITHUB_OUTPUT"
-          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+          echo "blake3=$sha" >> "$GITHUB_OUTPUT"
 
       - name: Upload tarball artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -167,22 +171,30 @@ jobs:
       - name: Upgrade npm to Trusted-Publishing-capable version (>= 11.5.1)
         run: npm install -g npm@latest
 
+      # b3sum re-verification below. This job has no rust setup, so add the
+      # toolchain (minimal profile is enough) and install b3sum from crates.io.
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: stable
+      - name: Install b3sum (cargo install b3sum --locked)
+        run: cargo install b3sum --locked
+
       - name: Download validated tarball
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: ${{ needs.validate.outputs.artifact_name }}
           path: dist
 
-      - name: Re-verify tarball sha256
+      - name: Re-verify tarball blake3
         env:
-          EXPECTED_SHA256: ${{ needs.validate.outputs.sha256 }}
+          EXPECTED_BLAKE3: ${{ needs.validate.outputs.blake3 }}
           TARBALL: ${{ needs.validate.outputs.tarball }}
         run: |
           set -euo pipefail
           [ -f "dist/$TARBALL" ] || { echo "tarball missing: dist/$TARBALL" >&2; exit 1; }
-          got=$(sha256sum "dist/$TARBALL" | cut -d' ' -f1)
-          if [ "$got" != "$EXPECTED_SHA256" ]; then
-            echo "sha256 mismatch across jobs: $got != $EXPECTED_SHA256" >&2
+          got=$(b3sum "dist/$TARBALL" | cut -d' ' -f1)
+          if [ "$got" != "$EXPECTED_BLAKE3" ]; then
+            echo "blake3 mismatch across jobs: $got != $EXPECTED_BLAKE3" >&2
             exit 1
           fi
 

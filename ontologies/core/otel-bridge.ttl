@@ -28,8 +28,8 @@
 
 <https://ggen.io/ontology/otel-bridge>
     a owl:Ontology ;
-    dcterms:title "OTEL Bridge Ontology — praxis Weaver registry source" ;
-    dcterms:description "Declares the event.praxis.activity_executed OTEL event semantic convention and its five required attributes, mapped to OCEL 2.0 and PROV-O public terms." ;
+    dcterms:title "OTEL Bridge Ontology — graphlaw Weaver registry source" ;
+    dcterms:description "Declares the event.graphlaw.activity_executed OTEL event semantic convention and its five required attributes, mapped to OCEL 2.0 and PROV-O public terms." ;
     owl:versionInfo "26.7.11" .
 
 # ───── Vocabulary (classes + properties for the flat shape) ─────
@@ -74,7 +74,7 @@ ob:memberOf a owl:ObjectProperty ;
 
 ob:ActivityExecutedEvent a ob:EventGroup ;
     rdfs:label "activity executed event" ;
-    ob:groupId "event.praxis.activity_executed" ;
+    ob:groupId "event.graphlaw.activity_executed" ;
     ob:stability "development" ;
     ob:brief "Records an observed process activity occurrence" ;
     rdfs:seeAlso prov:Activity , ocel:Event .

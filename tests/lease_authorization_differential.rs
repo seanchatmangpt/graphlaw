@@ -368,7 +368,7 @@ impl Reference {
         if c.now_unix >= c.expires_unix {
             return Verdict::Refused("expired");
         }
-        if !c.scope.iter().any(|s| *s == c.step) {
+        if !c.scope.contains(&c.step) {
             return Verdict::Refused("out_of_scope");
         }
         if rank(c.required) > rank(c.ceiling) {
@@ -578,11 +578,19 @@ fn registry_law_steps_agree_with_kernel_step_names_and_ceilings() {
             .expect("empty plan builds"),
     ));
     let no_trusted = Box::leak(Box::new(TrustedKeys::new()));
+    let empty_ruleset =
+        Box::leak(Box::new(graphlaw::tier::validate_n3_rules(b"", None).expect("empty rules")));
 
     // Registry wire name -> kernel Step variant of the same operation.
     let kernel_steps: [(&str, &Step<'static>); 8] = [
         ("shacl", &Step::AdmitShacl { shapes_ttl: "" }),
-        ("n3", &Step::DeriveN3 { rules: "" }),
+        (
+            "n3",
+            &Step::DeriveN3 {
+                rules: "",
+                ruleset: empty_ruleset,
+            },
+        ),
         ("rdfs", &Step::EntailRdfs),
         ("owl-rl", &Step::EntailOwlRl),
         ("hooks", &Step::Hooks { pack: empty_pack }),

@@ -10,7 +10,7 @@ Byte-identical pinned copies of the marketplace pack
   bijection totality, G5 valve totality, G6 A2A wire totality).
 - `queries/crosswalk.rq` — canonical projection (51+6+18+2 = 77 rows).
 
-`manifest.sha256` is the pin of record. Regenerate pins by re-copying from
+`manifest.blake3` is the pin of record. Regenerate pins by re-copying from
 the pack and re-running `shasum -a 256` over the same file set. The drift
 meta-test (`refusal_crosswalk_pin_matches_live_sibling` in
 `tests/refusal_crosswalk_differential.rs`) compares pin vs the live sibling

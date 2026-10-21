@@ -3,21 +3,21 @@
 //!
 //!   * bayesian_network dsep — Bayes-ball directional reachability as
 //!     stratified Datalog over node/edge facts:
-//!       stratum 1 (EDB): node/par/obs/start/end facts + extensional
-//!         disequality ddiff;
-//!       stratum 2: ancestor-of-observation seeding (anc, recursive),
-//!         unobserved gating unobs(N) :- node(N), !obs(N) (negation as
-//!         failure), and moralization marry(P,Q) :- par(C,P), par(C,Q),
-//!         ddiff(P,Q) (marry co-parents);
-//!       stratum 3: the Bayes-ball direction state machine, up/down
-//!         two-phase reachability as recursive positive rules:
-//!           up(S)  :- start(S).
-//!           down(C) :- up(N), par(C,N), unobs(N).   // up at unobs n -> children down
-//!           up(P)  :- up(N), par(N,P), unobs(N).    // up at unobs n -> parents up
-//!           down(C) :- down(N), par(C,N), unobs(N). // down at unobs n -> children down
-//!           up(P)  :- down(N), par(N,P), anc(N).    // down at n in anc -> parents up
-//!         reach(E) :- up(E). reach(E) :- down(E).
-//!         dsep_ok(E) :- end(E), !reach(E).
+//!     stratum 1 (EDB): node/par/obs/start/end facts + extensional
+//!     disequality ddiff;
+//!     stratum 2: ancestor-of-observation seeding (anc, recursive),
+//!     unobserved gating unobs(N) :- node(N), !obs(N) (negation as
+//!     failure), and moralization marry(P,Q) :- par(C,P), par(C,Q),
+//!     ddiff(P,Q) (marry co-parents);
+//!     stratum 3: the Bayes-ball direction state machine, up/down
+//!     two-phase reachability as recursive positive rules:
+//!     up(S)  :- start(S).
+//!     down(C) :- up(N), par(C,N), unobs(N).   // up at unobs n -> children down
+//!     up(P)  :- up(N), par(N,P), unobs(N).    // up at unobs n -> parents up
+//!     down(C) :- down(N), par(C,N), unobs(N). // down at unobs n -> children down
+//!     up(P)  :- down(N), par(N,P), anc(N).    // down at n in anc -> parents up
+//!     reach(E) :- up(E). reach(E) :- down(E).
+//!     dsep_ok(E) :- end(E), !reach(E).
 //!   * partial_order_plan VALIDATION — verifier, not deriver. Given the
 //!     breed's emitted plan (causal links + orderings), compute the order
 //!     relation's transitive closure (ordtc, the Chicago court's canonical

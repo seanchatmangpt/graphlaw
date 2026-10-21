@@ -87,7 +87,7 @@ fn semantic_laws_generate_adversarial_test_families() {
     let cases = [
         (
             include_str!("../qualification/laws/exact_subject.json"),
-            json!({"subject_digest": format!("sha256:{}", "a".repeat(64))}),
+            json!({"subject_digest": format!("blake3:{}", "a".repeat(64))}),
         ),
         (
             include_str!("../qualification/laws/collaborator_identity.json"),
@@ -95,7 +95,7 @@ fn semantic_laws_generate_adversarial_test_families() {
         ),
         (
             include_str!("../qualification/laws/replay_identity.json"),
-            json!({"replay_digest": format!("sha256:{}", "b".repeat(64))}),
+            json!({"replay_digest": format!("blake3:{}", "b".repeat(64))}),
         ),
         (
             include_str!("../qualification/laws/attempt_presence.json"),

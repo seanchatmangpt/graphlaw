@@ -10,7 +10,7 @@
 //!
 //! Fixtures are byte-identical pinned copies of
 //! /Users/sac/ggen-marketplace/packs/strata-*-pack/{ontology.ttl,gates/*.rq},
-//! sha256-pinned in `manifest.sha256` (regenerate pins by re-copying from the
+//! blake3-pinned in `manifest.blake3` (regenerate pins by re-copying from the
 //! marketplace pack source; the manifest is the pin of record).
 //!
 //! rdflib is exercised through a real python3 subprocess (Chicago: real
@@ -25,7 +25,6 @@ use graphlaw::law::LawState;
 use graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult};
 use graphlaw::sparql::NativeSparqlEngine;
 use serde_json::Value;
-use sha2::{Digest, Sha256};
 use std::process::Command;
 
 const FIXTURE_ROOT: &str = "tests/fixtures/strata_gate_differential";
@@ -50,29 +49,29 @@ fn fixture_path(pack: &str, rel: &str) -> String {
     format!("{FIXTURE_ROOT}/{pack}/{rel}")
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
-    let mut h = Sha256::new();
+fn blake3_hex(bytes: &[u8]) -> String {
+    let mut h = blake3::Hasher::new();
     h.update(bytes);
-    hex(&h.finalize())
+    hex(h.finalize().as_bytes())
 }
 
 fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-/// Verify pinned bytes match manifest.sha256 before any evaluation runs.
+/// Verify pinned bytes match manifest.blake3 before any evaluation runs.
 #[test]
 fn pinned_fixtures_match_manifest() {
-    let manifest = std::fs::read_to_string(format!("{FIXTURE_ROOT}/manifest.sha256"))
-        .expect("manifest.sha256 present");
+    let manifest = std::fs::read_to_string(format!("{FIXTURE_ROOT}/manifest.blake3"))
+        .expect("manifest.blake3 present");
     let mut pinned = 0;
     for line in manifest.lines().filter(|l| !l.trim().is_empty()) {
         let (hash, path) = line
             .split_once("  ")
-            .expect("sha256sum format `<hash>  <path>`");
+            .expect("b3sum format `<hash>  <path>`");
         let rel = path.trim_start_matches('*').trim_start_matches("./");
         let bytes = std::fs::read(format!("{FIXTURE_ROOT}/{rel}")).expect("pinned file readable");
-        assert_eq!(sha256_hex(&bytes), hash, "pin drift on {rel}");
+        assert_eq!(blake3_hex(&bytes), hash, "pin drift on {rel}");
         pinned += 1;
     }
     assert!(pinned >= 12, "manifest should pin >= 12 files, got {pinned}");
@@ -150,7 +149,8 @@ except Exception as err:
 fn differential_gate_agreement() {
     pinned_fixtures_match_manifest();
 
-    let mut results: Vec<(&str, &str, Result<usize, String>, Result<usize, String>)> = Vec::new();
+    type GateVerdict = (&'static str, &'static str, Result<usize, String>, Result<usize, String>);
+    let mut results: Vec<GateVerdict> = Vec::new();
     for (pack, gate) in GATES {
         let ont = fixture(pack, "ontology.ttl");
         let rq = fixture(pack, &format!("gates/{gate}"));

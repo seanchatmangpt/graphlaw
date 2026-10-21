@@ -127,7 +127,7 @@
       "required": ["code", "order", "kind", "fields"],
       "type": "object"
     },
-    "sha256": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
+    "blake3": {"pattern": "^blake3:[0-9a-f]{64}$", "type": "string"},
     "string_list": {"items": {"type": "string"}, "type": "array"},
     "variant": {
       "additionalProperties": true,
@@ -201,12 +201,12 @@
     "refusal_codes": {"items": {"$ref": "#/$defs/refusal_code"}, "minItems": 1, "type": "array"},
     "refusal_kinds": {"$ref": "#/$defs/string_list"},
     "regimes": {"$ref": "#/$defs/string_list"},
-    "registry_sha256": {"$ref": "#/$defs/sha256"},
+    "registry_blake3": {"$ref": "#/$defs/blake3"},
     "schema": {"const": "graphlaw.capability-registry/1"},
-    "surface_sha256": {"$ref": "#/$defs/sha256"}
+    "surface_blake3": {"$ref": "#/$defs/blake3"}
   },
   "required": [
-    "schema", "graphlaw_version", "abi_version", "surface_sha256", "registry_sha256",
+    "schema", "graphlaw_version", "abi_version", "surface_blake3", "registry_blake3",
     "authorities", "engines", "refusal_kinds", "rdf_dialects", "other_dialects", "regimes",
     "lease_ceilings", "lease_reasons", "receipt_reasons", "policy_refusal_kinds", "limits",
     "limit_meta", "models", "model_enums", "refusal_codes", "law_steps", "ops"

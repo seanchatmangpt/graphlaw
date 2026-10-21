@@ -92,7 +92,7 @@ const res = await callRaw({ op: 'sniff', text: 'PREFIX : <http://ex/> :s :p :o .
 Both runtimes share the same WASM core and the same typed API surface.
 
 For custom artifacts or dev setups, `initGraphlaw()` accepts `wasmBytes` and
-`skipShaCheck` options (see the type docs for `GraphlawInitOptions`).
+`skipDigestCheck` options (see the type docs for `GraphlawInitOptions`).
 
 ## Resources
 
@@ -106,5 +106,4 @@ For custom artifacts or dev setups, `initGraphlaw()` accepts `wasmBytes` and
 
 ## Upstream notice
 
-graphlaw is a fork of the RoXi reasoning engine
-(https://github.com/pbonte/roxi), preserved under the MIT license.
+graphlaw is a sovereign reasoning engine, offered under the MIT license.

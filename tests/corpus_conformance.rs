@@ -5,7 +5,7 @@
 //! Two tiers: files under `SLOW_BYTES` run in the default `cargo test`; the
 //! large vendored vocabularies run under `cargo test -- --ignored`.
 //!
-//! `ASSETS.sha256` pins the exact bytes of every asset. Regenerate it after a
+//! `ASSETS.blake3` pins the exact bytes of every asset. Regenerate it after a
 //! deliberate asset change with `UPDATE_ASSET_MANIFEST=1 cargo test --test
 //! corpus_conformance asset_manifest`.
 
@@ -14,7 +14,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use graphlaw::dialect::{Dialect, check, sniff};
-use sha2::{Digest, Sha256};
 
 const BASE: &str = "https://example.org/base/";
 const SLOW_BYTES: u64 = 1_000_000;
@@ -138,16 +137,16 @@ fn shacl_shape_files_load_in_purrdf() {
 
 fn manifest_text() -> String {
     let mut out =
-        String::from("# sha256  bytes  dialect  path   (regenerate: UPDATE_ASSET_MANIFEST=1)\n");
+        String::from("# blake3  bytes  dialect  path   (regenerate: UPDATE_ASSET_MANIFEST=1)\n");
     for p in all_files() {
         let bytes = fs::read(&p).unwrap();
-        let digest = Sha256::digest(&bytes);
+        let digest = blake3::hash(&bytes);
         let dialect = if is_semantic(&p) {
             sniff(&bytes, Some(ext(&p))).map_or_else(|_| "refused".into(), |d| format!("{d:?}"))
         } else {
             "-".into()
         };
-        let hex: String = digest.iter().fold(String::new(), |mut s, b| {
+        let hex: String = digest.as_bytes().iter().fold(String::new(), |mut s, b| {
             write!(s, "{b:02x}").unwrap();
             s
         });
@@ -158,13 +157,13 @@ fn manifest_text() -> String {
 
 #[test]
 fn asset_manifest_pins_every_byte() {
-    let path = root().join("ASSETS.sha256");
+    let path = root().join("ASSETS.blake3");
     let actual = manifest_text();
     if std::env::var_os("UPDATE_ASSET_MANIFEST").is_some() {
         fs::write(&path, &actual).unwrap();
         return;
     }
-    let pinned = fs::read_to_string(&path).expect("ASSETS.sha256 missing; regenerate it");
+    let pinned = fs::read_to_string(&path).expect("ASSETS.blake3 missing; regenerate it");
     if pinned != actual {
         let a: std::collections::BTreeSet<_> = actual.lines().collect();
         let p: std::collections::BTreeSet<_> = pinned.lines().collect();

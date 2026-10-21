@@ -3,13 +3,13 @@
 //!
 //! The canonical three-runtime crosswalk lives in the sibling marketplace
 //! pack /Users/sac/ggen-marketplace/packs/refusal-vocabulary-pack/ (READ-ONLY
-//! from this repo's perspective): 51 erlmcp refusal codes (1001-1089) ->
-//! 18 ash_a2a S42 refusal classes -> 6 strata-valve classes -> A2A wire
+//! from this repo's perspective): 51 erlmcp refusal codes (1001-1089) to
+//! 18 ash_a2a S42 refusal classes to 6 strata-valve classes to A2A wire
 //! (-32000 column). Its closure-style totality gates live in gates/.
 //!
-//! Fixtures are byte-identical pinned copies of the pack (ontology + 6 gates
-//! + queries/crosswalk.rq), sha256-pinned in
-//! tests/fixtures/refusal_crosswalk/manifest.sha256. The manifest is the pin
+//! Fixtures are byte-identical pinned copies of the pack (ontology,
+//! 6 gates, queries/crosswalk.rq), blake3-pinned in
+//! tests/fixtures/refusal_crosswalk/manifest.blake3. The manifest is the pin
 //! of record; a drift meta-test compares pin vs the live sibling file and
 //! BLOCKS (skips) when the sibling checkout is absent.
 //!
@@ -25,8 +25,6 @@ use graphlaw::law::LawState;
 use graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult};
 use graphlaw::sparql::NativeSparqlEngine;
 use serde_json::Value;
-use sha2::{Digest, Sha256};
-use std::collections::BTreeMap;
 use std::process::Command;
 
 const FIXTURE_ROOT: &str = "tests/fixtures/refusal_crosswalk";
@@ -77,24 +75,24 @@ fn fixture_path(rel: &str) -> String {
     format!("{FIXTURE_ROOT}/{rel}")
 }
 
-fn sha256_hex(bytes: &[u8]) -> String {
-    let mut h = Sha256::new();
+fn blake3_hex(bytes: &[u8]) -> String {
+    let mut h = blake3::Hasher::new();
     h.update(bytes);
-    h.finalize().iter().map(|b| format!("{b:02x}")).collect()
+    h.finalize().as_bytes().iter().map(|b| format!("{b:02x}")).collect()
 }
 
-/// Verify pinned bytes match manifest.sha256 before any evaluation runs.
+/// Verify pinned bytes match manifest.blake3 before any evaluation runs.
 fn pinned_fixtures_match_manifest() {
-    let manifest = std::fs::read_to_string(format!("{FIXTURE_ROOT}/manifest.sha256"))
-        .expect("manifest.sha256 present");
+    let manifest = std::fs::read_to_string(format!("{FIXTURE_ROOT}/manifest.blake3"))
+        .expect("manifest.blake3 present");
     let mut pinned = 0;
     for line in manifest.lines().filter(|l| !l.trim().is_empty()) {
         let (hash, path) = line
             .split_once("  ")
-            .expect("sha256sum format `<hash>  <path>`");
+            .expect("b3sum format `<hash>  <path>`");
         let rel = path.trim_start_matches('*').trim_start_matches("./");
         let bytes = std::fs::read(format!("{FIXTURE_ROOT}/{rel}")).expect("pinned file readable");
-        assert_eq!(sha256_hex(&bytes), hash, "pin drift on {rel}");
+        assert_eq!(blake3_hex(&bytes), hash, "pin drift on {rel}");
         pinned += 1;
     }
     assert!(pinned >= 8, "manifest should pin >= 8 files, got {pinned}");
@@ -231,7 +229,8 @@ fn refusal_crosswalk_pack_gates_clean_and_engines_agree() {
     let ont = fixture("ontology.ttl");
     let ont_path = fixture_path("ontology.ttl");
 
-    let mut results: Vec<(&str, Result<usize, String>, Result<usize, String>)> = Vec::new();
+    type RowVerdict = (&'static str, Result<usize, String>, Result<usize, String>);
+    let mut results: Vec<RowVerdict> = Vec::new();
     for (rel, _) in PINNED.iter().skip(1).take(6) {
         let rq = fixture(rel);
         let rq_path = fixture_path(rel);
@@ -374,7 +373,7 @@ fn sabotage_twin_mutated_verdict_fails_court() {
     assert_ne!(mutated, ont, "sabotage mutation applied");
 
     // 1. Pack's own gate verdict flips: G5 fires (double-mapped valve class).
-    let g5 = engine_rows(&mutated.as_str(), &fixture("gates/050_valve_totality.rq"));
+    let g5 = engine_rows(mutated.as_str(), &fixture("gates/050_valve_totality.rq"));
     assert!(
         matches!(&g5, Ok(n) if *n >= 1),
         "G5 must FIRE on the sabotaged graph, got {g5:?}"
@@ -383,7 +382,7 @@ fn sabotage_twin_mutated_verdict_fails_court() {
     // 2. graphlaw's differential evaluation flips: fuel_exhausted no longer
     //    maps solely to refused_bounds (two rows of disagreement remain even
     //    after correcting, because one mapping still contradicts).
-    let still_agrees = valve_mismatch_rows(&mutated.as_str(), "fuel_exhausted", "refused_bounds");
+    let still_agrees = valve_mismatch_rows(mutated.as_str(), "fuel_exhausted", "refused_bounds");
     // With two mappings (one refused_bounds, one refused_rule), the mismatch
     // query returns >= 1 row: the court detects the tampering.
     assert!(
@@ -393,7 +392,7 @@ fn sabotage_twin_mutated_verdict_fails_court() {
 
     // 3. Exactly-one-class per CODE totality is untouched (sabotage hit the
     //    valve column): negative control proving the court's selectivity.
-    let codes = erlmcp_code_count(&mutated.as_str()).expect("engine counts codes");
+    let codes = erlmcp_code_count(mutated.as_str()).expect("engine counts codes");
     assert_eq!(codes, 51, "erlmcp column untouched by valve sabotage");
 }
 

@@ -18,7 +18,8 @@ the source of truth for everything else.
 | `npm/src/wire.ts` | HAND-WRITTEN | Irreducible residue: wire protocol port of `tests/wasm_abi.rs` (gl_* packed-u64 ABI framing) |
 | `npm/src/runtime.ts` | HAND-WRITTEN | Irreducible residue: port of the Rust reference client (`tests/wasm_abi.rs`) calling convention plus a minimal `wasi_snapshot_preview1` stub surface. Zero-dependency; no `node:wasi`. Stub set derived from `wasm-objdump -x priv/graphlaw.wasm` imports — REVISIT if the artifact's import set changes. |
 | `npm/src/runtime.web.ts` | HAND-WRITTEN | Browser twin of `runtime.ts`: same calling convention and WASI stub surface, browser-compatible instantiation (no Node APIs) |
-| `npm/src/init.ts` | HAND-WRITTEN | Irreducible residue: module instantiation / artifact loading |
+| `npm/src/init.ts` | HAND-WRITTEN | Irreducible residue: module instantiation / artifact loading; BLAKE3 integrity gate via `npm/src/blake3.ts` (WebCrypto has no BLAKE3) |
+| `npm/src/blake3.ts` | HAND-WRITTEN | Pure-TypeScript BLAKE3 (hash mode), ported from the official public-domain reference implementation (BLAKE3-team/BLAKE3 `src/lib/reference_impl.rs`, CC0); constants taken verbatim from the reference, not guessed. External authority: `b3sum` CLI — validated on empty/`abc`/64B/1KiB/1MiB inputs in `test/blake3.test.ts`; `build.mjs` additionally cross-checks b3sum against this implementation on every build and refuses on disagreement |
 | `npm/src/errors.ts` | HAND-WRITTEN | Irreducible residue: typed error classes |
 | `npm/src/client.ts`, `npm/src/raw.ts` | HAND-WRITTEN | Irreducible residue: ergonomic client and raw passthrough |
 | `npm/src/index.ts`, `npm/src/types.ts` | HAND-WRITTEN | Irreducible residue: public surface re-exports and hand types |
@@ -27,4 +28,4 @@ the source of truth for everything else.
 | `npm/scripts/sync-version.mjs` | HAND-WRITTEN | Version sync from the workspace/Cargo source of truth into `npm/package.json` |
 | `npm/scripts/assemble.mjs` | HAND-WRITTEN | Dist assembly: stages generated + hand-written sources into the publishable `dist/` layout |
 | `npm/scripts/pack-smoke.mjs` | HAND-WRITTEN | Pack audit: smoke-checks the packed tarball surface before publish |
-| `npm/wasm/graphlaw.wasm` | GENERATED | ggen-rendered from `ontologies/graphlaw-wasm.ttl`, byte-pinned by `priv/graphlaw.wasm.sha256`; NEVER hand-edited; rebuild only via `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` |
+| `npm/wasm/graphlaw.wasm` | GENERATED | ggen-rendered from `ontologies/graphlaw-wasm.ttl`, byte-pinned by `priv/graphlaw.wasm.blake3`; NEVER hand-edited; rebuild only via `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` |

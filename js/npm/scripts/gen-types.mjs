@@ -122,7 +122,7 @@ function line(s = '') {
 }
 
 line('// GENERATED from registry/capability-registry.json');
-line(`// registry_sha256: ${registry.registry_sha256}`);
+line(`// registry_blake3: ${registry.registry_blake3}`);
 line('// Do not edit by hand; run `npm run gen` to regenerate.');
 line();
 line("import type { DataSpec, Term } from '../types.js';");

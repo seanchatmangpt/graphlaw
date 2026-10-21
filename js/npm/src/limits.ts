@@ -9,7 +9,7 @@
  * not mirrored here fails the test, and vice versa.
  *
  * Mirrored from registry document with:
- *   registry_sha256: sha256:1c129dd6eed90bc680f8e695070dcef2eccf0eab7ff4d2b9c0462b2439c514b9
+ *   registry_blake3: blake3:1c129dd6eed90bc680f8e695070dcef2eccf0eab7ff4d2b9c0462b2439c514b9
  *
  * Registry `limits` (key -> value):
  *

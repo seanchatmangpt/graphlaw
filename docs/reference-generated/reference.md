@@ -1628,9 +1628,9 @@
 
 | `verifying_key` | function | verifying_key(&self) -> VerifyingKey |  |  |  |  |
 
-| `Attestation` | struct | Attestation { pub payload_sha256: String, pub key_id: String, pub signature: String } |  |  |  |  |
+| `Attestation` | struct | Attestation { pub payload_blake3: String, pub key_id: String, pub signature: String } |  |  |  |  |
 
-| `ReceiptFields` | struct | ReceiptFields { pub parent: &'a str, pub child: &'a str, pub step: &'a str, pub authority: &'a str, pub revision: &'a str, pub added: u64, pub lease_id: Option<&'a str>, pub plan_sha256: Option<&'a str>, pub subject_sha256: Option<&'a str> } |  |  |  |  |
+| `ReceiptFields` | struct | ReceiptFields { pub parent: &'a str, pub child: &'a str, pub step: &'a str, pub authority: &'a str, pub revision: &'a str, pub added: u64, pub lease_id: Option<&'a str>, pub plan_blake3: Option<&'a str>, pub subject_blake3: Option<&'a str> } |  |  |  |  |
 
 | `SigningKey` | struct | SigningKey { DalekSigning } |  |  |  |  |
 
@@ -1716,9 +1716,9 @@
 
 | `materialize` | function | materialize(&self, state: &LawState) -> Result<Materialized, Refusal> |  |  |  |  |
 
-| `http://seanchatmangpt.github.io/praxis/handler#sparql-construct` | str_key | HANDLER_SPARQL_CONSTRUCT = "http://seanchatmangpt.github.io/praxis/handler#sparql-construct" |  |  |  |  |
+| `http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct` | str_key | HANDLER_SPARQL_CONSTRUCT = "http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct" |  |  |  |  |
 
-| `http://seanchatmangpt.github.io/praxis/kh#` | str_key | KH = "http://seanchatmangpt.github.io/praxis/kh#" |  |  |  |  |
+| `http://seanchatmangpt.github.io/graphlaw/kh#` | str_key | KH = "http://seanchatmangpt.github.io/graphlaw/kh#" |  |  |  |  |
 
 | `Firing` | struct | Firing { pub hook: String, pub round: usize, pub row: Vec<(String, String)>, pub added: usize } |  |  |  |  |
 
@@ -1783,7 +1783,7 @@
 
 | `transition_leased_unverified` | function | transition_leased_unverified( &self, lease: &Lease, step: &Step<'_>, now_unix: u64, ) -> Result<(LawState, Receipt), LawError> |  |  |  |  |
 
-| `with_subject` | function | with_subject(mut self, subject_sha256: impl Into<String>) -> Self |  |  |  |  |
+| `with_subject` | function | with_subject(mut self, subject_blake3: impl Into<String>) -> Self |  |  |  |  |
 
 | `FixedClock` | struct | FixedClock { pub u64 } |  |  |  |  |
 
@@ -1791,7 +1791,7 @@
 
 | `Lease` | struct | Lease { pub id: String, pub holder: String, pub ceiling: Ceiling, pub scope: Vec<String>, pub expires_unix: u64, pub issued_unix: u64 } |  |  |  |  |
 
-| `Receipt` | struct | Receipt { pub parent: String, pub child: String, pub step: &'static str, pub authority: BackendAuthority, pub added: usize, pub lease_id: Option<String>, pub plan_sha256: Option<String>, pub subject_sha256: Option<String> } |  |  |  |  |
+| `Receipt` | struct | Receipt { pub parent: String, pub child: String, pub step: &'static str, pub authority: BackendAuthority, pub added: usize, pub lease_id: Option<String>, pub plan_blake3: Option<String>, pub subject_blake3: Option<String> } |  |  |  |  |
 
 | `SignedLease` | struct | SignedLease { pub lease: Lease, pub attestation: crate::attest::Attestation } |  |  |  |  |
 
@@ -2125,9 +2125,9 @@
 
 | `ggen-receipt/v2` | str_key | SCHEMA_V2 = "ggen-receipt/v2" |  |  |  |  |
 
-| `praxis-chain/base` | str_key | CHAIN_RULE_BASE = "praxis-chain/base" |  |  |  |  |
+| `graphlaw-chain/base` | str_key | CHAIN_RULE_BASE = "graphlaw-chain/base" |  |  |  |  |
 
-| `praxis-chain/v2-fold` | str_key | CHAIN_RULE_V2_FOLD = "praxis-chain/v2-fold" |  |  |  |  |
+| `graphlaw-chain/v2-fold` | str_key | CHAIN_RULE_V2_FOLD = "graphlaw-chain/v2-fold" |  |  |  |  |
 
 | `receipts` | str_key | DEFAULT_RECEIPTS_DIR = "receipts" |  |  |  |  |
 
@@ -2243,13 +2243,13 @@
 
 | `registry_json_pretty` | function | registry_json_pretty() -> String |  |  |  |  |
 
-| `registry_sha256` | function | registry_sha256() -> String |  |  |  |  |
+| `registry_blake3` | function | registry_blake3() -> String |  |  |  |  |
 
 | `registry_turtle` | function | registry_turtle() -> String |  |  |  |  |
 
 | `registry_value` | function | registry_value() -> Value |  |  |  |  |
 
-| `surface_sha256` | function | surface_sha256() -> String |  |  |  |  |
+| `surface_blake3` | function | surface_blake3() -> String |  |  |  |  |
 
 | `EngineRejected` | str_key | KINDS_ENGINE = "EngineRejected" |  |  |  |  |
 
@@ -2431,7 +2431,7 @@
 
 | `<urn:p:occupied>` | str_key | OCC = "<urn:p:occupied>" |  |  |  |  |
 
-| `sha256:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc` | str_key | POSITIVE_DIGEST = "sha256:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc" |  |  |  |  |
+| `blake3:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc` | str_key | POSITIVE_DIGEST = "blake3:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc" |  |  |  |  |
 
 
 ### tests/receipt_feedback.rs
@@ -4113,9 +4113,9 @@
 
 | `verifying_key` | function | verifying_key(&self) -> VerifyingKey |  |  |  |  |
 
-| `Attestation` | struct | Attestation { pub payload_sha256: String, pub key_id: String, pub signature: String } |  |  |  |  |
+| `Attestation` | struct | Attestation { pub payload_blake3: String, pub key_id: String, pub signature: String } |  |  |  |  |
 
-| `ReceiptFields` | struct | ReceiptFields { pub parent: &'a str, pub child: &'a str, pub step: &'a str, pub authority: &'a str, pub revision: &'a str, pub added: u64, pub lease_id: Option<&'a str>, pub plan_sha256: Option<&'a str>, pub subject_sha256: Option<&'a str> } |  |  |  |  |
+| `ReceiptFields` | struct | ReceiptFields { pub parent: &'a str, pub child: &'a str, pub step: &'a str, pub authority: &'a str, pub revision: &'a str, pub added: u64, pub lease_id: Option<&'a str>, pub plan_blake3: Option<&'a str>, pub subject_blake3: Option<&'a str> } |  |  |  |  |
 
 | `SigningKey` | struct | SigningKey { DalekSigning } |  |  |  |  |
 
@@ -4189,9 +4189,9 @@
 
 | `materialize` | function | materialize(&self, state: &LawState) -> Result<Materialized, Refusal> |  |  |  |  |
 
-| `http://seanchatmangpt.github.io/praxis/handler#sparql-construct` | str_key | HANDLER_SPARQL_CONSTRUCT = "http://seanchatmangpt.github.io/praxis/handler#sparql-construct" |  |  |  |  |
+| `http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct` | str_key | HANDLER_SPARQL_CONSTRUCT = "http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct" |  |  |  |  |
 
-| `http://seanchatmangpt.github.io/praxis/kh#` | str_key | KH = "http://seanchatmangpt.github.io/praxis/kh#" |  |  |  |  |
+| `http://seanchatmangpt.github.io/graphlaw/kh#` | str_key | KH = "http://seanchatmangpt.github.io/graphlaw/kh#" |  |  |  |  |
 
 | `Firing` | struct | Firing { pub hook: String, pub round: usize, pub row: Vec<(String, String)>, pub added: usize } |  |  |  |  |
 
@@ -4253,7 +4253,7 @@
 
 | `transition_leased_unverified` | function | transition_leased_unverified( &self, lease: &Lease, step: &Step<'_>, now_unix: u64, ) -> Result<(LawState, Receipt), LawError> |  |  |  |  |
 
-| `with_subject` | function | with_subject(mut self, subject_sha256: impl Into<String>) -> Self |  |  |  |  |
+| `with_subject` | function | with_subject(mut self, subject_blake3: impl Into<String>) -> Self |  |  |  |  |
 
 | `FixedClock` | struct | FixedClock { pub u64 } |  |  |  |  |
 
@@ -4261,7 +4261,7 @@
 
 | `Lease` | struct | Lease { pub id: String, pub holder: String, pub ceiling: Ceiling, pub scope: Vec<String>, pub expires_unix: u64, pub issued_unix: u64 } |  |  |  |  |
 
-| `Receipt` | struct | Receipt { pub parent: String, pub child: String, pub step: &'static str, pub authority: BackendAuthority, pub added: usize, pub lease_id: Option<String>, pub plan_sha256: Option<String>, pub subject_sha256: Option<String> } |  |  |  |  |
+| `Receipt` | struct | Receipt { pub parent: String, pub child: String, pub step: &'static str, pub authority: BackendAuthority, pub added: usize, pub lease_id: Option<String>, pub plan_blake3: Option<String>, pub subject_blake3: Option<String> } |  |  |  |  |
 
 | `SignedLease` | struct | SignedLease { pub lease: Lease, pub attestation: crate::attest::Attestation } |  |  |  |  |
 
@@ -4577,9 +4577,9 @@
 
 | `ggen-receipt/v2` | str_key | SCHEMA_V2 = "ggen-receipt/v2" |  |  |  |  |
 
-| `praxis-chain/base` | str_key | CHAIN_RULE_BASE = "praxis-chain/base" |  |  |  |  |
+| `graphlaw-chain/base` | str_key | CHAIN_RULE_BASE = "graphlaw-chain/base" |  |  |  |  |
 
-| `praxis-chain/v2-fold` | str_key | CHAIN_RULE_V2_FOLD = "praxis-chain/v2-fold" |  |  |  |  |
+| `graphlaw-chain/v2-fold` | str_key | CHAIN_RULE_V2_FOLD = "graphlaw-chain/v2-fold" |  |  |  |  |
 
 | `receipts` | str_key | DEFAULT_RECEIPTS_DIR = "receipts" |  |  |  |  |
 
@@ -4689,13 +4689,13 @@
 
 | `registry_json_pretty` | function | registry_json_pretty() -> String |  |  |  |  |
 
-| `registry_sha256` | function | registry_sha256() -> String |  |  |  |  |
+| `registry_blake3` | function | registry_blake3() -> String |  |  |  |  |
 
 | `registry_turtle` | function | registry_turtle() -> String |  |  |  |  |
 
 | `registry_value` | function | registry_value() -> Value |  |  |  |  |
 
-| `surface_sha256` | function | surface_sha256() -> String |  |  |  |  |
+| `surface_blake3` | function | surface_blake3() -> String |  |  |  |  |
 
 | `EngineRejected` | str_key | KINDS_ENGINE = "EngineRejected" |  |  |  |  |
 
@@ -4847,7 +4847,7 @@
 
 | `<urn:p:occupied>` | str_key | OCC = "<urn:p:occupied>" |  |  |  |  |
 
-| `sha256:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc` | str_key | POSITIVE_DIGEST = "sha256:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc" |  |  |  |  |
+| `blake3:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc` | str_key | POSITIVE_DIGEST = "blake3:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc" |  |  |  |  |
 
 | `<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .` | str_key | NT = "<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> ." |  |  |  |  |
 

@@ -67,7 +67,7 @@ fn s(v: &Value, k: &str) -> String {
 fn a_control_parse_and_canonical_succeed_on_the_base_fixture() {
     let p = run_ok(json!({"op": "parse", "text": base_turtle(), "dialect": "turtle"}));
     assert_eq!(p["quads"], 6);
-    assert!(s(&p, "id").starts_with("sha256:"), "id: {}", s(&p, "id"));
+    assert!(s(&p, "id").starts_with("blake3:"), "id: {}", s(&p, "id"));
     let c =
         run_ok(json!({"op": "canonical", "data": {"text": base_turtle(), "dialect": "turtle"}}));
     assert_eq!(c["quads"], 6);

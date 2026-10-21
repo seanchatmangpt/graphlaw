@@ -204,14 +204,6 @@ const P_TERMINATED: &str = "urn:ec:terminated";
 const P_CLIPPED: &str = "urn:ec:clipped";
 const P_COMP: &str = "urn:ec:comp";
 
-fn fluent(f: &str) -> ClauseTerm {
-    ClauseTerm::iri(format!("urn:ec:f:{f}"))
-}
-
-fn time(t: usize) -> ClauseTerm {
-    ClauseTerm::iri(format!("urn:ec:t:{t}"))
-}
-
 fn var(name: &str) -> ClauseTerm {
     ClauseTerm::var(name)
 }
@@ -272,15 +264,16 @@ fn terminated_facts(sc: &Scenario) -> BTreeSet<(&'static str, usize)> {
 /// Route B (primary): stratified negation via purrdf-datalog negated atoms.
 /// Returns the derived holds(f,t) set.
 fn run_negation_route(sc: &Scenario, horizon: usize) -> BTreeSet<(String, usize)> {
-    let mut rules = Vec::new();
-    // terminated(f,t) :- happens(e,t), terminates(e,f)
-    rules.push(rule(
-        pos(var("f"), P_TERMINATED, var("t")),
-        vec![
-            pos(var("e"), P_HAPPENS, var("t")),
-            pos(var("e"), P_TERMINATES, var("f")),
-        ],
-    ));
+    let mut rules = vec![
+        // terminated(f,t) :- happens(e,t), terminates(e,f)
+        rule(
+            pos(var("f"), P_TERMINATED, var("t")),
+            vec![
+                pos(var("e"), P_HAPPENS, var("t")),
+                pos(var("e"), P_TERMINATES, var("f")),
+            ],
+        ),
+    ];
     // initiated(f,t) :- happens(e,t), initiates(e,f)
     rules.push(rule(
         pos(var("f"), P_INITIATED, var("t")),
@@ -353,15 +346,16 @@ fn run_complement_route(sc: &Scenario, horizon: usize) -> BTreeSet<(String, usiz
     let terminated = terminated_facts(sc);
     let fluents = all_fluents(sc);
 
-    let mut rules = Vec::new();
-    // initiated(f,t) :- happens(e,t), initiates(e,f)
-    rules.push(rule(
-        pos(var("f"), P_INITIATED, var("t")),
-        vec![
-            pos(var("e"), P_HAPPENS, var("t")),
-            pos(var("e"), P_INITIATES, var("f")),
-        ],
-    ));
+    let mut rules = vec![
+        // initiated(f,t) :- happens(e,t), initiates(e,f)
+        rule(
+            pos(var("f"), P_INITIATED, var("t")),
+            vec![
+                pos(var("e"), P_HAPPENS, var("t")),
+                pos(var("e"), P_INITIATES, var("f")),
+            ],
+        ),
+    ];
     // holds(f,t) :- succ(s,t), initiated(f,s)
     rules.push(rule(
         pos(var("f"), P_HOLDS, var("t")),

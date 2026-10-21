@@ -904,7 +904,7 @@
         "op": "hooks",
         "pack": {
           "dialect": "turtle",
-          "text": "@prefix kh: <http://seanchatmangpt.github.io/praxis/kh#> . @prefix ex: <https://e/> .\nex:h a kh:Hook ; kh:kind \"sparql\" ; kh:effect \"emit-delta\" ; kh:action ex:a ;\n  kh:query \"SELECT ?x WHERE { ?x a <https://e/A> }\" .\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ;\n  kh:query \"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\" .\n"
+          "text": "@prefix kh: <http://seanchatmangpt.github.io/graphlaw/kh#> . @prefix ex: <https://e/> .\nex:h a kh:Hook ; kh:kind \"sparql\" ; kh:effect \"emit-delta\" ; kh:action ex:a ;\n  kh:query \"SELECT ?x WHERE { ?x a <https://e/A> }\" .\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;\n  kh:query \"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\" .\n"
         }
       }
     },
@@ -924,7 +924,7 @@
         "op": "hooks",
         "pack": {
           "dialect": "turtle",
-          "text": "@prefix kh: <http://seanchatmangpt.github.io/praxis/kh#> . @prefix ex: <https://e/> .\nex:h a kh:Hook ; kh:kind \"sparql\" ; kh:effect \"emit-delta\" ; kh:action ex:a ;\n  kh:query \"SELECT ?x WHERE { ?x a <https://e/A> }\" .\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ;\n  kh:query \"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\" .\n"
+          "text": "@prefix kh: <http://seanchatmangpt.github.io/graphlaw/kh#> . @prefix ex: <https://e/> .\nex:h a kh:Hook ; kh:kind \"sparql\" ; kh:effect \"emit-delta\" ; kh:action ex:a ;\n  kh:query \"SELECT ?x WHERE { ?x a <https://e/A> }\" .\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;\n  kh:query \"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\" .\n"
         }
       }
     },
@@ -944,7 +944,7 @@
         "op": "hooks",
         "pack": {
           "dialect": "turtle",
-          "text": "@prefix kh: <http://seanchatmangpt.github.io/praxis/kh#> . @prefix ex: <https://e/> .\nex:h a kh:Hook ; kh:kind \"datalog\" ; kh:effect \"emit-delta\" ; kh:action ex:a ;\n  kh:query \"SELECT ?x WHERE { ?x a <https://e/A> }\" .\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ;\n  kh:query \"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\" .\n"
+          "text": "@prefix kh: <http://seanchatmangpt.github.io/graphlaw/kh#> . @prefix ex: <https://e/> .\nex:h a kh:Hook ; kh:kind \"datalog\" ; kh:effect \"emit-delta\" ; kh:action ex:a ;\n  kh:query \"SELECT ?x WHERE { ?x a <https://e/A> }\" .\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;\n  kh:query \"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\" .\n"
         }
       }
     },
@@ -1095,7 +1095,7 @@
           {
             "pack": {
               "dialect": "turtle",
-              "text": "@prefix kh: <http://seanchatmangpt.github.io/praxis/kh#> . @prefix ex: <https://e/> .\nex:h a kh:Hook ; kh:kind \"sparql\" ; kh:effect \"emit-delta\" ; kh:action ex:a ;\n  kh:query \"SELECT ?x WHERE { ?x a <https://e/A> }\" .\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ;\n  kh:query \"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\" .\n"
+              "text": "@prefix kh: <http://seanchatmangpt.github.io/graphlaw/kh#> . @prefix ex: <https://e/> .\nex:h a kh:Hook ; kh:kind \"sparql\" ; kh:effect \"emit-delta\" ; kh:action ex:a ;\n  kh:query \"SELECT ?x WHERE { ?x a <https://e/A> }\" .\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;\n  kh:query \"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\" .\n"
             },
             "step": "hooks"
           }

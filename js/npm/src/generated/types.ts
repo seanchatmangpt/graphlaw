@@ -1,5 +1,5 @@
 // GENERATED from registry/capability-registry.json
-// registry_sha256: sha256:1c129dd6eed90bc680f8e695070dcef2eccf0eab7ff4d2b9c0462b2439c514b9
+// registry_blake3: blake3:3f7a5c71ec2ae2f1daa2323a8c1eda5cc2c1df9425155201c6711c1a81ef634f
 // Do not edit by hand; run `npm run gen` to regenerate.
 
 import type { DataSpec, Term } from '../types.js';
@@ -105,15 +105,15 @@ export interface Receipt {
   /** Lease id when the step ran under a lease. */
   lease_id?: string | null;
   /** Plan digest for plan steps. */
-  plan_sha256?: string | null;
+  plan_blake3?: string | null;
   /** Digest of the external subject, when bound. */
-  subject_sha256?: string | null;
+  subject_blake3?: string | null;
 }
 
 /** Ed25519 attestation over a canonical payload. */
 export interface Attestation {
-  /** Lowercase hex SHA-256 of the canonical payload. */
-  payload_sha256: string;
+  /** Lowercase hex BLAKE3 of the canonical payload. */
+  payload_blake3: string;
   /** Identifier of the signing key. */
   key_id: string;
   /** Lowercase hex Ed25519 signature over the payload. */
@@ -220,9 +220,9 @@ export interface CapabilitiesResponse {
   /** Registry schema id; absent on engines older than v26.9.29. */
   registry_schema?: string;
   /** Registry digest; absent on engines older than v26.9.29. */
-  registry_sha256?: string;
+  registry_blake3?: string;
   /** Surface digest; absent on engines older than v26.9.29. */
-  surface_sha256?: string;
+  surface_blake3?: string;
 }
 
 /** Route text to a dialect and owning engine without parsing it. */

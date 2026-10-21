@@ -21,6 +21,7 @@
 
 use graphlaw::dialect::Dialect;
 use graphlaw::law::{LawState, Step};
+use graphlaw::tier::validate_n3_rules;
 use graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult, TermValue};
 use graphlaw::sparql::NativeSparqlEngine;
 use std::collections::BTreeSet;
@@ -138,13 +139,6 @@ fn cases() -> Vec<Case> {
     ]
 }
 
-fn term_iri(t: &Option<TermValue>) -> Option<String> {
-    match t {
-        Some(TermValue::Iri(v)) => Some(v.clone()),
-        _ => None,
-    }
-}
-
 fn iri(name: &str) -> String {
     format!("{DL}{name}")
 }
@@ -190,8 +184,10 @@ fn route_a(p: &Parsed, goals: &[&str]) -> Result<Vec<bool>, String> {
 
     let s0 = LawState::parse(base.as_bytes(), Dialect::Turtle, None)
         .map_err(|e| format!("route A parse: {e:?}"))?;
+    let ruleset = validate_n3_rules(rules.as_bytes(), None)
+        .map_err(|e| format!("route A rules: {e:?}"))?;
     let (s1, _r) = s0
-        .transition(&Step::DeriveN3 { rules: &rules })
+        .transition(&Step::DeriveN3 { rules: &rules, ruleset: &ruleset })
         .map_err(|e| format!("route A derive: {e:?}"))?;
 
     // Closure: all sub pairs.
@@ -302,7 +298,7 @@ fn route_b(p: &Parsed, goals: &[&str]) -> Result<Vec<bool>, String> {
 // Vector emission (tests/fixtures/graphlaw schema v1)
 // ---------------------------------------------------------------------------
 
-fn emit_vector(case: &Case, parsed: &Parsed, verdicts: &[bool]) -> Result<String, String> {
+fn emit_vector(case: &Case, _parsed: &Parsed, verdicts: &[bool]) -> Result<String, String> {
     let rev = std::process::Command::new("git")
         .args(["-C", "/Users/sac/graphlaw", "rev-parse", "HEAD"])
         .output()

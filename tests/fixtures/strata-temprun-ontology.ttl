@@ -1,6 +1,6 @@
 # PINNED COPY — provenance: ggen-marketplace:packs/strata-temprun-pack/ontology.ttl
-# sha256 of the pinned body below (the complete pack file, verbatim):
-# 7c7394b1f885784fbdcfedb94e9134b0614d80b122c7b6b239cacca4e0a16b3b
+# blake3 of the pinned body below (the complete pack file, verbatim):
+# cd3cde66a2a9a3440240e8ff005ca7258dfd995744f36b061102db522e33f30e
 # Pinned for the temprun framing differential court (tests/temprun_framing.rs).
 # If the pack ontology changes, re-pin and update this hash line.
 # strata-temprun-pack ontology — actuation arena vocabulary.
@@ -55,3 +55,82 @@ st:DefaultArena a st:ActuationArena ;
     st:maxFuel 1000000 ;
     # temprun run/2 sieve admitted iff fuel >= 3 (st:admissionFuel).
     st:admissionFuel 3 .
+
+# ── Fuel ↔ valve refusal composition ─────────────────────────────────
+# Composition law: arena fuel exhaustion emits a valve-taxonomy refusal.
+# The refusal class is declared in the strata-valve-pack ontology —
+# valve:FuelExhaustedRefusal (atom "fuel_exhausted", module
+# "Strata.Valve.Refusals.FuelExhausted"). House style cites by IRI literal,
+# no owl:imports: the union graph of both packs is not evaluable in a
+# single ggen sync, so the valve IRI is PINNED here as a constant and the
+# gate (gates/020_fuel_refusal_binding.rq) enforces its structural shape
+# plus the valve wire constant (32-byte refusal receipt) locally.
+# ──────────────────────────────────────────────────────────────────────
+
+st:FuelRefusalBinding a rdfs:Class ; rdfs:label "FuelRefusalBinding" ;
+    rdfs:comment "Pinned binding from temprun arena fuel exhaustion to the valve-pack refusal class that surfaces it on the wire." .
+
+st:valveRefusalIri a rdf:Property ; rdfs:label "valve refusal IRI" ;
+    rdfs:comment "Pinned constant: IRI of the valve-pack refusal class emitted on arena fuel exhaustion. Pinned by literal (no owl:imports); gated structurally." ;
+    rdfs:domain st:FuelRefusalBinding ; rdfs:range xsd:string .
+
+st:refusalReceiptLen a rdf:Property ; rdfs:label "refusal receipt length" ;
+    rdfs:comment "Wire length in bytes of the valve's opaque RefusalReceipt; must equal the valve pack's valve:refusalReceiptLen (32)." ;
+    rdfs:domain st:FuelRefusalBinding ; rdfs:range xsd:integer .
+
+st:emitsValveRefusal a rdf:Property ; rdfs:label "emits valve refusal" ;
+    rdfs:comment "Links an arena to the pinned valve refusal IRI it emits when fuel exhausts." ;
+    rdfs:domain st:ActuationArena ; rdfs:range xsd:string .
+
+st:FuelExhaustedBinding a st:FuelRefusalBinding ;
+    rdfs:label "fuel_exhausted_binding" ;
+    # PINNED VALVE IRI (constant, mirrored from strata-valve-pack
+    # ontology.ttl valve:FuelExhaustedRefusal — a valve:RefusalClass).
+    st:valveRefusalIri "https://strata.chatman.ai/ontology/valve#FuelExhaustedRefusal" ;
+    st:refusalReceiptLen 32 .
+
+st:DefaultArena st:emitsValveRefusal "https://strata.chatman.ai/ontology/valve#FuelExhaustedRefusal" .
+
+# ── ABI pin ──────────────────────────────────────────────────────────
+# The pack's arena law (fuel model, run/2 sieve) is UPSTREAM of the
+# temprun guest ABI: it encodes none of the receipt-wire surface that
+# changed in the ABI-v2 rebase (strata 59ed80c: 352B receipt-wire deleted,
+# CTTG New payload, errno 11 E_ABI_MISMATCH). The ABI delta lives in
+# temprun/src/bin/temprun_step.rs + worker.ex, which this pack does not
+# model. Honest verdict: PIN, not a fix. Pinned subject = strata main
+# pre-rebase state (dff1d41), the state the pack semantics were derived
+# against. Drift tripwire: when fix/kg-42-status-code (59ed80c) merges,
+# its receipt names the ABI delta — this court then fires and forces an
+# explicit re-pin decision (re-derive or re-assert against the merged
+# main). See tests/test_temprun_abi_pin.py.
+# ──────────────────────────────────────────────────────────────────────
+
+st:AbiPin a rdfs:Class ; rdfs:label "AbiPin" ;
+    rdfs:comment "Pinned strata subject this pack's semantics were derived against, with the semantic anchors that must keep holding in the live tree." .
+
+st:pinSubjectSha a rdf:Property ; rdfs:label "pin subject SHA" ;
+    rdfs:comment "Full 40-hex git SHA of the pinned strata commit." ;
+    rdfs:domain st:AbiPin ; rdfs:range xsd:string .
+
+st:pinBranch a rdf:Property ; rdfs:label "pin branch" ;
+    rdfs:comment "Branch the pinned subject was read from." ;
+    rdfs:domain st:AbiPin ; rdfs:range xsd:string .
+
+st:pinAbiVersion a rdf:Property ; rdfs:label "pin ABI version" ;
+    rdfs:comment "Guest ABI version the pinned subject carries. ABI v1 = pre-rebase (dff1d41); ABI v2 = 59ed80c rebase (receipt-wire change). This pack's fuel-model semantics are ABI-independent and exist on both sides; the pin records the derivation subject anyway." ;
+    rdfs:domain st:AbiPin ; rdfs:range xsd:integer .
+
+st:pinSemanticAnchor a rdf:Property ; rdfs:label "pin semantic anchor" ;
+    rdfs:comment "Literal source-text anchor that must be present in the pinned commit's tree AND in the live strata tree for the pin to keep standing (fail-closed drift tripwire)." ;
+    rdfs:domain st:AbiPin ; rdfs:range xsd:string .
+
+st:temprunAbiPin a st:AbiPin ;
+    rdfs:label "temprun_abi_pin" ;
+    st:pinSubjectSha "dff1d4178abf1fe465d58b815d1042c9784f93c2" ;
+    st:pinBranch "main" ;
+    st:pinAbiVersion 1 ;
+    # Anchors: the fuel-sieve semantics this pack encodes (temprun
+    # src/lib.rs run/2), which exist verbatim on BOTH sides of the rebase.
+    st:pinSemanticAnchor "pub fn run(input: &mut ArenaInput, mut fuel: fuel::FuelLease) -> ArenaOutput" ;
+    st:pinSemanticAnchor "Sieve order: clock + causal acyclicity" ;
+    st:pinSemanticAnchor "pub use fuel::FuelLease" .

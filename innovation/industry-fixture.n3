@@ -1,5 +1,5 @@
-@prefix inv: <https://praxis.chatman.io/innovation#> .
-@prefix demo: <https://praxis.chatman.io/innovation/demo#> .
+@prefix inv: <https://graphlaw.chatman.io/innovation#> .
+@prefix demo: <https://graphlaw.chatman.io/innovation/demo#> .
 
 # ELIMINATE: manual coordination is expensive, low-utility to the buyer, and
 # blocks a noncustomer. The replacement capability performs the same function

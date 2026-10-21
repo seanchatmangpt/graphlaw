@@ -103,7 +103,7 @@ fn hook_ttl(body: &str) -> LawState {
 fn unsupported_or_incomplete_hooks_are_refused_not_skipped() {
     let bad_kind = hook_ttl(
         "ex:h a kh:Hook ; kh:kind \"datalog\" ; kh:query \"SELECT * WHERE {?s ?p ?o}\" ; kh:effect \"emit-delta\" ; kh:action ex:a .\n\
-         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ; kh:query \"CONSTRUCT {?s ?p ?o} WHERE {?s ?p ?o}\" .",
+         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ; kh:query \"CONSTRUCT {?s ?p ?o} WHERE {?s ?p ?o}\" .",
     );
     let e = HookPack::load(&bad_kind).unwrap_err();
     assert_eq!(e.kind, RefusalKind::Unsupported);
@@ -121,7 +121,7 @@ fn unsupported_or_incomplete_hooks_are_refused_not_skipped() {
 
     let bad_query = hook_ttl(
         "ex:h a kh:Hook ; kh:kind \"sparql\" ; kh:query \"SELEKT nope\" ; kh:effect \"emit-delta\" ; kh:action ex:a .\n\
-         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ; kh:query \"CONSTRUCT {?s ?p ?o} WHERE {?s ?p ?o}\" .",
+         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ; kh:query \"CONSTRUCT {?s ?p ?o} WHERE {?s ?p ?o}\" .",
     );
     assert!(HookPack::load(&bad_query).is_err());
 }
@@ -133,7 +133,7 @@ fn hooks_chain_by_priority_to_a_fixpoint() {
         format!(
             "ex:h{n} a kh:Hook ; kh:kind \"sparql\" ; kh:effect \"emit-delta\" ; kh:priority {prio} ; kh:action ex:a{n} ;\n\
                kh:query \"SELECT ?x WHERE {{ ?x a <https://e/{from}> }}\" .\n\
-             ex:a{n} a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ;\n\
+             ex:a{n} a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;\n\
                kh:query \"CONSTRUCT {{ ?x a <https://e/{to}> }} WHERE {{ ?x a <https://e/{from}> }}\" .\n"
         )
     };
@@ -161,7 +161,7 @@ fn refuse_hook_fires_with_reason_and_emits_no_delta() {
          ex:no-writes a kh:Hook ; kh:kind \"sparql\" ; kh:effect \"refuse\" ; \
            kh:reason \"unattended writes are refused\" ; kh:action ex:a ;\n\
            kh:query \"SELECT ?x WHERE {{ ?x a <https://e/Forbidden> }}\" .\n\
-         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ;\n\
+         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;\n\
            kh:query \"CONSTRUCT {{ ?x <https://e/never> <https://e/emitted> }} WHERE {{ ?x a <https://e/Forbidden> }}\" .\n",
         graphlaw::hooks::KH
     );
@@ -196,7 +196,7 @@ fn refuse_hook_that_matches_nothing_produces_no_verdict() {
         "@prefix kh: <{}> . @prefix ex: <https://e/> .\n\
          ex:quiet a kh:Hook ; kh:kind \"sparql\" ; kh:effect \"refuse\" ; kh:action ex:a ;\n\
            kh:query \"SELECT ?x WHERE {{ ?x a <https://e/Absent> }}\" .\n\
-         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ;\n\
+         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;\n\
            kh:query \"CONSTRUCT {{ ?x ?p ?o }} WHERE {{ ?x ?p ?o }}\" .\n",
         graphlaw::hooks::KH
     );
@@ -235,7 +235,7 @@ fn malformed_effect_value_is_a_typed_refusal() {
     let doc = format!(
         "@prefix kh: <{}> . @prefix ex: <https://e/> .\n\
          ex:h a kh:Hook ; kh:kind \"sparql\" ; kh:query \"SELECT * WHERE {{?s ?p ?o}}\" ; kh:effect \"refuse-now\" ; kh:action ex:a .\n\
-         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/praxis/handler#sparql-construct> ; kh:query \"CONSTRUCT {{?s ?p ?o}} WHERE {{?s ?p ?o}}\" .",
+         ex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ; kh:query \"CONSTRUCT {{?s ?p ?o}} WHERE {{?s ?p ?o}}\" .",
         graphlaw::hooks::KH
     );
     let e = HookPack::load(&LawState::parse(doc.as_bytes(), Dialect::Turtle, None).unwrap())

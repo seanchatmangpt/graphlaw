@@ -1,13 +1,13 @@
-@prefix inv: <https://praxis.chatman.io/innovation#> .
+@prefix inv: <https://graphlaw.chatman.io/innovation#> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 
-<https://praxis.chatman.io/innovation>
+<https://graphlaw.chatman.io/innovation>
     a owl:Ontology ;
-    dcterms:title "Praxis RDF Innovation Law Profile" ;
+    dcterms:title "GraphLaw RDF Innovation Law Profile" ;
     dcterms:description "Bounded profile vocabulary for expressing Blue Ocean value-curve opportunities, TRIZ contradictions, Post-AGI mediation constraints, and deterministic candidate-future handoff in GraphLaw." .
 
 # Domain-bearing classes. These are profile terms for the innovation law pack,

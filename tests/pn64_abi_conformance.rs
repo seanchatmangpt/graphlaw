@@ -13,9 +13,9 @@
 //!      transitions, both the clear-then-set law `m' = (m & !pre) | post` and
 //!      the XOR form `m' = (m ^ pre) | post` documented on `pn:postMask`.
 //!
-//! Provenance: the ontology subject is pinned by sha256; a mismatch refuses the
+//! Provenance: the ontology subject is pinned by blake3; a mismatch refuses the
 //! court rather than silently judging a moved subject. The generated projection
-//! subject is deliberately NOT sha-pinned (see GENERATED_SHA256 below).
+//! subject is deliberately NOT digest-pinned (see GENERATED_BLAKE3 below).
 //!
 //! Standing: finite six-transition corpus on the exact pinned subjects; passing
 //! proves only that the ontology, the generated projection, and the bitOffset
@@ -25,7 +25,6 @@
 use graphlaw::purrdf;
 use graphlaw::rdf::{RdfDataset, SparqlEngine, SparqlRequest, SparqlResult, TermValue};
 use graphlaw::sparql::NativeSparqlEngine;
-use sha2::{Digest, Sha256};
 use std::sync::Arc;
 
 const PACK_DIR: &str = concat!(
@@ -33,16 +32,18 @@ const PACK_DIR: &str = concat!(
     "/../ggen-marketplace/packs/strata-pn64-pack"
 );
 
-/// Pinned sha256 of the ontology subject (re-pinned for ggen-marketplace
+/// Pinned blake3 of the ontology subject (re-pinned for ggen-marketplace
 /// 8a9949c49: the documented legacy st: -> pn: schema reconciliation — the six
 /// canonical RONR transition masks are carried over value-identical
 /// (129/130, 2/12, 8/16, 16/8, 8/96, 36/257); the legacy st:
 /// RonrTransition/Place/DaoVerb vocabulary is superseded by the pn:
 /// individuals, per that commit's reconcile note).
-/// Prior pin 1ded0f04… (itself re-pinned 2026-10-13, lane L147, from e3b4caa8…).
-const ONTOLOGY_SHA256: &str = "5feaf3824cc031dff7715e46e02d8d74412de5a1658cc8a47badd1d496d31f3b";
+/// Prior pins: 5feaf382… (sha256, pre-blake3-migration; re-pinned for
+/// ggen-marketplace 8a9949c49, itself re-pinned 2026-10-13, lane L147, from
+/// e3b4caa8…).
+const ONTOLOGY_BLAKE3: &str = "b3dbbc7c945a7883a75933dfc12699af393dac5fe711009bb5f4d694a2ac399b";
 
-/// The generated projection subject carries NO sha pin.
+/// The generated projection subject carries NO digest pin.
 ///
 /// UNSTABLE-WITH-REASON: `generated/pn64_masks.rs` is being rewritten
 /// concurrently (widened six -> 25 canonical transitions) by a lane that owns
@@ -51,7 +52,10 @@ const ONTOLOGY_SHA256: &str = "5feaf3824cc031dff7715e46e02d8d74412de5a1658cc8a47
 /// structurally instead: array lengths, index alignment with the ontology,
 /// and mask-value agreement — drift in the projection is caught by those
 /// structural courts, not by a byte pin.
-const GENERATED_SHA256: &str = "";
+// Retained as documentation of the pin-refusal schema (see comment above);
+// deliberately empty, never read.
+#[allow(dead_code)]
+const GENERATED_BLAKE3: &str = "";
 
 fn read_pack_file(rel: &str) -> String {
     std::fs::read_to_string(format!("{PACK_DIR}/{rel}"))
@@ -60,8 +64,8 @@ fn read_pack_file(rel: &str) -> String {
 
 fn assert_pinned(rel: &str, bytes: &[u8], want: &str) {
     assert!(!want.is_empty(), "{rel} pin is deliberately unset");
-    let got = hex(&Sha256::digest(bytes));
-    assert_eq!(got, want, "{rel} drifted from its pinned sha256; re-pin the court");
+    let got = hex(blake3::hash(bytes).as_bytes());
+    assert_eq!(got, want, "{rel} drifted from its pinned blake3; re-pin the court");
 }
 
 fn hex(digest: &[u8]) -> String {
@@ -113,10 +117,10 @@ fn nums_block(src: &str, start_marker: &str) -> Vec<u64> {
     out
 }
 
-/// Loads the ontology dataset after checking the sha256 pin.
+/// Loads the ontology dataset after checking the blake3 pin.
 fn ontology_dataset() -> Arc<RdfDataset> {
     let bytes = std::fs::read(format!("{PACK_DIR}/ontology.ttl")).expect("ontology.ttl readable");
-    assert_pinned("ontology.ttl", &bytes, ONTOLOGY_SHA256);
+    assert_pinned("ontology.ttl", &bytes, ONTOLOGY_BLAKE3);
     purrdf::parse_dataset(&bytes, "text/turtle", None).expect("ontology.ttl parses as Turtle")
 }
 
@@ -300,6 +304,7 @@ fn bitoffset_semantics_reconstruct_masks() {
 }
 
 #[test]
+#[allow(clippy::identity_op)] // `& 0xFFFF` documents the 32-bit wasm opcode truncation
 fn fire_law_over_six_transitions_both_forms_agree_on_enabled_domain() {
     let ds = ontology_dataset();
     let ttl = ttl_transitions(&ds);
@@ -376,6 +381,7 @@ fn dao_verb_values_bind_distinctly() {
 }
 
 #[test]
+#[allow(clippy::identity_op, clippy::erasing_op)] // `& 0xFFFF` mirrors the wasm-u32 truncation; `0x0000 & !pre` states the disabled-domain case explicitly
 fn divergence_witness_off_enabled_domain() {
     // Pins the documented divergence: off the enabled domain, the XOR fire
     // law sets absent pre-bits while clear-then-set leaves them unset.
@@ -395,7 +401,7 @@ fn divergence_witness_off_enabled_domain() {
 // Lean witness cross-anchor: `ProcInt.PN64.fire_law_equivalence_on_enabled`
 // and `ProcInt.PN64.fire_law_diverges_off_domain`, machine-checked in
 // /Users/sac/mfact/procint/ProcInt/Petri/PN64Conservation.lean
-// (sha256 3601e1bb7e6ff6e89e2ac60eb8b8d57cd72b2a4bd94d2f5b9773f778d7ac0e88,
+// (blake3 3601e1bb7e6ff6e89e2ac60eb8b8d57cd72b2a4bd94d2f5b9773f778d7ac0e88,
 // mfact HEAD 92b08da5c8, toolchain leanprover/lean4:v4.31.0), receipted in
 // /Users/sac/mfact/witnesses.jsonl (lean-witness/v1 schema, axioms
 // propext/Quot.sound). The Rust property tests below mirror those theorems

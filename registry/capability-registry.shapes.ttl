@@ -16,10 +16,10 @@ gls:RegistryShape a sh:NodeShape ;
                   sh:in ( "graphlaw.capability-registry/1" ) ] ;
     sh:property [ sh:path gac:graphlawVersion ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
     sh:property [ sh:path gac:abiVersion ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ] ;
-    sh:property [ sh:path gac:surfaceSha256 ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
-                  sh:pattern "^sha256:[0-9a-f]{64}$" ] ;
-    sh:property [ sh:path gac:registrySha256 ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
-                  sh:pattern "^sha256:[0-9a-f]{64}$" ] ;
+    sh:property [ sh:path gac:surfaceBlake3 ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+                  sh:pattern "^blake3:[0-9a-f]{64}$" ] ;
+    sh:property [ sh:path gac:registryBlake3 ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+                  sh:pattern "^blake3:[0-9a-f]{64}$" ] ;
     sh:property [ sh:path gac:opCount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
     sh:property [ sh:path gac:dialectCount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
     sh:sparql [

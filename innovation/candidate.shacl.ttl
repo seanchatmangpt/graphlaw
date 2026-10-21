@@ -1,5 +1,5 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
-@prefix inv: <https://praxis.chatman.io/innovation#> .
+@prefix inv: <https://graphlaw.chatman.io/innovation#> .
 
 # SHACL is the admission gate: a graph that merely calls itself a future is
 # not planning-eligible until it binds the value, delivery, exchange,

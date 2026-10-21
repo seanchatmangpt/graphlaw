@@ -46,7 +46,7 @@ cargo run --features abi --bin graphlaw-registry -- --print-digests
 committed files with a fresh emission and exits 0 when they match (observed on the current tree).
 
 Release assets: `capability-registry.json`, `capability-registry.ttl` and `op-examples.json`, each
-with a `.sha256` file.
+with a `.blake3` file.
 
 ## Top-level JSON shape
 
@@ -55,8 +55,8 @@ with a `.sha256` file.
   "schema": "graphlaw.capability-registry/1",
   "graphlaw_version": "<CARGO_PKG_VERSION, e.g. 26.10.10>",
   "abi_version": 1,
-  "surface_sha256": "sha256:<64 lowercase hex>",
-  "registry_sha256": "sha256:<64 lowercase hex>",
+  "surface_blake3": "blake3:<64 lowercase hex>",
+  "registry_blake3": "blake3:<64 lowercase hex>",
   "authorities": [{"capability": "...", "authority": "..."}],
   "engines": ["PurRdf", "Eyeron"],
   "refusal_kinds": ["NotSemanticContent", "Ambiguous", "EngineRejected", "Unsupported", "ResourceLimit"],
@@ -116,11 +116,11 @@ this.
 
 Two digests:
 
-- `surface_sha256` = `"sha256:" + hex(SHA-256(canonical(S)))` where
+- `surface_blake3` = `"blake3:" + hex(BLAKE3(canonical(S)))` where
   `S = {"abi_version": 1, "ops": [14 op names in order], "other_dialects": [names in order],
   "rdf_dialects": [names in order]}`.
-- `registry_sha256` = `"sha256:" + hex(SHA-256(canonical(R)))` where `R` is the registry document
-  with the key `registry_sha256` removed. `surface_sha256` is part of `R`.
+- `registry_blake3` = `"blake3:" + hex(BLAKE3(canonical(R)))` where `R` is the registry document
+  with the key `registry_blake3` removed. `surface_blake3` is part of `R`.
 
 Examples in `op-examples.json` are not part of the registry digest.
 
@@ -132,16 +132,16 @@ The `capabilities` response gains three top-level string fields, additively; `ab
 | field | value |
 |---|---|
 | `registry_schema` | `graphlaw.capability-registry/1` |
-| `registry_sha256` | the registry digest |
-| `surface_sha256` | the surface digest |
+| `registry_blake3` | the registry digest |
+| `surface_blake3` | the surface digest |
 
 Existing fields (`abi`, `abi_version`, `crate`, `authorities`, `rdf_dialects`, `other_dialects`,
 `ops`) keep their names and values. `ops`, `rdf_dialects` and `other_dialects` are built from
 `src/registry.rs`, not from a second literal.
 
 Engines older than v26.9.29 (for example the v26.9.28 wasm pinned by `ash_graphlaw`) return none
-of the three fields. A consumer then computes `surface_sha256` host-side from the live response
-using `S` above and treats `registry_sha256` as UNKNOWN.
+of the three fields. A consumer then computes `surface_blake3` host-side from the live response
+using `S` above and treats `registry_blake3` as UNKNOWN.
 
 ## Dispatch court
 
@@ -155,8 +155,8 @@ into multi-op arms.
 `ash_graphlaw` copies the three release files into `priv/graphlaw/` (`scripts/vendor_registry.sh`),
 recomputes the digest over canonical bytes and compares it with the literal it carries, then
 imports the Turtle into its ontology between generated-registry marker lines. The pin is the
-`registry_sha256` value; a registry change moves the pin. A consumer running against an engine
-whose live `surface_sha256` differs from the pinned registry must report the drift, not mask it.
+`registry_blake3` value; a registry change moves the pin. A consumer running against an engine
+whose live `surface_blake3` differs from the pinned registry must report the drift, not mask it.
 
 ## Forward-compatibility rules for decoders
 

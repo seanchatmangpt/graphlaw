@@ -564,10 +564,10 @@
     gac:modelFieldRequired true ;
     gac:modelFieldType "string" .
 
-<https://graphlaw.dev/registry#model/Attestation/payload_sha256>
+<https://graphlaw.dev/registry#model/Attestation/payload_blake3>
     a gac:ModelField ;
-    gac:modelFieldDoc "Lowercase hex SHA-256 of the canonical payload." ;
-    gac:modelFieldName "payload_sha256" ;
+    gac:modelFieldDoc "Lowercase hex BLAKE3 of the canonical payload." ;
+    gac:modelFieldName "payload_blake3" ;
     gac:modelFieldNullable false ;
     gac:modelFieldOf <https://graphlaw.dev/registry#model/Attestation> ;
     gac:modelFieldOrder 1 ;
@@ -814,10 +814,10 @@
     gac:modelFieldRequired true ;
     gac:modelFieldType "string" .
 
-<https://graphlaw.dev/registry#model/Receipt/plan_sha256>
+<https://graphlaw.dev/registry#model/Receipt/plan_blake3>
     a gac:ModelField ;
     gac:modelFieldDoc "Plan digest for plan steps." ;
-    gac:modelFieldName "plan_sha256" ;
+    gac:modelFieldName "plan_blake3" ;
     gac:modelFieldNullable true ;
     gac:modelFieldOf <https://graphlaw.dev/registry#model/Receipt> ;
     gac:modelFieldOrder 8 ;
@@ -844,10 +844,10 @@
     gac:modelFieldRequired true ;
     gac:modelFieldType "string" .
 
-<https://graphlaw.dev/registry#model/Receipt/subject_sha256>
+<https://graphlaw.dev/registry#model/Receipt/subject_blake3>
     a gac:ModelField ;
     gac:modelFieldDoc "Digest of the external subject, when bound." ;
-    gac:modelFieldName "subject_sha256" ;
+    gac:modelFieldName "subject_blake3" ;
     gac:modelFieldNullable true ;
     gac:modelFieldOf <https://graphlaw.dev/registry#model/Receipt> ;
     gac:modelFieldOrder 9 ;
@@ -1031,6 +1031,17 @@
     gac:fieldSide "response" ;
     gac:fieldType "list<string>" .
 
+<https://graphlaw.dev/registry#op/capabilities/response/default/registry_blake3>
+    a gac:CapabilityField ;
+    gac:fieldDoc "Registry digest; absent on engines older than v26.9.29." ;
+    gac:fieldName "registry_blake3" ;
+    gac:fieldNullable false ;
+    gac:fieldOrder 9 ;
+    gac:fieldOwner <https://graphlaw.dev/registry#op/capabilities/response/default> ;
+    gac:fieldRequired false ;
+    gac:fieldSide "response" ;
+    gac:fieldType "string" .
+
 <https://graphlaw.dev/registry#op/capabilities/response/default/registry_schema>
     a gac:CapabilityField ;
     gac:fieldDoc "Registry schema id; absent on engines older than v26.9.29." ;
@@ -1042,21 +1053,10 @@
     gac:fieldSide "response" ;
     gac:fieldType "string" .
 
-<https://graphlaw.dev/registry#op/capabilities/response/default/registry_sha256>
-    a gac:CapabilityField ;
-    gac:fieldDoc "Registry digest; absent on engines older than v26.9.29." ;
-    gac:fieldName "registry_sha256" ;
-    gac:fieldNullable false ;
-    gac:fieldOrder 9 ;
-    gac:fieldOwner <https://graphlaw.dev/registry#op/capabilities/response/default> ;
-    gac:fieldRequired false ;
-    gac:fieldSide "response" ;
-    gac:fieldType "string" .
-
-<https://graphlaw.dev/registry#op/capabilities/response/default/surface_sha256>
+<https://graphlaw.dev/registry#op/capabilities/response/default/surface_blake3>
     a gac:CapabilityField ;
     gac:fieldDoc "Surface digest; absent on engines older than v26.9.29." ;
-    gac:fieldName "surface_sha256" ;
+    gac:fieldName "surface_blake3" ;
     gac:fieldNullable false ;
     gac:fieldOrder 10 ;
     gac:fieldOwner <https://graphlaw.dev/registry#op/capabilities/response/default> ;
@@ -2534,9 +2534,9 @@
     gac:dialectCount 13 ;
     gac:graphlawVersion "26.10.13" ;
     gac:opCount 14 ;
-    gac:registrySha256 "sha256:1c129dd6eed90bc680f8e695070dcef2eccf0eab7ff4d2b9c0462b2439c514b9" ;
+    gac:registryBlake3 "blake3:3f7a5c71ec2ae2f1daa2323a8c1eda5cc2c1df9425155201c6711c1a81ef634f" ;
     gac:schemaId "graphlaw.capability-registry/1" ;
-    gac:surfaceSha256 "sha256:fcee74ee068940f9e9879ccd41371807f469d63950c8f63b095117391dbc8e28" .
+    gac:surfaceBlake3 "blake3:c143fcfe72db271e5789a8074abae8f8ceb6526f36b340340891b89ad744f65e" .
 
 <https://graphlaw.dev/registry#vocab/engines/1>
     a gac:VocabularyEntry ;

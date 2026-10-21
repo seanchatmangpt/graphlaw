@@ -4,7 +4,7 @@
 kh:FiboPaymentPowerless a sa2a:PortableVector ;
   sa2a:capability "fibo:PaymentExecution" ;
   sa2a:exactSubject "urn:payment:synthetic:001" ;
-  sa2a:sourceDigest "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" ;
+  sa2a:sourceDigest "blake3:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" ;
   sa2a:replayIdentity "replay:fibo:payment:001" ;
   sa2a:authority "NONE" ;
   sa2a:consequence "EVIDENCE_ONLY" ;

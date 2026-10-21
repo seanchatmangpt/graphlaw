@@ -9,9 +9,9 @@
 //! `other_dialects` lists from here, so there is no second literal.
 //!
 //! Digest rule: `canonical(v)` is compact JSON with object keys sorted by byte
-//! order; `surface_sha256` hashes the surface document (ABI version, op names,
-//! dialect names) and `registry_sha256` hashes the whole registry document with
-//! the `registry_sha256` key removed. Digests are over canonical bytes, never
+//! order; `surface_blake3` hashes the surface document (ABI version, op names,
+//! dialect names) and `registry_blake3` hashes the whole registry document with
+//! the `registry_blake3` key removed. Digests are over canonical bytes, never
 //! over the pretty file bytes.
 
 use std::collections::BTreeMap;
@@ -19,7 +19,6 @@ use std::fmt::Write as _;
 use std::sync::OnceLock;
 
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 
 use crate::abi::{
     ABI_VERSION, MAX_ATOMS_PER_FIELD, MAX_JSON_DEPTH, MAX_OUTSTANDING_ALLOC_BYTES,
@@ -346,12 +345,12 @@ pub const OPS: &[Op] = &[
                 "Registry schema id; absent on engines older than v26.9.29.",
             ),
             opt(
-                "registry_sha256",
+                "registry_blake3",
                 "string",
                 "Registry digest; absent on engines older than v26.9.29.",
             ),
             opt(
-                "surface_sha256",
+                "surface_blake3",
                 "string",
                 "Surface digest; absent on engines older than v26.9.29.",
             ),
@@ -943,17 +942,17 @@ fn surface_document() -> Value {
     })
 }
 
-fn sha256_of(bytes: &[u8]) -> String {
-    let digest = Sha256::digest(bytes);
+fn blake3_of(bytes: &[u8]) -> String {
+    let digest = blake3::hash(bytes);
     let mut out = String::with_capacity(7 + 64);
-    out.push_str("sha256:");
-    for b in digest {
+    out.push_str("blake3:");
+    for b in digest.as_bytes() {
         let _ = write!(out, "{b:02x}");
     }
     out
 }
 
-/// Registry document without the `registry_sha256` key.
+/// Registry document without the `registry_blake3` key.
 fn base_document() -> Value {
     let ops: Vec<Value> = OPS
         .iter()
@@ -974,7 +973,7 @@ fn base_document() -> Value {
         "schema": REGISTRY_SCHEMA,
         "graphlaw_version": env!("CARGO_PKG_VERSION"),
         "abi_version": ABI_VERSION,
-        "surface_sha256": surface_sha256(),
+        "surface_blake3": surface_blake3(),
         "authorities": crate::BACKEND_AUTHORITIES.iter().map(|a| json!({
             "capability": a.capability, "authority": a.authority,
         })).collect::<Vec<_>>(),
@@ -1247,14 +1246,14 @@ const MODELS: &[ModelRow] = &[
                 "Lease id when the step ran under a lease.",
             ),
             (
-                "plan_sha256",
+                "plan_blake3",
                 "string",
                 false,
                 true,
                 "Plan digest for plan steps.",
             ),
             (
-                "subject_sha256",
+                "subject_blake3",
                 "string",
                 false,
                 true,
@@ -1268,11 +1267,11 @@ const MODELS: &[ModelRow] = &[
         "Ed25519 attestation over a canonical payload.",
         &[
             (
-                "payload_sha256",
+                "payload_blake3",
                 "string",
                 true,
                 false,
-                "Lowercase hex SHA-256 of the canonical payload.",
+                "Lowercase hex BLAKE3 of the canonical payload.",
             ),
             (
                 "key_id",
@@ -1449,30 +1448,30 @@ static DOCUMENT: OnceLock<Value> = OnceLock::new();
 fn document() -> &'static Value {
     DOCUMENT.get_or_init(|| {
         let mut doc = base_document();
-        let digest = sha256_of(canonical(&doc).as_bytes());
+        let digest = blake3_of(canonical(&doc).as_bytes());
         if let Some(o) = doc.as_object_mut() {
-            o.insert("registry_sha256".into(), json!(digest));
+            o.insert("registry_blake3".into(), json!(digest));
         }
         doc
     })
 }
 
-/// `sha256:<hex>` of the canonical surface document (ABI version, op names,
+/// `blake3:<hex>` of the canonical surface document (ABI version, op names,
 /// RDF dialect names, other dialect names).
-pub fn surface_sha256() -> String {
-    sha256_of(canonical(&surface_document()).as_bytes())
+pub fn surface_blake3() -> String {
+    blake3_of(canonical(&surface_document()).as_bytes())
 }
 
-/// `sha256:<hex>` of the canonical registry document with `registry_sha256` removed.
-pub fn registry_sha256() -> String {
+/// `blake3:<hex>` of the canonical registry document with `registry_blake3` removed.
+pub fn registry_blake3() -> String {
     document()
-        .get("registry_sha256")
+        .get("registry_blake3")
         .and_then(Value::as_str)
         .map(str::to_owned)
         .unwrap_or_default()
 }
 
-/// The complete registry document, including `registry_sha256`.
+/// The complete registry document, including `registry_blake3`.
 pub fn registry_value() -> Value {
     document().clone()
 }
@@ -1680,11 +1679,11 @@ fn graph(doc: &Value) -> Graph {
         lit(&text_of(doc, "graphlaw_version")),
     );
     g.add(r, "gac:abiVersion", int_of(doc, "abi_version"));
-    g.add(r, "gac:surfaceSha256", lit(&text_of(doc, "surface_sha256")));
+    g.add(r, "gac:surfaceBlake3", lit(&text_of(doc, "surface_blake3")));
     g.add(
         r,
-        "gac:registrySha256",
-        lit(&text_of(doc, "registry_sha256")),
+        "gac:registryBlake3",
+        lit(&text_of(doc, "registry_blake3")),
     );
     g.add(r, "gac:opCount", items(doc, "ops").len().to_string());
     g.add(
@@ -1911,9 +1910,9 @@ mod tests {
         assert_eq!(other_dialect_names().len(), 4);
         assert_eq!(op_names()[0], "capabilities");
         assert_eq!(op_names()[13], "policy");
-        assert!(surface_sha256().starts_with("sha256:"));
-        assert_eq!(surface_sha256().len(), 71);
-        assert_eq!(registry_sha256().len(), 71);
+        assert!(surface_blake3().starts_with("blake3:"));
+        assert_eq!(surface_blake3().len(), 71);
+        assert_eq!(registry_blake3().len(), 71);
     }
 
     #[test]
@@ -1941,11 +1940,11 @@ mod tests {
         let mut doc = registry_value();
         let stated = doc
             .as_object_mut()
-            .and_then(|o| o.remove("registry_sha256"))
+            .and_then(|o| o.remove("registry_blake3"))
             .and_then(|v| v.as_str().map(str::to_owned))
-            .expect("registry_sha256 present");
-        assert_eq!(sha256_of(canonical(&doc).as_bytes()), stated);
-        assert_eq!(stated, registry_sha256());
+            .expect("registry_blake3 present");
+        assert_eq!(blake3_of(canonical(&doc).as_bytes()), stated);
+        assert_eq!(stated, registry_blake3());
     }
 
     #[test]
