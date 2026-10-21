@@ -26,13 +26,17 @@ const parsed = await gl.parse({
   text: '<http://ex/s> <http://ex/p> "hello" .',
   dialect: 'turtle',
 });
-console.log(parsed.triples.length); // 1
+console.log(parsed.quads); // 1
+console.log(parsed.id);    // blake3:... content-addressed state id
 
-const { bindings } = await gl.sparql({
+const res = await gl.sparql({
   data: { text: '<http://ex/s> <http://ex/p> "hello" .', dialect: 'turtle' },
   query: 'SELECT ?s ?o WHERE { ?s ?p ?o }',
 });
-for (const b of bindings) console.log(b.s, b.o);
+// res is a kind-tagged union: {kind:'solutions'} | {kind:'graph'} | {kind:'boolean'}
+if (res.kind === 'solutions') {
+  for (const row of res.rows) console.log(row); // cells are Term objects, null = unbound
+}
 ```
 
 `createClient()` initializes the WASM engine once and fails fast on init errors. Each

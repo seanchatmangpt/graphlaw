@@ -1,0 +1,58 @@
+@prefix sql:  <http://graphlaw.org/sql#> .
+@prefix fn:   <http://graphlaw.org/functions#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:   <http://biopharma.org/queries#> .
+
+# Conforming governed SELECT from the cold-chain case study (Phase 2):
+# bounded excursion query over the OCEL parquet views. Carries a WHERE
+# clause (anti-scan) and identifier-clean table references (anti-injection).
+ex:ColdChainExcursionQuery a sql:SelectStatement ;
+    sql:fromTable [
+        sql:tableName "ocel_events" ;
+        sql:tableAlias "e"
+    ] ;
+    sql:joinClause [
+        sql:joinType sql:InnerJoin ;
+        sql:joinTable [
+            sql:tableName "ocel_event_object_rel" ;
+            sql:tableAlias "r"
+        ] ;
+        sql:joinCondition [
+            sql:operator sql:Equals ;
+            sql:leftOperand  [ sql:columnName "event_id" ; sql:tableAlias "e" ] ;
+            sql:rightOperand [ sql:columnName "event_id" ; sql:tableAlias "r" ]
+        ]
+    ] ;
+    sql:selectList (
+        [ sql:columnName "object_id" ; sql:tableAlias "r" ]
+        [
+            sql:aliasName "max_excursion_temp" ;
+            sql:expression [
+                sql:function fn:MAX ;
+                sql:argument [ sql:columnName "temp_celsius" ; sql:tableAlias "e" ]
+            ]
+        ]
+        [
+            sql:aliasName "total_excursion_duration" ;
+            sql:expression [
+                sql:function fn:SUM ;
+                sql:argument [ sql:columnName "duration_seconds" ; sql:tableAlias "e" ]
+            ]
+        ]
+    ) ;
+    sql:whereClause [
+        sql:operator sql:And ;
+        sql:leftOperand [
+            sql:operator sql:GreaterThan ;
+            sql:leftOperand  [ sql:columnName "temp_celsius" ; sql:tableAlias "e" ] ;
+            sql:rightOperand [ sql:literalValue "-20.0"^^xsd:double ]
+        ] ;
+        sql:rightOperand [
+            sql:operator sql:Equals ;
+            sql:leftOperand  [ sql:columnName "qualifier" ; sql:tableAlias "r" ] ;
+            sql:rightOperand [ sql:literalValue "contains_product"^^xsd:string ]
+        ]
+    ] ;
+    sql:groupBy (
+        [ sql:columnName "object_id" ; sql:tableAlias "r" ]
+    ) .

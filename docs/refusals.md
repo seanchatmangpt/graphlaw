@@ -13,7 +13,7 @@ the [capability registry](capability-registry.md)).
 
 | code | Rust | `details` fields | What to do |
 |---|---|---|---|
-| `PlanRefused` | `LawError::PlanRefused` | `index`, `action`, `unmet`, `violated_absent` | Action `index` (or `<goal>` at one past the last) lacks the N-Quads lines in `unmet`, or has the forbidden lines in `violated_absent` (`pre_not` / `goal_not`, PDDL `(not p)`) present. Fix the plan or the start state. |
+| `PlanRefused` | `LawError::PlanRefused` | `index`, `action`, `missing`, `violated_absent` | Action `index` (or `<goal>` at one past the last) lacks the N-Quads lines in `missing`, or has the forbidden lines in `violated_absent` (`pre_not` / `goal_not`, PDDL `(not p)`) present. Fix the plan or the start state. |
 | `ReceiptRequired` | `LawError::ReceiptRequired` | `step` | Run the step, then `receipt::record` its receipt into the state before the gate. |
 | `ReceiptRefused` | `LawError::ReceiptRefused` | `step`, `reason` (`unattested`, `bad_signature`, `untrusted_key`) | Raised by `require-signed-receipt`. `unattested`: the receipt has no attestation; `bad_signature`: the signature does not verify; `untrusted_key`: the signing key is not in the step's `trusted_keys`. |
 | `LeaseRefused` | `LawError::LeaseRefused` | `reason`, `lease_id`, `step` | See lease reasons below. |

@@ -1,0 +1,53 @@
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix sql:  <http://graphlaw.org/sql#> .
+
+<http://graphlaw.org/shapes/ast-governance>
+    a owl:Ontology ;
+    rdfs:label "GraphLaw SQL-AST Governance Shapes" ;
+    rdfs:comment "Phase-2 SHACL preflight for the cold-chain case study: anti-scan (a governed SELECT must carry a WHERE), and identifier pattern invariants (anti-injection) on table names." ;
+    owl:versionInfo "1.0.0" .
+
+# =============================================================================
+# sql:SelectStatementShape — anti-scan + structural invariants
+# =============================================================================
+
+sql:SelectStatementShape a sh:NodeShape ;
+    rdfs:label "Governed SELECT statement shape" ;
+    sh:targetClass sql:SelectStatement ;
+    sh:property [
+        sh:path sql:fromTable ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node sql:TableRefShape ;
+    ] ;
+    sh:property [
+        sh:path sql:selectList ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    # Anti-scan law: every governed SELECT must be bounded by an explicit
+    # predicate — an unbounded WHERE-less scan is refused at preflight,
+    # before any pushdown to the columnar engine.
+    sh:property [
+        sh:path sql:whereClause ;
+        sh:minCount 1 ;
+    ] .
+
+# =============================================================================
+# sql:TableRefShape — identifier pattern (anti-injection)
+# =============================================================================
+
+sql:TableRefShape a sh:NodeShape ;
+    rdfs:label "Governed table reference FROM and JOIN table refs" ;
+    sh:targetClass sql:TableRef ;
+    sh:property [
+        sh:path sql:tableName ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[a-zA-Z_][a-zA-Z0-9_]*$" ;
+    ] .
