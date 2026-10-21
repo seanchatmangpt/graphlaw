@@ -1,0 +1,11 @@
+object_id,object_type,lot_number
+BATCH-A1,bio:BiologicBatch,LOT-A1
+BATCH-A2,bio:BiologicBatch,LOT-A2
+BATCH-Q1,bio:BiologicBatch,LOT-Q1
+BATCH-Q2,bio:BiologicBatch,LOT-Q2
+BATCH-Q3,bio:BiologicBatch,LOT-Q3
+BATCH-R1,bio:BiologicBatch,LOT-R1
+BATCH-R2,bio:BiologicBatch,LOT-R2
+BATCH-R3,bio:BiologicBatch,LOT-R3
+BATCH-R4,bio:BiologicBatch,LOT-R4
+BATCH-R5,bio:BiologicBatch,LOT-R5
