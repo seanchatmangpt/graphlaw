@@ -42,9 +42,21 @@ Organized Diataxis-style; the hub is [docs/index.md](docs/index.md).
 | | |
 |---|---|
 | **Tutorial** | [Quickstart](docs/quickstart.md) |
-| **How-to** | [Run the WASM module](docs/how-to/run-the-wasm-module.md) · [Signed leases](docs/how-to/authorize-with-signed-leases.md) · [Offline verification](docs/how-to/verify-without-trusting-the-operator.md) · [Knowledge hooks](docs/how-to/use-knowledge-hooks.md) · [Use from JavaScript](docs/how-to/use-from-javascript.md) |
+| **How-to** | [Run the WASM module](docs/how-to/run-the-wasm-module.md) · [Signed leases](docs/how-to/authorize-with-signed-leases.md) · [Offline verification](docs/how-to/verify-without-trusting-the-operator.md) · [Knowledge hooks](docs/how-to/use-knowledge-hooks.md) · [Edge Ingestion & Compaction](docs/how-to/how-to-edge-ingestion-and-compaction.md) · [Use from JavaScript](docs/how-to/use-from-javascript.md) |
 | **Reference** | [ABI reference](docs/abi-reference.md) · [Capability registry](docs/capability-registry.md) · [Refusals](docs/refusals.md) · [API stability](docs/api-stability.md) · [WASM integration](docs/wasm-integration.md) · [WASM runbook](docs/WASM.md) · [Dialects](docs/DIALECTS.md) · [Full generated reference](docs/reference-generated/reference.md) |
-| **Explanation** | [Qualification algebra](docs/QUALIFICATION_ALGEBRA.md) · [Chicago courts](docs/CHICAGO_N3_DATALOG.md) ([FIBO](docs/CHICAGO_FIBO.md), [cross-authority](docs/CHICAGO_CROSS_AUTHORITY.md)) · [Receipt fields](docs/explanation/receipt-fields.md) |
+| **Explanation** | [Qualification algebra](docs/QUALIFICATION_ALGEBRA.md) · [Chicago courts](docs/CHICAGO_N3_DATALOG.md) ([FIBO](docs/CHICAGO_FIBO.md), [cross-authority](docs/CHICAGO_CROSS_AUTHORITY.md)) · [Receipt fields](docs/explanation/receipt-fields.md) · [Edge Sovereignty & Compaction](docs/explanation/edge-sovereignty-and-zero-trust-compaction.md) |
+
+## Edge Sovereignty & Embedded Analytical Substrate (`frozen-duckdb`)
+
+GraphLaw unconditionally embeds the **`frozen-duckdb 2.0`** analytical engine, unlocking local analytical ingestion and **zero-trust semantic compaction (1,000:1 to 10,000:1)** at the extreme edge:
+
+* **High-Throughput Local Ingestion**: Sensor streams and OCEL v2 event traces are appended directly into local columnar Arrow/Parquet buffers with microsecond latencies.
+* **Declarative SQL-in-RDF Pushdowns**: Structured analytical reductions are authored as W3C RDF ASTs (`sql-ast.ttl`), validated by a fail-closed SHACL pre-flight gate, and pushed down into DuckDB's vectorized execution engine.
+* **Signed Semantic Compaction**: Massive event bursts reduce to minimal, cryptographically verifiable RDF facts sealed with BLAKE3 execution receipts. A 500,000-event telemetry burst compresses to ~1 KB of signed triples before syncing across intermittent/DDIL networks.
+* **Under the 64 MiB WASM Ceiling**: Together with `frozen-duckdb 2.0`, the complete combined WebAssembly footprint is **~36.5 MiB**, operating safely within tight 64 MB browser or WASM runtime memory arenas without dynamic swapping or memory fragmentation.
+* **Disconnected Fail-Closed Operations**: Missing filter bounds or excursion breaches trigger immediate local actuator lockouts and quarantined states without requiring an upstream cloud coordinator.
+
+See [docs/how-to/how-to-edge-ingestion-and-compaction.md](docs/how-to/how-to-edge-ingestion-and-compaction.md) and [docs/explanation/edge-sovereignty-and-zero-trust-compaction.md](docs/explanation/edge-sovereignty-and-zero-trust-compaction.md).
 
 ## JavaScript / TypeScript
 
@@ -75,7 +87,7 @@ the authority; a refused step yields no state. `receipt::record` writes a receip
 the state, changing its id — so verification loops can require prior receipts
 (`Step::RequireReceipt`). `Plan::admit` replays a candidate plan action-by-action into a
 chain of content-addressed states; the first violated precondition refuses with
-`PlanRefused { index, action, unmet, violated_absent }`.
+`PlanRefused { index, action, missing, violated_absent }`.
 
 ## Dialects and tiers
 

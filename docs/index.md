@@ -19,6 +19,7 @@ Documentation is organized by Diataxis: [tutorials](#tutorials) teach,
   `graphlaw-verify` offline replay: flags, exit codes, tamper refusals.
 - [Use knowledge hooks](how-to/use-knowledge-hooks.md) — `kh:` packs, fixpoint
   materialization, the refuse effect.
+- [Edge ingestion & compaction](how-to/how-to-edge-ingestion-and-compaction.md) — local columnar ring buffers, zero-trust semantic compaction (10,000:1), and disconnected fail-closed operations.
 - [Use from JavaScript](how-to/use-from-javascript.md) — install the npm package,
   load the WASM module in Node and browsers.
 
@@ -44,6 +45,7 @@ Documentation is organized by Diataxis: [tutorials](#tutorials) teach,
   they are shaped the way they are.
 - [Receipt fields](explanation/receipt-fields.md) — what a receipt carries and how it
   maps to the portfolio receipt concept (informal).
+- [Edge sovereignty & zero-trust compaction](explanation/edge-sovereignty-and-zero-trust-compaction.md) — why local analytical compaction transforms edge/browser systems (1,000:1 to 10,000:1 reduction, disconnected DDIL operations, bounded WASM ceilings).
 - [Knowledge hook projection](reference/knowledge-hook-projection.md) — the
   powerless state → hook projection contract.
 
