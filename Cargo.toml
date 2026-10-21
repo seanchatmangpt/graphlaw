@@ -32,7 +32,7 @@ path = "src/lib.rs"
 
 [dependencies]
 purrdf = "=2.0.2"
-frozen-duckdb = { path = "/Users/sac/frozen-duckdb/crates/frozen-duckdb", version = "2.0.0-dev" }
+frozen-duckdb = { path = "/Users/sac/frozen-duckdb/crates/frozen-duckdb", version = "2.0.0-dev", optional = true }
 # SECURITY (supply-chain note): sha2 0.10.9 remains in the tree ONLY as a
 # transitive dep of the purrdf family (purrdf-core 2.0.2 declares sha2 = "0.10")
 # and ed25519-dalek 2.2.0 (sha2 = "0.10", exact-pinned per GOALS.md invariant 3).
@@ -64,6 +64,9 @@ default = ["abi"]
 # Capture/rewrite tooling for packs/self-monitoring-pack (replaces the former
 # Python scripts). Off by default so the library stays dependency-light.
 pack-tools = ["dep:regex"]
+# Native-only SQL evaluation (frozen-duckdb): excluded from the wasm target.
+# Rules referencing `gl:evalSql` without this feature are refused at admission.
+duckdb = ["dep:frozen-duckdb"]
 # JSON request/response ABI (src/abi.rs) consumed by the wasm module in ./wasm.
 # (serde_json is now a required dependency for the receipt-chain family, so the
 # former `dep:serde_json` toggles are no-ops kept for feature compatibility.)
@@ -71,6 +74,11 @@ abi = []
 # Asserts that the build applied the vendored WASI clock patch (see
 # vendor/README.md). Only the repo workspace (crates.io ignores [patch]) sets it.
 wasi-patched-deps = []
+# GWS-18: `graphlaw-run` — a packet-4 stdio host for the compiled wasm module
+# (wasmi, mirroring tests/wasm_abi.rs's Host), speaking the smalt sandbox
+# runner protocol. Host-only (wasmi cannot compile for wasm32), so the deps are
+# target-scoped and optional; off by default, on via --features runner.
+runner = ["dep:wasmi", "dep:wasmi_wasi"]
 
 [[bin]]
 name = "smon-transcript-to-turtle"
@@ -87,6 +95,13 @@ name = "graphlaw-verify"
 path = "src/bin/graphlaw_verify.rs"
 required-features = ["abi"]
 
+# GWS-18: stdio runner/adapter between the smalt sandbox port driver
+# (packet-4 JSON over stdio) and the real compiled wasm module via wasmi.
+[[bin]]
+name = "graphlaw-run"
+path = "src/bin/graphlaw_run.rs"
+required-features = ["runner"]
+
 [[bin]]
 name = "graphlaw-registry"
 path = "src/bin/graphlaw_registry.rs"
@@ -94,6 +109,13 @@ required-features = ["abi"]
 
 [package.metadata.docs.rs]
 all-features = true
+
+# Host-side wasm runtime for the `runner` feature (graphlaw-run) and the abi
+# integration tests. Optional in [dependencies] (bins cannot see dev-deps);
+# tests keep their unconditional dev-dependency below.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+wasmi = { version = "2", optional = true }
+wasmi_wasi = { version = "2", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 wasmi = "2"
@@ -194,19 +216,38 @@ required-features = ["abi"]
 name = "graphlaw-attest"
 path = "src/bin/graphlaw_attest.rs"
 
-# GLR-11: duckdb targets (unconditionally integrated via frozen-duckdb)
+# GLR-11: duckdb targets (native-only; require the `duckdb` feature)
 [[example]]
 name = "sql_in_rdf_duckdb"
 path = "examples/sql_in_rdf_duckdb.rs"
+required-features = ["duckdb"]
+
+[[test]]
+name = "test_edge_sovereign_ingestion"
+path = "tests/test_edge_sovereign_ingestion.rs"
+required-features = ["duckdb"]
+
+[[test]]
+name = "gws4_ipc_injection_court"
+path = "tests/gws4_ipc_injection_court.rs"
+required-features = ["duckdb"]
 
 [[test]]
 name = "test_parquet_and_builtin_eval"
 path = "tests/test_parquet_and_builtin_eval.rs"
+required-features = ["duckdb"]
 
 [[test]]
 name = "test_cold_chain_ocel"
 path = "tests/test_cold_chain_ocel.rs"
+required-features = ["duckdb"]
+
+[[test]]
+name = "wasm_duckdb_op"
+path = "tests/wasm_duckdb_op.rs"
+required-features = ["duckdb"]
 
 [[example]]
 name = "cold_chain_biologics_verification"
 path = "examples/cold_chain_biologics_verification.rs"
+required-features = ["duckdb"]

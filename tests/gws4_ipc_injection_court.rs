@@ -1,4 +1,4 @@
-#![cfg(feature = "abi")]
+#![cfg(all(feature = "abi", feature = "duckdb"))]
 //! GWS-4 design court: in-WASM duckdb cannot read the host filesystem, so the
 //! cold-chain case study's `register_parquet_view`/hive-partition path
 //! (`src/duckdb_eval.rs::register_parquet_view`) cannot work as-written inside
@@ -31,13 +31,14 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 
-use frozen_duckdb::duckdb::types::ValueRef;
+
 use serde_json::{Value, json};
 
+use graphlaw::purrdf::TermValue;
 use graphlaw::abi::{MAX_REQUEST_BYTES, call_json};
 use graphlaw::duckdb_eval::{GraphLawDuckDB, RdfTriple};
 use graphlaw::sql_ast::{
-    AggregateFunction, Operator, SelectStatement, SqlExpr, SqlLiteral, TableRef,
+    AggregateFunction, SelectStatement, SqlExpr, SqlLiteral, TableRef,
 };
 
 // ---------------------------------------------------------------- corpus ---
@@ -84,7 +85,8 @@ fn csv_bytes(rows: &[ColdChainRow]) -> Vec<u8> {
 fn wire_envelope(csv: &[u8]) -> Vec<u8> {
     let body = String::from_utf8(csv.to_vec()).expect("corpus is utf8");
     json!({
-        "op": "sql_eval", // the designed ingest op (not yet in the registry)
+        "op": "duckdb", // op-15 (native-only today; the wasm module's op
+                        // table does not include it — the gap this court types)
         "corpus": body,
         "dialect": "csv",
     })
@@ -124,7 +126,7 @@ fn eval_stub(chunk_csv: &[u8]) -> ChunkAggregate {
         let temp: f64 = cols[2].parse().expect("temp parses");
         agg.rows += 1;
         agg.min_temp = agg.min_temp.min(temp);
-        agg.max_temp = agg.max_temp.max(temp COUNT_PLACEHOLDER);
+        agg.max_temp = agg.max_temp.max(temp);
         agg.sum_duration += cols[3].parse::<i64>().expect("duration parses");
     }
     agg
@@ -191,7 +193,7 @@ fn load_csv(db: &GraphLawDuckDB, csv: &[u8]) {
             esc(c[1]),
             c[2],
             c[3]
-        relation_placeholder);
+        ));
     }
     db.raw_connection().execute_batch(&stmts).expect("load runs");
 }
@@ -231,29 +233,26 @@ fn agg_query() -> SelectStatement {
 /// Recover (facility, n) from the eval path's RDF projection. Each row projects
 /// to subject `<prefix>/row_k`, with `.../v/facility_id` and `.../v/n` literals.
 fn triples_to_counts(triples: &[RdfTriple]) -> Vec<(String, i64)> {
-    let mut out = Vec::new();
+    let mut out: Vec<(String, i64)> = Vec::new();
     for t in triples {
-        if t.predicate.ends_with("/v/n") {
-            let fac = triples
-                .iter()
-                .find(|f| {
-                    f.subject == t.subject && f.predicate.ends_with("/v/facility_id")
-                })
-                .map(|f| match &f.object {
-                    graphlaw::duckdb_eval::TermValue::Literal { lexical_form, .. } => {
-                        lexical_form.clone()
-                    }
-                    _ => panic!("facility_id literal"),
-                })
-                .expect("facility column present");
-            let n = match &t.object {
-                TermValue::Literal { lexical_form, .. } => {
-                    lexical_form.parse::<i64>().expect("count literal")
-                }
-                _ => panic!("count literal"),
-            };
-            out.push((fac, n));
+        if !t.predicate.ends_with("/n") {
+            continue;
         }
+        let fac = triples
+            .iter()
+            .find(|f| f.subject == t.subject && f.predicate.ends_with("/facility_id"))
+            .map(|f| match &f.object {
+                TermValue::Literal { lexical_form, .. } => lexical_form.clone(),
+                _ => panic!("facility_id literal"),
+            })
+            .expect("facility column present");
+        let n = match &t.object {
+            TermValue::Literal { lexical_form, .. } => {
+                lexical_form.parse::<i64>().expect("count literal")
+            }
+            _ => panic!("count literal"),
+        };
+        out.push((fac, n));
     }
     out.sort();
     out
@@ -328,7 +327,7 @@ impl Host {
         let mut out = vec![0u8; out_len as usize];
         self.memory.read(&self.store, out_ptr as usize, &mut out).unwrap();
         self.free.call(&mut self.store, (out_ptr, out_len)).unwrap();
-        self.free.call(&mut self store, (ptr, live_len)).unwrap();
+        self.free.call(&mut self.store, (ptr, live_len)).unwrap();
         serde_json::from_slice(&out).expect("response is JSON")
     }
 }
@@ -348,10 +347,10 @@ fn gws4_a_corpus_injected_as_linear_memory_buffer_loads_into_duckdb_eval() {
     // (a) the same bytes, injected as one buffer, load and evaluate through the
     // REAL frozen-duckdb eval path with the AST compiler driving it.
     let (rows_out, counts) = duckdb_whole(&csv);
-    assert_eq!(rows_out, 100, "all 100 rows evaluated");
+    assert_eq!(rows_out, 4, "GROUP BY emits one result row per facility: {counts:?}");
     assert_eq!(counts.len(), 4, "four facility groups: {counts:?}");
     for (fac, n) in &counts {
-        assert_eq!(n, 25, "{fac}");
+        assert_eq!(*n, 25, "{fac}");
     }
 
     // (a') the identical bytes cross the compiled wasm module's linear-memory
@@ -359,12 +358,14 @@ fn gws4_a_corpus_injected_as_linear_memory_buffer_loads_into_duckdb_eval() {
     let envelope = wire_envelope(&csv);
     assert!(envelope.len() < MAX_REQUEST_BYTES, "envelope under the bound");
     let r = host().lock().unwrap_or_else(|e| e.into_inner()).inject(&envelope);
-    // Typed: the designed `sql_eval` op is not yet in the registry, so the
-    // module refuses with `unknown op` — the bytes crossed, the refusal is
-    // typed JSON (never a trap). This IS the design gap the follow-up closes.
+    // Typed: op-15 `duckdb` landed NATIVE-only (feature `duckdb`; the wasm
+    // module's op table does not include it), so the compiled wasm module
+    // refuses the injected corpus envelope with `unknown op \`duckdb\`` —
+    // typed JSON, never a trap. The bytes crossed the boundary; the in-wasm
+    // eval leg is the typed gap this court proves the design for.
     assert_eq!(r["ok"], false, "{r}");
     assert!(
-        r["error"]["message"].as_str().unwrap().contains("unknown op `sql_eval`"),
+        r["error"]["message"].as_str().unwrap().contains("unknown op `duckdb`"),
         "{r}"
     );
 
@@ -411,17 +412,16 @@ fn gws4_b_chunk_streaming_design_meets_16mib_bound_and_merge_equals_whole() {
 
     // Facility-partition chunks, mirroring the case study's PARTITION_BY.
     let mut chunks: Vec<Vec<u8>> = vec![Vec::new(); 4];
-    let mut headers = ["", "", "", ""];
+    let mut header = "";
     for (i, line) in std::str::from_utf8(&csv).unwrap().lines().enumerate() {
         if i == 0 {
-            *headers.iter_mut().for_each(|h| *h = line);
+            header = line;
             continue;
         }
         let fac_idx = (i - 1) % 4;
         chunks[fac_idx].extend_from_slice(line.as_bytes());
         chunks[fac_idx].push(b'\n');
     }
-    let header = headers[0];
 
     // Each chunk's wire envelope stays far under the bound.
     for chunk in &chunks {
@@ -438,9 +438,10 @@ fn gws4_b_chunk_streaming_design_meets_16mib_bound_and_merge_equals_whole() {
     let mut stub_merged: Vec<(String, i64)> = Vec::new();
     for chunk in &chunks {
         let mut full = header.as_bytes().to_vec();
+        full.push(b'\n');
         full.extend_from_slice(chunk);
         let stub = eval_stub(&full);
-        let db = GraphLawDuckDB::open_in_memory().expect("duckdb opens");
+            let db = GraphLawDuckDB::open_in_memory().expect("duckdb opens");
         load_csv(&db, &full);
         let compiled = agg_query().compile().expect("compiles");
         let receipt = db
@@ -448,17 +449,18 @@ fn gws4_b_chunk_streaming_design_meets_16mib_bound_and_merge_equals_whole() {
             .expect("chunk eval");
         let per_chunk = triples_to_counts(&receipt.result_triples);
         assert_eq!(per_chunk.len(), 1, "one facility per chunk");
-        assert_eq!(stub.rows, receipt.rows_emitted as u64);
-        assert_eq!(stub_merged.len() as u64 + stub.rows,
-                   stub_merged.len() as u64 + receipt.rows_emitted as u64);
+        // stub aggregates SOURCE rows (25); duckdb's GROUP BY emits one RESULT
+        // row per facility — equivalence is via the count, not rows_emitted.
+        assert_eq!(receipt.rows_emitted, 1, "one group row per facility chunk");
+        assert_eq!(per_chunk[0].1 as u64, stub.rows, "stub == duckdb count");
+        assert_eq!(stub.rows, 25, "chunk carries 25 source rows");
         stub_merged.extend(per_chunk);
-        let _ = stub; // stub equivalence recorded above
     }
     let mut merged = stub_merged.clone();
     merged.sort();
     assert_eq!(merged.len(), 4);
     for (fac, n) in &merged {
-        assert_eq!(n, 25, "{fac}");
+        assert_eq!(*n, 25, "{fac}");
     }
 
     // Aggregate-then-merge == whole-corpus real duckdb aggregate.
@@ -473,6 +475,7 @@ fn chunks_with_header(header: &str, chunks: &[Vec<u8>]) -> Vec<Vec<u8>> {
         .iter()
         .map(|c| {
             let mut full = header.as_bytes().to_vec();
+            full.push(b'\n');
             full.extend_from_slice(c);
             full
         })
@@ -492,13 +495,16 @@ fn gws4_c_fail_closed_when_corpus_exceeds_bounds() {
 
     // Wasm, real module: gl_alloc refuses an over-cap allocation outright.
     {
-        let mut h = host().lock().unwrap_or_else(|e| e.into_inner());
+        let mut guard = host().lock().unwrap_or_else(|e| e.into_inner());
+        let h = &mut *guard;
         assert_eq!(h.alloc.call(&mut h.store, (MAX_REQUEST_BYTES + 1) as u32).unwrap(), 0);
         // A live buffer with an over-cap DECLARED length is refused typed,
         // without the host ever materializing the corpus.
-        let live = h.alloc.call(&mut h.store, 8).unwrap();
-        assert_ne!(live, 0);
-        let r = h.inject_declared_over(8, (MAX_REQUEST_BYTES + 1) as u32);
+        let r = {
+            let live = h.alloc.call(&mut h.store, 8).unwrap();
+            assert_ne!(live, 0);
+            h.inject_declared_over(8, (MAX_REQUEST_BYTES + 1) as u32)
+        };
         assert_eq!(r["ok"], false, "{r}");
         assert!(
             r["error"]["message"].as_str().unwrap().contains("resource limit `request_bytes`"),
@@ -509,7 +515,8 @@ fn gws4_c_fail_closed_when_corpus_exceeds_bounds() {
     // A 16 MiB-sized corpus envelope is still inside the bound (positive
     // control): a just-under-cap buffer allocates and calls cleanly.
     {
-        let mut h = host().lock().unwrap_or_else(|e| e.into_inner());
+        let mut guard = host().lock().unwrap_or_else(|e| e.into_inner());
+        let h = &mut *guard;
         let ok_len = MAX_REQUEST_BYTES - 4096;
         let ptr = h.alloc.call(&mut h.store, ok_len as u32).unwrap();
         assert_ne!(ptr, 0);
