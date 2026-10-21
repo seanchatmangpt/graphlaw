@@ -12,7 +12,7 @@
 //! uses the native SWAP IRIs; no other adaptation was needed.
 //!
 //! Fail-closed leg: a batch whose premises are incomplete (typed
-//! ExcursionBatch but no gl:auditProof on record) matches neither rule and
+//! ExcursionBatch but no bio:recordedProof on record) matches neither rule and
 //! derives NOTHING — no release by default.
 #![cfg(all(feature = "abi", not(target_arch = "wasm32")))]
 mod common;
@@ -29,7 +29,7 @@ const RULESET: &str = r#"
     ?batch a bio:ExcursionBatch ;
         bio:totalDuration ?d ;
         bio:maxTemp ?t ;
-        gl:auditProof ?p .
+        bio:recordedProof ?p .
     ?d math:greaterThan 300 .
 } => {
     ?batch a bio:QuarantinedBatch ;
@@ -42,7 +42,7 @@ const RULESET: &str = r#"
     ?batch a bio:ExcursionBatch ;
         bio:totalDuration ?d ;
         bio:maxTemp ?t ;
-        gl:auditProof ?p .
+        bio:recordedProof ?p .
     ?d math:notGreaterThan 300 .
     ?t math:lessThan -15 .
 } => {
@@ -54,7 +54,7 @@ const RULESET: &str = r#"
 
 /// Phase-5 materialized triples: COLD-1's corpus values (BATCH-MAB-9042:
 /// 140 s / -18.2 C compliant; BATCH-MAB-9043: 450 s / -12.4 C breach) plus
-/// BATCH-MAB-9044, typed but missing its audit proof on record.
+/// BATCH-MAB-9044, typed but missing its recorded audit proof (bio:recordedProof).
 const DATA: &str = r#"
 @prefix bio: <http://biopharma.org/vocab#> .
 @prefix gl:  <http://graphlaw.org/gl#> .
@@ -63,12 +63,12 @@ const DATA: &str = r#"
 <http://biopharma.org/batches/BATCH-MAB-9042> a bio:ExcursionBatch ;
     bio:totalDuration 140 ;
     bio:maxTemp -18.2 ;
-    gl:auditProof "aa"^^xsd:hexBinary .
+    bio:recordedProof "aa"^^xsd:hexBinary .
 
 <http://biopharma.org/batches/BATCH-MAB-9043> a bio:ExcursionBatch ;
     bio:totalDuration 450 ;
     bio:maxTemp -12.4 ;
-    gl:auditProof "bb"^^xsd:hexBinary .
+    bio:recordedProof "bb"^^xsd:hexBinary .
 
 <http://biopharma.org/batches/BATCH-MAB-9044> a bio:ExcursionBatch ;
     bio:totalDuration 120 ;
@@ -118,7 +118,7 @@ fn n3_admission_partitions_released_vs_quarantined() {
 fn n3_admission_is_fail_closed_for_incomplete_premises() {
     let derived = derived_text();
 
-    // BATCH-MAB-9044 is typed but has no gl:auditProof on record, so neither
+    // BATCH-MAB-9044 is typed but has no bio:recordedProof on record, so neither
     // rule's premise completes: it derives NOTHING. Absence of evidence is
     // quarantine, not release.
     assert!(
