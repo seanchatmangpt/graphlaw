@@ -4,7 +4,7 @@
 
 | version | supported |
 |---|---|
-| 26.10.13 (latest released) | yes |
+| 26.10.21 (latest released) | yes |
 | 26.10.5 | no |
 | 26.9.28 | no |
 | earlier / `graphlaw` | no |

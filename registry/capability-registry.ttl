@@ -2532,9 +2532,9 @@
     a gac:Registry ;
     gac:abiVersion 1 ;
     gac:dialectCount 13 ;
-    gac:graphlawVersion "26.10.13" ;
+    gac:graphlawVersion "26.10.21" ;
     gac:opCount 14 ;
-    gac:registryBlake3 "blake3:3f7a5c71ec2ae2f1daa2323a8c1eda5cc2c1df9425155201c6711c1a81ef634f" ;
+    gac:registryBlake3 "blake3:aa636fd1fb3d7b70f5492595d6a03fd7d6c04923133a463989bcfcea8245990d" ;
     gac:schemaId "graphlaw.capability-registry/1" ;
     gac:surfaceBlake3 "blake3:c143fcfe72db271e5789a8074abae8f8ceb6526f36b340340891b89ad744f65e" .
 

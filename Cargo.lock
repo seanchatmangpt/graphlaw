@@ -1342,7 +1342,7 @@ checksum = "e4eba85ea1d0a966a983acd07deee566e67395d2d96b6fb39e62b5a833f1eb0b"
 
 [[package]]
 name = "graphlaw"
-version = "26.10.13"
+version = "26.10.21"
 dependencies = [
  "blake3",
  "ed25519-dalek",
@@ -1371,7 +1371,7 @@ dependencies = [
 
 [[package]]
 name = "graphlaw-wasm"
-version = "26.10.13"
+version = "26.10.21"
 dependencies = [
  "graphlaw",
 ]

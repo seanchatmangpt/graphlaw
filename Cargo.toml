@@ -242,11 +242,6 @@ name = "test_cold_chain_ocel"
 path = "tests/test_cold_chain_ocel.rs"
 required-features = ["duckdb"]
 
-[[test]]
-name = "wasm_duckdb_op"
-path = "tests/wasm_duckdb_op.rs"
-required-features = ["duckdb"]
-
 [[example]]
 name = "cold_chain_biologics_verification"
 path = "examples/cold_chain_biologics_verification.rs"

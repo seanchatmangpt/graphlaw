@@ -86,7 +86,7 @@
     "size_bytes": 128,
     "struct": "OcelCausalFrame"
   },
-  "graphlaw_version": "26.10.13",
+  "graphlaw_version": "26.10.21",
   "limits": {
     "default_max_skew_secs": 60,
     "max_atoms_per_field": 10000,
@@ -104,7 +104,7 @@
     "n3_max_total_bytes": 268435456,
     "n3_max_total_steps": 50000000
   },
-  "manifest_blake3": "blake3:a30323d01e637280bffa5359c8cd4ebce7b991ceb96f893de25faf99c6a00e9a",
+  "manifest_blake3": "blake3:073156341d52c9e919fe0a5239b0a4b9e4ba9cd34d673abd226434f68d1b5a41",
   "ops": [
     {
       "name": "capabilities",

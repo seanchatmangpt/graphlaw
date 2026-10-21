@@ -192,9 +192,5 @@ pub mod sql_ast;
 /// at admission (see docs/refusals.md).
 #[cfg(feature = "duckdb")]
 pub mod duckdb_eval;
-/// ABI op-15 `duckdb`: cursor-streamed analytical eval (native-only, feature
-/// `duckdb`; the wasm module's op table does not include it).
-#[cfg(feature = "duckdb")]
-pub mod duckdb_op;
 pub mod rules;
 
