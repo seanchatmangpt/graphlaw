@@ -249,6 +249,7 @@ impl RdfDatasetReader {
 
         Ok(SelectStatement {
             from,
+            joins: vec![],
             select_list,
             where_clause,
             group_by,

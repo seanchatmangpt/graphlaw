@@ -97,6 +97,7 @@ fn test_parquet_hive_partition_and_zonemap_query() {
             name: "telemetry_events".to_string(),
             alias: None,
         },
+        joins: vec![],
         select_list: vec![
             SqlExpr::ColumnRef {
                 column: "batch_id".to_string(),
@@ -213,6 +214,7 @@ fn test_builtin_eval_sql_admission_and_fail_closed_rejection() {
             name: "telemetry_events".to_string(),
             alias: None,
         },
+        joins: vec![],
         select_list: vec![
             SqlExpr::ColumnRef {
                 column: "batch_id".to_string(),

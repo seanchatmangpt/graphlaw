@@ -169,8 +169,39 @@ pub struct TableRef {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum JoinType {
+    Inner,
+    LeftOuter,
+}
+
+impl JoinType {
+    pub fn as_sql(&self) -> &'static str {
+        match self {
+            Self::Inner => "JOIN",
+            Self::LeftOuter => "LEFT JOIN",
+        }
+    }
+
+    pub fn from_iri(iri: &str) -> Result<Self, AstError> {
+        match iri {
+            "http://graphlaw.org/sql#InnerJoin" => Ok(Self::Inner),
+            "http://graphlaw.org/sql#LeftJoin" => Ok(Self::LeftOuter),
+            _ => Err(AstError::UnsupportedTerm(iri.to_string())),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct JoinClause {
+    pub join_type: JoinType,
+    pub table: TableRef,
+    pub condition: SqlExpr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct SelectStatement {
     pub from: TableRef,
+    pub joins: Vec<JoinClause>,
     pub select_list: Vec<SqlExpr>,
     pub where_clause: Option<SqlExpr>,
     pub group_by: Vec<SqlExpr>,
@@ -214,6 +245,23 @@ impl SelectStatement {
         if let Some(alias) = &self.from.alias {
             sql.push(' ');
             sql.push_str(alias);
+        }
+
+        for join in &self.joins {
+            validate_identifier(&join.table.name)?;
+            if let Some(alias) = &join.table.alias {
+                validate_identifier(alias)?;
+            }
+            sql.push(' ');
+            sql.push_str(join.join_type.as_sql());
+            sql.push(' ');
+            sql.push_str(&join.table.name);
+            if let Some(alias) = &join.table.alias {
+                sql.push(' ');
+                sql.push_str(alias);
+            }
+            sql.push_str(" ON ");
+            Self::serialize_expr(&join.condition, &mut sql, &mut params, 0)?;
         }
 
         if let Some(where_clause) = &self.where_clause {
@@ -476,6 +524,40 @@ pub trait RdfAstGraphReader {
             alias: table_alias,
         };
 
+        // Joins (optional)
+        let mut joins = Vec::new();
+        if let Some(join_node) = self.get_single_object(query_node, "http://graphlaw.org/sql#joinClause") {
+            let join_type = if let Some(type_node) = self.get_single_object(&join_node, "http://graphlaw.org/sql#joinType") {
+                let type_iri = self.get_iri(&type_node).unwrap_or_default();
+                JoinType::from_iri(&type_iri).unwrap_or(JoinType::Inner)
+            } else {
+                JoinType::Inner
+            };
+
+            let join_table_node = self.get_single_object(&join_node, "http://graphlaw.org/sql#joinTable")
+                .ok_or_else(|| AstError::MissingProperty("http://graphlaw.org/sql#joinTable".to_string(), join_node.to_string()))?;
+
+            let (join_table_name, _) = self.get_datatype_literal(&join_table_node, "http://graphlaw.org/sql#tableName")
+                .ok_or_else(|| AstError::MissingProperty("http://graphlaw.org/sql#tableName".to_string(), join_table_node.to_string()))?;
+
+            let join_table_alias = self.get_datatype_literal(&join_table_node, "http://graphlaw.org/sql#tableAlias")
+                .map(|(a, _)| a);
+
+            let join_cond_node = self.get_single_object(&join_node, "http://graphlaw.org/sql#joinCondition")
+                .ok_or_else(|| AstError::MissingProperty("http://graphlaw.org/sql#joinCondition".to_string(), join_node.to_string()))?;
+
+            let join_condition = self.extract_expr(&join_cond_node, 0)?;
+
+            joins.push(JoinClause {
+                join_type,
+                table: TableRef {
+                    name: join_table_name,
+                    alias: join_table_alias,
+                },
+                condition: join_condition,
+            });
+        }
+
         // Unroll projection list (rdf:List)
         let select_head = self
             .get_single_object(query_node, "http://graphlaw.org/sql#selectList")
@@ -524,6 +606,7 @@ pub trait RdfAstGraphReader {
 
         Ok(SelectStatement {
             from,
+            joins,
             select_list,
             where_clause,
             group_by,
@@ -579,6 +662,7 @@ mod tests {
                 name: "telemetry_events".to_string(),
                 alias: Some("t".to_string()),
             },
+            joins: vec![],
             select_list: vec![
                 SqlExpr::ColumnRef {
                     column: "batch_id".to_string(),
@@ -626,6 +710,7 @@ mod tests {
                 name: "events; DROP TABLE users; --".to_string(),
                 alias: None,
             },
+            joins: vec![],
             select_list: vec![],
             where_clause: None,
             group_by: vec![],

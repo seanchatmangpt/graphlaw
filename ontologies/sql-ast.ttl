@@ -64,6 +64,31 @@ sql:selectList a owl:ObjectProperty ;
     rdfs:domain sql:SelectStatement ;
     rdfs:range rdf:List .
 
+sql:joinClause a owl:ObjectProperty ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range sql:Join .
+
+sql:Join a owl:Class ;
+    rdfs:subClassOf owl:Thing .
+
+sql:JoinType a owl:Class ;
+    rdfs:subClassOf owl:Thing .
+
+sql:InnerJoin a sql:JoinType ; rdfs:label "INNER JOIN" .
+sql:LeftJoin  a sql:JoinType ; rdfs:label "LEFT JOIN" .
+
+sql:joinType a owl:ObjectProperty ;
+    rdfs:domain sql:Join ;
+    rdfs:range sql:JoinType .
+
+sql:joinTable a owl:ObjectProperty ;
+    rdfs:domain sql:Join ;
+    rdfs:range sql:TableRef .
+
+sql:joinCondition a owl:ObjectProperty ;
+    rdfs:domain sql:Join ;
+    rdfs:range sql:Expression .
+
 sql:whereClause a owl:ObjectProperty ;
     rdfs:domain sql:SelectStatement ;
     rdfs:range sql:Expression .

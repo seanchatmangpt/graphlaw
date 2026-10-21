@@ -1,0 +1,45 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix ocel:  <http://graphlaw.org/ocel2#> .
+@prefix bio:   <http://regulatory.fda.gov/cber/biologics#> .
+@prefix sql:   <http://graphlaw.org/sql#> .
+@prefix fn:    <http://graphlaw.org/functions#> .
+@prefix gl:    <http://graphlaw.org/terms#> .
+
+<http://regulatory.fda.gov/cber/biologics>
+    a owl:Ontology ;
+    rdfs:label "GxP Life-Sciences Cold-Chain Biologics Verification Ontology" ;
+    rdfs:comment "Formal OCEL v2 and GxP regulatory extensions for deterministic cold-chain auditability." ;
+    owl:versionInfo "2.0.0" .
+
+# -----------------------------------------------------------------------------
+# OCEL v2 Metamodel Classes
+# -----------------------------------------------------------------------------
+ocel:Event          a owl:Class .
+ocel:Object         a owl:Class .
+ocel:ObjectType     a owl:Class .
+ocel:EventType      a owl:Class .
+
+ocel:hasId          a owl:DatatypeProperty ; rdfs:range xsd:string .
+ocel:hasTimestamp   a owl:DatatypeProperty ; rdfs:range xsd:dateTime .
+ocel:qualifier      a owl:DatatypeProperty ; rdfs:range xsd:string .
+ocel:interactsWith  a owl:ObjectProperty ;
+    rdfs:domain ocel:Event ;
+    rdfs:range  ocel:Object .
+
+# -----------------------------------------------------------------------------
+# Regulated Biopharma Domain Extensions
+# -----------------------------------------------------------------------------
+bio:BiologicBatch   a owl:Class ; rdfs:subClassOf ocel:Object .
+bio:FreezerUnit     a owl:Class ; rdfs:subClassOf ocel:Object .
+bio:ColdChainLog    a owl:Class ; rdfs:subClassOf ocel:Event .
+
+bio:ReleasedBatch   a owl:Class ; rdfs:subClassOf bio:BiologicBatch .
+bio:QuarantinedBatch a owl:Class ; rdfs:subClassOf bio:BiologicBatch .
+
+# Critical Quality Attributes (CQA)
+bio:tempCelsius     a owl:DatatypeProperty ; rdfs:range xsd:double .
+bio:durationSeconds a owl:DatatypeProperty ; rdfs:range xsd:integer .
+bio:mktKelvin       a owl:DatatypeProperty ; rdfs:range xsd:double .

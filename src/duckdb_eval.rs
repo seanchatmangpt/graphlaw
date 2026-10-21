@@ -169,36 +169,98 @@ impl GraphLawDuckDB {
             for (col_idx, col_name) in column_names.iter().enumerate() {
                 let predicate = format!("{}/{}", predicate_iri_prefix, col_name);
 
-                let term: Option<TermValue> = if let Ok(val) = row.get::<_, i64>(col_idx) {
-                    Some(TermValue::Literal {
-                        lexical_form: val.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
-                        language: None,
-                        direction: None,
-                    })
-                } else if let Ok(val) = row.get::<_, f64>(col_idx) {
-                    Some(TermValue::Literal {
-                        lexical_form: val.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#double".to_string(),
-                        language: None,
-                        direction: None,
-                    })
-                } else if let Ok(val) = row.get::<_, bool>(col_idx) {
-                    Some(TermValue::Literal {
-                        lexical_form: val.to_string(),
+                let term: Option<TermValue> = match row.get_ref(col_idx) {
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Null) => None,
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Boolean(b)) => Some(TermValue::Literal {
+                        lexical_form: b.to_string(),
                         datatype: "http://www.w3.org/2001/XMLSchema#boolean".to_string(),
                         language: None,
                         direction: None,
-                    })
-                } else if let Ok(val) = row.get::<_, String>(col_idx) {
-                    Some(TermValue::Literal {
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::TinyInt(i)) => Some(TermValue::Literal {
+                        lexical_form: i.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::SmallInt(i)) => Some(TermValue::Literal {
+                        lexical_form: i.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Int(i)) => Some(TermValue::Literal {
+                        lexical_form: i.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::BigInt(i)) => Some(TermValue::Literal {
+                        lexical_form: i.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::HugeInt(i)) => Some(TermValue::Literal {
+                        lexical_form: i.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::UTinyInt(i)) => Some(TermValue::Literal {
+                        lexical_form: i.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::USmallInt(i)) => Some(TermValue::Literal {
+                        lexical_form: i.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::UInt(i)) => Some(TermValue::Literal {
+                        lexical_form: i.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::UBigInt(i)) => Some(TermValue::Literal {
+                        lexical_form: i.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Float(f)) => Some(TermValue::Literal {
+                        lexical_form: f.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#double".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Double(d)) => Some(TermValue::Literal {
+                        lexical_form: d.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#double".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Decimal(d)) => Some(TermValue::Literal {
+                        lexical_form: d.to_string(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#decimal".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Text(bytes)) => Some(TermValue::Literal {
+                        lexical_form: String::from_utf8_lossy(bytes).into_owned(),
+                        datatype: "http://www.w3.org/2001/XMLSchema#string".to_string(),
+                        language: None,
+                        direction: None,
+                    }),
+                    _ => row.get::<_, String>(col_idx).ok().map(|val| TermValue::Literal {
                         lexical_form: val,
                         datatype: "http://www.w3.org/2001/XMLSchema#string".to_string(),
                         language: None,
                         direction: None,
-                    })
-                } else {
-                    None
+                    }),
                 };
 
                 if let Some(object_term) = term {
@@ -315,6 +377,7 @@ mod tests {
                 name: "telemetry".to_string(),
                 alias: None,
             },
+            joins: vec![],
             select_list: vec![
                 SqlExpr::ColumnRef {
                     column: "batch_id".to_string(),
