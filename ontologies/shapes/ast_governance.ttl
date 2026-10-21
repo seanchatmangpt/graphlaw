@@ -8,7 +8,7 @@
 <http://graphlaw.org/shapes/ast-governance>
     a owl:Ontology ;
     rdfs:label "GraphLaw SQL-AST Governance Shapes" ;
-    rdfs:comment "Phase-2 SHACL preflight for the cold-chain case study: anti-scan (a governed SELECT must carry a WHERE), and identifier pattern invariants (anti-injection) on table names." ;
+    rdfs:comment "Phase-2 SHACL preflight for the cold-chain case study: anti-scan (a governed SELECT must carry a WHERE), and identifier pattern invariants (anti-injection) on table names. Property shapes carry IRIs so violation reports name the violated constraint addressably." ;
     owl:versionInfo "1.0.0" .
 
 # =============================================================================
@@ -18,36 +18,57 @@
 sql:SelectStatementShape a sh:NodeShape ;
     rdfs:label "Governed SELECT statement shape" ;
     sh:targetClass sql:SelectStatement ;
-    sh:property [
-        sh:path sql:fromTable ;
-        sh:minCount 1 ;
-        sh:maxCount 1 ;
-        sh:node sql:TableRefShape ;
-    ] ;
-    sh:property [
-        sh:path sql:selectList ;
-        sh:minCount 1 ;
-        sh:maxCount 1 ;
-    ] ;
+    sh:property sql:HasFromTable ;
+    sh:property sql:FromTableNamePattern ;
+    sh:property sql:JoinTableNamePattern ;
+    sh:property sql:HasSelectList ;
     # Anti-scan law: every governed SELECT must be bounded by an explicit
     # predicate — an unbounded WHERE-less scan is refused at preflight,
     # before any pushdown to the columnar engine.
-    sh:property [
-        sh:path sql:whereClause ;
-        sh:minCount 1 ;
-    ] .
+    sh:property sql:HasWhereClause .
+
+sql:HasFromTable a sh:PropertyShape ;
+    sh:path sql:fromTable ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:node sql:TableRefShape .
+
+# Identifier pattern on table names, evaluated through sequence property
+# paths so the Pattern violation is reported directly at the governed query
+# node (sh:node folds nested results into NodeConstraintComponent).
+sql:FromTableNamePattern a sh:PropertyShape ;
+    sh:path ( sql:fromTable sql:tableName ) ;
+    sh:datatype xsd:string ;
+    sh:pattern "^[a-zA-Z_][a-zA-Z0-9_]*$" .
+
+sql:JoinTableNamePattern a sh:PropertyShape ;
+    sh:path ( sql:joinClause sql:joinTable sql:tableName ) ;
+    sh:datatype xsd:string ;
+    sh:pattern "^[a-zA-Z_][a-zA-Z0-9_]*$" .
+
+sql:HasSelectList a sh:PropertyShape ;
+    sh:path sql:selectList ;
+    sh:minCount 1 ;
+    sh:maxCount 1 .
+
+# Anti-scan law: a governed SELECT without a WHERE clause is an unbounded
+# scan and is refused at preflight.
+sql:HasWhereClause a sh:PropertyShape ;
+    sh:path sql:whereClause ;
+    sh:minCount 1 .
 
 # =============================================================================
 # sql:TableRefShape — identifier pattern (anti-injection)
 # =============================================================================
 
 sql:TableRefShape a sh:NodeShape ;
-    rdfs:label "Governed table reference FROM and JOIN table refs" ;
+    rdfs:label "Governed table reference (FROM and JOIN table refs)" ;
     sh:targetClass sql:TableRef ;
-    sh:property [
-        sh:path sql:tableName ;
-        sh:datatype xsd:string ;
-        sh:minCount 1 ;
-        sh:maxCount 1 ;
-        sh:pattern "^[a-zA-Z_][a-zA-Z0-9_]*$" ;
-    ] .
+    sh:property sql:TableNamePattern .
+
+sql:TableNamePattern a sh:PropertyShape ;
+    sh:path sql:tableName ;
+    sh:datatype xsd:string ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:pattern "^[a-zA-Z_][a-zA-Z0-9_]*$" .

@@ -9,10 +9,12 @@
 //!     admits;
 //! (b) hostile AST variants get typed SHACL violations naming the violated
 //!     shape and constraint component:
-//!       - a WHERE-less SELECT (unbounded scan) violates
-//!         sql:SelectStatementShape on sh:minCount over sql:whereClause;
-//!       - a table name carrying an injection token
-//!         (`ColdChain; DROP`) violates sql:TableRefShape on sh:pattern.
+//!       - a WHERE-less SELECT (unbounded scan) violates the anti-scan
+//!         property shape sql:HasWhereClause (of sql:SelectStatementShape)
+//!         on sh:minCount over sql:whereClause;
+//!       - a table name carrying an injection token (`ColdChain; DROP`)
+//!         violates the pattern property shape sql:TableNamePattern (of
+//!         sql:TableRefShape) on sh:pattern.
 //!
 //! Conventions follow tests/wasm_abi.rs via tests/common/mod.rs. Real wasm
 //! module, real shapes file, real SHACL engine — no mocks.
@@ -66,32 +68,33 @@ fn governance_preflight_refuses_whereless_scan_naming_select_statement_shape() {
     let shapes = governance_shapes();
     // Strip the WHERE clause: rename the predicate so the SELECT becomes an
     // unbounded scan. The AST must be refused with a typed violation on
-    // sql:SelectStatementShape / MinCount.
+    // sql:HasWhereClause / MinCount.
     let ast = read("tests/fixtures/ast_governance/cold_chain_ast.ttl")
         .replace("sql:whereClause", "sql:comment");
     let r = wasm(&shacl_req(&ast, &shapes));
     let vs = violations(&r);
     assert!(
         vs.iter()
-            .any(|(shape, component)| shape.contains("SelectStatementShape")
-                && component.to_lowercase().contains("mincount")),
-        "expected sql:SelectStatementShape / MinCount violation, got {vs:?}"
+            .any(|(shape, component)| shape == "<http://graphlaw.org/sql#HasWhereClause>"
+                && component == "<http://www.w3.org/ns/shacl#MinCountConstraintComponent>"),
+        "expected sql:HasWhereClause (sql:SelectStatementShape) / MinCount violation, got {vs:?}"
     );
 }
 
 #[test]
 fn governance_preflight_refuses_injection_token_naming_table_ref_shape() {
     let shapes = governance_shapes();
-    // Injection token in the FROM table name: identifier pattern must refuse
-    // it with a typed violation on sql:TableRefShape / Pattern.
+    // Injection token in the FROM table name: the identifier pattern (via the
+    // sequence path sql:fromTable/sql:tableName) must refuse it with a typed
+    // Pattern violation naming sql:FromTableNamePattern.
     let ast = read("tests/fixtures/ast_governance/cold_chain_ast.ttl")
         .replace("\"ocel_events\"", "\"ColdChain; DROP\"");
     let r = wasm(&shacl_req(&ast, &shapes));
     let vs = violations(&r);
     assert!(
         vs.iter()
-            .any(|(shape, component)| shape.contains("TableRefShape")
-                && component.to_lowercase().contains("pattern")),
-        "expected sql:TableRefShape / Pattern violation, got {vs:?}"
+            .any(|(shape, component)| shape == "<http://graphlaw.org/sql#FromTableNamePattern>"
+                && component == "<http://www.w3.org/ns/shacl#PatternConstraintComponent>"),
+        "expected sql:FromTableNamePattern (sql:TableRefShape) / Pattern violation, got {vs:?}"
     );
 }
