@@ -180,3 +180,7 @@ pub const BACKEND_AUTHORITIES: &[BackendAuthority] = &[
 
 /// This release has no legacy semantic fallback path.
 pub const LEGACY_FALLBACK_ENABLED: bool = false;
+
+pub mod sql_ast;
+#[cfg(feature = "duckdb")]
+pub mod duckdb_eval;

@@ -1,0 +1,178 @@
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix sql:   <http://graphlaw.org/sql#> .
+@prefix fn:    <http://graphlaw.org/functions#> .
+
+<http://graphlaw.org/sql>
+    a owl:Ontology ;
+    rdfs:label "GraphLaw Relational AST Ontology" ;
+    rdfs:comment "Declarative representation of relational algebra and DuckDB-compatible SQL ASTs as addressable RDF graphs." ;
+    owl:versionInfo "2.0.0" .
+
+# =============================================================================
+# Core AST Classes
+# =============================================================================
+
+sql:Statement a owl:Class ;
+    rdfs:subClassOf owl:Thing .
+
+sql:SelectStatement a owl:Class ;
+    rdfs:subClassOf sql:Statement .
+
+sql:Expression a owl:Class ;
+    rdfs:subClassOf owl:Thing .
+
+sql:TableRef a owl:Class ;
+    rdfs:subClassOf sql:Expression .
+
+sql:ColumnRef a owl:Class ;
+    rdfs:subClassOf sql:Expression .
+
+sql:BinaryExpression a owl:Class ;
+    rdfs:subClassOf sql:Expression .
+
+sql:UnaryExpression a owl:Class ;
+    rdfs:subClassOf sql:Expression .
+
+sql:FunctionCall a owl:Class ;
+    rdfs:subClassOf sql:Expression .
+
+sql:Literal a owl:Class ;
+    rdfs:subClassOf sql:Expression .
+
+sql:Alias a owl:Class ;
+    rdfs:subClassOf sql:Expression .
+
+sql:Operator a owl:Class ;
+    rdfs:subClassOf owl:Thing .
+
+sql:Function a owl:Class ;
+    rdfs:subClassOf owl:Thing .
+
+# =============================================================================
+# Structural Properties
+# =============================================================================
+
+sql:fromTable a owl:ObjectProperty ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range sql:TableRef .
+
+sql:selectList a owl:ObjectProperty ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range rdf:List .
+
+sql:whereClause a owl:ObjectProperty ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range sql:Expression .
+
+sql:groupBy a owl:ObjectProperty ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range rdf:List .
+
+sql:havingClause a owl:ObjectProperty ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range sql:Expression .
+
+sql:orderBy a owl:ObjectProperty ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range rdf:List .
+
+sql:limit a owl:DatatypeProperty ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range xsd:nonNegativeInteger .
+
+sql:offset a owl:DatatypeProperty ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range xsd:nonNegativeInteger .
+
+# Operators & Expressions
+sql:operator a owl:ObjectProperty ;
+    rdfs:domain sql:BinaryExpression ;
+    rdfs:range sql:Operator .
+
+sql:leftOperand a owl:ObjectProperty ;
+    rdfs:domain sql:BinaryExpression ;
+    rdfs:range sql:Expression .
+
+sql:rightOperand a owl:ObjectProperty ;
+    rdfs:domain sql:BinaryExpression ;
+    rdfs:range sql:Expression .
+
+sql:function a owl:ObjectProperty ;
+    rdfs:domain sql:FunctionCall ;
+    rdfs:range sql:Function .
+
+sql:argument a owl:ObjectProperty ;
+    rdfs:domain sql:FunctionCall ;
+    rdfs:range sql:Expression .
+
+sql:expression a owl:ObjectProperty ;
+    rdfs:domain sql:Alias ;
+    rdfs:range sql:Expression .
+
+# Terminals & Identifiers
+sql:tableName a owl:DatatypeProperty ;
+    rdfs:domain sql:TableRef ;
+    rdfs:range xsd:string .
+
+sql:tableAlias a owl:DatatypeProperty ;
+    rdfs:domain sql:TableRef ;
+    rdfs:range xsd:string .
+
+sql:columnName a owl:DatatypeProperty ;
+    rdfs:domain sql:ColumnRef ;
+    rdfs:range xsd:string .
+
+sql:aliasName a owl:DatatypeProperty ;
+    rdfs:domain sql:Alias ;
+    rdfs:range xsd:string .
+
+sql:literalValue a owl:DatatypeProperty ;
+    rdfs:domain sql:Literal .
+
+# =============================================================================
+# Axiomatic Operators & Functions
+# =============================================================================
+
+sql:Equals          a sql:Operator ; rdfs:label "=" .
+sql:NotEquals       a sql:Operator ; rdfs:label "<>" .
+sql:GreaterThan     a sql:Operator ; rdfs:label ">" .
+sql:GreaterThanOrEq a sql:Operator ; rdfs:label ">=" .
+sql:LessThan        a sql:Operator ; rdfs:label "<" .
+sql:LessThanOrEq    a sql:Operator ; rdfs:label "<=" .
+sql:And             a sql:Operator ; rdfs:label "AND" .
+sql:Or              a sql:Operator ; rdfs:label "OR" .
+sql:Like            a sql:Operator ; rdfs:label "LIKE" .
+
+fn:COUNT            a sql:Function ; rdfs:label "COUNT" .
+fn:SUM              a sql:Function ; rdfs:label "SUM" .
+fn:AVG              a sql:Function ; rdfs:label "AVG" .
+fn:MIN              a sql:Function ; rdfs:label "MIN" .
+fn:MAX              a sql:Function ; rdfs:label "MAX" .
+
+# =============================================================================
+# SHACL Structural Invariant Shapes (Anti-Injection & Soundness)
+# =============================================================================
+
+sql:TableRefShape a sh:NodeShape ;
+    sh:targetClass sql:TableRef ;
+    sh:property [
+        sh:path sql:tableName ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[a-zA-Z_][a-zA-Z0-9_]*$" ;
+    ] .
+
+sql:ColumnRefShape a sh:NodeShape ;
+    sh:targetClass sql:ColumnRef ;
+    sh:property [
+        sh:path sql:columnName ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:pattern "^[a-zA-Z_][a-zA-Z0-9_]*$" ;
+    ] .
