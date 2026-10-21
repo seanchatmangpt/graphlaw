@@ -33,6 +33,13 @@ Routing (`sniff`) decides *which* engine owns a document; it never parses one.
 The owning engine is always the final authority. A document routing cannot
 place is refused, not tried against every engine in turn.
 
+## Relational Dialect (`sql-ast.ttl`)
+
+In addition to pure RDF dataset and N3 logic dialects, GraphLaw admits declarative relational query specifications modeled in RDF Turtle under the `http://graphlaw.org/sql#` namespace.
+- **Owning Engine**: `frozen-duckdb 2.0` (`src/duckdb_eval.rs`).
+- **Validation**: Enforced via SHACL pre-flight gate (`validate_ast_shacl`). Queries omitting a bounded `WHERE` clause or containing token injection attempts are rejected before reaching the execution layer.
+- **Output**: Vectorized execution directly over Parquet partitions or in-memory tables, emitting typed RDF statements accompanied by a BLAKE3 query execution receipt.
+
 ## Support matrix
 
 The 13 dialects of `Dialect` (`src/dialect.rs`), and what the current surface

@@ -1,5 +1,8 @@
 # v26.10.10 Publish — Definition-of-Done Receipt (skeleton)
 
+> [!NOTE]
+> **Historical definition-of-done receipt.** This document records point-in-time publication verification steps from 2026-10-10. Preserved for audit compliance.
+
 Lane 6 (receipt-claim verification), 2026-10-10. Read-only audit; no cargo run.
 Source receipt: `docs/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md`.
 

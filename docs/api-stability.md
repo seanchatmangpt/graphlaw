@@ -25,8 +25,8 @@ rely on, how deprecations work, and how the minimum supported Rust version moves
   `PlanRefused`, `ReceiptRequired`, `LeaseRefused`) and the stable `as_str()` names of
   `LeaseReason` and `ReceiptReason` never change meaning. New codes may be added; hosts must treat
   an unknown code as a refusal.
-- **Re-exports** `graphlaw::purrdf` and `graphlaw::eyeron` are unstable escape hatches; their
-  API is that of the pinned upstream version (`purrdf =2.0.2`).
+- **Re-exports** `graphlaw::purrdf`, `graphlaw::eyeron`, and `graphlaw::duckdb_eval` (with `frozen_duckdb`) are escape hatches; their
+  API is that of the pinned upstream version (`purrdf =2.0.2`, `frozen-duckdb 2.0.0-dev`).
 
 ## Deprecation policy
 

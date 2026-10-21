@@ -24,6 +24,8 @@ Let $\mathbf{Graph}$ denote the category of directed multi-graphs. An RDF knowle
 $$\mathcal{G}: \mathbf{Sch} \to \mathbf{Set}$$
 where $\mathbf{Sch}$ is the schema category whose objects represent node classes $\mathcal{C}$ and edge properties $\mathcal{P}$.
 
+When extended with relational tabular execution (`frozen-duckdb 2.0`), relational schemas form fibered categories over $\mathbf{Sch}$, where columnar Arrow vector batches and Parquet zone-maps represent local sections of the cellular sheaf restricted to tabular evaluation manifolds.
+
 We define the cellular sheaf $\mathcal{F}$ over a cell complex $K$ representing the distributed graph:
 - For each vertex $v \in K_0$, $\mathcal{F}(v)$ is the stalks of local quads $(s, p, o, g)$.
 - For each 1-cell $e = (u, v) \in K_1$, the restriction map $\rho_{u, e}: \mathcal{F}(u) \to \mathcal{F}(e)$ enforces property-path continuity.

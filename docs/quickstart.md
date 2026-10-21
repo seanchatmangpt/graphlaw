@@ -40,6 +40,36 @@ final state: blake3:3be6530bdf3597afdcc5f60a2a7a0c15a952a1e8f8dd440e0a0bf49082e0
 
 Each line is a receipt's child state id; the last equals the final state id.
 
+## Tabular & Edge Compaction Quickstart (frozen-duckdb 2.0)
+
+Compile a declarative SQL AST expressed in RDF Turtle, validate it against the SHACL pre-flight gate, and execute vectorized pushdown over embedded columnar buffers:
+
+```sh
+cargo run --example sql_in_rdf_duckdb
+```
+
+Expected output:
+```text
+=== 1. Initializing Embedded frozen-duckdb Substrate ===
+  -> Ingested seed telemetry into 'telemetry_events' table.
+
+=== 2. Parsing Declarative SQL AST Turtle Subgraph ===
+  -> Parsed Turtle dataset successfully into RdfDatasetReader.
+=== 3. Extracting and Validating AST in GraphLaw ===
+  -> Validated AST conformance (identifiers safe from injection).
+  -> Serialized SQL : SELECT batch_id, SUM(cost) AS total_cost FROM telemetry_events t WHERE (latency_ms > $1) GROUP BY batch_id LIMIT 10
+  -> Bound Params   : [Integer(400)]
+
+=== 4. Executing via frozen-duckdb & Producing ExecutionReceipt ===
+  -> Rows Emitted    : 2
+  -> Execution Time  : 3.806 ms
+  -> Query Hash (BLAKE3): [89, 01, be, b8, 78, c2, 45, 1a]
+
+=== 5. Materialized RDF Statements (Grounding Tabular State) ===
+  <http://example.org/data/row_1> <http://example.org/vocab/batch_id> Literal { lexical_form: "batch-beta", datatype: "http://www.w3.org/2001/XMLSchema#string", language: None, direction: None }
+  <http://example.org/data/row_1> <http://example.org/vocab/total_cost> Literal { lexical_form: "310", datatype: "http://www.w3.org/2001/XMLSchema#integer", language: None, direction: None }
+```
+
 ## A refused plan
 
 ```sh

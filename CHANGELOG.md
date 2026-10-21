@@ -7,6 +7,21 @@ Versioning policy (stated once, applies to every entry): `graphlaw-eyeron` keeps
 independent, upstream-vendored version (currently 0.7.8) and is not coupled to the
 workspace calendar version; "Published as crates.io" lines refer to the `graphlaw` crate.
 
+## [26.10.21] - 2026-10-21
+
+Wave release: Unconditional `frozen-duckdb 2.0` integration, zero-trust semantic compaction, and life-sciences cold-chain OCEL verification.
+
+### Added
+
+- Embedded `frozen-duckdb 2.0` unconditionally into GraphLaw as the third admitted upstream engine (no optional feature gate).
+- Declarative SQL-in-RDF compiler (`src/sql_ast.rs`) supporting projection, aggregations (`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`), joins (`sql:joinClause`), and parameters.
+- Fail-closed SHACL pre-flight gate (`validate_ast_shacl`) preventing SQL injection, verifying token safety, and refusing queries missing bounded `WHERE` clauses.
+- Vectorized query evaluator (`src/duckdb_eval.rs`) with direct `ValueRef` variant inspection into typed RDF literals, Hive partition scanning, and Parquet view registration.
+- Deductive rule built-in `builtin_eval_sql` bridging columnar analytical executions into PurRDF / N3 deduction state.
+- Regulated life-sciences cold-chain biologics verification case study (`ontologies/biopharma-ocel.ttl`, `examples/cold_chain_biologics_verification.rs`).
+- Zero-trust edge compaction test suite (`tests/test_edge_sovereign_ingestion.rs`): 10,000:1 semantic reduction and offline fail-closed actuator lockout.
+- Diataxis documentation: `docs/how-to/how-to-edge-ingestion-and-compaction.md` and `docs/explanation/edge-sovereignty-and-zero-trust-compaction.md`.
+
 ## [26.10.20] - 2026-10-20
 
 Wave release (G-lanes): dialect layer, W3C conformance, and WASM bounds/ABI hardening.

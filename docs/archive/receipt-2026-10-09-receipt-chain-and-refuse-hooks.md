@@ -1,5 +1,8 @@
 # Session receipt — receipt-chain port + refuse hooks (2026-10-09)
 
+> [!NOTE]
+> **Historical session receipt.** This document records point-in-time test tallies and working tree states from 2026-10-09. All described capabilities have since merged into `main`. Do not treat rows as current state.
+
 Branch `docs/doc-hdit-scaffold-gl`. All changes listed are landed in the
 working tree but **uncommitted and unpushed**.
 

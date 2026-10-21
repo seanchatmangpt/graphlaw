@@ -1,5 +1,8 @@
 # GraphLaw extraction receipt
 
+> [!NOTE]
+> **Historical record.** This is an immutable provenance receipt of the original repository bootstrap. It is preserved for lineage audit and is not an executable path. Current standards semantics derive exclusively from the three pinned upstream authorities recorded in `README.md` and `src/lib.rs`.
+
 GraphLaw was originally extracted from `seanchatmangpt/graphlaw` at source commit
 `15504cd791cc13e117ff7cd02fd662be7a1f8631`.
 

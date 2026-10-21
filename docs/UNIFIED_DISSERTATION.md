@@ -22,6 +22,7 @@ $$\mathcal{A} = \mu(\mathcal{O}^*)$$
 into a complete categorical framework, we prove:
 1. **The Structural Functor $\mathcal{L}_{\mathrm{graph}}$ (`graphlaw`)**: Knowledge graphs form cellular sheaves $\mathcal{F}$ over cell complexes $K$. Logical entailment (RDFS, OWL-RL, Datalog, N3) operates as an idempotent monad on complete subobject lattices, and SHACL/ShEx constraint enforcement corresponds to the vanishing of the 1-cohomology obstruction group:
    $$H^1(K; \mathcal{F}_{\mathrm{SHACL}}) = 0$$
+   Relational pushdowns and Parquet zone-map aggregations delegate to embedded `frozen-duckdb 2.0`, restricting columnar vector evaluations to verifiable sub-sheaf stalks without corrupting structural logical purity.
 2. **The Dynamic Functor $\mathcal{D}_{\mathrm{process}}$ (`wasm4pm`)**: Continuous and discrete execution traces embed into Riemannian manifolds $(\mathcal{M}, g)$. Optimal process discovery and conformance checking reduce to finding geodesics of a variational Hamiltonian action functional:
    $$\delta \mathcal{S}[\gamma] = \delta \int_{t_0}^{t_1} \left( \frac{1}{2} g_{ij} \dot{x}^i \dot{x}^j - V_{\mathrm{policy}}(x) \right) dt = 0$$
    where alignment penalties compute the minimum distance along sub-Riemannian Carnot-Carathéodory metrics.

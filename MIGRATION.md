@@ -14,6 +14,7 @@ using the authoritative surfaces re-exported by `graphlaw`.
 | `shex_native`, `shexc_parser` | `graphlaw::shex` (PurRDF) |
 | `owlrl/*` | `graphlaw::entailment` (PurRDF) |
 | local RDF event/window plumbing | `graphlaw::events` where covered by PurRDF |
+| relational / SQL engine | `graphlaw::duckdb_eval` (`frozen-duckdb 2.0`), driven declaratively via `sql-ast.ttl` |
 | local WASM wrapper | build the library-backed crate for `wasm32-wasip1` directly (`cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`; `wasm32-unknown-unknown` is not a supported module target — it needs a JavaScript host) |
 
 There is deliberately no compatibility implementation that can silently take

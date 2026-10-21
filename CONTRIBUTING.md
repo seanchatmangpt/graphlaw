@@ -25,6 +25,14 @@ arms of `dispatch` in `src/abi.rs` and compares them with the registry op list) 
 
 Install targets first: `rustup target add wasm32-wasip1 wasm32-unknown-unknown`.
 
+## Embedded DuckDB 2.0 Substrate
+
+GraphLaw unconditionally embeds `frozen-duckdb 2.0`. Prebuilt native binaries are cached automatically in `~/.frozen-duckdb/cache/` (e.g., `libduckdb_arm64.dylib` on macOS).
+Run DuckDB-specific integration suites:
+```sh
+cargo test --test test_edge_sovereign_ingestion --test test_cold_chain_ocel --test test_parquet_and_builtin_eval
+```
+
 ## WebAssembly module
 
 `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` produces

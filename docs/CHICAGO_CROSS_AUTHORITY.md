@@ -18,6 +18,7 @@ do they agree on the answer, and does each fail closed when the input is wrong?
 
 Authorities exercised through `graphlaw::abi::call`: `n3`, `datalog`, `entail` (owl-rl),
 `shacl`, `sparql`, `canonical`, and the `law` op where a case needs a plan or lease.
+Relational analytical evaluations are separately verified through the embedded `frozen-duckdb` engine via `sql-ast.ttl` and `builtin_eval_sql`.
 Collaborators are real. There are no mocks; assertions are on final response state.
 
 ## Case classes

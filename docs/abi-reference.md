@@ -18,7 +18,7 @@ on refusal:
 
 - `kind` is one of `NotSemanticContent`, `Ambiguous`, `EngineRejected`, `Unsupported`,
   `ResourceLimit`.
-- `engine` (`PurRdf` or `Eyeron`) and `dialect` are `null` when not applicable.
+- `engine` (`PurRdf`, `Eyeron`, or `DuckDb`) and `dialect` are `null` when not applicable.
 - `details` is present only for refusals that carry a machine-readable `code`; see
   [Refusals](refusals.md).
 - A request that is not JSON, lacks `op`, names an unknown op, or lacks a required field is refused

@@ -22,6 +22,7 @@ the [capability registry](capability-registry.md)).
 | `ResourceLimit` | `RefusalKind::ResourceLimit` | `limit`, `observed`, `max` (N3 limits always carry `max`) | Shrink the request. Limits: `request_bytes`, `json_depth`, `atoms_per_field`, `plan_actions`, `policy_entries` (constants `abi::MAX_*`), plus the N3 reasoner limits `n3_iterations`, `n3_match_steps`, `n3_term_bytes`, `n3_total_bytes`, `n3_derived_facts` (constants `law::N3_*`). |
 | `Refused` | `LawError::Refused` | `kind` | Upstream engine or routing refusal raised inside a `law` step; `kind` is a `RefusalKind` name (below). |
 | `PolicyRefused` | `policy::PolicyRefused` | `policy_kind`, `state`, `action` | See policy kinds below. |
+| `AstError` | `sql_ast::AstError` | `reason` (`InjectionAttempt`, `MissingWhereClause`, `ShapeViolation`) | Refusal during SQL AST validation before query dispatch to `frozen-duckdb`. Bounded WHERE clause is mandatory, and identifiers must adhere to regex `^[a-zA-Z_][a-zA-Z0-9_]*$`. |
 
 ## `Refused {kind}`
 

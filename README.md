@@ -2,7 +2,7 @@
 
 GraphLaw is a library-backed semantic law-state boundary for Rust: immutable,
 content-addressed RDF states, admitted transitions with receipts, and typed refusals —
-over two pinned upstream engines, without reimplementing any standards algorithm.
+over three pinned upstream engines, without reimplementing any standards algorithm.
 
 ## Install
 
@@ -28,6 +28,10 @@ cargo run --example refused_plan
 cargo run --example receipt_feedback
 # before record: receipt required: no recorded receipt for step `derive:rdfs`
 # after record:  admitted by `admit:require-receipt`
+
+cargo run --example sql_in_rdf_duckdb
+# compiles declarative Turtle AST -> runs vectorized pushdown in embedded DuckDB
+# emitted 2 rows in 3.806ms, sealed by query hash blake3:8901beb8…
 
 cargo test --test differential
 # N3 (Eyeron), Datalog and OWL-RL (PurRDF) must agree on a transitive closure
@@ -120,6 +124,7 @@ Capability | Authority
 ---|---
 RDF 1.2, codecs, SPARQL 1.1/1.2, SHACL, ShEx 2.1, Datalog/stratified fixpoint, RDF/RDFS/OWL-RL entailment | PurRDF 2.0.2 (`purrdf = "=2.0.2"`)
 Notation3 parsing/reasoning/proofs | Eyeron 0.7.8 (vendored `crates/graphlaw-eyeron` from upstream 0.7.7 @ `eyereasoner/eyeron@d6568f65`; see its `UPSTREAM.md`)
+Vectorized columnar execution, Parquet scan pipelines, SIMD aggregations | DuckDB 2.0 (`frozen-duckdb = "2.0.0-dev"`)
 
 GraphLaw owns the composition boundary and semantic assets (ontologies, packs,
 queries) and the decision about which upstream implementation has standing.
@@ -152,7 +157,7 @@ CI (`.github/workflows/release.yml`) builds and tests, tags `vX.Y.Z`, and create
 No standards algorithm is reimplemented in GraphLaw. If an admitted upstream library
 lacks a required standard feature, GraphLaw either refuses that feature or contributes
 the capability upstream — it does not create another local parser, reasoner, validator,
-query engine, or fixpoint implementation. The pre-v26.9.28 engine remains available
+query engine, or fixpoint implementation. GraphLaw does not build a relational execution engine; it delegates tabular pushdown and Parquet zone-map evaluation to `frozen-duckdb 2.0`, restricting GraphLaw's scope strictly to AST validation, declarative translation, and cryptographic receipt issuance. The pre-v26.9.28 engine remains available
 through Git history only; see [MIGRATION.md](MIGRATION.md) for the old-to-new surface
 map, [SECURITY.md](SECURITY.md) for key-custody and supported-versions policy, and
 [docs/api-stability.md](docs/api-stability.md) for the stability contract

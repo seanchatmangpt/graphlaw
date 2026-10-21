@@ -17,7 +17,8 @@ vulnerability"). Do not open a public issue for an undisclosed vulnerability.
 ## Scope
 
 In scope: untrusted plan, policy, and JSON ABI input; receipt forgery; resource exhaustion
-(memory, CPU, unbounded loops). Vulnerabilities in PurRDF or Eyeron themselves belong upstream.
+(memory, CPU, unbounded loops). Vulnerabilities in PurRDF, Eyeron, or DuckDB (`frozen-duckdb`)
+themselves belong upstream.
 
 ## Known limits (as of the current `git log`)
 

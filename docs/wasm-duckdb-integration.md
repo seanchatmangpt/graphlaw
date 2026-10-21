@@ -20,6 +20,7 @@ Landed (sources read on disk, 2026-10-21):
 - `lib/smalt/wasm/{bridge,pool,worker}.ex` (Elixir): supervised worker pool
   per `WASM-SANDBOX-SPEC.md` (16 pre-warmed workers, trap_exit respawn,
   `:pool_exhausted` typed when drained).
+- Landed DuckDB Integration Core: `src/sql_ast.rs` (declarative AST compiler & SHACL pre-flight gate), `src/duckdb_eval.rs` (vectorized query evaluator with `ValueRef` inspection & Parquet view registration), and `src/rules/builtins.rs` (`builtin_eval_sql`).
 - Specs: `WASM-SANDBOX-SPEC.md` (sandbox topology, 64 MiB wall, 3-gate
   court) and `GRAPHLAW-SPEC.md` (GL-1..12 guard-seam topology, ANDON wire
   face, GL-6 dual-governance parity with frozen-duckdb audit filtering).

@@ -6,10 +6,10 @@ conformance to any external receipt schema.
 
 | portfolio R field | GraphLaw field |
 |---|---|
-| identity | `parent`, `child` (state ids), `subject_blake3` (external subject digest) |
-| authority | `authority`, `revision` (upstream engine), `lease_id`, attestation `key_id` |
-| consequence | `step`, `added` |
-| replay | `plan_blake3`, and `graphlaw-verify` replay from the start state |
+| identity | `parent`, `child` (state ids), `subject_blake3` (external subject digest), `query_hash` (DuckDB AST execution) |
+| authority | `authority`, `revision` (upstream engine: PurRDF, Eyeron, frozen-duckdb), `lease_id`, attestation `key_id` |
+| consequence | `step`, `added`, `rows_emitted` |
+| replay | `plan_blake3`, query hash, and `graphlaw-verify` replay from the start state |
 | standing | not stored — derived by the verifier (`ADMITTED`/`REFUSED`) from the receipts |
 
 ## Receipt chains (graphlaw-compatible)
@@ -23,7 +23,7 @@ migrates onto this to retire its vendored graphlaw-core.
 
 ## History
 
-The two dated session receipts are historical records, kept as written:
+The two dated session receipts are historical records, preserved under `docs/archive/`:
 
-- [receipt-2026-10-09-receipt-chain-and-refuse-hooks](../receipt-2026-10-09-receipt-chain-and-refuse-hooks.md)
-- [receipt-2026-10-10-publish-dod](../receipt-2026-10-10-publish-dod.md)
+- [receipt-2026-10-09-receipt-chain-and-refuse-hooks](../archive/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md)
+- [receipt-2026-10-10-publish-dod](../archive/receipt-2026-10-10-publish-dod.md)

@@ -20,7 +20,7 @@ cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 ```
 
 Output: `target/wasm32-wasip1/wasm/graphlaw_wasm.wasm` under the `wasm`
-profile (`opt-level = "s"`, LTO, `panic = "abort"`, stripped).
+profile (`opt-level = "s"`, LTO, `panic = "abort"`, stripped). The core GraphLaw WASM cdylib is **~6.34 MiB**; together with embedded `frozen-duckdb 2.0`, the complete combined analytical runtime is **~36.5 MiB**, well within the standard **64 MiB linear memory ceiling**.
 
 ## Verify the bytes
 

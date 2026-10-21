@@ -23,6 +23,22 @@ fn purrdf_revision_matches_cargo_pin() {
 }
 
 #[test]
+fn duckdb_revision_matches_cargo_pin() {
+    let toml = cargo_toml();
+    for a in BACKEND_AUTHORITIES
+        .iter()
+        .filter(|a| a.authority == "frozen-duckdb")
+    {
+        assert!(
+            toml.contains(&format!("version = \"{}\"", a.revision)),
+            "{} claims frozen-duckdb {} but Cargo.toml disagrees",
+            a.capability,
+            a.revision
+        );
+    }
+}
+
+#[test]
 fn eyeron_revision_matches_the_vendored_crate() {
     let root = env!("CARGO_MANIFEST_DIR");
     let manifest =

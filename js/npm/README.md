@@ -3,6 +3,7 @@
 GraphLaw is an RDF law-state composition engine compiled to WebAssembly: parse 9 RDF
 dialects, run SPARQL queries, validate with SHACL and ShEx, reason in N3, apply
 RDF/RDFS/OWL-RL entailment regimes, evaluate datalog fixpoints, fire knowledge hooks,
+execute vectorized columnar pushdowns over embedded DuckDB 2.0,
 and run law pipelines with receipts and signed leases — ending in FOND policy admission.
 Every op returns a typed result or a typed refusal over a versioned JSON ABI
 (`ABI_VERSION = 1`).

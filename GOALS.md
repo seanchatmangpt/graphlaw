@@ -13,11 +13,13 @@
 
 - PurRDF 2.0.2: RDF 1.2, SPARQL 1.1/1.2, SHACL, ShEx 2.1, Datalog, RDF/RDFS/OWL-RL entailment, RDF events.
 - Eyeron d6568f657c19805b64223acf28d74234156bb837: Notation3 parsing, reasoning, built-ins, resource limits and proofs.
+- DuckDB 2.0 (`frozen-duckdb 2.0.0-dev`): Vectorized columnar execution, Arrow C ABI integration, Parquet scanning, zone-map filtering, SIMD aggregations.
 
 ## Non-goals
 
 - Maintaining a hidden fallback of the retired historical standards engine.
 - Preserving internal implementation APIs whose purpose was to implement a standard now owned upstream.
 - Recreating DRed/RSP/window/query algorithms locally when no production-grade admitted library has standing. Such capabilities stay absent or external until an authority is admitted.
+- Building a relational execution engine or SQL parser inside GraphLaw. Tabular storage, columnar pushdown, and Parquet scans belong to `frozen-duckdb`.
 
 GraphLaw should grow primarily by adding semantic assets, admission policy, provenance/receipt composition, and adapters that do not duplicate upstream semantics.

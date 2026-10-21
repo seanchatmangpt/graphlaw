@@ -176,12 +176,25 @@ pub const BACKEND_AUTHORITIES: &[BackendAuthority] = &[
         authority: "eyeron",
         revision: "0.7.7 (eyereasoner/eyeron@d6568f657c19805b64223acf28d74234156bb837, vendored)",
     },
+    BackendAuthority {
+        capability: "Vectorized columnar execution, Parquet scan, and SIMD aggregations",
+        authority: "frozen-duckdb",
+        revision: "2.0.0-dev",
+    },
 ];
 
 /// This release has no legacy semantic fallback path.
 pub const LEGACY_FALLBACK_ENABLED: bool = false;
 
 pub mod sql_ast;
+/// Native-only SQL evaluation (frozen-duckdb). Compiled out of the wasm target;
+/// rules referencing `gl:evalSql` without the `duckdb` feature are typed-refused
+/// at admission (see docs/refusals.md).
+#[cfg(feature = "duckdb")]
 pub mod duckdb_eval;
+/// ABI op-15 `duckdb`: cursor-streamed analytical eval (native-only, feature
+/// `duckdb`; the wasm module's op table does not include it).
+#[cfg(feature = "duckdb")]
+pub mod duckdb_op;
 pub mod rules;
 

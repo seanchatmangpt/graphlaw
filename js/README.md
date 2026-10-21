@@ -2,7 +2,7 @@
 
 JavaScript/TypeScript distribution of GraphLaw: the npm package `graphlaw`, a
 typed client over the pinned wasm32-wasip1 artifact — no wasm-bindgen, no
-second implementation of any engine.
+second implementation of any engine. Embedded analytical pushdowns are powered by `frozen-duckdb 2.0` within a strict 64 MB WASM boundary.
 
 ## What this is
 

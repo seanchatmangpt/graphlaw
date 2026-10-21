@@ -22,6 +22,8 @@ The crate has two halves:
   `limit_response(name, observed, max)`, `missing_buffer_response()`
   (`wasm/src/ffi.rs:22-26`).
 
+For streaming analytical evaluations and large Parquet scans, the runtime architecture is detailed in [WASM ABI Op-15 Design](wasm-duckdb-op15-design.md) and [WASM + DuckDB Integration Wave](wasm-duckdb-integration.md). Memory accounting operates under a deterministic 32 MiB DuckDB ceiling within the 64 MiB WASM arena, avoiding linear memory fragmentation.
+
 Compile-time asserts in `wasm/src/lib.rs:29-36` pin the generated
 `abi_meta` limits and version to `graphlaw::abi`'s constants, so an ontology
 edit that drifts from the core fails the native build instead of shipping a
