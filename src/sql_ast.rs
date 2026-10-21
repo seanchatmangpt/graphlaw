@@ -17,6 +17,7 @@ pub enum AstError {
     MalformedList,
     UnsupportedTerm(String),
     MalformedNode(String),
+    ShaclViolation(String),
 }
 
 impl fmt::Display for AstError {
@@ -28,6 +29,7 @@ impl fmt::Display for AstError {
             Self::MalformedList => write!(f, "Malformed RDF list: circular reference or unclosed node"),
             Self::UnsupportedTerm(term) => write!(f, "Unsupported operator or function IRI: {term}"),
             Self::MalformedNode(node) => write!(f, "Unexpected terminal node: {node}"),
+            Self::ShaclViolation(msg) => write!(f, "SHACL AST structural violation: {msg}"),
         }
     }
 }
@@ -335,6 +337,235 @@ pub trait RdfAstGraphReader {
 
         Ok(items)
     }
+
+    /// Recursively extracts a `SqlExpr` from an AST node in the graph.
+    fn extract_expr(&self, node: &Self::Node, depth: usize) -> Result<SqlExpr, AstError> {
+        if depth > 32 {
+            return Err(AstError::RecursionLimitExceeded(32));
+        }
+
+        // Check if node is a ColumnRef
+        if let Some((col_name, _)) = self.get_datatype_literal(node, "http://graphlaw.org/sql#columnName") {
+            let alias = self
+                .get_datatype_literal(node, "http://graphlaw.org/sql#tableAlias")
+                .map(|(a, _)| a);
+            return Ok(SqlExpr::ColumnRef {
+                column: col_name,
+                table_alias: alias,
+            });
+        }
+
+        // Check if node is a Literal
+        if let Some((val_str, dtype)) = self.get_datatype_literal(node, "http://graphlaw.org/sql#literalValue") {
+            let lit = match dtype.as_deref() {
+                Some("http://www.w3.org/2001/XMLSchema#integer") => {
+                    SqlLiteral::Integer(val_str.parse().unwrap_or(0))
+                }
+                Some("http://www.w3.org/2001/XMLSchema#double") => {
+                    SqlLiteral::Float(val_str.parse().unwrap_or(0.0))
+                }
+                Some("http://www.w3.org/2001/XMLSchema#boolean") => {
+                    SqlLiteral::Boolean(val_str == "true" || val_str == "1")
+                }
+                _ => SqlLiteral::String(val_str),
+            };
+            return Ok(SqlExpr::Literal(lit));
+        }
+
+        // Check if node is an Alias
+        if let Some((alias_name, _)) = self.get_datatype_literal(node, "http://graphlaw.org/sql#aliasName") {
+            let target_expr_node = self
+                .get_single_object(node, "http://graphlaw.org/sql#expression")
+                .ok_or_else(|| {
+                    AstError::MissingProperty(
+                        "http://graphlaw.org/sql#expression".to_string(),
+                        node.to_string(),
+                    )
+                })?;
+            let inner_expr = self.extract_expr(&target_expr_node, depth + 1)?;
+            return Ok(SqlExpr::Alias {
+                expr: Box::new(inner_expr),
+                alias: alias_name,
+            });
+        }
+
+        // Check if node is a FunctionCall
+        if let Some(func_node) = self.get_single_object(node, "http://graphlaw.org/sql#function") {
+            let func_iri = self.get_iri(&func_node).ok_or_else(|| {
+                AstError::MissingProperty("http://graphlaw.org/sql#function".to_string(), node.to_string())
+            })?;
+            let function = AggregateFunction::from_iri(&func_iri)?;
+            let arg_node = self
+                .get_single_object(node, "http://graphlaw.org/sql#argument")
+                .ok_or_else(|| {
+                    AstError::MissingProperty(
+                        "http://graphlaw.org/sql#argument".to_string(),
+                        node.to_string(),
+                    )
+                })?;
+            let argument = self.extract_expr(&arg_node, depth + 1)?;
+            return Ok(SqlExpr::FunctionCall {
+                function,
+                argument: Box::new(argument),
+            });
+        }
+
+        // Check if node is a BinaryExpression
+        if let Some(op_node) = self.get_single_object(node, "http://graphlaw.org/sql#operator") {
+            let op_iri = self.get_iri(&op_node).ok_or_else(|| {
+                AstError::MissingProperty("http://graphlaw.org/sql#operator".to_string(), node.to_string())
+            })?;
+            let op = Operator::from_iri(&op_iri)?;
+
+            let left_node = self
+                .get_single_object(node, "http://graphlaw.org/sql#leftOperand")
+                .ok_or_else(|| {
+                    AstError::MissingProperty(
+                        "http://graphlaw.org/sql#leftOperand".to_string(),
+                        node.to_string(),
+                    )
+                })?;
+            let right_node = self
+                .get_single_object(node, "http://graphlaw.org/sql#rightOperand")
+                .ok_or_else(|| {
+                    AstError::MissingProperty(
+                        "http://graphlaw.org/sql#rightOperand".to_string(),
+                        node.to_string(),
+                    )
+                })?;
+
+            let left = self.extract_expr(&left_node, depth + 1)?;
+            let right = self.extract_expr(&right_node, depth + 1)?;
+
+            return Ok(SqlExpr::Binary {
+                op,
+                left: Box::new(left),
+                right: Box::new(right),
+            });
+        }
+
+        Err(AstError::MalformedNode(node.to_string()))
+    }
+
+    /// Extracts a full `SelectStatement` AST from a target query node.
+    fn extract_select_statement(&self, query_node: &Self::Node) -> Result<SelectStatement, AstError> {
+        let table_ref_node = self
+            .get_single_object(query_node, "http://graphlaw.org/sql#fromTable")
+            .ok_or_else(|| {
+                AstError::MissingProperty(
+                    "http://graphlaw.org/sql#fromTable".to_string(),
+                    query_node.to_string(),
+                )
+            })?;
+
+        let (table_name, _) = self
+            .get_datatype_literal(&table_ref_node, "http://graphlaw.org/sql#tableName")
+            .ok_or_else(|| {
+                AstError::MissingProperty(
+                    "http://graphlaw.org/sql#tableName".to_string(),
+                    table_ref_node.to_string(),
+                )
+            })?;
+
+        let table_alias = self
+            .get_datatype_literal(&table_ref_node, "http://graphlaw.org/sql#tableAlias")
+            .map(|(a, _)| a);
+
+        let from = TableRef {
+            name: table_name,
+            alias: table_alias,
+        };
+
+        // Unroll projection list (rdf:List)
+        let select_head = self
+            .get_single_object(query_node, "http://graphlaw.org/sql#selectList")
+            .ok_or_else(|| {
+                AstError::MissingProperty(
+                    "http://graphlaw.org/sql#selectList".to_string(),
+                    query_node.to_string(),
+                )
+            })?;
+        let select_nodes = self.unroll_rdf_list(&select_head, 64)?;
+        let mut select_list = Vec::with_capacity(select_nodes.len());
+        for node in select_nodes {
+            select_list.push(self.extract_expr(&node, 0)?);
+        }
+
+        // Where clause (optional)
+        let where_clause = if let Some(where_node) =
+            self.get_single_object(query_node, "http://graphlaw.org/sql#whereClause")
+        {
+            Some(self.extract_expr(&where_node, 0)?)
+        } else {
+            None
+        };
+
+        // Group by (optional rdf:List)
+        let group_by = if let Some(group_head) =
+            self.get_single_object(query_node, "http://graphlaw.org/sql#groupBy")
+        {
+            let group_nodes = self.unroll_rdf_list(&group_head, 64)?;
+            let mut list = Vec::with_capacity(group_nodes.len());
+            for node in group_nodes {
+                list.push(self.extract_expr(&node, 0)?);
+            }
+            list
+        } else {
+            Vec::new()
+        };
+
+        // Limit & offset
+        let limit = self
+            .get_datatype_literal(query_node, "http://graphlaw.org/sql#limit")
+            .and_then(|(l, _)| l.parse().ok());
+        let offset = self
+            .get_datatype_literal(query_node, "http://graphlaw.org/sql#offset")
+            .and_then(|(o, _)| o.parse().ok());
+
+        Ok(SelectStatement {
+            from,
+            select_list,
+            where_clause,
+            group_by,
+            limit,
+            offset,
+        })
+    }
+}
+
+/// Validates an RDF AST dataset in Turtle syntax against the canonical SHACL rules in `ontologies/sql-ast.ttl`.
+pub fn validate_ast_shacl(
+    turtle_dataset: &str,
+    shapes_ttl: &str,
+) -> Result<(), AstError> {
+    if let Err(over) = crate::shacl_guard::check_shape_depth(shapes_ttl) {
+        return Err(AstError::ShaclViolation(format!(
+            "SHACL nesting depth exceeded: observed {}, max {}",
+            over.observed,
+            crate::shacl_guard::MAX_SHACL_VALIDATION_DEPTH
+        )));
+    }
+
+    let ds = purrdf::parse_dataset(turtle_dataset.as_bytes(), "text/turtle", None)
+        .map_err(|e| AstError::ShaclViolation(format!("Failed to parse AST dataset: {e:?}")))?;
+
+    let shapes = crate::shacl::engine::parse_shapes(shapes_ttl, None)
+        .map_err(|e| AstError::ShaclViolation(format!("Failed to parse SHACL shapes: {e}")))?;
+
+    let report = crate::shacl::engine::validate_dataset(&ds, &shapes)
+        .map_err(|e| AstError::ShaclViolation(format!("Validation engine failure: {e}")))?;
+
+    if !report.conforms {
+        let violations = report
+            .results
+            .iter()
+            .map(|r| format!("Node <{}>: {}", r.focus_node, r.message.as_deref().unwrap_or("violation")))
+            .collect::<Vec<_>>()
+            .join("; ");
+        return Err(AstError::ShaclViolation(violations));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

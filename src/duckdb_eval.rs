@@ -222,6 +222,66 @@ impl GraphLawDuckDB {
             result_triples,
         })
     }
+
+    /// Mounts a directory of partitioned Parquet files or a glob pattern as a 
+    /// zero-copy virtual view.
+    ///
+    /// - `view_name`: Relational table identifier exposed to the AST (e.g., "telemetry_events").
+    /// - `glob_pattern`: Path pattern (e.g., "data/telemetry/tenant_id=*/*.parquet").
+    /// - `hive_partitioning`: Enables automatic partition column extraction from paths.
+    pub fn register_parquet_view(
+        &self,
+        view_name: &str,
+        glob_pattern: &str,
+        hive_partitioning: bool,
+    ) -> Result<(), EvaluatorError> {
+        crate::sql_ast::validate_identifier(view_name)
+            .map_err(|e| EvaluatorError::ReceiptError(e.to_string()))?;
+
+        // Sanitize glob pattern string to prevent escaping the single-quoted literal
+        let sanitized_pattern = glob_pattern.replace('\'', "''");
+
+        let sql = format!(
+            "CREATE OR REPLACE VIEW {} AS SELECT * FROM read_parquet('{}', hive_partitioning = {});",
+            view_name,
+            sanitized_pattern,
+            if hive_partitioning { "true" } else { "false" }
+        );
+
+        self.conn.execute_batch(&sql)?;
+        Ok(())
+    }
+
+    /// Verifies zone map pruning by retrieving DuckDB's physical execution plan.
+    pub fn explain_ast_query(&self, compiled: &CompiledQuery) -> Result<String, EvaluatorError> {
+        let mut stmt = self.conn.prepare(&format!("EXPLAIN {}", compiled.sql))?;
+        let duck_params: Vec<Box<dyn frozen_duckdb::ToSql>> = compiled
+            .params
+            .iter()
+            .map(|p| -> Box<dyn frozen_duckdb::ToSql> {
+                match p {
+                    SqlLiteral::String(s) => Box::new(s.clone()),
+                    SqlLiteral::Integer(i) => Box::new(*i),
+                    SqlLiteral::Float(f) => Box::new(*f),
+                    SqlLiteral::Boolean(b) => Box::new(*b),
+                    SqlLiteral::Null => Box::new(Option::<String>::None),
+                }
+            })
+            .collect();
+
+        let param_refs: Vec<&dyn frozen_duckdb::ToSql> =
+            duck_params.iter().map(|b| b.as_ref()).collect();
+
+        let mut rows = stmt.query(param_refs.as_slice())?;
+
+        let mut plan = String::new();
+        while let Some(row) = rows.next()? {
+            let line: String = row.get(1)?;
+            plan.push_str(&line);
+            plan.push('\n');
+        }
+        Ok(plan)
+    }
 }
 
 #[cfg(test)]

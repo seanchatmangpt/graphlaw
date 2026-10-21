@@ -184,3 +184,5 @@ pub const LEGACY_FALLBACK_ENABLED: bool = false;
 pub mod sql_ast;
 #[cfg(feature = "duckdb")]
 pub mod duckdb_eval;
+pub mod rules;
+

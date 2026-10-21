@@ -157,6 +157,20 @@ fn:MAX              a sql:Function ; rdfs:label "MAX" .
 # SHACL Structural Invariant Shapes (Anti-Injection & Soundness)
 # =============================================================================
 
+sql:SelectStatementShape a sh:NodeShape ;
+    sh:targetClass sql:SelectStatement ;
+    sh:property [
+        sh:path sql:fromTable ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node sql:TableRefShape ;
+    ] ;
+    sh:property [
+        sh:path sql:selectList ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
 sql:TableRefShape a sh:NodeShape ;
     sh:targetClass sql:TableRef ;
     sh:property [
