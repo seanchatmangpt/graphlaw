@@ -41,7 +41,7 @@ jobs:
       # (step above), so the canonical tool is `cargo install b3sum --locked`.
       - name: Install b3sum (cargo install b3sum --locked)
         run: cargo install b3sum --locked
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -188,7 +188,7 @@ jobs:
         with:
           toolchain: 1.96.0
           targets: wasm32-wasip1
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
