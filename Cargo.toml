@@ -194,3 +194,25 @@ required-features = ["abi"]
 [[bin]]
 name = "graphlaw-attest"
 path = "src/bin/graphlaw_attest.rs"
+
+# GLR-11: duckdb-gated targets — excluded from default (feature-light) builds
+# so plain `cargo test` compiles green; they run under `--features duckdb`.
+[[example]]
+name = "sql_in_rdf_duckdb"
+path = "examples/sql_in_rdf_duckdb.rs"
+required-features = ["duckdb"]
+
+[[test]]
+name = "test_parquet_and_builtin_eval"
+path = "tests/test_parquet_and_builtin_eval.rs"
+required-features = ["duckdb"]
+
+[[test]]
+name = "test_cold_chain_ocel"
+path = "tests/test_cold_chain_ocel.rs"
+required-features = ["duckdb"]
+
+[[example]]
+name = "cold_chain_biologics_verification"
+path = "examples/cold_chain_biologics_verification.rs"
+required-features = ["duckdb"]
