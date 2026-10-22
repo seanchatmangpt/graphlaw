@@ -4,9 +4,10 @@ Standing: OPERATOR-CHARTER — documented from landed artifacts only
 (`WASM-SANDBOX-SPEC.md`, `GRAPHLAW-SPEC.md`, `docs/wasm-integration.md`,
 `wasm/src/*.rs`, `COLDCHAIN-CASE-STUDY.md`). Every wave item carries a typed
 status token (`PENDING-GWS-n` until its receipt lands, then replaced by the
-typed verdict from that receipt). **All items are currently `PENDING-GWS-n`:
-no GWS receipt has landed in `/Users/sac/graphlaw/receipts/` or
-`/Users/sac/smalt/docs/jira/v26.10.21/receipts/` as of 2026-10-21.**
+typed verdict from that receipt). Flip state as of 2026-10-21 (WRAP-2):
+GWS-5, GWS-6, GWS-9, GWS-10, GWS-11, GWS-12 have landed receipts/courts and
+are flipped below; GWS-1, GWS-2, GWS-3, GWS-4, GWS-7, GWS-8 remain
+`PENDING-GWS-n`.
 Context: full · Milestone window: v26.10.21 (smalt) / graphlaw
 
 ## 1. What is landed vs pending
@@ -27,7 +28,7 @@ Landed (sources read on disk, 2026-10-21):
 - Case study: `COLDCHAIN-CASE-STUDY.md` (OCEL 2.0 → GraphLaw →
   frozen-duckdb → N3 admission pipeline).
 
-Pending: the entire GWS-1..12 receipt set. A status token flips
+Pending: the GWS-1/2/3/4/7/8 receipt set. A status token flips
 `PENDING-GWS-n` → typed verdict only when a witness receipt for that lane
 lands on disk; no receipt, no flip.
 
@@ -39,14 +40,14 @@ lands on disk; no receipt, no flip.
 | GWS-2 | Build outcomes (graphlaw_duckdb.wasm target) | `wasm/Cargo.toml`, smalt `lib/smalt/wasm/` | PENDING-GWS-2 |
 | GWS-3 | ABI `duckdb-op` design | `docs/wasm-integration.md` gl_* ABI | PENDING-GWS-3 |
 | GWS-4 | Data-injection design (Parquet/views into guest linear memory) | COLDCHAIN-CASE-STUDY.md §2 | PENDING-GWS-4 |
-| GWS-5 | SHACL in-wasm court | `shapes/ast_governance.ttl` (case study §4) | PENDING-GWS-5 |
-| GWS-6 | N3 in-wasm court | `rules/gxp_compliance.n3` (case study §5) | PENDING-GWS-6 |
+| GWS-5 | SHACL in-wasm court | `shapes/ast_governance.ttl` (case study §4) | PASS — `tests/wasm_governance_preflight.rs` 3/3 (re-run 2026-10-21, this flip) |
+| GWS-6 | N3 in-wasm court | `rules/gxp_compliance.n3` (case study §5) | PASS — `tests/wasm_n3_admission.rs` 3/3 incl. native differential (re-run 2026-10-21; receipt: GWS-12 finding 3) |
 | GWS-7 | Bridge alignment (smalt_wasm_bridge ↔ gl_* ABI) | `lib/smalt/wasm/bridge.ex` | PENDING-GWS-7 |
 | GWS-8 | Perf differential (guarded vs raw, and wasm vs native) | GRAPHLAW-SPEC GL-9 methodology | PENDING-GWS-8 |
-| GWS-9 | Security fuzz | GL-10 skeptic methodology | PENDING-GWS-9 |
-| GWS-10 | E2E (wire → pool → wasm → refusal envelope) | WASM-SANDBOX-SPEC 3-gate court | PENDING-GWS-10 |
-| GWS-11 | Memory wall (64 MiB hard limit) | WASM-SANDBOX-SPEC gate 2 | PENDING-GWS-11 |
-| GWS-12 | Determinism cross-engine (wasm vs native same-input) | wasm-integration.md compile profile | PENDING-GWS-12 |
+| GWS-9 | Security fuzz | GL-10 skeptic methodology | PASS — receipt `receipts/gws-9-wasm-boundary-fuzz.md`; 312 hostile calls / 0 panics, `tests/wasm_boundary_fuzz.rs` 2/2 (re-run 2026-10-21) |
+| GWS-10 | E2E (wire → pool → wasm → refusal envelope) | WASM-SANDBOX-SPEC 3-gate court | PASS — receipt `receipts/gws-10-e2e-coldchain-wasm.md`; `tests/wasm_coldchain_e2e.rs` 3/3 (re-run 2026-10-21); duckdb phases 3-5 typed PENDING-GWS-3/4 (host stub, honestly carried) |
+| GWS-11 | Memory wall (64 MiB hard limit) | WASM-SANDBOX-SPEC gate 2 | PASS — receipt smalt `receipts/gws11-wasm-memory-wall.md`; 7/7 with `GRAPHLAW_WASM=priv/graphlaw.wasm` (re-run 2026-10-21); enforced-boundary map in receipt |
+| GWS-12 | Determinism cross-engine (wasm vs native same-input) | wasm-integration.md compile profile | PASS — receipt smalt `receipts/gws12-cross-engine-determinism.md`; 3-leg partition-identical (native / wasm / COLD-1), `tests/gws12_coldchain_cross_engine.rs` 2/2 (re-run 2026-10-21) |
 
 ## 3. Integration build order
 
