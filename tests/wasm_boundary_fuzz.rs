@@ -543,7 +543,7 @@ ex:NodeShape a sh:NodeShape ;
 
 #[test]
 fn gws9_sql_injection_ast_gate() {
-    use graphlaw::sql_ast::{self, AstError};
+    use graphlaw::sql_ast::{self, RefusalCode};
 
     let shapes_ttl = include_str!("../ontologies/sql-ast.ttl");
 
@@ -551,7 +551,7 @@ fn gws9_sql_injection_ast_gate() {
     for tok in SQL_TOKENS {
         let r = sql_ast::validate_identifier(tok);
         assert!(
-            matches!(r, Err(AstError::InvalidIdentifier(_))),
+            matches!(r, Err(e) if matches!(e.code, RefusalCode::InvalidIdentifier)),
             "identifier gate accepted injection token {tok:?}: {r:?}"
         );
     }

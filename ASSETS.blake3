@@ -459,7 +459,7 @@ d6626c624f613f7e5ee660897d56286a9aa0b0cf94a245e107b0ba700b5b2fb9  22344  Turtle 
 26874b21e0ce98a251668b36ed91d5c776fa3dd0480edc1de8a3c14683819c68  41670  RdfXml  ontologies/social/relationship.rdf
 ff114c5c20184d31e9ccbc59091b689dd108ec94910ed019446b6fdc5855cbfa  28966  RdfXml  ontologies/social/skos.rdf
 d52a6f796180902cec36f566d5059780f43a635a0faed98c4152b339c9499a7a  32183  Turtle  ontologies/social/vcard.ttl
-038450fae98dc54c56c3564282bb3bf5847b925b377a8a4ab7a7634bb7f33d18  6459  Turtle  ontologies/sql-ast.ttl
+ea179a03e2ee199585f5dbb7cc1ca8e4e7737f2e0a3eed43d9d8138a5b6bc0d0  14914  Turtle  ontologies/sql-ast.ttl
 1cbf7e6fef4af8db3947ab944aadff72d311e2b0ddefb69da60232ce532cab78  937897  Turtle  packs/self-monitoring-pack/fixtures/session-real-broad-topic.ttl
 bc6e8e64772a56df8b1750bda7de600942b840b59b0f01dc6d77756834535db6  937865  Turtle  packs/self-monitoring-pack/fixtures/session-real.ttl
 08394236e3644fa937e0e00c28eec1bafcb42b9f5cf51a1f9f218a40f1b4a76e  10460  Turtle  packs/self-monitoring-pack/hook.ttl

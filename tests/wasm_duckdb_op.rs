@@ -16,7 +16,7 @@
 //! (c) raw_call fuzz: adversarial requests never panic; every response is a
 //!     typed JSON envelope.
 //! (d) native `builtin_eval_sql` <-> ABI op-15 receipt/query_hash identity.
-#![cfg(all(feature = "abi", feature = "duckdb", not(target_arch = "wasm32")))]
+#![cfg(all(feature = "abi", not(target_arch = "wasm32")))]
 
 use serde_json::{Value, json};
 
@@ -70,7 +70,46 @@ fn telemetry_rows() -> Vec<String> {
 
 const TELEMETRY_HEADER: &str = "batch_id,cost,latency\n";
 const AGG_SQL: &str = "SELECT batch_id, SUM(cost) AS total_cost FROM telemetry WHERE (latency > $1) GROUP BY batch_id";
+/// SQLRDF-17: the op contract admits only graph-backed queries. The AGG
+/// query rides the same Turtle AST document on both the native builtin
+/// path and the ABI op path; `threshold` is inlined as the AST literal.
+fn agg_turtle(threshold: i64) -> String {
+    format!(
+        r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <https://example.org/queries/> .
+ex:q1 a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry" ] ;
+    sql:selectList (
+        [ sql:columnName "batch_id" ]
+        [ sql:aliasName "total_cost" ; sql:expression [
+            sql:function <http://graphlaw.org/functions#SUM> ;
+            sql:argument [ sql:columnName "cost" ] ] ]
+    ) ;
+    sql:whereClause [
+        sql:operator sql:GreaterThan ;
+        sql:leftOperand [ sql:columnName "latency" ] ;
+        sql:rightOperand [ sql:literalValue "{threshold}"^^xsd:integer ]
+    ] ;
+    sql:groupBy ( [ sql:columnName "batch_id" ] ) .
+"#
+    )
+}
 const Q1: &str = "https://example.org/queries/q1";
+
+/// Simple graph-backed projection: `SELECT batch_id FROM telemetry`.
+fn batch_turtle() -> String {
+    r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <https://example.org/queries/> .
+ex:q2 a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry" ] ;
+    sql:selectList ( [ sql:columnName "batch_id" ] ) .
+"#
+    .to_string()
+}
 const SUBJECT: &str = "https://example.org/data";
 const VOCAB: &str = "https://example.org/vocab";
 
@@ -82,7 +121,7 @@ fn exec_latency_gt(rows: &[String], threshold: i64) -> Value {
         "mode": "exec",
         "views": [{"name": "telemetry", "glob": csv.glob()}],
         "query_ast": Q1,
-        "ast": {"text": AGG_SQL},
+        "ast": {"turtle": agg_turtle(threshold)},
         "subject_prefix": SUBJECT,
         "vocab_prefix": VOCAB,
         "params": [threshold],
@@ -156,7 +195,7 @@ fn chunk_row_limit_is_a_typed_refusal() {
         "op": "duckdb", "mode": "exec",
         "views": [{"name": "telemetry", "glob": csv.glob()}],
         "query_ast": Q1,
-        "ast": {"text": "SELECT 1"},
+        "ast": {"turtle": batch_turtle()},
         "subject_prefix": SUBJECT,
         "vocab_prefix": VOCAB,
         "chunk_rows": 10_001,
@@ -177,7 +216,7 @@ fn chunk_byte_limit_is_a_typed_refusal_and_cursor_survives() {
         "op": "duckdb", "mode": "exec",
         "views": [{"name": "telemetry", "glob": csv.glob()}],
         "query_ast": "https://example.org/queries/q2",
-        "ast": {"text": "SELECT batch_id FROM telemetry"},
+        "ast": {"turtle": batch_turtle()},
         "subject_prefix": SUBJECT,
         "vocab_prefix": VOCAB,
     }));
@@ -212,10 +251,12 @@ fn raw_call_fuzz_never_traps() {
         json!({"op": "duckdb", "mode": "exec", "views": [{"name": "v", "sql": "ATTACH 'x' AS y"}]}),
         json!({"op": "duckdb", "mode": "exec", "views": [{"name": "1bad; DROP TABLE x", "glob": "/etc/passwd"}]}),
         json!({"op": "duckdb", "mode": "exec", "views": [{"name": "v", "glob": "*.csv", "pragma": "SET memory_limit='2GB'"}]}),
-        json!({"op": "duckdb", "mode": "exec", "query_ast": "q", "ast": {"text": "SELECT * FROM read_csv_auto('/etc/passwd')"}, "subject_prefix": "s", "vocab_prefix": "v"}),
-        json!({"op": "duckdb", "mode": "exec", "query_ast": "q", "ast": {"text": "SELECT"}, "subject_prefix": "s", "vocab_prefix": "v"}),
-        json!({"op": "duckdb", "mode": "exec", "query_ast": "q", "ast": {"text": "SELECT 1"}, "subject_prefix": "s", "vocab_prefix": "v", "params": [[1, 2]]}),
-        json!({"op": "duckdb", "mode": "exec", "query_ast": "q", "ast": {"text": "SELECT 1"}, "subject_prefix": "s", "vocab_prefix": "v", "chunk_rows": 0}),
+        json!({"op": "duckdb", "mode": "exec", "query_ast": "q", "ast": {"turtle": "SELECT * FROM read_csv_auto('/etc/passwd')"}, "subject_prefix": "s", "vocab_prefix": "v"}),
+        json!({"op": "duckdb", "mode": "exec", "query_ast": "q", "ast": {"turtle": "not a turtle document"}, "subject_prefix": "s", "vocab_prefix": "v"}),
+        json!({"op": "duckdb", "mode": "exec", "query_ast": "q", "ast": {"text": "SELECT 1"}}),
+        json!({"op": "duckdb", "mode": "exec", "query_ast": "q", "ast": {"text": "SELECT 1"}, "subject_prefix": "s", "vocab_prefix": "v"}),
+        json!({"op": "duckdb", "mode": "exec", "query_ast": "q", "ast": {"turtle": batch_turtle()}, "subject_prefix": "s", "vocab_prefix": "v", "params": [[1, 2]]}),
+        json!({"op": "duckdb", "mode": "exec", "query_ast": "q", "ast": {"turtle": batch_turtle()}, "subject_prefix": "s", "vocab_prefix": "v", "chunk_rows": 0}),
         json!({"op": "duckdb", "mode": "stream", "cursor": null}),
         json!({"op": "duckdb", "mode": "stream", "cursor": 5}),
         json!({"op": "duckdb", "mode": "stream", "cursor": "", "max_rows": -1}),
@@ -248,9 +289,11 @@ fn raw_call_fuzz_never_traps() {
 
 // --------------------------------------------------------------- (d) identity
 
-/// Minimal RDF-AST reader yielding one fixed SelectStatement — the real
-/// `builtin_eval_sql` front door, with a graph that holds exactly one query.
-struct FixedQueryReader(graphlaw::sql_ast::SelectStatement);
+/// Document-backed RDF-AST reader serving the admitted AGG Turtle AST
+/// document — the real `builtin_eval_sql` front door, with a graph that
+/// holds exactly one query (SQLRDF-17 contract: document-backed readers
+/// only).
+struct FixedQueryReader(String);
 
 impl graphlaw::sql_ast::RdfAstGraphReader for FixedQueryReader {
     type Node = String;
@@ -264,11 +307,14 @@ impl graphlaw::sql_ast::RdfAstGraphReader for FixedQueryReader {
     fn get_iri(&self, _n: &String) -> Option<String> {
         None
     }
-    fn extract_select_statement(
-        &self,
-        _query_node: &String,
-    ) -> Result<graphlaw::sql_ast::SelectStatement, graphlaw::sql_ast::AstError> {
-        Ok(self.0.clone())
+    fn object_count(&self, _n: &String, _p: &str) -> usize {
+        0
+    }
+    fn iri_object_count(&self, _n: &String, _p: &str) -> usize {
+        0
+    }
+    fn query_document_turtle(&self) -> Option<String> {
+        Some(self.0.clone())
     }
 }
 
@@ -276,47 +322,10 @@ impl graphlaw::sql_ast::RdfAstGraphReader for FixedQueryReader {
 fn builtin_eval_sql_and_abi_op_receipt_query_hash_byte_identity() {
     use graphlaw::duckdb_eval::GraphLawDuckDB;
     use graphlaw::rules::builtins::{BuiltinContext, builtin_eval_sql};
-    use graphlaw::sql_ast::{
-        AggregateFunction, Operator, SelectStatement, SqlExpr, SqlLiteral, TableRef,
-    };
+    use graphlaw::sql_ast::compile_turtle;
 
-    let ast = SelectStatement {
-        from: TableRef {
-            name: "telemetry".into(),
-            alias: None,
-        },
-        joins: vec![],
-        select_list: vec![
-            SqlExpr::ColumnRef {
-                column: "batch_id".into(),
-                table_alias: None,
-            },
-            SqlExpr::Alias {
-                expr: Box::new(SqlExpr::FunctionCall {
-                    function: AggregateFunction::Sum,
-                    argument: Box::new(SqlExpr::ColumnRef {
-                        column: "cost".into(),
-                        table_alias: None,
-                    }),
-                }),
-                alias: "total_cost".into(),
-            },
-        ],
-        where_clause: Some(SqlExpr::Binary {
-            op: Operator::GreaterThan,
-            left: Box::new(SqlExpr::ColumnRef {
-                column: "latency".into(),
-                table_alias: None,
-            }),
-            right: Box::new(SqlExpr::Literal(SqlLiteral::Integer(500))),
-        }),
-        group_by: vec![SqlExpr::ColumnRef {
-            column: "batch_id".into(),
-            table_alias: None,
-        }],
-        limit: None,
-        offset: None,
-    };
+    // Both admission paths compile the SAME Turtle AST document.
+    let turtle = agg_turtle(500);
 
     // Path A: the real native builtin (the gl:evalSql front door).
     let db = GraphLawDuckDB::open_in_memory().expect("duckdb");
@@ -333,7 +342,7 @@ fn builtin_eval_sql_and_abi_op_receipt_query_hash_byte_identity() {
         &[Q1, SUBJECT, VOCAB],
         &["receipt", "rowsEmitted", "queryHash"],
         &ctx,
-        &FixedQueryReader(ast.clone()),
+        &FixedQueryReader(turtle.clone()),
     )
     .expect("builtin eval");
     assert_eq!(result.rows_emitted, 2);
@@ -343,14 +352,35 @@ fn builtin_eval_sql_and_abi_op_receipt_query_hash_byte_identity() {
         other => panic!("binding 0 is not an IRI: {other:?}"),
     };
 
-    // Path B: ABI op-15 exec over an identical CSV-injected table.
-    let compiled = ast.compile().expect("compile");
+    // Path B: ABI op-15 exec over an identical CSV-injected table, same AST
+    // document.
+    let compiled = compile_turtle(&turtle).expect("compile");
     let ex = exec_latency_gt(&telemetry_rows(), 500);
-    // The exec above runs AGG_SQL; assert it equals the AST-compiled SQL so
-    // both paths ran the identical statement.
     assert_eq!(ex["sql"], Value::String(compiled.sql.clone()), "{ex}");
-    assert_eq!(ex["sql"], Value::String(AGG_SQL.to_string()));
     assert_eq!(ex["rows_emitted"], Value::from(result.rows_emitted));
     assert_eq!(ex["query_hash"], Value::String(native_hash), "query_hash diverges");
     assert_eq!(ex["receipt"], Value::String(native_receipt_iri), "receipt IRI diverges");
+}
+
+// ------------------------------------------------- (e) SQLRDF-17 raw-SQL refusal
+
+/// SQLRDF-17 dynamic falsifier: feeding raw SQL text to the op must return
+/// the typed refusal, never an executed statement.
+#[test]
+fn raw_sql_text_is_refused_not_executed() {
+    let csv = CsvFixture::write("raw", TELEMETRY_HEADER, &telemetry_rows());
+    let ex = call(&json!({
+        "op": "duckdb",
+        "mode": "exec",
+        "views": [{"name": "telemetry", "glob": csv.glob()}],
+        "query_ast": Q1,
+        "ast": {"text": AGG_SQL},
+        "subject_prefix": SUBJECT,
+        "vocab_prefix": VOCAB,
+        "params": [500],
+    }));
+    assert_eq!(ex["ok"], Value::Bool(false), "raw SQL must not execute: {ex}");
+    let msg = ex["error"]["details"]["message"].as_str().unwrap_or_default();
+    assert!(msg.contains("SQLRDF-17"), "{ex}");
+    assert!(msg.contains("ast.turtle"), "{ex}");
 }

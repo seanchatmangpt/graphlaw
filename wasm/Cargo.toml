@@ -8,7 +8,7 @@ name = "graphlaw-wasm"
 version = "26.10.21"
 edition = "2024"
 rust-version = "1.96"
-license = "MIT"
+license = "MIT AND LicenseRef-P28-SIL-2.1.0"
 description = "GraphLaw as a WebAssembly module: a JSON-over-linear-memory ABI for hosts such as Elixir (Wasmex)"
 publish = false
 

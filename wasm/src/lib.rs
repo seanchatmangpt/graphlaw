@@ -73,4 +73,32 @@ mod contract {
         );
         assert!(!response.is_empty() && !oversized.is_empty());
     }
+
+    /// The wasm crate links the same graphlaw dialect surface. A SQL-in-RDF
+    /// document admits through `compile_turtle`, the path `Dialect::SqlRdf`
+    /// uses. It is not a feature the module turns off.
+    #[test]
+    fn sql_document_admits_in_the_wasm_unit() {
+        let doc = r#"
+            @prefix sql: <http://graphlaw.org/sql#> .
+            @prefix ex: <http://example.org/queries#> .
+            @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+            ex:Q a sql:SelectStatement ;
+                sql:statementIndex 1 ;
+                sql:fromTable [ sql:tableName "t" ] ;
+                sql:selectList ( [ sql:columnName "c" ] ) ."#;
+        let declared = graphlaw::tier::admit_declared(
+            doc.as_bytes(),
+            graphlaw::tier::DialectDecl {
+                tier: graphlaw::tier::Tier::Relational,
+                dialect: graphlaw::dialect::Dialect::SqlRdf,
+            },
+            None,
+        )
+        .expect("sql-rdf admits inside the wasm crate's graphlaw");
+        assert!(matches!(declared, graphlaw::tier::Admitted::Query(_)));
+        let sniffed = graphlaw::tier::admit_bytes_tiered(doc.as_bytes(), Some("sql"), None, None)
+            .expect("sniffed sql admits");
+        assert!(matches!(sniffed, graphlaw::tier::Admitted::Query(_)));
+    }
 }

@@ -83,9 +83,11 @@ fn wasm_path() -> PathBuf {
             .expect("cargo runs");
         assert!(status.success(), "wasm build failed");
     }
+    // Bounded deadline poll on the observable (artifact existence); no fixed
+    // sleep — yield to the scheduler while the deadline holds (no-sleep law).
     let deadline = Instant::now() + Duration::from_secs(30);
     while !artifact.exists() && Instant::now() < deadline {
-        std::thread::sleep(Duration::from_millis(100));
+        std::thread::yield_now();
     }
     artifact
 }
@@ -273,7 +275,7 @@ fn bulk_focus_node_injection_over_request_cap_is_typed_never_a_trap() {
         None,
         "gl_alloc over the request cap must return null, not trap"
     );
-    let ptr = h
+    let _ptr = h
         .alloc(MAX_REQUEST_BYTES)
         .expect("at-cap alloc must succeed");
     drop(h);
