@@ -37,6 +37,10 @@ cargo test --test differential
 # N3 (Eyeron), Datalog and OWL-RL (PurRDF) must agree on a transitive closure
 
 cargo test --test wasm_abi          # builds the WASI module and drives all 14 ops
+
+cargo test --test sql_rdf_dialect   # SQL-in-RDF compile + admission courts
+cargo test --test chicago_validation  # Chicago receipt/execution courts
+cargo test --test duckdb_statement_kinds  # 35 PEG statement kinds on real frozen-duckdb
 ```
 
 ## Documentation
@@ -55,9 +59,12 @@ Organized Diataxis-style; the hub is [docs/index.md](docs/index.md).
 GraphLaw unconditionally embeds the **`frozen-duckdb 2.0`** analytical engine, unlocking local analytical ingestion and **zero-trust semantic compaction (1,000:1 to 10,000:1)** at the extreme edge:
 
 * **High-Throughput Local Ingestion**: Sensor streams and OCEL v2 event traces are appended directly into local columnar Arrow/Parquet buffers with microsecond latencies.
-* **Declarative SQL-in-RDF Pushdowns**: Structured analytical reductions are authored as W3C RDF ASTs (`sql-ast.ttl`), validated by a fail-closed SHACL pre-flight gate, and pushed down into DuckDB's vectorized execution engine.
+* **Declarative SQL-in-RDF Pushdowns**: Structured analytical reductions are authored as W3C RDF ASTs (`sql-ast.ttl`), validated by a fail-closed SHACL pre-flight gate, and pushed down into DuckDB's vectorized execution engine. 35 statement classes are
+  generated from the DuckDB PEG grammar (`ggen/sql-dialect/`), with expression-level
+  compilation for SELECT and the command classes, typed `REFUSAL-01..04` refusals, and
+  BLAKE3 receipts binding the canonical AST graph + parameters.
 * **Signed Semantic Compaction**: Massive event bursts reduce to minimal, cryptographically verifiable RDF facts sealed with BLAKE3 execution receipts. A 500,000-event telemetry burst compresses to ~1 KB of signed triples before syncing across intermittent/DDIL networks.
-* **Under the 64 MiB WASM Ceiling**: Together with `frozen-duckdb 2.0`, the complete combined WebAssembly footprint is **~36.5 MiB**, operating safely within tight 64 MB browser or WASM runtime memory arenas without dynamic swapping or memory fragmentation.
+* **Under the 25 MiB WASM Ceiling**: The core `graphlaw.wasm` artifact is **~6.3 MiB** (6,654,496 bytes, pinned by `registry/ARTIFACTS.blake3`), enforced by a 25 MiB court ceiling (`tests/wasm_size_court.rs`) — comfortably inside tight browser/WASM runtime memory arenas without dynamic swapping or memory fragmentation. (The DuckDB engine executes host-side; the wasm boundary refuses SQL by typed `REFUSAL-04` capability refusal, not by embedding the engine.)
 * **Disconnected Fail-Closed Operations**: Missing filter bounds or excursion breaches trigger immediate local actuator lockouts and quarantined states without requiring an upstream cloud coordinator.
 
 See [docs/how-to/how-to-edge-ingestion-and-compaction.md](docs/how-to/how-to-edge-ingestion-and-compaction.md) and [docs/explanation/edge-sovereignty-and-zero-trust-compaction.md](docs/explanation/edge-sovereignty-and-zero-trust-compaction.md).
@@ -95,7 +102,7 @@ chain of content-addressed states; the first violated precondition refuses with
 
 ## Dialects and tiers
 
-`dialect::sniff` recognizes 13 dialects under a two-tier model: dataset
+`dialect::sniff` recognizes 14 dialects under a two-tier model: dataset
 syntaxes (Turtle, TriG, N-Triples, N-Quads, RDF/XML, JSON-LD, YAML-LD, TriX,
 HexTuples) route to PurRDF; Notation3 routes to Eyeron as a separate logic
 tier (`n3` op, never silently down-converted to a dataset). Ambiguous content
@@ -147,6 +154,10 @@ graphlaw-verify --start state.nt --plan plan.json --receipts ./receipts \
 Replays the plan, checks the receipt store holds exactly the replayed chain, verifies
 every Ed25519 attestation — offline, no sockets. `ADMITTED` (0) or
 `REFUSED: <code>: <detail>` (1). Details: [docs/how-to/verify-without-trusting-the-operator.md](docs/how-to/verify-without-trusting-the-operator.md).
+
+## License
+
+Code is MIT ([LICENSE](LICENSE)); execution/use of the kernel is governed by the P28 Sovereign Invariant License v2.1.0, `urn:graphlaw:license:p28-sil:v2.1.0-sovereign` ([LICENSE-P28-SIL.md](LICENSE-P28-SIL.md)) — statutory metric classifications with the $50M Class-I safe harbor, anti-circumvention ratchet, harmonic regularization, and zero hot-path drag invariant, with its implementation-status appendix non-normative.
 
 ## Releasing
 

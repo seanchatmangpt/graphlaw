@@ -7,6 +7,36 @@ Versioning policy (stated once, applies to every entry): `graphlaw-eyeron` keeps
 independent, upstream-vendored version (currently 0.7.8) and is not coupled to the
 workspace calendar version; "Published as crates.io" lines refer to the `graphlaw` crate.
 
+## [26.10.22] - 2026-10-22
+
+Wave release: sql-rdf dialect surface (35 statement classes, SHACL admission, expression
+compiler, parameterized MERGE), typed refusal register, and receipt-hash pinning.
+
+### Added
+
+- 35 statement classes extracted from the DuckDB 2.0 PEG (`Statement` rule, commit
+  `b6013f7aa2`) into `ggen/sql-dialect/sql_statement_kinds.rs`, generated via
+  `ggen sync run` from `ontology/statements.ttl` and included by `src/sql_statement_kinds.rs`.
+- Section 4 SHACL admission of the SQL AST: strict closed-world shape validation including
+  required integer `sql:statementIndex` per statement (`src/sql_ast.rs:1406`).
+- Expression-level compiler covering 29 command classes (`src/sql_ast.rs`).
+- Section 7.1 parameterized `MERGE INTO` extraction (`extract_merge_statement`,
+  `src/sql_ast.rs:1234`).
+- Scope lattice (`ProcessScope`/`ViewScope`) with `REFUSAL-03 ScopeIntegrityRefusal`
+  (aggregate in WHERE/JOIN/GROUP BY, scope column in wrong position).
+- Typed refusal register `REFUSAL-01..04` (`docs/refusals.md`): malformed-AST,
+  unimplemented-statement, scope-integrity, and capability (wasm fail-closed) refusals.
+- `H_query = BLAKE3(Canon(G_AST) || P_params)` admitted-statement receipts with
+  canon-once carry (`src/duckdb_eval.rs`).
+- Courts: SQL-in-RDF laundering corpus (`tests/sql_rdf_laundering_corpus.rs`), conformance
+  rung (`tests/sql_rdf_conformance.rs`), determinism court (`tests/p28_determinism_court.rs`).
+
+### Changed
+
+- `frozen-duckdb` pinned to crates.io 2.0.0 with registry checksums (`Cargo.lock` 2.0.0).
+- `LICENSE-P28-SIL.md` added (P28 Sovereign Invariant License governing execution/use;
+  MIT remains the code license).
+
 ## [26.10.21] - 2026-10-21
 
 Wave release: Unconditional `frozen-duckdb 2.0` integration, zero-trust semantic compaction, and life-sciences cold-chain OCEL verification.

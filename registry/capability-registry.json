@@ -40,7 +40,8 @@
   ],
   "engines": [
     "PurRdf",
-    "Eyeron"
+    "Eyeron",
+    "FrozenDuckdb"
   ],
   "graphlaw_version": "26.10.21",
   "law_steps": [
@@ -1973,13 +1974,21 @@
       "response_name": "Sparql"
     },
     {
+      "aliases": [],
+      "kind": "other",
+      "media_type": null,
+      "name": "sql",
+      "order": 12,
+      "response_name": "SqlRdf"
+    },
+    {
       "aliases": [
         "shex"
       ],
       "kind": "other",
       "media_type": null,
       "name": "shexc",
-      "order": 12,
+      "order": 13,
       "response_name": "ShExC"
     },
     {
@@ -1987,7 +1996,7 @@
       "kind": "other",
       "media_type": null,
       "name": "shexj",
-      "order": 13,
+      "order": 14,
       "response_name": "ShExJ"
     }
   ],
@@ -2088,6 +2097,22 @@
     "bad_signature",
     "untrusted_key"
   ],
+  "receipt_surface": {
+    "files": [
+      {
+        "blake3": "blake3:96e374587ffeab339d74b8947f393536deb9ae10631429c6f9569b6c916935da",
+        "bytes": 62030,
+        "path": "src/duckdb_eval.rs"
+      },
+      {
+        "blake3": "blake3:6a99baa75cfed58186c25c309bfde0829655aab269d64426beaeca4dab5a884b",
+        "bytes": 132918,
+        "path": "src/sql_ast.rs"
+      }
+    ],
+    "schema": "graphlaw.receipt-surface/1"
+  },
+  "receipt_surface_blake3": "blake3:78ebb149bb6712049fabbefc8b17cb72dcb6461b66422e1ea04e106e2b63f96e",
   "refusal_codes": [
     {
       "code": "Refused",
@@ -2380,7 +2405,7 @@
     "owl-rl",
     "d"
   ],
-  "registry_blake3": "blake3:0debaedbc40b72b1fb0c6003b59dac24a1d7a7c48b9344dd8befd2ede69ad044",
+  "registry_blake3": "blake3:7db561aa315e86f3f21022697276ef3382b808ea1bcef4e4245159b755f819b4",
   "schema": "graphlaw.capability-registry/1",
-  "surface_blake3": "blake3:c143fcfe72db271e5789a8074abae8f8ceb6526f36b340340891b89ad744f65e"
+  "surface_blake3": "blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9"
 }

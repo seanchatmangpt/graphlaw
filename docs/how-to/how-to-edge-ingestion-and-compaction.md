@@ -40,7 +40,7 @@ GraphLaw unconditionally includes `frozen-duckdb`. No optional feature flags are
 use graphlaw::duckdb_eval::GraphLawDuckDB;
 
 // Initialize an in-memory or embedded disk connection
-let engine = GraphLawDuckDB::new_in_memory()?;
+let engine = GraphLawDuckDB::open_in_memory()?;
 let conn = engine.raw_connection();
 ```
 
@@ -109,24 +109,27 @@ Define the analytical reduction query as a formal RDF AST adhering to `ontologie
 
 ## Step 4: Validate AST through SHACL Pre-Flight Gate & Execute
 
-Validate that the AST is safe, non-injected, and has mandatory bounded conditions:
+The SHACL gate runs inside `compile_turtle`: the Turtle source is validated
+against `ontologies/sql-ast.ttl` + `ggen/sql-dialect/statement_classes.ttl`
+before any SQL reaches the engine, and parameter literals come from the AST
+itself (`sql:rightParam`), not a separate parameter vector:
 
 ```rust
-use graphlaw::sql_ast::{validate_ast_shacl, RdfAstGraph};
-use graphlaw::duckdb_eval::ParamValue;
+use graphlaw::sql_ast::compile_turtle;
 
-// Parse the Turtle AST
-let ast_graph = RdfAstGraph::from_turtle(ast_turtle_str)?;
-
-// SHACL Pre-Flight Conformance Gate
-validate_ast_shacl(&ast_graph)?;
+// SHACL Pre-Flight Conformance Gate + compile to parameterized SQL
+let compiled = compile_turtle(ast_turtle_str)?;
 
 // Vectorized execution over local buffers
-let params = vec![ParamValue::Float(30.0)];
-let (results, receipt) = engine.eval_ast_query(&ast_graph, "http://example.org/edge_compaction_query", &params)?;
+let receipt = engine.eval_ast_query(
+    "http://example.org/edge_compaction_query",
+    &compiled,
+    "http://fleet.internal/subject/",
+    "http://fleet.internal/predicate/",
+)?;
 
-println!("Compacted 10,000 raw events in {} ms", receipt.duration_ms);
-println!("Receipt BLAKE3 Hash: {}", receipt.query_hash);
+println!("Compacted 10,000 raw events into {} triples", receipt.result_triples.len());
+println!("Receipt BLAKE3 Hash: {:?}", receipt.query_hash);
 ```
 
 ---
@@ -159,5 +162,26 @@ let sync_payload = format!(
 
 When operating in denied, degraded, intermittent, or limited (DDIL) connectivity environments, GraphLaw guarantees **fail-closed security**:
 
-1. **Missing WHERE Bounding**: Queries omitting filtering boundaries are stopped at the SHACL gate (`AstError::ShapeViolation`) before any SQL touches the DuckDB execution engine.
+1. **Typed Pre-Flight Refusals**: Malformed or non-conforming ASTs are stopped at the SHACL gate (`AstError::ShaclViolation` carrying a stable `[REFUSAL-nn]` code, see `docs/refusals.md`) before any SQL touches the DuckDB execution engine. `sql:whereClause` is optional, not mandatory.
 2. **Safety Invariants**: Out-of-spec physical measurements (e.g., thermal limits or cumulative excursion durations) trigger automatic quarantine rules in PurRDF, locking actuators locally without requiring an upstream network coordinator.
+
+---
+
+## Execution Receipts and the Evidentiary Path
+
+Every admitted statement seals its execution receipt as
+`H_query = BLAKE3(Canon(G_AST) || P_params)` at execution time
+(`src/duckdb_eval.rs`, `ExecutionReceipt::query_hash`); `Canon(G_AST)` is
+computed once at compile (`purrdf::try_canonicalize`) and pre-absorbed into
+`receipt_state`, so the per-receipt fold covers only the typed parameter
+buffer. Mutation invalidation is a separate witness, not folded into
+`H_query`: a mutating statement (DML/ATTACH/DETACH/DDL) bumps the C1 plan
+epoch and flushes frozen-duckdb's prepared-statement cache after successful
+execution only, so a failed statement never invalidates. The SPSC evidentiary
+ring (`src/evidence_ring.rs`) and batch-chained query ledger
+(`src/query_ledger.rs`) are Phase-2 surfaces behind the `evidentiary-ring`
+Cargo feature (default off; P28-SIL PRD). Honest caveat: prepared statements
+are cached per connection in an LRU pinned to 256
+(`set_prepared_statement_cache_capacity(256)` at construction); plans are
+flushed on any stored-data mutation so no stale plan survives a schema or
+data change.

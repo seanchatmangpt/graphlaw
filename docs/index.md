@@ -19,7 +19,7 @@ Documentation is organized by Diataxis: [tutorials](#tutorials) teach,
   `graphlaw-verify` offline replay: flags, exit codes, tamper refusals.
 - [Use knowledge hooks](how-to/use-knowledge-hooks.md) — `kh:` packs, fixpoint
   materialization, the refuse effect.
-- [Edge ingestion & compaction](how-to/how-to-edge-ingestion-and-compaction.md) — local columnar ring buffers, zero-trust semantic compaction (10,000:1), and disconnected fail-closed operations.
+- [Edge ingestion & compaction](how-to/how-to-edge-ingestion-and-compaction.md) — local columnar ingestion buffers, zero-trust semantic compaction (1,000:1 to 10,000:1), and disconnected fail-closed operations.
 - [Use from JavaScript](how-to/use-from-javascript.md) — install the npm package,
   load the WASM module in Node and browsers.
 
@@ -29,12 +29,18 @@ Documentation is organized by Diataxis: [tutorials](#tutorials) teach,
 - [Capability registry](capability-registry.md) — machine-readable op surface
   (`graphlaw-registry --check`), digest rule.
 - [Refusals](refusals.md) — every typed refusal code, its `details` fields, remediation.
+- [Dialects](DIALECTS.md) — routing table for the 14 dialects, including the
+  sql-rdf relational dialect (frozen-duckdb engine, `REFUSAL-01..04` refusals,
+  `H_query` receipts).
 - [API stability](api-stability.md) — semver policy, `#[non_exhaustive]` list, MSRV.
 - [WASM integration](wasm-integration.md) — generated shell vs hand-written safe core.
 - [Full generated reference](reference-generated/reference.md) — machine-rendered
   module/symbol tables (regen: [instructions](reference-generated/README.md)).
 - [TypeScript API](reference/typescript-api.md) — the npm package's exported
   functions, types, and error mapping.
+- [License](../LICENSE-P28-SIL.md) — code is MIT ([LICENSE](../LICENSE));
+  execution/use of the kernel is governed by the P28 Sovereign Invariant
+  License (P28-SIL v1.0.0).
 
 ## Explanation
 

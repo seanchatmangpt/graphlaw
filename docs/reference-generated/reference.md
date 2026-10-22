@@ -11,6 +11,33 @@
 ## Modules
 
 
+### @seanchatmangpt/graphlaw
+
+| `build` | script | npm run gen && node scripts/build.mjs && tsc -p tsconfig.build.json && node scripts/assemble.mjs |  |  |  |  |
+
+| `gen` | script | node scripts/gen-types.mjs |  |  |  |  |
+
+| `lint:pkg` | script | publint && attw --pack . |  |  |  |  |
+
+| `sync-version` | script | node scripts/sync-version.mjs |  |  |  |  |
+
+| `test` | script | vitest run |  |  |  |  |
+
+| `test:browser` | script | vitest run --config vitest.browser.config.ts |  |  |  |  |
+
+| `typecheck` | script | tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit |  |  |  |  |
+
+
+### benches/tc_hot_01.rs
+
+| `TC_HOT_FULL` | env_key | std::env::var("TC_HOT_FULL") |  |  |  |  |
+
+
+### benches/tc_hot_02.rs
+
+| `TC_HOT_FULL` | env_key | std::env::var("TC_HOT_FULL") |  |  |  |  |
+
+
 ### crates/graphlaw-eyeron/src/ast.rs
 
 | `CRYPTO_SHA` | const | CRYPTO_SHA: &str |  |  |  |  |
@@ -1543,6 +1570,118 @@
 | `version` | function | version() -> String |  |  |  |  |
 
 | `EyeronSession` | struct | EyeronSession { prepared: PreparedReasoner, proof: bool } |  |  |  |  |
+
+
+### examples/allen_datalog.rs
+
+| `p` | str_key | NAMES = "p" |  |  |  |  |
+
+
+### examples/asp_tableaux_vector_gen.rs
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+
+| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+
+| `t` | str_key | SUBJ = "t" |  |  |  |  |
+
+| `true` | str_key | TRUE_OBJ = "true" |  |  |  |  |
+
+
+### examples/bayes_pop_vectors.rs
+
+| `GL_DEBUG` | env_key | std::env::var_os("GL_DEBUG") |  |  |  |  |
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+
+| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+
+
+### examples/breed_oracle_gen.rs
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+
+| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+
+
+### examples/event_calculus_vectors.rs
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `f` | env_key | var("f") |  |  |  |  |
+
+| `t` | env_key | var("t") |  |  |  |  |
+
+| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+
+| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+
+| `event_calculus-paper-narrative` | str_key | SCENARIOS = "event_calculus-paper-narrative" |  |  |  |  |
+
+| `event_calculus_vectors` | str_key | GENERATOR = "event_calculus_vectors" |  |  |  |  |
+
+| `urn:ec:clipped` | str_key | P_CLIPPED = "urn:ec:clipped" |  |  |  |  |
+
+| `urn:ec:comp` | str_key | P_COMP = "urn:ec:comp" |  |  |  |  |
+
+| `urn:ec:happens` | str_key | P_HAPPENS = "urn:ec:happens" |  |  |  |  |
+
+| `urn:ec:holds` | str_key | P_HOLDS = "urn:ec:holds" |  |  |  |  |
+
+| `urn:ec:initiated` | str_key | P_INITIATED = "urn:ec:initiated" |  |  |  |  |
+
+| `urn:ec:initiates` | str_key | P_INITIATES = "urn:ec:initiates" |  |  |  |  |
+
+| `urn:ec:succ` | str_key | P_SUCC = "urn:ec:succ" |  |  |  |  |
+
+| `urn:ec:terminated` | str_key | P_TERMINATED = "urn:ec:terminated" |  |  |  |  |
+
+| `urn:ec:terminates` | str_key | P_TERMINATES = "urn:ec:terminates" |  |  |  |  |
+
+
+### examples/naive_physics_vectors.rs
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw` | str_key | OUT_DIR = "/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw" |  |  |  |  |
+
+| `https://np.graphlaw.dev/` | str_key | NS = "https://np.graphlaw.dev/" |  |  |  |  |
+
+
+### examples/plan_replay_oracle_gen.rs
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+
+| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+
+| `plan_replay_oracle_gen` | str_key | GENERATOR = "plan_replay_oracle_gen" |  |  |  |  |
+
+
+### examples/sql_in_rdf_duckdb.rs
+
+| `extract_select_statement` | function | extract_select_statement(&self, query_node: &String) -> Result<SelectStatement, AstError> |  |  |  |  |
+
+
+### ggen/sql-dialect/sql_extensions.rs
+
+| `SQL_EXTENSIONS` | const | SQL_EXTENSIONS: &[(&str, &str, &str, i64)] |  |  |  |  |
+
+| `autocomplete` | str_key | SQL_EXTENSIONS = "autocomplete" |  |  |  |  |
+
+
+### ggen/sql-dialect/sql_statement_kinds.rs
+
+| `SQL_STATEMENTS` | const | SQL_STATEMENTS: &[(&str, &str)] |  |  |  |  |
+
+| `ExternalResourceStatement` | str_key | SQL_STATEMENTS = "ExternalResourceStatement" |  |  |  |  |
 
 
 ### src/abi.rs
@@ -1551,7 +1690,13 @@
 
 | `MAX_ATOMS_PER_FIELD` | const | MAX_ATOMS_PER_FIELD: usize |  |  |  |  |
 
+| `MAX_DATALOG_FACTS` | const | MAX_DATALOG_FACTS: usize |  |  |  |  |
+
+| `MAX_DATALOG_RULES` | const | MAX_DATALOG_RULES: usize |  |  |  |  |
+
 | `MAX_JSON_DEPTH` | const | MAX_JSON_DEPTH: usize |  |  |  |  |
+
+| `MAX_LAW_STEPS` | const | MAX_LAW_STEPS: usize |  |  |  |  |
 
 | `MAX_OUTSTANDING_ALLOC_BYTES` | const | MAX_OUTSTANDING_ALLOC_BYTES: usize |  |  |  |  |
 
@@ -1574,6 +1719,23 @@
 | `plan_from_json` | function | plan_from_json(plan: &Value) -> Result<crate::plan::Plan, String> |  |  |  |  |
 
 | `Fail` | struct | Fail { refusal: Refusal, details: Option<Value> } |  |  |  |  |
+
+
+### src/abi_manifest.rs
+
+| `EXPORTS` | const | EXPORTS: &[Export] |  |  |  |  |
+
+| `manifest_json_pretty` | function | manifest_json_pretty() -> String |  |  |  |  |
+
+| `manifest_value` | function | manifest_value() -> Value |  |  |  |  |
+
+| `write_manifest` | function | write_manifest(path: &std::path::Path) -> std::io::Result<()> |  |  |  |  |
+
+| `gl_alloc` | str_key | EXPORTS = "gl_alloc" |  |  |  |  |
+
+| `instruction_id` | str_key | FRAME_FIELDS = "instruction_id" |  |  |  |  |
+
+| `Export` | struct | Export { pub name: &'static str, pub params: &'static [&'static str], pub result: &'static str, pub summary: &'static str } |  |  |  |  |
 
 
 ### src/attest.rs
@@ -1639,6 +1801,16 @@
 | `VerifyingKey` | struct | VerifyingKey { DalekVerifying } |  |  |  |  |
 
 
+### src/bin/dl_dualroute.rs
+
+| `https://graphlaw.dev/dl#` | str_key | DL = "https://graphlaw.dev/dl#" |  |  |  |  |
+
+
+### src/bin/graphlaw_run.rs
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+
 ### src/bin/sa2a_run14_verify.rs
 
 | `https://chatmangpt.com/sa2a#` | str_key | V2 = "https://chatmangpt.com/sa2a#" |  |  |  |  |
@@ -1646,52 +1818,142 @@
 | `https://sa2a.dev/ontology#` | str_key | V1 = "https://sa2a.dev/ontology#" |  |  |  |  |
 
 
-### src/capability_intake.rs
-
-| `AUTHORITY_CEILING` | const | AUTHORITY_CEILING: &str |  |  |  |  |
-
-| `DONORS` | const | DONORS: &[CapabilityDonor] |  |  |  |  |
-
-| `OWNER_CAPABILITY` | const | OWNER_CAPABILITY: &str |  |  |  |  |
-
-| `PROJECTION_SOURCE` | const | PROJECTION_SOURCE: &str |  |  |  |  |
-
-| `consequence_authority` | function | consequence_authority(_repository: &str) -> bool |  |  |  |  |
-
-| `donor` | function | donor(repository: &str) -> Option<&'static CapabilityDonor> |  |  |  |  |
-
-| `CONSTRUCT` | str_key | AUTHORITY_CEILING = "CONSTRUCT" |  |  |  |  |
-
-| `SEMANTIC_LAW_DERIVATION` | str_key | OWNER_CAPABILITY = "SEMANTIC_LAW_DERIVATION" |  |  |  |  |
-
-| `seanchatmangpt/ggen-ecosystem@50fdfa20c84205a80c6eb94e916cffbedc4b816e` | str_key | PROJECTION_SOURCE = "seanchatmangpt/ggen-ecosystem@50fdfa20c84205a80c6eb94e916cffbedc4b816e" |  |  |  |  |
-
-| `seanchatmangpt/unrdf` | str_key | DONORS = "seanchatmangpt/unrdf" |  |  |  |  |
-
-| `CapabilityDonor` | struct | CapabilityDonor { pub repository: &'static str, pub sha: &'static str, pub capability: &'static str, pub disposition: &'static str } |  |  |  |  |
-
-
 ### src/dialect.rs
 
-| `Dialect` | enum | Dialect { Turtle, TriG, NTriples, NQuads, RdfXml, JsonLd, YamlLd, TriX, HexTuples, N3, ShExC, ShExJ, Sparql } |  |  |  |  |
+| `Dialect` | enum | Dialect { Turtle, TriG, NTriples, NQuads, RdfXml, JsonLd, YamlLd, TriX, HexTuples, N3, ShExC, ShExJ, Sparql, SqlRdf } |  |  |  |  |
 
-| `Engine` | enum | Engine { PurRdf, Eyeron } |  |  |  |  |
+| `Engine` | enum | Engine { PurRdf, Eyeron, FrozenDuckdb } |  |  |  |  |
 
-| `RefusalKind` | enum | RefusalKind { NotSemanticContent, Ambiguous, EngineRejected, Unsupported, ResourceLimit } |  |  |  |  |
+| `ReasonClass` | enum | ReasonClass { Syntax, UndefinedPrefix, BadIri, FormulaInRdfLayer, NotSemanticContent, AmbiguousDialect, RemoteContext, Limit { name: String, observed: u64, max: u64, } } |  |  |  |  |
+
+| `RefusalKind` | enum | RefusalKind { NotSemanticContent, Ambiguous, EngineRejected, Unsupported, ResourceLimit, TierMismatch, DuckDb } |  |  |  |  |
 
 | `admit_bytes` | function | admit_bytes( bytes: &[u8], hint: Option<&str>, base: Option<&str>, ) -> Result<LawState, Refusal> |  |  |  |  |
 
 | `check` | function | check(bytes: &[u8], dialect: Dialect, base: Option<&str>) -> Result<(), Refusal> |  |  |  |  |
 
+| `check_typed` | function | check_typed( bytes: &[u8], dialect: Dialect, base: Option<&str>, ) -> Result<(), Box<ParseRefusal>> |  |  |  |  |
+
 | `engine` | function | engine(self) -> Engine |  |  |  |  |
+
+| `limit` | function | limit( dialect: Dialect, name: impl Into<String>, observed: u64, max: u64, message: impl Into<String>, ) -> Self |  |  |  |  |
 
 | `media_type` | function | media_type(self) -> Option<&'static str> |  |  |  |  |
 
+| `new` | function | new( dialect: Dialect, reason: ReasonClass, message: impl Into<String>, ) -> Self |  |  |  |  |
+
 | `parse_rdf` | function | parse_rdf( bytes: &[u8], dialect: Dialect, base: Option<&str>, ) -> Result<Arc<purrdf::RdfDataset>, Refusal> |  |  |  |  |
+
+| `parse_rdf_typed` | function | parse_rdf_typed( bytes: &[u8], dialect: Dialect, base: Option<&str>, ) -> Result<Arc<purrdf::RdfDataset>, Box<ParseRefusal>> |  |  |  |  |
 
 | `sniff` | function | sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> |  |  |  |  |
 
+| `ParseRefusal` | struct | ParseRefusal { pub dialect: Dialect, pub engine: Engine, pub reason: ReasonClass, pub line: Option<u32>, pub col: Option<u32>, pub byte_offset: Option<usize>, pub snippet: Option<String>, pub message: String } |  |  |  |  |
+
 | `Refusal` | struct | Refusal { pub kind: RefusalKind, pub dialect: Option<Dialect>, pub engine: Option<Engine>, pub message: String } |  |  |  |  |
+
+
+### src/duckdb_eval.rs
+
+| `EvaluatorError` | enum | EvaluatorError { DuckDb(frozen_duckdb::DuckDBError), ConversionError { column: String, row: usize, details: String, }, ReceiptError(String) } |  |  |  |  |
+
+| `admitted_statement_hash` | function | admitted_statement_hash( canonical_graph: &[u8], params: &[SqlLiteral], ) -> [u8; 32] |  |  |  |  |
+
+| `canonical_ast_graph_bytes` | function | canonical_ast_graph_bytes(turtle: &str) -> Result<Vec<u8>, EvaluatorError> |  |  |  |  |
+
+| `eval_admitted_ast` | function | eval_admitted_ast( &self, ast_turtle: &str, query_iri: &str, compiled: &CompiledQuery, subject_iri_prefix: &str, predicate_iri_prefix: &str, ) -> Result<ExecutionReceipt, EvaluatorError> |  |  |  |  |
+
+| `eval_ast_query` | function | eval_ast_query( &self, query_iri: &str, compiled: &CompiledQuery, subject_iri_prefix: &str, predicate_iri_prefix: &str, ) -> Result<ExecutionReceipt, EvaluatorError> |  |  |  |  |
+
+| `explain_ast_query` | function | explain_ast_query(&self, compiled: &CompiledQuery) -> Result<String, EvaluatorError> |  |  |  |  |
+
+| `from_connection` | function | from_connection(conn: frozen_duckdb::Connection) -> Self |  |  |  |  |
+
+| `from_connection_with_cache` | function | from_connection_with_cache( conn: frozen_duckdb::Connection, cache: std::sync::Arc<crate::query_cache::QueryCache>, ) -> Self |  |  |  |  |
+
+| `hash_param_buffer` | function | hash_param_buffer(hasher: &mut blake3::Hasher, params: &[SqlLiteral]) |  |  |  |  |
+
+| `open_in_memory` | function | open_in_memory() -> Result<Self, EvaluatorError> |  |  |  |  |
+
+| `open_in_memory_allowing_unsigned_extensions` | function | open_in_memory_allowing_unsigned_extensions() -> Result<Self, EvaluatorError> |  |  |  |  |
+
+| `open_in_memory_with_cache` | function | open_in_memory_with_cache( cache: std::sync::Arc<crate::query_cache::QueryCache>, ) -> Result<Self, EvaluatorError> |  |  |  |  |
+
+| `raw_connection` | function | raw_connection(&self) -> &frozen_duckdb::Connection |  |  |  |  |
+
+| `register_parquet_view` | function | register_parquet_view( &self, view_name: &str, glob_pattern: &str, hive_partitioning: bool, ) -> Result<(), EvaluatorError> |  |  |  |  |
+
+| `shared_cache` | function | shared_cache(&self) -> std::sync::Arc<crate::query_cache::QueryCache> |  |  |  |  |
+
+| `ExecutionReceipt` | struct | ExecutionReceipt { pub query_iri: String, pub query_hash: [u8; 32], pub sql_statement: String, pub rows_emitted: usize, pub execution_ms: f64, pub result_triples: Vec<RdfTriple>, pub cached: bool, pub consult_ms: f64 } |  |  |  |  |
+
+| `GraphLawDuckDB` | struct | GraphLawDuckDB { conn: frozen_duckdb::Connection, cache: std::sync::Arc<crate::query_cache::QueryCache> } |  |  |  |  |
+
+| `RdfTriple` | struct | RdfTriple { pub subject: String, pub predicate: String, pub object: TermValue } |  |  |  |  |
+
+
+### src/duckdb_op.rs
+
+| `DUCKDB_MEMORY_LIMIT` | const | DUCKDB_MEMORY_LIMIT: &str |  |  |  |  |
+
+| `DUCKDB_THREADS` | const | DUCKDB_THREADS: u32 |  |  |  |  |
+
+| `MAX_CHUNK_BYTES` | const | MAX_CHUNK_BYTES: usize |  |  |  |  |
+
+| `MAX_CHUNK_ROWS` | const | MAX_CHUNK_ROWS: usize |  |  |  |  |
+
+| `dispatch` | function | dispatch(v: &Value) -> Result<Value, Fail> |  |  |  |  |
+
+| `32MiB` | str_key | DUCKDB_MEMORY_LIMIT = "32MiB" |  |  |  |  |
+
+
+### src/evidence_ring.rs
+
+| `RING_CAPACITY` | const | RING_CAPACITY: usize |  |  |  |  |
+
+| `PushOutcome` | enum | PushOutcome { Buffered, DroppedNewest } |  |  |  |  |
+
+| `RingError` | enum | RingError { Io(String), BrokenChain { detail: String, }, Malformed { line: usize, }, TornSlot { line: usize, }, SequenceGap { detail: String, }, AlreadyInitialized } |  |  |  |  |
+
+| `close` | function | close(&self) |  |  |  |  |
+
+| `dropped_total` | function | dropped_total(&self) -> u64 |  |  |  |  |
+
+| `global` | function | global() -> Option<&'static Arc<Self>> |  |  |  |  |
+
+| `init` | function | init(dir: impl AsRef<Path>) -> Result<Arc<Self>, RingError> |  |  |  |  |
+
+| `init_global` | function | init_global(dir: impl AsRef<Path>) -> Result<(), RingError> |  |  |  |  |
+
+| `init_with_ledger` | function | init_with_ledger( dir: impl AsRef<Path>, ledger_dir: impl AsRef<Path>, ) -> Result<Arc<Self>, RingError> |  |  |  |  |
+
+| `last_ledger_error` | function | last_ledger_error(&self) -> Option<String> |  |  |  |  |
+
+| `ledger_dir` | function | ledger_dir(&self) -> Option<&Path> |  |  |  |  |
+
+| `ledger_path` | function | ledger_path(&self) -> PathBuf |  |  |  |  |
+
+| `new` | function | new( h_query: [u8; 32], rows_emitted: u64, execution_ms: u32, cached: u8, timestamp_ms: u64, ) -> Self |  |  |  |  |
+
+| `now_ms` | function | now_ms() -> u64 |  |  |  |  |
+
+| `pads_zero` | function | pads_zero(&self) -> bool |  |  |  |  |
+
+| `push` | function | push(&self, desc: RingDescriptor) -> PushOutcome |  |  |  |  |
+
+| `pushed_total` | function | pushed_total(&self) -> u64 |  |  |  |  |
+
+| `set_drainer_paused` | function | set_drainer_paused(&self, paused: bool) |  |  |  |  |
+
+| `verify` | function | verify(dir: impl AsRef<Path>) -> Result<(usize, usize, u64), RingError> |  |  |  |  |
+
+| `0000000000000000000000000000000000000000000000000000000000000000` | str_key | GENESIS = "0000000000000000000000000000000000000000000000000000000000000000" |  |  |  |  |
+
+| `DroppedEvidence` | struct | DroppedEvidence { pub dropped_count: u64, pub refused_h_query: [u8; 32], pub refused_at_ms: u64 } |  |  |  |  |
+
+| `EvidenceRing` | struct | EvidenceRing { dir: PathBuf, ledger_dir: Option<PathBuf>, producer: Mutex<Option<Producer<EvidenceSlot>>>, consumer: Mutex<Option<Consumer<EvidenceSlot>>>, seq_counter: Arc<AtomicU64>, dropped: AtomicU64, paused_flag: Arc<AtomicBool>, shutdown_flag: Arc<AtomicBool>, ledger_error: Arc<Mutex<Option<String>>>, drainer: Mutex<Option<std::thread::JoinHandle<()>>> } |  |  |  |  |
+
+| `RingDescriptor` | struct | RingDescriptor { pub h_query: [u8; 32], pub rows_emitted: u64, pub execution_ms: u32, pub cached: u8, pub pad1: [u8; 3], pub timestamp_ms: u64, pub pad2: [u8; 8] } |  |  |  |  |
 
 
 ### src/hooks.rs
@@ -1755,7 +2017,7 @@
 
 | `ReceiptReason` | enum | ReceiptReason { Unattested, BadSignature, UntrustedKey } |  |  |  |  |
 
-| `Step` | enum | Step { AdmitShacl { shapes_ttl: &'a str, }, DeriveN3 { rules: &'a str, }, Hooks { pack: &'a crate::hooks::HookPack, }, Plan { plan: &'a crate::plan::Plan, }, RequireReceipt { step: &'a str, }, RequireSignedReceipt { step: &'a str, trusted: &'a crate::attest::TrustedKeys, }, EntailRdfs, EntailOwlRl } |  |  |  |  |
+| `Step` | enum | Step { AdmitShacl { shapes_ttl: &'a str, }, DeriveN3 { rules: &'a str, ruleset: &'a crate::tier::RuleSet, }, Hooks { pack: &'a crate::hooks::HookPack, }, Plan { plan: &'a crate::plan::Plan, }, RequireReceipt { step: &'a str, }, RequireSignedReceipt { step: &'a str, trusted: &'a crate::attest::TrustedKeys, }, EntailRdfs, EntailOwlRl } |  |  |  |  |
 
 | `as_str` | function | as_str(self) -> &'static str |  |  |  |  |
 
@@ -1930,6 +2192,78 @@
 | `temporal_rule_holds` | function | temporal_rule_holds(events: &[&str], rule: &str) -> bool |  |  |  |  |
 
 | `Observation` | struct | Observation { pub attempt_observed: bool, pub violation_observed: bool, pub independent_observer: bool, pub postconditions_satisfied: bool, pub durable_evidence: bool, pub crash_observed: bool, pub crash_reconciled: bool } |  |  |  |  |
+
+
+### src/query_cache.rs
+
+| `bump` | function | bump(&self) -> u64 |  |  |  |  |
+
+| `consult` | function | consult(&self, h_query: [u8; 32], grounding: Option<&[u8]>) -> Option<(ExecutionReceipt, u64)> |  |  |  |  |
+
+| `epoch` | function | epoch(&self) -> u64 |  |  |  |  |
+
+| `is_empty` | function | is_empty(&self) -> bool |  |  |  |  |
+
+| `len` | function | len(&self) -> usize |  |  |  |  |
+
+| `new` | function | new() -> Self |  |  |  |  |
+
+| `now_ms` | function | now_ms() -> u64 |  |  |  |  |
+
+| `store` | function | store(&self, entry: CacheEntry) |  |  |  |  |
+
+| `CacheEntry` | struct | CacheEntry { pub h_query: [u8; 32], pub receipt: ExecutionReceipt, pub grounding: Vec<u8>, pub epoch: u64, pub stored_at: u64 } |  |  |  |  |
+
+| `QueryCache` | struct | QueryCache { entries: Mutex<HashMap<[u8; 32], CacheEntry>>, epoch: AtomicU64 } |  |  |  |  |
+
+
+### src/query_ledger.rs
+
+| `FLUSH_AGE_MS` | const | FLUSH_AGE_MS: u64 |  |  |  |  |
+
+| `FLUSH_COUNT` | const | FLUSH_COUNT: usize |  |  |  |  |
+
+| `GENESIS` | const | GENESIS: &str |  |  |  |  |
+
+| `LedgerError` | enum | LedgerError { Io(String), DigestMismatch { file: String, expected: String, actual: String, }, Malformed { file: String, }, BrokenChain { detail: String, }, Fork { parent: String, }, DoubleGenesis { digest: String, }, MissingAgg { batch: String, }, AggMismatch { batch: String, }, ChainIndex { detail: String, } } |  |  |  |  |
+
+| `aggregate` | function | aggregate(&self, from_ms: u64, to_ms: u64) -> Result<Aggregate, LedgerError> |  |  |  |  |
+
+| `chain_state` | function | chain_state(&self) -> ChainState |  |  |  |  |
+
+| `content_digest` | function | content_digest(bytes: &[u8]) -> String |  |  |  |  |
+
+| `flush` | function | flush(&mut self) -> Result<(), LedgerError> |  |  |  |  |
+
+| `fold_batch` | function | fold_batch(batch: &str, records: &[Descriptor]) -> BatchAgg |  |  |  |  |
+
+| `gaps` | function | gaps(&self) -> Result<Vec<(u64, u64)>, LedgerError> |  |  |  |  |
+
+| `now_ms` | function | now_ms() -> u64 |  |  |  |  |
+
+| `open` | function | open(dir: impl AsRef<Path>) -> Result<Self, LedgerError> |  |  |  |  |
+
+| `open_with_producer` | function | open_with_producer( dir: impl AsRef<Path>, producer_next_seq: u64, ) -> Result<Self, LedgerError> |  |  |  |  |
+
+| `push` | function | push(&mut self, d: Descriptor) -> Result<(), LedgerError> |  |  |  |  |
+
+| `record_batch` | function | record_batch(&mut self, batch: &[Descriptor]) -> Result<(), LedgerError> |  |  |  |  |
+
+| `record_gap` | function | record_gap(&self, first: u64, last: u64) -> Result<(), LedgerError> |  |  |  |  |
+
+| `verify` | function | verify(&self) -> Result<ChainState, LedgerError> |  |  |  |  |
+
+| `0000000000000000000000000000000000000000000000000000000000000000` | str_key | GENESIS = "0000000000000000000000000000000000000000000000000000000000000000" |  |  |  |  |
+
+| `Aggregate` | struct | Aggregate { pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool, pub complete: bool, pub batches: usize } |  |  |  |  |
+
+| `BatchAgg` | struct | BatchAgg { pub batch: String, pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool } |  |  |  |  |
+
+| `ChainState` | struct | ChainState { pub head: String, pub tail: String, pub batches: u64, pub next_seq: u64 } |  |  |  |  |
+
+| `Descriptor` | struct | Descriptor { pub h_query: [u8; 32], pub rows_emitted: u32, pub flags: u8, pub ts_unix_ms: u64, pub epoch: u64 } |  |  |  |  |
+
+| `QueryLedger` | struct | QueryLedger { dir: PathBuf, parent: String, next_seq: u64, batches: u64, head: String, tail: String, buf: Vec<Descriptor>, buf_first_seq: u64, buf_opened_ms: u64, pub last_flush_error: Option<LedgerError> } |  |  |  |  |
 
 
 ### src/receipt.rs
@@ -2117,6 +2451,8 @@
 
 | `with_explicit_ceiling` | function | with_explicit_ceiling(mut self, level: CeilingLevel) -> Self |  |  |  |  |
 
+| `with_generation` | function | with_generation(mut self, generation: u64) -> Self |  |  |  |  |
+
 | `with_verified_promotion` | function | with_verified_promotion( mut self, witness: &PromotionWitness, actuator_identity: &str, ) -> Result<Self, CoreError> |  |  |  |  |
 
 | `M_1_to_2` | str_key | MIGRATION_LAW_1_TO_2 = "M_1_to_2" |  |  |  |  |
@@ -2133,7 +2469,7 @@
 
 | `receipts.jsonl` | str_key | LEDGER_FILE_NAME = "receipts.jsonl" |  |  |  |  |
 
-| `AdmissionItem` | struct | AdmissionItem { pub evidence_id: String, pub observed_outcome: ObservedOutcome, pub decision: AdmissionDecision, pub reason: String, pub obligations_discharged: Vec<String>, pub obligations_created: Vec<String> } |  |  |  |  |
+| `AdmissionItem` | struct | AdmissionItem { pub evidence_id: String, pub observed_outcome: ObservedOutcome, pub decision: AdmissionDecision, pub reason: String, pub obligations_discharged: Vec<String>, pub obligations_created: Vec<String>, pub generation: u64 } |  |  |  |  |
 
 | `ChainRuleMonotonicity` | struct | ChainRuleMonotonicity { first_declared: Option<usize> } |  |  |  |  |
 
@@ -2155,9 +2491,9 @@
 
 | `PromotionWitness` | struct | PromotionWitness { pub from_ceiling: CeilingLevel, pub to_ceiling: CeilingLevel, pub evidence_receipts: Vec<String>, pub closed_obligations: Vec<String>, pub verifier_identity: String, pub authorization_basis: String } |  |  |  |  |
 
-| `ReceiptEpochV2` | struct | ReceiptEpochV2 { pub admission: AdmissionLedger, pub standing_ceiling: CeilingLevel, pub equivalence: EquivalenceMap, pub obligation_count: ObligationCount, pub andon: AndonLevel, pub promotion_eligible: bool } |  |  |  |  |
+| `ReceiptEpochV2` | struct | ReceiptEpochV2 { pub admission: AdmissionLedger, pub standing_ceiling: CeilingLevel, pub equivalence: EquivalenceMap, pub obligation_count: ObligationCount, pub andon: AndonLevel, pub promotion_eligible: bool, pub generation: u64 } |  |  |  |  |
 
-| `ReceiptEpochV2Builder` | struct | ReceiptEpochV2Builder { prev_ceiling: CeilingLevel, components: ComponentLevels, admission: Vec<AdmissionItem>, equivalence: EquivalenceMap, explicit_ceiling: Option<CeilingLevel>, promoted: bool } |  |  |  |  |
+| `ReceiptEpochV2Builder` | struct | ReceiptEpochV2Builder { prev_ceiling: CeilingLevel, components: ComponentLevels, admission: Vec<AdmissionItem>, equivalence: EquivalenceMap, explicit_ceiling: Option<CeilingLevel>, promoted: bool, generation: u64 } |  |  |  |  |
 
 | `ReceiptMeta` | struct | ReceiptMeta { pub instruction_id: u64, pub activity_idx: u16, pub node_kind: u8, pub ts_ns: Option<u64>, pub denial: DenialPolarity, pub andon: Andon, pub object_ids: Vec<String>, pub obligation_count: u32 } |  |  |  |  |
 
@@ -2211,6 +2547,8 @@
 
 | `LEASE_REASONS` | const | LEASE_REASONS: &[&str] |  |  |  |  |
 
+| `NATIVE_ONLY_OPS` | const | NATIVE_ONLY_OPS: &[&str] |  |  |  |  |
+
 | `OPS` | const | OPS: &[Op] |  |  |  |  |
 
 | `OTHER_DIALECTS` | const | OTHER_DIALECTS: &[DialectRow] |  |  |  |  |
@@ -2241,9 +2579,11 @@
 
 | `rdf_dialect_names` | function | rdf_dialect_names() -> Vec<&'static str> |  |  |  |  |
 
-| `registry_json_pretty` | function | registry_json_pretty() -> String |  |  |  |  |
+| `receipt_surface_blake3` | function | receipt_surface_blake3() -> String |  |  |  |  |
 
 | `registry_blake3` | function | registry_blake3() -> String |  |  |  |  |
+
+| `registry_json_pretty` | function | registry_json_pretty() -> String |  |  |  |  |
 
 | `registry_turtle` | function | registry_turtle() -> String |  |  |  |  |
 
@@ -2271,6 +2611,8 @@
 
 | `data` | str_key | DATA = "data" |  |  |  |  |
 
+| `duckdb` | str_key | NATIVE_ONLY_OPS = "duckdb" |  |  |  |  |
+
 | `expired` | str_key | LEASE_REASONS = "expired" |  |  |  |  |
 
 | `graphlaw.capability-registry/1` | str_key | REGISTRY_SCHEMA = "graphlaw.capability-registry/1" |  |  |  |  |
@@ -2289,6 +2631,8 @@
 
 | `simple` | str_key | REGIMES = "simple" |  |  |  |  |
 
+| `src/duckdb_eval.rs` | str_key | FILES = "src/duckdb_eval.rs" |  |  |  |  |
+
 | `turtle` | str_key | RDF_DIALECTS = "turtle" |  |  |  |  |
 
 | `unattested` | str_key | RECEIPT_REASONS = "unattested" |  |  |  |  |
@@ -2304,6 +2648,36 @@
 | `RefusalCodeRow` | struct | RefusalCodeRow { pub code: &'static str, pub kind: Option<&'static str>, pub fields: &'static [Field] } |  |  |  |  |
 
 | `Variant` | struct | Variant { pub tag: Option<&'static str>, pub tag_field: Option<&'static str>, pub fields: &'static [Field] } |  |  |  |  |
+
+
+### src/rules/builtins.rs
+
+| `BuiltinError` | enum | BuiltinError { Eval(EvaluatorError), InvalidArguments { expected: String, got: String }, AstError(String) } |  |  |  |  |
+
+| `builtin_eval_sql` | function | builtin_eval_sql( args: &[&str], output_vars: &[&str], ctx: &BuiltinContext, reader: &R, ) -> Result<BuiltinResult, BuiltinError> |  |  |  |  |
+
+| `BuiltinContext` | struct | BuiltinContext { pub db: &'a GraphLawDuckDB } |  |  |  |  |
+
+| `BuiltinResult` | struct | BuiltinResult { pub bindings: Vec<(String, TermValue)>, pub derived_triples: Vec<RdfTriple>, pub query_hash: [u8; 32], pub rows_emitted: usize } |  |  |  |  |
+
+
+### src/shacl_guard.rs
+
+| `MAX_SHACL_VALIDATION_DEPTH` | const | MAX_SHACL_VALIDATION_DEPTH: usize |  |  |  |  |
+
+| `check_shape_depth` | function | check_shape_depth(shapes_ttl: &str) -> Result<(), DepthExceeded> |  |  |  |  |
+
+| `and` | str_key | SHAPE_LIST_PREDICATES = "and" |  |  |  |  |
+
+| `http://www.w3.org/1999/02/22-rdf-syntax-ns#first` | str_key | RDF_FIRST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first" |  |  |  |  |
+
+| `http://www.w3.org/1999/02/22-rdf-syntax-ns#rest` | str_key | RDF_REST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest" |  |  |  |  |
+
+| `http://www.w3.org/ns/shacl#` | str_key | SH = "http://www.w3.org/ns/shacl#" |  |  |  |  |
+
+| `node` | str_key | SHAPE_LINK_PREDICATES = "node" |  |  |  |  |
+
+| `DepthExceeded` | struct | DepthExceeded { pub observed: usize } |  |  |  |  |
 
 
 ### src/smon.rs
@@ -2359,14 +2733,125 @@
 | `Turn` | struct | Turn { pub seq: usize, pub role: &'static str, pub text: String, pub kind: &'static str, pub evidence: Vec<String>, pub topic: String } |  |  |  |  |
 
 
-### tests/castle_capability_intake.rs
+### src/sql_ast.rs
 
-| `../ontologies/castle-capability-intake.ttl` | str_key | GRAPH = "../ontologies/castle-capability-intake.ttl" |  |  |  |  |
+| `REFUSAL_01_MALFORMED_AST` | const | REFUSAL_01_MALFORMED_AST: &str |  |  |  |  |
+
+| `REFUSAL_02_UNIMPLEMENTED` | const | REFUSAL_02_UNIMPLEMENTED: &str |  |  |  |  |
+
+| `REFUSAL_03_SCOPE_INTEGRITY` | const | REFUSAL_03_SCOPE_INTEGRITY: &str |  |  |  |  |
+
+| `AggregateFunction` | enum | AggregateFunction { Count, Sum, Avg, Min, Max } |  |  |  |  |
+
+| `AstError` | enum | AstError { InvalidIdentifier(String), MissingProperty(String, String), RecursionLimitExceeded(usize), MalformedList, UnsupportedTerm(String), MalformedNode(String), ShaclViolation(String) } |  |  |  |  |
+
+| `JoinType` | enum | JoinType { Inner, LeftOuter } |  |  |  |  |
+
+| `Operator` | enum | Operator { Equals, NotEquals, GreaterThan, GreaterThanOrEq, LessThan, LessThanOrEq, And, Or, Like, ILike, Add, Subtract, Multiply, Divide, Modulo } |  |  |  |  |
+
+| `Scope` | enum | Scope { View, Process } |  |  |  |  |
+
+| `ScopePos` | enum | ScopePos { SelectList, OrderBy, Having, Predicate, GroupBy, AggregateArgument, PredicateAggregateArgument } |  |  |  |  |
+
+| `SqlExpr` | enum | SqlExpr { ColumnRef { column: String, table_alias: Option<String>, }, Literal(SqlLiteral), Binary { op: Operator, left: Box<SqlExpr>, right: Box<SqlExpr>, }, FunctionCall { function: AggregateFunction, argument: Box<SqlExpr>, }, Alias { expr: Box<SqlExpr>, alias: String, } } |  |  |  |  |
+
+| `SqlLiteral` | enum | SqlLiteral { String(String), Integer(i64), Float(f64), Boolean(bool), Null } |  |  |  |  |
+
+| `as_sql` | function | as_sql(&self) -> &'static str |  |  |  |  |
+
+| `compile` | function | compile(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
+
+| `compile_merge` | function | compile_merge(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
+
+| `compile_turtle` | function | compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> |  |  |  |  |
+
+| `from_iri` | function | from_iri(iri: &str) -> Result<Self, AstError> |  |  |  |  |
+
+| `from_token` | function | from_token(token: &str) -> Result<Self, AstError> |  |  |  |  |
+
+| `validate_ast_shacl` | function | validate_ast_shacl( turtle_dataset: &str, shapes_ttl: &str, ) -> Result<(), AstError> |  |  |  |  |
+
+| `validate_identifier` | function | validate_identifier(ident: &str) -> Result<&str, AstError> |  |  |  |  |
+
+| `validate_qualified_identifier` | function | validate_qualified_identifier(ident: &str) -> Result<(), AstError> |  |  |  |  |
+
+| `[REFUSAL-01] MalformedAstRefusal:` | str_key | REFUSAL_01_MALFORMED_AST = "[REFUSAL-01] MalformedAstRefusal:" |  |  |  |  |
+
+| `[REFUSAL-02] UnimplementedStatementRefusal:` | str_key | REFUSAL_02_UNIMPLEMENTED = "[REFUSAL-02] UnimplementedStatementRefusal:" |  |  |  |  |
+
+| `[REFUSAL-03] ScopeIntegrityRefusal:` | str_key | REFUSAL_03_SCOPE_INTEGRITY = "[REFUSAL-03] ScopeIntegrityRefusal:" |  |  |  |  |
+
+| `CompiledQuery` | struct | CompiledQuery { pub sql: String, pub params: Vec<SqlLiteral>, pub ast_graph_turtle: Option<String>, pub canon_graph_bytes: Option<Vec<u8>>, pub receipt_state: Option<blake3::Hasher>, pub cacheable: bool } |  |  |  |  |
+
+| `JoinClause` | struct | JoinClause { pub join_type: JoinType, pub table: TableRef, pub condition: SqlExpr } |  |  |  |  |
+
+| `MergeStatement` | struct | MergeStatement { pub target: TableRef, pub source: SelectStatement, pub on: SqlExpr, pub assignments: Vec<(String, SqlExpr)> } |  |  |  |  |
+
+| `OrderTerm` | struct | OrderTerm { pub expr: SqlExpr, pub descending: bool } |  |  |  |  |
+
+| `SelectStatement` | struct | SelectStatement { pub from: TableRef, pub joins: Vec<JoinClause>, pub select_list: Vec<SqlExpr>, pub where_clause: Option<SqlExpr>, pub group_by: Vec<SqlExpr>, pub having: Option<SqlExpr>, pub order_by: Vec<OrderTerm>, pub limit: Option<usize>, pub offset: Option<usize> } |  |  |  |  |
+
+| `TableRef` | struct | TableRef { pub name: String, pub alias: Option<String>, pub schema: Option<String> } |  |  |  |  |
+
+| `RdfAstGraphReader` | trait |  |  |  |  |  |
+
+
+### src/tier.rs
+
+| `REFUSAL_04_CAPABILITY_REFUSAL` | const | REFUSAL_04_CAPABILITY_REFUSAL: &str |  |  |  |  |
+
+| `Admitted` | enum | Admitted { Dataset(Arc<purrdf::RdfDataset>), Rules(RuleSet), Query(crate::sql_ast::CompiledQuery) } |  |  |  |  |
+
+| `Tier` | enum | Tier { Rdf, N3Logic, Relational } |  |  |  |  |
+
+| `admit_bytes_tiered` | function | admit_bytes_tiered( bytes: &[u8], hint: Option<&str>, base: Option<&str>, decl: Option<DialectDecl>, ) -> Result<Admitted, Refusal> |  |  |  |  |
+
+| `admit_declared` | function | admit_declared(bytes: &[u8], decl: DialectDecl, base: Option<&str>) -> Result<Admitted, Refusal> |  |  |  |  |
+
+| `rule_count` | function | rule_count(&self) -> usize |  |  |  |  |
+
+| `tier` | function | tier(self) -> Tier |  |  |  |  |
+
+| `validate_n3_rules` | function | validate_n3_rules(bytes: &[u8], base: Option<&str>) -> Result<RuleSet, Refusal> |  |  |  |  |
+
+| `REFUSAL-04` | str_key | REFUSAL_04_CAPABILITY_REFUSAL = "REFUSAL-04" |  |  |  |  |
+
+| `DialectDecl` | struct | DialectDecl { pub tier: Tier, pub dialect: Dialect } |  |  |  |  |
+
+| `RuleSet` | struct | RuleSet { pub document: eyeron::Document } |  |  |  |  |
+
+
+### tests/abi_manifest_court.rs
+
+| `0807060504030201887766554433221100ff0000000000000100000002000000030000000400000005000000060000000700000008000000bebafecaefbeaddeefbe2aa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5` | str_key | GOLDEN_FRAME_HASH_HEX = "0807060504030201887766554433221100ff0000000000000100000002000000030000000400000005000000060000000700000008000000bebafecaefbeaddeefbe2aa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5" |  |  |  |  |
+
+
+### tests/canonical_cross_dialect.rs
+
+| `<http://example.org/alice> <http://example.org/knows> <http://example.org/bob> .` | str_key | PURE_NT = "<http://example.org/alice> <http://example.org/knows> <http://example.org/bob> ." |  |  |  |  |
+
+| `<http://example.org/alice> <http://example.org/knows> <http://example.org/bob> <http://example.org/g> .` | str_key | DATASET_NQ = "<http://example.org/alice> <http://example.org/knows> <http://example.org/bob> <http://example.org/g> ." |  |  |  |  |
+
+| `_:p <http://example.org/knows> _:q .` | str_key | BNODE_NT_RELABELED = "_:p <http://example.org/knows> _:q ." |  |  |  |  |
+
+| `_:x <http://example.org/knows> _:y .` | str_key | BNODE_NT = "_:x <http://example.org/knows> _:y ." |  |  |  |  |
+
+
+### tests/chicago_boundary_constraints.rs
+
+| `@prefix sh: <http://www.w3.org/ns/shacl#> .` | str_key | PREFIX = "@prefix sh: <http://www.w3.org/ns/shacl#> ." |  |  |  |  |
 
 
 ### tests/chicago_n3_datalog.rs
 
 | `https://chicago.graphlaw.dev/` | str_key | NS = "https://chicago.graphlaw.dev/" |  |  |  |  |
+
+
+### tests/chicago_validation.rs
+
+| `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB` | str_key | KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB" |  |  |  |  |
+
+| `[ a sql:BinaryExpression ; sql:operator ` | str_key | AGGREGATE_WHERE = "[ a sql:BinaryExpression ; sql:operator " |  |  |  |  |
 
 
 ### tests/common/mod.rs
@@ -2394,6 +2879,8 @@
 
 ### tests/corpus_conformance.rs
 
+| `CARGO_BIN_EXE_{name}` | env_key | std::env::var("CARGO_BIN_EXE_{name}") |  |  |  |  |
+
 | `UPDATE_ASSET_MANIFEST` | env_key | std::env::var_os("UPDATE_ASSET_MANIFEST") |  |  |  |  |
 
 | `https://example.org/base/` | str_key | BASE = "https://example.org/base/" |  |  |  |  |
@@ -2404,6 +2891,82 @@
 ### tests/differential.rs
 
 | `https://example.org/` | str_key | NS = "https://example.org/" |  |  |  |  |
+
+
+### tests/docs_release_claims.rs
+
+| `.github/workflows/release.yml` | str_key | WORKFLOW = ".github/workflows/release.yml" |  |  |  |  |
+
+| `README.md` | str_key | README = "README.md" |  |  |  |  |
+
+| `cargo cicd publish run` | str_key | LOCAL_ONLY_MARKER = "cargo cicd publish run" |  |  |  |  |
+
+| `cargo publish -p graphlaw` | str_key | PUBLISH_STEP = "cargo publish -p graphlaw" |  |  |  |  |
+
+
+### tests/duckdb_statement_kinds.rs
+
+| `/Users/sac/frozen-duckdb/target/wasm-build/duckdb/src/parser/peg/grammar/statements/common.gram` | str_key | GRAM = "/Users/sac/frozen-duckdb/target/wasm-build/duckdb/src/parser/peg/grammar/statements/common.gram" |  |  |  |  |
+
+| `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB` | str_key | EXPR_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB" |  |  |  |  |
+
+| `core_functions` | str_key | CERTIFIED = "core_functions" |  |  |  |  |
+
+
+### tests/gws12_coldchain_cross_engine.rs
+
+| `COLDCHAIN_CSV_DIR` | env_key | std::env::var("COLDCHAIN_CSV_DIR") |  |  |  |  |
+
+| `DUCKDB_BIN` | env_key | std::env::var("DUCKDB_BIN") |  |  |  |  |
+
+| `6971c912530619217b462f0b458a390eec34383a8155e0ccfcce869e4b6aeb8e` | str_key | COLD1_AUDIT_HASH = "6971c912530619217b462f0b458a390eec34383a8155e0ccfcce869e4b6aeb8e" |  |  |  |  |
+
+| `BATCH-A1` | str_key | COLD1_QUARANTINED = "BATCH-A1" |  |  |  |  |
+
+| `BATCH-R1` | str_key | COLD1_RELEASED = "BATCH-R1" |  |  |  |  |
+
+| `SELECT o.object_id, MAX(e.temp_celsius) AS max_temp, SUM(e.duration_seconds) AS duration FROM ocel_events AS e JOIN ocel_event_object_rel AS r ON e.event_id = r.event_id JOIN ocel_objects AS o ON r.object_id = o.object_id WHERE e.temp_celsius > -20.0 AND r.qualifier = 'contains_product' AND o.object_type = 'bio:BiologicBatch' GROUP BY o.object_id` | str_key | CANONICAL_QUERY = "SELECT o.object_id, MAX(e.temp_celsius) AS max_temp, SUM(e.duration_seconds) AS duration FROM ocel_events AS e JOIN ocel_event_object_rel AS r ON e.event_id = r.event_id JOIN ocel_objects AS o ON r.object_id = o.object_id WHERE e.temp_celsius > -20.0 AND r.qualifier = 'contains_product' AND o.object_type = 'bio:BiologicBatch' GROUP BY o.object_id" |  |  |  |  |
+
+
+### tests/gws4_ipc_injection_court.rs
+
+| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+
+
+### tests/insa_chain_differential.rs
+
+| `05ea1aa096f45968aacb2c996d2b541e4b9fdef24f006e0204e1fa88d33f68a5` | str_key | INSA_KAT_HEAD_HEX = "05ea1aa096f45968aacb2c996d2b541e4b9fdef24f006e0204e1fa88d33f68a5" |  |  |  |  |
+
+| `95163f2a6b24bebdfd19bf77cc60553640b8c9f5f5c54bc415c3b0da77e77598` | str_key | GRAPHLAW_HEAD_HEX = "95163f2a6b24bebdfd19bf77cc60553640b8c9f5f5c54bc415c3b0da77e77598" |  |  |  |  |
+
+
+### tests/insa_law_order.rs
+
+| `INSA_LAW_PACK_ONTOLOGY` | env_key | std::env::var("INSA_LAW_PACK_ONTOLOGY") |  |  |  |  |
+
+| `/Users/sac/ggen-marketplace/packs/insa-law-pack/ontology.ttl` | str_key | ONTOLOGY_PATH = "/Users/sac/ggen-marketplace/packs/insa-law-pack/ontology.ttl" |  |  |  |  |
+
+| `19d9ec90cb861e8b1e320ef01e5e0d8a54022b19357f2b4856f379417dcc79d7` | str_key | ONTOLOGY_BLAKE3 = "19d9ec90cb861e8b1e320ef01e5e0d8a54022b19357f2b4856f379417dcc79d7" |  |  |  |  |
+
+| `@prefix insa: <urn:insa-law:> .` | str_key | LINK_RULES = "@prefix insa: <urn:insa-law:> ." |  |  |  |  |
+
+| `SELECT ?a ?b WHERE { ` | str_key | VIOLATION_QUERY = "SELECT ?a ?b WHERE { " |  |  |  |  |
+
+| `tx-source-pattern` | str_key | LAWFUL_EDGES = "tx-source-pattern" |  |  |  |  |
+
+
+### tests/lease_authorization_differential.rs
+
+| `admit:shacl` | str_key | STEP_NAMES = "admit:shacl" |  |  |  |  |
+
+| `observe` | str_key | CEILING_NAMES = "observe" |  |  |  |  |
+
+
+### tests/no_mock_markers.rs
+
+| `mock` | str_key | BANNED = "mock" |  |  |  |  |
+
+| `tests/no_mock_markers.rs` | str_key | ALLOWLIST = "tests/no_mock_markers.rs" |  |  |  |  |
 
 
 ### tests/op_differential.rs
@@ -2431,7 +2994,21 @@
 
 | `<urn:p:occupied>` | str_key | OCC = "<urn:p:occupied>" |  |  |  |  |
 
-| `blake3:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc` | str_key | POSITIVE_DIGEST = "blake3:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc" |  |  |  |  |
+| `blake3:e16c63901ed5012208d71405fd179ad947da8f849d8c3cb083c26d0ff6e31803` | str_key | POSITIVE_DIGEST = "blake3:e16c63901ed5012208d71405fd179ad947da8f849d8c3cb083c26d0ff6e31803" |  |  |  |  |
+
+
+### tests/pn64_abi_conformance.rs
+
+| `CARGO_MANIFEST_DIR` | str_key | PACK_DIR = "CARGO_MANIFEST_DIR" |  |  |  |  |
+
+| `b3dbbc7c945a7883a75933dfc12699af393dac5fe711009bb5f4d694a2ac399b` | str_key | ONTOLOGY_BLAKE3 = "b3dbbc7c945a7883a75933dfc12699af393dac5fe711009bb5f4d694a2ac399b" |  |  |  |  |
+
+
+### tests/receipt_chain_golden_test.rs
+
+| `d52282d8c48e9021ff6f78e413d8a79dbffbc6b28e28db9a9d855f5810bb3185` | str_key | FIXTURE_BLAKE3 = "d52282d8c48e9021ff6f78e413d8a79dbffbc6b28e28db9a9d855f5810bb3185" |  |  |  |  |
+
+| `tests/fixtures/fm_chain_009.json` | str_key | FIXTURE_PATH = "tests/fixtures/fm_chain_009.json" |  |  |  |  |
 
 
 ### tests/receipt_feedback.rs
@@ -2444,6 +3021,17 @@
 ### tests/receipt_store.rs
 
 | `0123456789abcdef0123456789abcdef01234567` | str_key | SUBJECT = "0123456789abcdef0123456789abcdef01234567" |  |  |  |  |
+
+
+### tests/refusal_crosswalk_differential.rs
+
+| `/Users/sac/ggen-marketplace/packs/refusal-vocabulary-pack` | str_key | SIBLING_ROOT = "/Users/sac/ggen-marketplace/packs/refusal-vocabulary-pack" |  |  |  |  |
+
+| `malformed_frame` | str_key | VALVE_EXPECTED = "malformed_frame" |  |  |  |  |
+
+| `ontology.ttl` | str_key | PINNED = "ontology.ttl" |  |  |  |  |
+
+| `tests/fixtures/refusal_crosswalk` | str_key | FIXTURE_ROOT = "tests/fixtures/refusal_crosswalk" |  |  |  |  |
 
 
 ### tests/refusal_details.rs
@@ -2483,9 +3071,61 @@
 | `CARGO_BIN_EXE_sa2a-run14-verify` | str_key | BIN = "CARGO_BIN_EXE_sa2a-run14-verify" |  |  |  |  |
 
 
+### tests/sql_rdf_conformance.rs
+
+| `CONFORMANCE_REPORT` | env_key | std::env::var("CONFORMANCE_REPORT") |  |  |  |  |
+
+| `../docs/refusals.md` | str_key | REFUSALS_MD = "../docs/refusals.md" |  |  |  |  |
+
+| `../ontologies/sql-ast.ttl` | str_key | SQL_AST_TTL = "../ontologies/sql-ast.ttl" |  |  |  |  |
+
+| `core_functions` | str_key | CERTIFIED_EXTENSION_RESULTS = "core_functions" |  |  |  |  |
+
+| `§1` | str_key | CLAUSE_TABLE = "§1" |  |  |  |  |
+
+
+### tests/strata_gate_differential.rs
+
+| `hash` | str_key | GATES = "hash" |  |  |  |  |
+
+| `tests/fixtures/strata_gate_differential` | str_key | FIXTURE_ROOT = "tests/fixtures/strata_gate_differential" |  |  |  |  |
+
+
+### tests/temprun_framing.rs
+
+| `cd3cde66a2a9a3440240e8ff005ca7258dfd995744f36b061102db522e33f30e` | str_key | PIN_BLAKE3 = "cd3cde66a2a9a3440240e8ff005ca7258dfd995744f36b061102db522e33f30e" |  |  |  |  |
+
+| `https://strata.chatman.ai/ontology#` | str_key | ST = "https://strata.chatman.ai/ontology#" |  |  |  |  |
+
+| `tests/fixtures/strata-temprun-ontology.ttl` | str_key | PINNED = "tests/fixtures/strata-temprun-ontology.ttl" |  |  |  |  |
+
+
+### tests/tier_court.rs
+
+| `@prefix : <https://e/> .` | str_key | N3_RULES = "@prefix : <https://e/> ." |  |  |  |  |
+
+
 ### tests/verify_cli.rs
 
 | `0123456789abcdef0123456789abcdef01234567` | str_key | SUBJECT = "0123456789abcdef0123456789abcdef01234567" |  |  |  |  |
+
+
+### tests/w3c_conformance.rs
+
+| `rdf-n-triples/nt-syntax-bad-string-04.nt` | str_key | KNOWN_DIVERGENCES = "rdf-n-triples/nt-syntax-bad-string-04.nt" |  |  |  |  |
+
+| `rdf-turtle/turtle-syntax-number-11.ttl` | str_key | KNOWN_POSITIVE_DIVERGENCES = "rdf-turtle/turtle-syntax-number-11.ttl" |  |  |  |  |
+
+
+### tests/w3c_manifest.rs
+
+| `ENTRIES` | const | ENTRIES: &[(Dialect, &str, Kind)] |  |  |  |  |
+
+| `Dialect` | enum | Dialect { Turtle, NTriples, NQuads, Trig, RdfXml } |  |  |  |  |
+
+| `Kind` | enum | Kind { Positive, Negative } |  |  |  |  |
+
+| `rdf-turtle/turtle-syntax-file-01.ttl` | str_key | ENTRIES = "rdf-turtle/turtle-syntax-file-01.ttl" |  |  |  |  |
 
 
 ### tests/wasm_abi.rs
@@ -2495,6 +3135,68 @@
 | `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
 
 | `@prefix ex: <https://e/> . ex:s ex:p ex:o, ` | str_key | SAMPLE = "@prefix ex: <https://e/> . ex:s ex:p ex:o, " |  |  |  |  |
+
+
+### tests/wasm_boundary_fuzz.rs
+
+| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `'; DROP TABLE cold_chain_events; --` | str_key | SQL_TOKENS = "'; DROP TABLE cold_chain_events; --" |  |  |  |  |
+
+| `NotSemanticContent` | str_key | REFUSAL_KINDS = "NotSemanticContent" |  |  |  |  |
+
+
+### tests/wasm_coldchain_e2e.rs
+
+| `GWS10_DEBUG` | env_key | std::env::var("GWS10_DEBUG") |  |  |  |  |
+
+| `BATCH-A1` | str_key | COLD1_QUARANTINED = "BATCH-A1" |  |  |  |  |
+
+| `BATCH-R1` | str_key | COLD1_RELEASED = "BATCH-R1" |  |  |  |  |
+
+
+### tests/wasm_duckdb_op.rs
+
+| `SELECT batch_id, SUM(cost) AS total_cost FROM telemetry WHERE (latency > $1) GROUP BY batch_id` | str_key | AGG_SQL = "SELECT batch_id, SUM(cost) AS total_cost FROM telemetry WHERE (latency > $1) GROUP BY batch_id" |  |  |  |  |
+
+| `batch_id,cost,latency` | str_key | TELEMETRY_HEADER = "batch_id,cost,latency" |  |  |  |  |
+
+| `https://example.org/data` | str_key | SUBJECT = "https://example.org/data" |  |  |  |  |
+
+| `https://example.org/queries/q1` | str_key | Q1 = "https://example.org/queries/q1" |  |  |  |  |
+
+| `https://example.org/vocab` | str_key | VOCAB = "https://example.org/vocab" |  |  |  |  |
+
+
+### tests/wasm_memory_wall.rs
+
+| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `@prefix ex: <https://e/> . ex:s ex:p ex:o .` | str_key | SAMPLE = "@prefix ex: <https://e/> . ex:s ex:p ex:o ." |  |  |  |  |
+
+
+### tests/wasm_native_differential.rs
+
+| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `_:p <http://example.org/knows> _:q .` | str_key | BNQ_PQ = "_:p <http://example.org/knows> _:q ." |  |  |  |  |
+
+| `_:x <http://example.org/knows> _:y .` | str_key | BNQ_AB = "_:x <http://example.org/knows> _:y ." |  |  |  |  |
+
+| `packs/self-monitoring-pack/fixtures/session-real-broad-topic.ttl` | str_key | HOOK_SESSION = "packs/self-monitoring-pack/fixtures/session-real-broad-topic.ttl" |  |  |  |  |
+
+| `packs/self-monitoring-pack/hook.ttl` | str_key | HOOK_PACK = "packs/self-monitoring-pack/hook.ttl" |  |  |  |  |
+
+
+### tests/wasm_size_court.rs
+
+| `GRAPHLAW_WASM` | env_key | std::env::var("GRAPHLAW_WASM") |  |  |  |  |
 
 
 ### wasm/src/abi_meta.rs
@@ -2591,6 +3293,24 @@
 | Item | Type | Signature | Params | Defaults | Errors | Invariants |
 |------|------|-----------|--------|----------|--------|------------|
 
+| `build` | script | npm run gen && node scripts/build.mjs && tsc -p tsconfig.build.json && node scripts/assemble.mjs |  |  |  |  |
+
+| `gen` | script | node scripts/gen-types.mjs |  |  |  |  |
+
+| `lint:pkg` | script | publint && attw --pack . |  |  |  |  |
+
+| `sync-version` | script | node scripts/sync-version.mjs |  |  |  |  |
+
+| `test` | script | vitest run |  |  |  |  |
+
+| `test:browser` | script | vitest run --config vitest.browser.config.ts |  |  |  |  |
+
+| `typecheck` | script | tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit |  |  |  |  |
+
+| `TC_HOT_FULL` | env_key | std::env::var("TC_HOT_FULL") |  |  |  |  |
+
+| `TC_HOT_FULL` | env_key | std::env::var("TC_HOT_FULL") |  |  |  |  |
+
 | `CRYPTO_SHA` | const | CRYPTO_SHA: &str |  |  |  |  |
 
 | `DT_DATATYPE` | const | DT_DATATYPE: &str |  |  |  |  |
@@ -4034,12 +4754,100 @@
 | `version` | function | version() -> String |  |  |  |  |
 
 | `EyeronSession` | struct | EyeronSession { prepared: PreparedReasoner, proof: bool } |  |  |  |  |
+
+| `p` | str_key | NAMES = "p" |  |  |  |  |
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+
+| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+
+| `t` | str_key | SUBJ = "t" |  |  |  |  |
+
+| `true` | str_key | TRUE_OBJ = "true" |  |  |  |  |
+
+| `GL_DEBUG` | env_key | std::env::var_os("GL_DEBUG") |  |  |  |  |
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+
+| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+
+| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `f` | env_key | var("f") |  |  |  |  |
+
+| `t` | env_key | var("t") |  |  |  |  |
+
+| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+
+| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+
+| `event_calculus-paper-narrative` | str_key | SCENARIOS = "event_calculus-paper-narrative" |  |  |  |  |
+
+| `event_calculus_vectors` | str_key | GENERATOR = "event_calculus_vectors" |  |  |  |  |
+
+| `urn:ec:clipped` | str_key | P_CLIPPED = "urn:ec:clipped" |  |  |  |  |
+
+| `urn:ec:comp` | str_key | P_COMP = "urn:ec:comp" |  |  |  |  |
+
+| `urn:ec:happens` | str_key | P_HAPPENS = "urn:ec:happens" |  |  |  |  |
+
+| `urn:ec:holds` | str_key | P_HOLDS = "urn:ec:holds" |  |  |  |  |
+
+| `urn:ec:initiated` | str_key | P_INITIATED = "urn:ec:initiated" |  |  |  |  |
+
+| `urn:ec:initiates` | str_key | P_INITIATES = "urn:ec:initiates" |  |  |  |  |
+
+| `urn:ec:succ` | str_key | P_SUCC = "urn:ec:succ" |  |  |  |  |
+
+| `urn:ec:terminated` | str_key | P_TERMINATED = "urn:ec:terminated" |  |  |  |  |
+
+| `urn:ec:terminates` | str_key | P_TERMINATES = "urn:ec:terminates" |  |  |  |  |
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw` | str_key | OUT_DIR = "/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw" |  |  |  |  |
+
+| `https://np.graphlaw.dev/` | str_key | NS = "https://np.graphlaw.dev/" |  |  |  |  |
+
+| `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
+
+| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+
+| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+
+| `plan_replay_oracle_gen` | str_key | GENERATOR = "plan_replay_oracle_gen" |  |  |  |  |
+
+| `extract_select_statement` | function | extract_select_statement(&self, query_node: &String) -> Result<SelectStatement, AstError> |  |  |  |  |
+
+| `SQL_EXTENSIONS` | const | SQL_EXTENSIONS: &[(&str, &str, &str, i64)] |  |  |  |  |
+
+| `autocomplete` | str_key | SQL_EXTENSIONS = "autocomplete" |  |  |  |  |
+
+| `SQL_STATEMENTS` | const | SQL_STATEMENTS: &[(&str, &str)] |  |  |  |  |
+
+| `ExternalResourceStatement` | str_key | SQL_STATEMENTS = "ExternalResourceStatement" |  |  |  |  |
 
 | `ABI_VERSION` | const | ABI_VERSION: u32 |  |  |  |  |
 
 | `MAX_ATOMS_PER_FIELD` | const | MAX_ATOMS_PER_FIELD: usize |  |  |  |  |
 
+| `MAX_DATALOG_FACTS` | const | MAX_DATALOG_FACTS: usize |  |  |  |  |
+
+| `MAX_DATALOG_RULES` | const | MAX_DATALOG_RULES: usize |  |  |  |  |
+
 | `MAX_JSON_DEPTH` | const | MAX_JSON_DEPTH: usize |  |  |  |  |
+
+| `MAX_LAW_STEPS` | const | MAX_LAW_STEPS: usize |  |  |  |  |
 
 | `MAX_OUTSTANDING_ALLOC_BYTES` | const | MAX_OUTSTANDING_ALLOC_BYTES: usize |  |  |  |  |
 
@@ -4062,6 +4870,20 @@
 | `plan_from_json` | function | plan_from_json(plan: &Value) -> Result<crate::plan::Plan, String> |  |  |  |  |
 
 | `Fail` | struct | Fail { refusal: Refusal, details: Option<Value> } |  |  |  |  |
+
+| `EXPORTS` | const | EXPORTS: &[Export] |  |  |  |  |
+
+| `manifest_json_pretty` | function | manifest_json_pretty() -> String |  |  |  |  |
+
+| `manifest_value` | function | manifest_value() -> Value |  |  |  |  |
+
+| `write_manifest` | function | write_manifest(path: &std::path::Path) -> std::io::Result<()> |  |  |  |  |
+
+| `gl_alloc` | str_key | EXPORTS = "gl_alloc" |  |  |  |  |
+
+| `instruction_id` | str_key | FRAME_FIELDS = "instruction_id" |  |  |  |  |
+
+| `Export` | struct | Export { pub name: &'static str, pub params: &'static [&'static str], pub result: &'static str, pub summary: &'static str } |  |  |  |  |
 
 | `AttestError` | enum | AttestError { BadSignature, UnknownKey, Malformed(String) } |  |  |  |  |
 
@@ -4123,51 +4945,139 @@
 
 | `VerifyingKey` | struct | VerifyingKey { DalekVerifying } |  |  |  |  |
 
+| `https://graphlaw.dev/dl#` | str_key | DL = "https://graphlaw.dev/dl#" |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
 | `https://chatmangpt.com/sa2a#` | str_key | V2 = "https://chatmangpt.com/sa2a#" |  |  |  |  |
 
 | `https://sa2a.dev/ontology#` | str_key | V1 = "https://sa2a.dev/ontology#" |  |  |  |  |
 
-| `AUTHORITY_CEILING` | const | AUTHORITY_CEILING: &str |  |  |  |  |
+| `Dialect` | enum | Dialect { Turtle, TriG, NTriples, NQuads, RdfXml, JsonLd, YamlLd, TriX, HexTuples, N3, ShExC, ShExJ, Sparql, SqlRdf } |  |  |  |  |
 
-| `DONORS` | const | DONORS: &[CapabilityDonor] |  |  |  |  |
+| `Engine` | enum | Engine { PurRdf, Eyeron, FrozenDuckdb } |  |  |  |  |
 
-| `OWNER_CAPABILITY` | const | OWNER_CAPABILITY: &str |  |  |  |  |
+| `ReasonClass` | enum | ReasonClass { Syntax, UndefinedPrefix, BadIri, FormulaInRdfLayer, NotSemanticContent, AmbiguousDialect, RemoteContext, Limit { name: String, observed: u64, max: u64, } } |  |  |  |  |
 
-| `PROJECTION_SOURCE` | const | PROJECTION_SOURCE: &str |  |  |  |  |
-
-| `consequence_authority` | function | consequence_authority(_repository: &str) -> bool |  |  |  |  |
-
-| `donor` | function | donor(repository: &str) -> Option<&'static CapabilityDonor> |  |  |  |  |
-
-| `CONSTRUCT` | str_key | AUTHORITY_CEILING = "CONSTRUCT" |  |  |  |  |
-
-| `SEMANTIC_LAW_DERIVATION` | str_key | OWNER_CAPABILITY = "SEMANTIC_LAW_DERIVATION" |  |  |  |  |
-
-| `seanchatmangpt/ggen-ecosystem@50fdfa20c84205a80c6eb94e916cffbedc4b816e` | str_key | PROJECTION_SOURCE = "seanchatmangpt/ggen-ecosystem@50fdfa20c84205a80c6eb94e916cffbedc4b816e" |  |  |  |  |
-
-| `seanchatmangpt/unrdf` | str_key | DONORS = "seanchatmangpt/unrdf" |  |  |  |  |
-
-| `CapabilityDonor` | struct | CapabilityDonor { pub repository: &'static str, pub sha: &'static str, pub capability: &'static str, pub disposition: &'static str } |  |  |  |  |
-
-| `Dialect` | enum | Dialect { Turtle, TriG, NTriples, NQuads, RdfXml, JsonLd, YamlLd, TriX, HexTuples, N3, ShExC, ShExJ, Sparql } |  |  |  |  |
-
-| `Engine` | enum | Engine { PurRdf, Eyeron } |  |  |  |  |
-
-| `RefusalKind` | enum | RefusalKind { NotSemanticContent, Ambiguous, EngineRejected, Unsupported, ResourceLimit } |  |  |  |  |
+| `RefusalKind` | enum | RefusalKind { NotSemanticContent, Ambiguous, EngineRejected, Unsupported, ResourceLimit, TierMismatch, DuckDb } |  |  |  |  |
 
 | `admit_bytes` | function | admit_bytes( bytes: &[u8], hint: Option<&str>, base: Option<&str>, ) -> Result<LawState, Refusal> |  |  |  |  |
 
 | `check` | function | check(bytes: &[u8], dialect: Dialect, base: Option<&str>) -> Result<(), Refusal> |  |  |  |  |
 
+| `check_typed` | function | check_typed( bytes: &[u8], dialect: Dialect, base: Option<&str>, ) -> Result<(), Box<ParseRefusal>> |  |  |  |  |
+
 | `engine` | function | engine(self) -> Engine |  |  |  |  |
+
+| `limit` | function | limit( dialect: Dialect, name: impl Into<String>, observed: u64, max: u64, message: impl Into<String>, ) -> Self |  |  |  |  |
 
 | `media_type` | function | media_type(self) -> Option<&'static str> |  |  |  |  |
 
+| `new` | function | new( dialect: Dialect, reason: ReasonClass, message: impl Into<String>, ) -> Self |  |  |  |  |
+
 | `parse_rdf` | function | parse_rdf( bytes: &[u8], dialect: Dialect, base: Option<&str>, ) -> Result<Arc<purrdf::RdfDataset>, Refusal> |  |  |  |  |
+
+| `parse_rdf_typed` | function | parse_rdf_typed( bytes: &[u8], dialect: Dialect, base: Option<&str>, ) -> Result<Arc<purrdf::RdfDataset>, Box<ParseRefusal>> |  |  |  |  |
 
 | `sniff` | function | sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> |  |  |  |  |
 
+| `ParseRefusal` | struct | ParseRefusal { pub dialect: Dialect, pub engine: Engine, pub reason: ReasonClass, pub line: Option<u32>, pub col: Option<u32>, pub byte_offset: Option<usize>, pub snippet: Option<String>, pub message: String } |  |  |  |  |
+
 | `Refusal` | struct | Refusal { pub kind: RefusalKind, pub dialect: Option<Dialect>, pub engine: Option<Engine>, pub message: String } |  |  |  |  |
+
+| `EvaluatorError` | enum | EvaluatorError { DuckDb(frozen_duckdb::DuckDBError), ConversionError { column: String, row: usize, details: String, }, ReceiptError(String) } |  |  |  |  |
+
+| `admitted_statement_hash` | function | admitted_statement_hash( canonical_graph: &[u8], params: &[SqlLiteral], ) -> [u8; 32] |  |  |  |  |
+
+| `canonical_ast_graph_bytes` | function | canonical_ast_graph_bytes(turtle: &str) -> Result<Vec<u8>, EvaluatorError> |  |  |  |  |
+
+| `eval_admitted_ast` | function | eval_admitted_ast( &self, ast_turtle: &str, query_iri: &str, compiled: &CompiledQuery, subject_iri_prefix: &str, predicate_iri_prefix: &str, ) -> Result<ExecutionReceipt, EvaluatorError> |  |  |  |  |
+
+| `eval_ast_query` | function | eval_ast_query( &self, query_iri: &str, compiled: &CompiledQuery, subject_iri_prefix: &str, predicate_iri_prefix: &str, ) -> Result<ExecutionReceipt, EvaluatorError> |  |  |  |  |
+
+| `explain_ast_query` | function | explain_ast_query(&self, compiled: &CompiledQuery) -> Result<String, EvaluatorError> |  |  |  |  |
+
+| `from_connection` | function | from_connection(conn: frozen_duckdb::Connection) -> Self |  |  |  |  |
+
+| `from_connection_with_cache` | function | from_connection_with_cache( conn: frozen_duckdb::Connection, cache: std::sync::Arc<crate::query_cache::QueryCache>, ) -> Self |  |  |  |  |
+
+| `hash_param_buffer` | function | hash_param_buffer(hasher: &mut blake3::Hasher, params: &[SqlLiteral]) |  |  |  |  |
+
+| `open_in_memory` | function | open_in_memory() -> Result<Self, EvaluatorError> |  |  |  |  |
+
+| `open_in_memory_allowing_unsigned_extensions` | function | open_in_memory_allowing_unsigned_extensions() -> Result<Self, EvaluatorError> |  |  |  |  |
+
+| `open_in_memory_with_cache` | function | open_in_memory_with_cache( cache: std::sync::Arc<crate::query_cache::QueryCache>, ) -> Result<Self, EvaluatorError> |  |  |  |  |
+
+| `raw_connection` | function | raw_connection(&self) -> &frozen_duckdb::Connection |  |  |  |  |
+
+| `register_parquet_view` | function | register_parquet_view( &self, view_name: &str, glob_pattern: &str, hive_partitioning: bool, ) -> Result<(), EvaluatorError> |  |  |  |  |
+
+| `shared_cache` | function | shared_cache(&self) -> std::sync::Arc<crate::query_cache::QueryCache> |  |  |  |  |
+
+| `ExecutionReceipt` | struct | ExecutionReceipt { pub query_iri: String, pub query_hash: [u8; 32], pub sql_statement: String, pub rows_emitted: usize, pub execution_ms: f64, pub result_triples: Vec<RdfTriple>, pub cached: bool, pub consult_ms: f64 } |  |  |  |  |
+
+| `GraphLawDuckDB` | struct | GraphLawDuckDB { conn: frozen_duckdb::Connection, cache: std::sync::Arc<crate::query_cache::QueryCache> } |  |  |  |  |
+
+| `RdfTriple` | struct | RdfTriple { pub subject: String, pub predicate: String, pub object: TermValue } |  |  |  |  |
+
+| `DUCKDB_MEMORY_LIMIT` | const | DUCKDB_MEMORY_LIMIT: &str |  |  |  |  |
+
+| `DUCKDB_THREADS` | const | DUCKDB_THREADS: u32 |  |  |  |  |
+
+| `MAX_CHUNK_BYTES` | const | MAX_CHUNK_BYTES: usize |  |  |  |  |
+
+| `MAX_CHUNK_ROWS` | const | MAX_CHUNK_ROWS: usize |  |  |  |  |
+
+| `dispatch` | function | dispatch(v: &Value) -> Result<Value, Fail> |  |  |  |  |
+
+| `32MiB` | str_key | DUCKDB_MEMORY_LIMIT = "32MiB" |  |  |  |  |
+
+| `RING_CAPACITY` | const | RING_CAPACITY: usize |  |  |  |  |
+
+| `PushOutcome` | enum | PushOutcome { Buffered, DroppedNewest } |  |  |  |  |
+
+| `RingError` | enum | RingError { Io(String), BrokenChain { detail: String, }, Malformed { line: usize, }, TornSlot { line: usize, }, SequenceGap { detail: String, }, AlreadyInitialized } |  |  |  |  |
+
+| `close` | function | close(&self) |  |  |  |  |
+
+| `dropped_total` | function | dropped_total(&self) -> u64 |  |  |  |  |
+
+| `global` | function | global() -> Option<&'static Arc<Self>> |  |  |  |  |
+
+| `init` | function | init(dir: impl AsRef<Path>) -> Result<Arc<Self>, RingError> |  |  |  |  |
+
+| `init_global` | function | init_global(dir: impl AsRef<Path>) -> Result<(), RingError> |  |  |  |  |
+
+| `init_with_ledger` | function | init_with_ledger( dir: impl AsRef<Path>, ledger_dir: impl AsRef<Path>, ) -> Result<Arc<Self>, RingError> |  |  |  |  |
+
+| `last_ledger_error` | function | last_ledger_error(&self) -> Option<String> |  |  |  |  |
+
+| `ledger_dir` | function | ledger_dir(&self) -> Option<&Path> |  |  |  |  |
+
+| `ledger_path` | function | ledger_path(&self) -> PathBuf |  |  |  |  |
+
+| `new` | function | new( h_query: [u8; 32], rows_emitted: u64, execution_ms: u32, cached: u8, timestamp_ms: u64, ) -> Self |  |  |  |  |
+
+| `now_ms` | function | now_ms() -> u64 |  |  |  |  |
+
+| `pads_zero` | function | pads_zero(&self) -> bool |  |  |  |  |
+
+| `push` | function | push(&self, desc: RingDescriptor) -> PushOutcome |  |  |  |  |
+
+| `pushed_total` | function | pushed_total(&self) -> u64 |  |  |  |  |
+
+| `set_drainer_paused` | function | set_drainer_paused(&self, paused: bool) |  |  |  |  |
+
+| `verify` | function | verify(dir: impl AsRef<Path>) -> Result<(usize, usize, u64), RingError> |  |  |  |  |
+
+| `0000000000000000000000000000000000000000000000000000000000000000` | str_key | GENESIS = "0000000000000000000000000000000000000000000000000000000000000000" |  |  |  |  |
+
+| `DroppedEvidence` | struct | DroppedEvidence { pub dropped_count: u64, pub refused_h_query: [u8; 32], pub refused_at_ms: u64 } |  |  |  |  |
+
+| `EvidenceRing` | struct | EvidenceRing { dir: PathBuf, ledger_dir: Option<PathBuf>, producer: Mutex<Option<Producer<EvidenceSlot>>>, consumer: Mutex<Option<Consumer<EvidenceSlot>>>, seq_counter: Arc<AtomicU64>, dropped: AtomicU64, paused_flag: Arc<AtomicBool>, shutdown_flag: Arc<AtomicBool>, ledger_error: Arc<Mutex<Option<String>>>, drainer: Mutex<Option<std::thread::JoinHandle<()>>> } |  |  |  |  |
+
+| `RingDescriptor` | struct | RingDescriptor { pub h_query: [u8; 32], pub rows_emitted: u64, pub execution_ms: u32, pub cached: u8, pub pad1: [u8; 3], pub timestamp_ms: u64, pub pad2: [u8; 8] } |  |  |  |  |
 
 | `HANDLER_SPARQL_CONSTRUCT` | const | HANDLER_SPARQL_CONSTRUCT: &str |  |  |  |  |
 
@@ -4225,7 +5135,7 @@
 
 | `ReceiptReason` | enum | ReceiptReason { Unattested, BadSignature, UntrustedKey } |  |  |  |  |
 
-| `Step` | enum | Step { AdmitShacl { shapes_ttl: &'a str, }, DeriveN3 { rules: &'a str, }, Hooks { pack: &'a crate::hooks::HookPack, }, Plan { plan: &'a crate::plan::Plan, }, RequireReceipt { step: &'a str, }, RequireSignedReceipt { step: &'a str, trusted: &'a crate::attest::TrustedKeys, }, EntailRdfs, EntailOwlRl } |  |  |  |  |
+| `Step` | enum | Step { AdmitShacl { shapes_ttl: &'a str, }, DeriveN3 { rules: &'a str, ruleset: &'a crate::tier::RuleSet, }, Hooks { pack: &'a crate::hooks::HookPack, }, Plan { plan: &'a crate::plan::Plan, }, RequireReceipt { step: &'a str, }, RequireSignedReceipt { step: &'a str, trusted: &'a crate::attest::TrustedKeys, }, EntailRdfs, EntailOwlRl } |  |  |  |  |
 
 | `as_str` | function | as_str(self) -> &'static str |  |  |  |  |
 
@@ -4388,6 +5298,72 @@
 | `temporal_rule_holds` | function | temporal_rule_holds(events: &[&str], rule: &str) -> bool |  |  |  |  |
 
 | `Observation` | struct | Observation { pub attempt_observed: bool, pub violation_observed: bool, pub independent_observer: bool, pub postconditions_satisfied: bool, pub durable_evidence: bool, pub crash_observed: bool, pub crash_reconciled: bool } |  |  |  |  |
+
+| `bump` | function | bump(&self) -> u64 |  |  |  |  |
+
+| `consult` | function | consult(&self, h_query: [u8; 32], grounding: Option<&[u8]>) -> Option<(ExecutionReceipt, u64)> |  |  |  |  |
+
+| `epoch` | function | epoch(&self) -> u64 |  |  |  |  |
+
+| `is_empty` | function | is_empty(&self) -> bool |  |  |  |  |
+
+| `len` | function | len(&self) -> usize |  |  |  |  |
+
+| `new` | function | new() -> Self |  |  |  |  |
+
+| `now_ms` | function | now_ms() -> u64 |  |  |  |  |
+
+| `store` | function | store(&self, entry: CacheEntry) |  |  |  |  |
+
+| `CacheEntry` | struct | CacheEntry { pub h_query: [u8; 32], pub receipt: ExecutionReceipt, pub grounding: Vec<u8>, pub epoch: u64, pub stored_at: u64 } |  |  |  |  |
+
+| `QueryCache` | struct | QueryCache { entries: Mutex<HashMap<[u8; 32], CacheEntry>>, epoch: AtomicU64 } |  |  |  |  |
+
+| `FLUSH_AGE_MS` | const | FLUSH_AGE_MS: u64 |  |  |  |  |
+
+| `FLUSH_COUNT` | const | FLUSH_COUNT: usize |  |  |  |  |
+
+| `GENESIS` | const | GENESIS: &str |  |  |  |  |
+
+| `LedgerError` | enum | LedgerError { Io(String), DigestMismatch { file: String, expected: String, actual: String, }, Malformed { file: String, }, BrokenChain { detail: String, }, Fork { parent: String, }, DoubleGenesis { digest: String, }, MissingAgg { batch: String, }, AggMismatch { batch: String, }, ChainIndex { detail: String, } } |  |  |  |  |
+
+| `aggregate` | function | aggregate(&self, from_ms: u64, to_ms: u64) -> Result<Aggregate, LedgerError> |  |  |  |  |
+
+| `chain_state` | function | chain_state(&self) -> ChainState |  |  |  |  |
+
+| `content_digest` | function | content_digest(bytes: &[u8]) -> String |  |  |  |  |
+
+| `flush` | function | flush(&mut self) -> Result<(), LedgerError> |  |  |  |  |
+
+| `fold_batch` | function | fold_batch(batch: &str, records: &[Descriptor]) -> BatchAgg |  |  |  |  |
+
+| `gaps` | function | gaps(&self) -> Result<Vec<(u64, u64)>, LedgerError> |  |  |  |  |
+
+| `now_ms` | function | now_ms() -> u64 |  |  |  |  |
+
+| `open` | function | open(dir: impl AsRef<Path>) -> Result<Self, LedgerError> |  |  |  |  |
+
+| `open_with_producer` | function | open_with_producer( dir: impl AsRef<Path>, producer_next_seq: u64, ) -> Result<Self, LedgerError> |  |  |  |  |
+
+| `push` | function | push(&mut self, d: Descriptor) -> Result<(), LedgerError> |  |  |  |  |
+
+| `record_batch` | function | record_batch(&mut self, batch: &[Descriptor]) -> Result<(), LedgerError> |  |  |  |  |
+
+| `record_gap` | function | record_gap(&self, first: u64, last: u64) -> Result<(), LedgerError> |  |  |  |  |
+
+| `verify` | function | verify(&self) -> Result<ChainState, LedgerError> |  |  |  |  |
+
+| `0000000000000000000000000000000000000000000000000000000000000000` | str_key | GENESIS = "0000000000000000000000000000000000000000000000000000000000000000" |  |  |  |  |
+
+| `Aggregate` | struct | Aggregate { pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool, pub complete: bool, pub batches: usize } |  |  |  |  |
+
+| `BatchAgg` | struct | BatchAgg { pub batch: String, pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool } |  |  |  |  |
+
+| `ChainState` | struct | ChainState { pub head: String, pub tail: String, pub batches: u64, pub next_seq: u64 } |  |  |  |  |
+
+| `Descriptor` | struct | Descriptor { pub h_query: [u8; 32], pub rows_emitted: u32, pub flags: u8, pub ts_unix_ms: u64, pub epoch: u64 } |  |  |  |  |
+
+| `QueryLedger` | struct | QueryLedger { dir: PathBuf, parent: String, next_seq: u64, batches: u64, head: String, tail: String, buf: Vec<Descriptor>, buf_first_seq: u64, buf_opened_ms: u64, pub last_flush_error: Option<LedgerError> } |  |  |  |  |
 
 | `record` | function | record(state: &LawState, receipt: &Receipt) -> Result<LawState, LawError> |  |  |  |  |
 
@@ -4569,6 +5545,8 @@
 
 | `with_explicit_ceiling` | function | with_explicit_ceiling(mut self, level: CeilingLevel) -> Self |  |  |  |  |
 
+| `with_generation` | function | with_generation(mut self, generation: u64) -> Self |  |  |  |  |
+
 | `with_verified_promotion` | function | with_verified_promotion( mut self, witness: &PromotionWitness, actuator_identity: &str, ) -> Result<Self, CoreError> |  |  |  |  |
 
 | `M_1_to_2` | str_key | MIGRATION_LAW_1_TO_2 = "M_1_to_2" |  |  |  |  |
@@ -4585,7 +5563,7 @@
 
 | `receipts.jsonl` | str_key | LEDGER_FILE_NAME = "receipts.jsonl" |  |  |  |  |
 
-| `AdmissionItem` | struct | AdmissionItem { pub evidence_id: String, pub observed_outcome: ObservedOutcome, pub decision: AdmissionDecision, pub reason: String, pub obligations_discharged: Vec<String>, pub obligations_created: Vec<String> } |  |  |  |  |
+| `AdmissionItem` | struct | AdmissionItem { pub evidence_id: String, pub observed_outcome: ObservedOutcome, pub decision: AdmissionDecision, pub reason: String, pub obligations_discharged: Vec<String>, pub obligations_created: Vec<String>, pub generation: u64 } |  |  |  |  |
 
 | `ChainRuleMonotonicity` | struct | ChainRuleMonotonicity { first_declared: Option<usize> } |  |  |  |  |
 
@@ -4607,9 +5585,9 @@
 
 | `PromotionWitness` | struct | PromotionWitness { pub from_ceiling: CeilingLevel, pub to_ceiling: CeilingLevel, pub evidence_receipts: Vec<String>, pub closed_obligations: Vec<String>, pub verifier_identity: String, pub authorization_basis: String } |  |  |  |  |
 
-| `ReceiptEpochV2` | struct | ReceiptEpochV2 { pub admission: AdmissionLedger, pub standing_ceiling: CeilingLevel, pub equivalence: EquivalenceMap, pub obligation_count: ObligationCount, pub andon: AndonLevel, pub promotion_eligible: bool } |  |  |  |  |
+| `ReceiptEpochV2` | struct | ReceiptEpochV2 { pub admission: AdmissionLedger, pub standing_ceiling: CeilingLevel, pub equivalence: EquivalenceMap, pub obligation_count: ObligationCount, pub andon: AndonLevel, pub promotion_eligible: bool, pub generation: u64 } |  |  |  |  |
 
-| `ReceiptEpochV2Builder` | struct | ReceiptEpochV2Builder { prev_ceiling: CeilingLevel, components: ComponentLevels, admission: Vec<AdmissionItem>, equivalence: EquivalenceMap, explicit_ceiling: Option<CeilingLevel>, promoted: bool } |  |  |  |  |
+| `ReceiptEpochV2Builder` | struct | ReceiptEpochV2Builder { prev_ceiling: CeilingLevel, components: ComponentLevels, admission: Vec<AdmissionItem>, equivalence: EquivalenceMap, explicit_ceiling: Option<CeilingLevel>, promoted: bool, generation: u64 } |  |  |  |  |
 
 | `ReceiptMeta` | struct | ReceiptMeta { pub instruction_id: u64, pub activity_idx: u16, pub node_kind: u8, pub ts_ns: Option<u64>, pub denial: DenialPolarity, pub andon: Andon, pub object_ids: Vec<String>, pub obligation_count: u32 } |  |  |  |  |
 
@@ -4657,6 +5635,8 @@
 
 | `LEASE_REASONS` | const | LEASE_REASONS: &[&str] |  |  |  |  |
 
+| `NATIVE_ONLY_OPS` | const | NATIVE_ONLY_OPS: &[&str] |  |  |  |  |
+
 | `OPS` | const | OPS: &[Op] |  |  |  |  |
 
 | `OTHER_DIALECTS` | const | OTHER_DIALECTS: &[DialectRow] |  |  |  |  |
@@ -4687,9 +5667,11 @@
 
 | `rdf_dialect_names` | function | rdf_dialect_names() -> Vec<&'static str> |  |  |  |  |
 
-| `registry_json_pretty` | function | registry_json_pretty() -> String |  |  |  |  |
+| `receipt_surface_blake3` | function | receipt_surface_blake3() -> String |  |  |  |  |
 
 | `registry_blake3` | function | registry_blake3() -> String |  |  |  |  |
+
+| `registry_json_pretty` | function | registry_json_pretty() -> String |  |  |  |  |
 
 | `registry_turtle` | function | registry_turtle() -> String |  |  |  |  |
 
@@ -4717,6 +5699,8 @@
 
 | `data` | str_key | DATA = "data" |  |  |  |  |
 
+| `duckdb` | str_key | NATIVE_ONLY_OPS = "duckdb" |  |  |  |  |
+
 | `expired` | str_key | LEASE_REASONS = "expired" |  |  |  |  |
 
 | `graphlaw.capability-registry/1` | str_key | REGISTRY_SCHEMA = "graphlaw.capability-registry/1" |  |  |  |  |
@@ -4735,6 +5719,8 @@
 
 | `simple` | str_key | REGIMES = "simple" |  |  |  |  |
 
+| `src/duckdb_eval.rs` | str_key | FILES = "src/duckdb_eval.rs" |  |  |  |  |
+
 | `turtle` | str_key | RDF_DIALECTS = "turtle" |  |  |  |  |
 
 | `unattested` | str_key | RECEIPT_REASONS = "unattested" |  |  |  |  |
@@ -4750,6 +5736,30 @@
 | `RefusalCodeRow` | struct | RefusalCodeRow { pub code: &'static str, pub kind: Option<&'static str>, pub fields: &'static [Field] } |  |  |  |  |
 
 | `Variant` | struct | Variant { pub tag: Option<&'static str>, pub tag_field: Option<&'static str>, pub fields: &'static [Field] } |  |  |  |  |
+
+| `BuiltinError` | enum | BuiltinError { Eval(EvaluatorError), InvalidArguments { expected: String, got: String }, AstError(String) } |  |  |  |  |
+
+| `builtin_eval_sql` | function | builtin_eval_sql( args: &[&str], output_vars: &[&str], ctx: &BuiltinContext, reader: &R, ) -> Result<BuiltinResult, BuiltinError> |  |  |  |  |
+
+| `BuiltinContext` | struct | BuiltinContext { pub db: &'a GraphLawDuckDB } |  |  |  |  |
+
+| `BuiltinResult` | struct | BuiltinResult { pub bindings: Vec<(String, TermValue)>, pub derived_triples: Vec<RdfTriple>, pub query_hash: [u8; 32], pub rows_emitted: usize } |  |  |  |  |
+
+| `MAX_SHACL_VALIDATION_DEPTH` | const | MAX_SHACL_VALIDATION_DEPTH: usize |  |  |  |  |
+
+| `check_shape_depth` | function | check_shape_depth(shapes_ttl: &str) -> Result<(), DepthExceeded> |  |  |  |  |
+
+| `and` | str_key | SHAPE_LIST_PREDICATES = "and" |  |  |  |  |
+
+| `http://www.w3.org/1999/02/22-rdf-syntax-ns#first` | str_key | RDF_FIRST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first" |  |  |  |  |
+
+| `http://www.w3.org/1999/02/22-rdf-syntax-ns#rest` | str_key | RDF_REST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest" |  |  |  |  |
+
+| `http://www.w3.org/ns/shacl#` | str_key | SH = "http://www.w3.org/ns/shacl#" |  |  |  |  |
+
+| `node` | str_key | SHAPE_LINK_PREDICATES = "node" |  |  |  |  |
+
+| `DepthExceeded` | struct | DepthExceeded { pub observed: usize } |  |  |  |  |
 
 | `DCTERMS` | const | DCTERMS: &str |  |  |  |  |
 
@@ -4801,9 +5811,105 @@
 
 | `Turn` | struct | Turn { pub seq: usize, pub role: &'static str, pub text: String, pub kind: &'static str, pub evidence: Vec<String>, pub topic: String } |  |  |  |  |
 
-| `../ontologies/castle-capability-intake.ttl` | str_key | GRAPH = "../ontologies/castle-capability-intake.ttl" |  |  |  |  |
+| `REFUSAL_01_MALFORMED_AST` | const | REFUSAL_01_MALFORMED_AST: &str |  |  |  |  |
+
+| `REFUSAL_02_UNIMPLEMENTED` | const | REFUSAL_02_UNIMPLEMENTED: &str |  |  |  |  |
+
+| `REFUSAL_03_SCOPE_INTEGRITY` | const | REFUSAL_03_SCOPE_INTEGRITY: &str |  |  |  |  |
+
+| `AggregateFunction` | enum | AggregateFunction { Count, Sum, Avg, Min, Max } |  |  |  |  |
+
+| `AstError` | enum | AstError { InvalidIdentifier(String), MissingProperty(String, String), RecursionLimitExceeded(usize), MalformedList, UnsupportedTerm(String), MalformedNode(String), ShaclViolation(String) } |  |  |  |  |
+
+| `JoinType` | enum | JoinType { Inner, LeftOuter } |  |  |  |  |
+
+| `Operator` | enum | Operator { Equals, NotEquals, GreaterThan, GreaterThanOrEq, LessThan, LessThanOrEq, And, Or, Like, ILike, Add, Subtract, Multiply, Divide, Modulo } |  |  |  |  |
+
+| `Scope` | enum | Scope { View, Process } |  |  |  |  |
+
+| `ScopePos` | enum | ScopePos { SelectList, OrderBy, Having, Predicate, GroupBy, AggregateArgument, PredicateAggregateArgument } |  |  |  |  |
+
+| `SqlExpr` | enum | SqlExpr { ColumnRef { column: String, table_alias: Option<String>, }, Literal(SqlLiteral), Binary { op: Operator, left: Box<SqlExpr>, right: Box<SqlExpr>, }, FunctionCall { function: AggregateFunction, argument: Box<SqlExpr>, }, Alias { expr: Box<SqlExpr>, alias: String, } } |  |  |  |  |
+
+| `SqlLiteral` | enum | SqlLiteral { String(String), Integer(i64), Float(f64), Boolean(bool), Null } |  |  |  |  |
+
+| `as_sql` | function | as_sql(&self) -> &'static str |  |  |  |  |
+
+| `compile` | function | compile(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
+
+| `compile_merge` | function | compile_merge(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
+
+| `compile_turtle` | function | compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> |  |  |  |  |
+
+| `from_iri` | function | from_iri(iri: &str) -> Result<Self, AstError> |  |  |  |  |
+
+| `from_token` | function | from_token(token: &str) -> Result<Self, AstError> |  |  |  |  |
+
+| `validate_ast_shacl` | function | validate_ast_shacl( turtle_dataset: &str, shapes_ttl: &str, ) -> Result<(), AstError> |  |  |  |  |
+
+| `validate_identifier` | function | validate_identifier(ident: &str) -> Result<&str, AstError> |  |  |  |  |
+
+| `validate_qualified_identifier` | function | validate_qualified_identifier(ident: &str) -> Result<(), AstError> |  |  |  |  |
+
+| `[REFUSAL-01] MalformedAstRefusal:` | str_key | REFUSAL_01_MALFORMED_AST = "[REFUSAL-01] MalformedAstRefusal:" |  |  |  |  |
+
+| `[REFUSAL-02] UnimplementedStatementRefusal:` | str_key | REFUSAL_02_UNIMPLEMENTED = "[REFUSAL-02] UnimplementedStatementRefusal:" |  |  |  |  |
+
+| `[REFUSAL-03] ScopeIntegrityRefusal:` | str_key | REFUSAL_03_SCOPE_INTEGRITY = "[REFUSAL-03] ScopeIntegrityRefusal:" |  |  |  |  |
+
+| `CompiledQuery` | struct | CompiledQuery { pub sql: String, pub params: Vec<SqlLiteral>, pub ast_graph_turtle: Option<String>, pub canon_graph_bytes: Option<Vec<u8>>, pub receipt_state: Option<blake3::Hasher>, pub cacheable: bool } |  |  |  |  |
+
+| `JoinClause` | struct | JoinClause { pub join_type: JoinType, pub table: TableRef, pub condition: SqlExpr } |  |  |  |  |
+
+| `MergeStatement` | struct | MergeStatement { pub target: TableRef, pub source: SelectStatement, pub on: SqlExpr, pub assignments: Vec<(String, SqlExpr)> } |  |  |  |  |
+
+| `OrderTerm` | struct | OrderTerm { pub expr: SqlExpr, pub descending: bool } |  |  |  |  |
+
+| `SelectStatement` | struct | SelectStatement { pub from: TableRef, pub joins: Vec<JoinClause>, pub select_list: Vec<SqlExpr>, pub where_clause: Option<SqlExpr>, pub group_by: Vec<SqlExpr>, pub having: Option<SqlExpr>, pub order_by: Vec<OrderTerm>, pub limit: Option<usize>, pub offset: Option<usize> } |  |  |  |  |
+
+| `TableRef` | struct | TableRef { pub name: String, pub alias: Option<String>, pub schema: Option<String> } |  |  |  |  |
+
+| `RdfAstGraphReader` | trait |  |  |  |  |  |
+
+| `REFUSAL_04_CAPABILITY_REFUSAL` | const | REFUSAL_04_CAPABILITY_REFUSAL: &str |  |  |  |  |
+
+| `Admitted` | enum | Admitted { Dataset(Arc<purrdf::RdfDataset>), Rules(RuleSet), Query(crate::sql_ast::CompiledQuery) } |  |  |  |  |
+
+| `Tier` | enum | Tier { Rdf, N3Logic, Relational } |  |  |  |  |
+
+| `admit_bytes_tiered` | function | admit_bytes_tiered( bytes: &[u8], hint: Option<&str>, base: Option<&str>, decl: Option<DialectDecl>, ) -> Result<Admitted, Refusal> |  |  |  |  |
+
+| `admit_declared` | function | admit_declared(bytes: &[u8], decl: DialectDecl, base: Option<&str>) -> Result<Admitted, Refusal> |  |  |  |  |
+
+| `rule_count` | function | rule_count(&self) -> usize |  |  |  |  |
+
+| `tier` | function | tier(self) -> Tier |  |  |  |  |
+
+| `validate_n3_rules` | function | validate_n3_rules(bytes: &[u8], base: Option<&str>) -> Result<RuleSet, Refusal> |  |  |  |  |
+
+| `REFUSAL-04` | str_key | REFUSAL_04_CAPABILITY_REFUSAL = "REFUSAL-04" |  |  |  |  |
+
+| `DialectDecl` | struct | DialectDecl { pub tier: Tier, pub dialect: Dialect } |  |  |  |  |
+
+| `RuleSet` | struct | RuleSet { pub document: eyeron::Document } |  |  |  |  |
+
+| `0807060504030201887766554433221100ff0000000000000100000002000000030000000400000005000000060000000700000008000000bebafecaefbeaddeefbe2aa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5` | str_key | GOLDEN_FRAME_HASH_HEX = "0807060504030201887766554433221100ff0000000000000100000002000000030000000400000005000000060000000700000008000000bebafecaefbeaddeefbe2aa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5" |  |  |  |  |
+
+| `<http://example.org/alice> <http://example.org/knows> <http://example.org/bob> .` | str_key | PURE_NT = "<http://example.org/alice> <http://example.org/knows> <http://example.org/bob> ." |  |  |  |  |
+
+| `<http://example.org/alice> <http://example.org/knows> <http://example.org/bob> <http://example.org/g> .` | str_key | DATASET_NQ = "<http://example.org/alice> <http://example.org/knows> <http://example.org/bob> <http://example.org/g> ." |  |  |  |  |
+
+| `_:p <http://example.org/knows> _:q .` | str_key | BNODE_NT_RELABELED = "_:p <http://example.org/knows> _:q ." |  |  |  |  |
+
+| `_:x <http://example.org/knows> _:y .` | str_key | BNODE_NT = "_:x <http://example.org/knows> _:y ." |  |  |  |  |
+
+| `@prefix sh: <http://www.w3.org/ns/shacl#> .` | str_key | PREFIX = "@prefix sh: <http://www.w3.org/ns/shacl#> ." |  |  |  |  |
 
 | `https://chicago.graphlaw.dev/` | str_key | NS = "https://chicago.graphlaw.dev/" |  |  |  |  |
+
+| `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB` | str_key | KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB" |  |  |  |  |
+
+| `[ a sql:BinaryExpression ; sql:operator ` | str_key | AGGREGATE_WHERE = "[ a sql:BinaryExpression ; sql:operator " |  |  |  |  |
 
 | `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
 
@@ -4825,6 +5931,8 @@
 
 | `wasm_path` | function | wasm_path() -> PathBuf |  |  |  |  |
 
+| `CARGO_BIN_EXE_{name}` | env_key | std::env::var("CARGO_BIN_EXE_{name}") |  |  |  |  |
+
 | `UPDATE_ASSET_MANIFEST` | env_key | std::env::var_os("UPDATE_ASSET_MANIFEST") |  |  |  |  |
 
 | `https://example.org/base/` | str_key | BASE = "https://example.org/base/" |  |  |  |  |
@@ -4832,6 +5940,58 @@
 | `ontologies` | str_key | ROOTS = "ontologies" |  |  |  |  |
 
 | `https://example.org/` | str_key | NS = "https://example.org/" |  |  |  |  |
+
+| `.github/workflows/release.yml` | str_key | WORKFLOW = ".github/workflows/release.yml" |  |  |  |  |
+
+| `README.md` | str_key | README = "README.md" |  |  |  |  |
+
+| `cargo cicd publish run` | str_key | LOCAL_ONLY_MARKER = "cargo cicd publish run" |  |  |  |  |
+
+| `cargo publish -p graphlaw` | str_key | PUBLISH_STEP = "cargo publish -p graphlaw" |  |  |  |  |
+
+| `/Users/sac/frozen-duckdb/target/wasm-build/duckdb/src/parser/peg/grammar/statements/common.gram` | str_key | GRAM = "/Users/sac/frozen-duckdb/target/wasm-build/duckdb/src/parser/peg/grammar/statements/common.gram" |  |  |  |  |
+
+| `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB` | str_key | EXPR_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB" |  |  |  |  |
+
+| `core_functions` | str_key | CERTIFIED = "core_functions" |  |  |  |  |
+
+| `COLDCHAIN_CSV_DIR` | env_key | std::env::var("COLDCHAIN_CSV_DIR") |  |  |  |  |
+
+| `DUCKDB_BIN` | env_key | std::env::var("DUCKDB_BIN") |  |  |  |  |
+
+| `6971c912530619217b462f0b458a390eec34383a8155e0ccfcce869e4b6aeb8e` | str_key | COLD1_AUDIT_HASH = "6971c912530619217b462f0b458a390eec34383a8155e0ccfcce869e4b6aeb8e" |  |  |  |  |
+
+| `BATCH-A1` | str_key | COLD1_QUARANTINED = "BATCH-A1" |  |  |  |  |
+
+| `BATCH-R1` | str_key | COLD1_RELEASED = "BATCH-R1" |  |  |  |  |
+
+| `SELECT o.object_id, MAX(e.temp_celsius) AS max_temp, SUM(e.duration_seconds) AS duration FROM ocel_events AS e JOIN ocel_event_object_rel AS r ON e.event_id = r.event_id JOIN ocel_objects AS o ON r.object_id = o.object_id WHERE e.temp_celsius > -20.0 AND r.qualifier = 'contains_product' AND o.object_type = 'bio:BiologicBatch' GROUP BY o.object_id` | str_key | CANONICAL_QUERY = "SELECT o.object_id, MAX(e.temp_celsius) AS max_temp, SUM(e.duration_seconds) AS duration FROM ocel_events AS e JOIN ocel_event_object_rel AS r ON e.event_id = r.event_id JOIN ocel_objects AS o ON r.object_id = o.object_id WHERE e.temp_celsius > -20.0 AND r.qualifier = 'contains_product' AND o.object_type = 'bio:BiologicBatch' GROUP BY o.object_id" |  |  |  |  |
+
+| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+
+| `05ea1aa096f45968aacb2c996d2b541e4b9fdef24f006e0204e1fa88d33f68a5` | str_key | INSA_KAT_HEAD_HEX = "05ea1aa096f45968aacb2c996d2b541e4b9fdef24f006e0204e1fa88d33f68a5" |  |  |  |  |
+
+| `95163f2a6b24bebdfd19bf77cc60553640b8c9f5f5c54bc415c3b0da77e77598` | str_key | GRAPHLAW_HEAD_HEX = "95163f2a6b24bebdfd19bf77cc60553640b8c9f5f5c54bc415c3b0da77e77598" |  |  |  |  |
+
+| `INSA_LAW_PACK_ONTOLOGY` | env_key | std::env::var("INSA_LAW_PACK_ONTOLOGY") |  |  |  |  |
+
+| `/Users/sac/ggen-marketplace/packs/insa-law-pack/ontology.ttl` | str_key | ONTOLOGY_PATH = "/Users/sac/ggen-marketplace/packs/insa-law-pack/ontology.ttl" |  |  |  |  |
+
+| `19d9ec90cb861e8b1e320ef01e5e0d8a54022b19357f2b4856f379417dcc79d7` | str_key | ONTOLOGY_BLAKE3 = "19d9ec90cb861e8b1e320ef01e5e0d8a54022b19357f2b4856f379417dcc79d7" |  |  |  |  |
+
+| `@prefix insa: <urn:insa-law:> .` | str_key | LINK_RULES = "@prefix insa: <urn:insa-law:> ." |  |  |  |  |
+
+| `SELECT ?a ?b WHERE { ` | str_key | VIOLATION_QUERY = "SELECT ?a ?b WHERE { " |  |  |  |  |
+
+| `tx-source-pattern` | str_key | LAWFUL_EDGES = "tx-source-pattern" |  |  |  |  |
+
+| `admit:shacl` | str_key | STEP_NAMES = "admit:shacl" |  |  |  |  |
+
+| `observe` | str_key | CEILING_NAMES = "observe" |  |  |  |  |
+
+| `mock` | str_key | BANNED = "mock" |  |  |  |  |
+
+| `tests/no_mock_markers.rs` | str_key | ALLOWLIST = "tests/no_mock_markers.rs" |  |  |  |  |
 
 | `https://example.org/` | str_key | NS = "https://example.org/" |  |  |  |  |
 
@@ -4847,13 +6007,29 @@
 
 | `<urn:p:occupied>` | str_key | OCC = "<urn:p:occupied>" |  |  |  |  |
 
-| `blake3:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc` | str_key | POSITIVE_DIGEST = "blake3:6f39711c204fee70b841604e719937e44dd127a9895d3127efe23153065aa1cc" |  |  |  |  |
+| `blake3:e16c63901ed5012208d71405fd179ad947da8f849d8c3cb083c26d0ff6e31803` | str_key | POSITIVE_DIGEST = "blake3:e16c63901ed5012208d71405fd179ad947da8f849d8c3cb083c26d0ff6e31803" |  |  |  |  |
+
+| `CARGO_MANIFEST_DIR` | str_key | PACK_DIR = "CARGO_MANIFEST_DIR" |  |  |  |  |
+
+| `b3dbbc7c945a7883a75933dfc12699af393dac5fe711009bb5f4d694a2ac399b` | str_key | ONTOLOGY_BLAKE3 = "b3dbbc7c945a7883a75933dfc12699af393dac5fe711009bb5f4d694a2ac399b" |  |  |  |  |
+
+| `d52282d8c48e9021ff6f78e413d8a79dbffbc6b28e28db9a9d855f5810bb3185` | str_key | FIXTURE_BLAKE3 = "d52282d8c48e9021ff6f78e413d8a79dbffbc6b28e28db9a9d855f5810bb3185" |  |  |  |  |
+
+| `tests/fixtures/fm_chain_009.json` | str_key | FIXTURE_PATH = "tests/fixtures/fm_chain_009.json" |  |  |  |  |
 
 | `<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .` | str_key | NT = "<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> ." |  |  |  |  |
 
 | `derive:rdfs` | str_key | GATE = "derive:rdfs" |  |  |  |  |
 
 | `0123456789abcdef0123456789abcdef01234567` | str_key | SUBJECT = "0123456789abcdef0123456789abcdef01234567" |  |  |  |  |
+
+| `/Users/sac/ggen-marketplace/packs/refusal-vocabulary-pack` | str_key | SIBLING_ROOT = "/Users/sac/ggen-marketplace/packs/refusal-vocabulary-pack" |  |  |  |  |
+
+| `malformed_frame` | str_key | VALVE_EXPECTED = "malformed_frame" |  |  |  |  |
+
+| `ontology.ttl` | str_key | PINNED = "ontology.ttl" |  |  |  |  |
+
+| `tests/fixtures/refusal_crosswalk` | str_key | FIXTURE_ROOT = "tests/fixtures/refusal_crosswalk" |  |  |  |  |
 
 | `SHAPES` | const | SHAPES: &str |  |  |  |  |
 
@@ -4877,13 +6053,91 @@
 
 | `CARGO_BIN_EXE_sa2a-run14-verify` | str_key | BIN = "CARGO_BIN_EXE_sa2a-run14-verify" |  |  |  |  |
 
+| `CONFORMANCE_REPORT` | env_key | std::env::var("CONFORMANCE_REPORT") |  |  |  |  |
+
+| `../docs/refusals.md` | str_key | REFUSALS_MD = "../docs/refusals.md" |  |  |  |  |
+
+| `../ontologies/sql-ast.ttl` | str_key | SQL_AST_TTL = "../ontologies/sql-ast.ttl" |  |  |  |  |
+
+| `core_functions` | str_key | CERTIFIED_EXTENSION_RESULTS = "core_functions" |  |  |  |  |
+
+| `§1` | str_key | CLAUSE_TABLE = "§1" |  |  |  |  |
+
+| `hash` | str_key | GATES = "hash" |  |  |  |  |
+
+| `tests/fixtures/strata_gate_differential` | str_key | FIXTURE_ROOT = "tests/fixtures/strata_gate_differential" |  |  |  |  |
+
+| `cd3cde66a2a9a3440240e8ff005ca7258dfd995744f36b061102db522e33f30e` | str_key | PIN_BLAKE3 = "cd3cde66a2a9a3440240e8ff005ca7258dfd995744f36b061102db522e33f30e" |  |  |  |  |
+
+| `https://strata.chatman.ai/ontology#` | str_key | ST = "https://strata.chatman.ai/ontology#" |  |  |  |  |
+
+| `tests/fixtures/strata-temprun-ontology.ttl` | str_key | PINNED = "tests/fixtures/strata-temprun-ontology.ttl" |  |  |  |  |
+
+| `@prefix : <https://e/> .` | str_key | N3_RULES = "@prefix : <https://e/> ." |  |  |  |  |
+
 | `0123456789abcdef0123456789abcdef01234567` | str_key | SUBJECT = "0123456789abcdef0123456789abcdef01234567" |  |  |  |  |
+
+| `rdf-n-triples/nt-syntax-bad-string-04.nt` | str_key | KNOWN_DIVERGENCES = "rdf-n-triples/nt-syntax-bad-string-04.nt" |  |  |  |  |
+
+| `rdf-turtle/turtle-syntax-number-11.ttl` | str_key | KNOWN_POSITIVE_DIVERGENCES = "rdf-turtle/turtle-syntax-number-11.ttl" |  |  |  |  |
+
+| `ENTRIES` | const | ENTRIES: &[(Dialect, &str, Kind)] |  |  |  |  |
+
+| `Dialect` | enum | Dialect { Turtle, NTriples, NQuads, Trig, RdfXml } |  |  |  |  |
+
+| `Kind` | enum | Kind { Positive, Negative } |  |  |  |  |
+
+| `rdf-turtle/turtle-syntax-file-01.ttl` | str_key | ENTRIES = "rdf-turtle/turtle-syntax-file-01.ttl" |  |  |  |  |
 
 | `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
 
 | `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
 
 | `@prefix ex: <https://e/> . ex:s ex:p ex:o, ` | str_key | SAMPLE = "@prefix ex: <https://e/> . ex:s ex:p ex:o, " |  |  |  |  |
+
+| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `'; DROP TABLE cold_chain_events; --` | str_key | SQL_TOKENS = "'; DROP TABLE cold_chain_events; --" |  |  |  |  |
+
+| `NotSemanticContent` | str_key | REFUSAL_KINDS = "NotSemanticContent" |  |  |  |  |
+
+| `GWS10_DEBUG` | env_key | std::env::var("GWS10_DEBUG") |  |  |  |  |
+
+| `BATCH-A1` | str_key | COLD1_QUARANTINED = "BATCH-A1" |  |  |  |  |
+
+| `BATCH-R1` | str_key | COLD1_RELEASED = "BATCH-R1" |  |  |  |  |
+
+| `SELECT batch_id, SUM(cost) AS total_cost FROM telemetry WHERE (latency > $1) GROUP BY batch_id` | str_key | AGG_SQL = "SELECT batch_id, SUM(cost) AS total_cost FROM telemetry WHERE (latency > $1) GROUP BY batch_id" |  |  |  |  |
+
+| `batch_id,cost,latency` | str_key | TELEMETRY_HEADER = "batch_id,cost,latency" |  |  |  |  |
+
+| `https://example.org/data` | str_key | SUBJECT = "https://example.org/data" |  |  |  |  |
+
+| `https://example.org/queries/q1` | str_key | Q1 = "https://example.org/queries/q1" |  |  |  |  |
+
+| `https://example.org/vocab` | str_key | VOCAB = "https://example.org/vocab" |  |  |  |  |
+
+| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `@prefix ex: <https://e/> . ex:s ex:p ex:o .` | str_key | SAMPLE = "@prefix ex: <https://e/> . ex:s ex:p ex:o ." |  |  |  |  |
+
+| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `_:p <http://example.org/knows> _:q .` | str_key | BNQ_PQ = "_:p <http://example.org/knows> _:q ." |  |  |  |  |
+
+| `_:x <http://example.org/knows> _:y .` | str_key | BNQ_AB = "_:x <http://example.org/knows> _:y ." |  |  |  |  |
+
+| `packs/self-monitoring-pack/fixtures/session-real-broad-topic.ttl` | str_key | HOOK_SESSION = "packs/self-monitoring-pack/fixtures/session-real-broad-topic.ttl" |  |  |  |  |
+
+| `packs/self-monitoring-pack/hook.ttl` | str_key | HOOK_PACK = "packs/self-monitoring-pack/hook.ttl" |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var("GRAPHLAW_WASM") |  |  |  |  |
 
 | `ABI_VERSION` | const | ABI_VERSION: u32 |  |  |  |  |
 

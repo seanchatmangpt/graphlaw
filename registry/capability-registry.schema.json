@@ -1,5 +1,28 @@
 {
   "$defs": {
+    "receipt_surface": {
+      "additionalProperties": false,
+      "properties": {
+        "schema": {"const": "graphlaw.receipt-surface/1"},
+        "files": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "blake3": {"pattern": "^blake3:[0-9a-f]{64}$", "type": "string"},
+              "bytes": {"minimum": 1, "type": "integer"},
+              "path": {"minLength": 1, "type": "string"}
+            },
+            "required": ["path", "blake3", "bytes"],
+            "type": "object"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": ["schema", "files"],
+      "type": "object"
+    },
     "dialect": {
       "additionalProperties": true,
       "properties": {

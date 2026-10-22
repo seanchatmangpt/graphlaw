@@ -1,8 +1,14 @@
 # graphlaw working-tree artifact pins. The wasm row pins the bytes built from this tree (per-release digests live in each release's GitHub assets and CHANGELOG). Format: <kind> <blake3> <bytes> <name>
-# crate=26.10.13 wasm-abi=1 target=wasm32-wasip1 digest=cbc80f07346f025d4e1cd001f21d15474928cb055d4b1a9c0ac7c31c5938dc6a size=6654496 pin-source=26.10.13
-#   pin-source: digest was minted at the 26.10.13 source state; valid until next artifact rebuild, at which point this header and priv/graphlaw.wasm.blake3 are re-pinned in the same commit as the version bump (W09, 2026-10-20).
+# crate=26.10.21 wasm-abi=1 target=wasm32-wasip1 digest=332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c size=6793617 pin-source=26.10.21
+#   pin-source: digest was minted at the 26.10.21 source state; valid until next artifact rebuild, at which point this header and priv/graphlaw.wasm.blake3 are re-pinned in the same commit as the version bump (W09, 2026-10-20).
 # wasm: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm (rust 1.96.0);
 #   observed 2026-09-30: two builds, each after `cargo clean -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`, same target dir (dependency crates cached, not rebuilt), same machine, produced identical bytes. Not verified across separate target dirs or machines.
-wasm cbc80f07346f025d4e1cd001f21d15474928cb055d4b1a9c0ac7c31c5938dc6a 6654496 graphlaw_wasm.wasm
-registry blake3:0debaedbc40b72b1fb0c6003b59dac24a1d7a7c48b9344dd8befd2ede69ad044 - capability-registry.json
-surface blake3:c143fcfe72db271e5789a8074abae8f8ceb6526f36b340340891b89ad744f65e - capability-registry.json
+# wasm row: never re-pinned by graphlaw-registry; re-pinned by the wasm rebuild flow.
+wasm 332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c 6793617 graphlaw_wasm.wasm
+registry blake3:7db561aa315e86f3f21022697276ef3382b808ea1bcef4e4245159b755f819b4 - capability-registry.json
+surface blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9 - capability-registry.json
+receipt-surface blake3:78ebb149bb6712049fabbefc8b17cb72dcb6461b66422e1ea04e106e2b63f96e - src/duckdb_eval.rs+src/sql_ast.rs
+# receipt-surface: blake3 of the canonical graphlaw.receipt-surface/1 document
+#   (per-file blake3+bytes for src/duckdb_eval.rs and src/sql_ast.rs, the receipt-minting
+#   surface); recomputed by graphlaw::registry::receipt_surface_blake3(). Re-pin via
+#   `cargo run --bin graphlaw-registry -- --write` whenever either file changes.

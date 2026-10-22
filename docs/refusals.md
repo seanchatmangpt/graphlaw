@@ -23,7 +23,41 @@ the [capability registry](capability-registry.md)).
 | `Refused` | `LawError::Refused` | `kind` | Upstream engine or routing refusal raised inside a `law` step; `kind` is a `RefusalKind` name (below). |
 | `PolicyRefused` | `policy::PolicyRefused` | `policy_kind`, `state`, `action` | See policy kinds below. |
 | `DuckDb` | `RefusalKind::DuckDb` | `message` | The embedded DuckDB substrate (ABI op `duckdb`, feature `duckdb`, native-only; `src/duckdb_op.rs`) failed or the request misused it — unknown/expired cursor, bad view mount, unsupported param, engine error. Never traps. Chunk limits ride `ResourceLimit` with `limit` = `duckdb_chunk_rows` / `duckdb_chunk_bytes` / `duckdb_views`. |
-| `AstError` | `sql_ast::AstError` | `reason` (`InjectionAttempt`, `MissingWhereClause`, `ShapeViolation`) | Refusal during SQL AST validation before query dispatch to `frozen-duckdb`. Bounded WHERE clause is mandatory, and identifiers must adhere to regex `^[a-zA-Z_][a-zA-Z0-9_]*$`. |
+| `AstError` | `sql_ast::AstError` | `reason` (Display of the variant) | Refusal during SQL AST validation before query dispatch to `frozen-duckdb`. Variants in src: `InvalidIdentifier` (identifiers must match regex `^[a-zA-Z_][a-zA-Z0-9_]*$`), `MissingProperty`, `RecursionLimitExceeded`, `MalformedList`, `UnsupportedTerm`, `MalformedNode`, `ShaclViolation`. The stable `REFUSAL-01..04` codes for this surface appear as `[REFUSAL-nn]` markers inside the `reason` string (see below); no WHERE clause is required — bounded-WHERE enforcement does not exist on this path. |
+
+## SQL AST refusals (`REFUSAL-01..04`)
+
+Stable-coded refusal rows for the sql-rdf surface. The codes are stable as string
+markers: each refusal embeds a `[REFUSAL-nn]` marker in its message/reason and the
+trigger-to-code mapping is fixed by the tables below. Scope note (honest limits): the
+marker prefixes are typed constants in `src` — `sql_ast::REFUSAL_01_MALFORMED_AST`,
+`sql_ast::REFUSAL_02_UNIMPLEMENTED`, `sql_ast::REFUSAL_03_SCOPE_INTEGRITY`
+(`src/sql_ast.rs`), and `tier::REFUSAL_04_CAPABILITY_REFUSAL` (`src/tier.rs`) — but the
+codes still have no capability-registry rows, and the register flip itself has no
+`receipts/` entry this wave. Those are tracked integration items, not mechanical
+guarantees yet.
+
+| code | name | trigger | carrier | recovery |
+|---|---|---|---|---|
+| `REFUSAL-01` | `MalformedAstRefusal` | The graph AST fails strict closed-world SHACL shape validation before admission: missing or non-integer `sql:statementIndex`, empty/missing `sql:from`, missing projection list, malformed/unclosed RDF list, unexpected terminal node, recursion-limit breach, more than one expression discriminator per node, a token outside the §4 operator enum (`Operator::from_token`), or a non-`sql:Scope` individual. | `sql_ast::AstError::ShaclViolation` (operator tokens, scope individuals, and shape failures — message carries `[REFUSAL-01]`), plus `MissingProperty`, `MalformedNode`, `MalformedList`, `RecursionLimitExceeded`, `InvalidIdentifier` for the non-shape malformed cases. Unrecognized *function* IRIs use `UnsupportedTerm` with no `[REFUSAL-nn]` marker today (unclassified — pinned as a known gap). | Fix the AST to satisfy the shapes (`ontologies/sql-ast.ttl`); re-admit. |
+| `REFUSAL-02` | `UnimplementedStatementRefusal` | A dialect statement kind parsed from the grammar (`ggen/sql-dialect/sql_statement_kinds.rs`) is recognized but has no evaluation path in this DuckDB build — currently `ConnectStatement`, `DisconnectStatement`. | `sql_ast::AstError::UnsupportedTerm` carrying the decorated string `compile refusal: http://graphlaw.org/sql#<Kind> [REFUSAL-02] UnimplementedStatementRefusal: not implemented by this DuckDB build` | Rewrite the query using admitted statement kinds, or implement the evaluation path behind a receipted ticket. |
+| `REFUSAL-03` | `ScopeIntegrityRefusal` | Scope discrimination boundary violated (rec §1.3): an aggregate in a `WHERE`/`JOIN`/`GROUP BY` position, a `sql:ProcessScope` column in the projection list, or a `sql:ViewScope` column inside a predicate. | `sql_ast::AstError::ShaclViolation` (message carries `[REFUSAL-03]`) | Move the aggregate into `SELECT`/`HAVING` as shapes permit; keep `sql:ProcessScope` columns out of the projection and `sql:ViewScope` columns out of predicates. |
+| `REFUSAL-04` | `CapabilityRefusal` | Builtin SQL eval was given a reader that is not document-backed. The wasm module still admits and compiles SQL-in-RDF through `compile_turtle`, the same path as the other dialects. | `rules::builtins`: `BuiltinError::AstError` whose text starts with the typed constant `tier::REFUSAL_04_CAPABILITY_REFUSAL` (`REFUSAL-04`) | Supply the admitted Turtle document (`query_document_turtle`) and compile with `compile_turtle`. |
+
+## Conformance note: `Σ_PQC` is UNMET (SQLRDF-10)
+
+The second formula of `docs/reference/sql-rdf-rec.md` §1.4,
+
+`ΔS_admitted + Φ_lease ≡ R_receipt (mod Σ_PQC)`,
+
+names a post-quantum signature scheme `Σ_PQC` that this crate does not implement. The
+conformance clause is **UNMET** as of v26.10.22. The only signature scheme in the tree is
+Ed25519 via `src/attest.rs` (`sign_bytes`, `sign_receipt`), courted by
+`tests/trust_attest.rs`. A signature over a SQL query digest (e.g. the §1.4
+`H_query = BLAKE3(Canon(G_AST) ‖ P_params)`) *can* ride that existing Ed25519 path;
+nothing signs `H_query` today. No post-quantum scheme, parameter set, or modulus is
+defined by this register, and no new signature scheme is admitted without a receipted
+ticket.
 
 ## `Refused {kind}`
 

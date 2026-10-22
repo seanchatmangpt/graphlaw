@@ -67,7 +67,7 @@
     gac:dialectKind "other" ;
     gac:dialectName "shexc" ;
     gac:dialectOf <https://graphlaw.dev/registry#registry> ;
-    gac:dialectOrder 12 ;
+    gac:dialectOrder 13 ;
     gac:dialectResponseName "ShExC" .
 
 <https://graphlaw.dev/registry#dialect/shexj>
@@ -75,7 +75,7 @@
     gac:dialectKind "other" ;
     gac:dialectName "shexj" ;
     gac:dialectOf <https://graphlaw.dev/registry#registry> ;
-    gac:dialectOrder 13 ;
+    gac:dialectOrder 14 ;
     gac:dialectResponseName "ShExJ" .
 
 <https://graphlaw.dev/registry#dialect/sparql>
@@ -86,6 +86,14 @@
     gac:dialectOf <https://graphlaw.dev/registry#registry> ;
     gac:dialectOrder 11 ;
     gac:dialectResponseName "Sparql" .
+
+<https://graphlaw.dev/registry#dialect/sql>
+    a gac:Dialect ;
+    gac:dialectKind "other" ;
+    gac:dialectName "sql" ;
+    gac:dialectOf <https://graphlaw.dev/registry#registry> ;
+    gac:dialectOrder 12 ;
+    gac:dialectResponseName "SqlRdf" .
 
 <https://graphlaw.dev/registry#dialect/trig>
     a gac:Dialect ;
@@ -2548,12 +2556,13 @@
 <https://graphlaw.dev/registry#registry>
     a gac:Registry ;
     gac:abiVersion 1 ;
-    gac:dialectCount 13 ;
+    gac:dialectCount 14 ;
     gac:graphlawVersion "26.10.21" ;
     gac:opCount 14 ;
-    gac:registryBlake3 "blake3:0debaedbc40b72b1fb0c6003b59dac24a1d7a7c48b9344dd8befd2ede69ad044" ;
+    gac:receiptSurfaceBlake3 "blake3:78ebb149bb6712049fabbefc8b17cb72dcb6461b66422e1ea04e106e2b63f96e" ;
+    gac:registryBlake3 "blake3:7db561aa315e86f3f21022697276ef3382b808ea1bcef4e4245159b755f819b4" ;
     gac:schemaId "graphlaw.capability-registry/1" ;
-    gac:surfaceBlake3 "blake3:c143fcfe72db271e5789a8074abae8f8ceb6526f36b340340891b89ad744f65e" .
+    gac:surfaceBlake3 "blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9" .
 
 <https://graphlaw.dev/registry#vocab/engines/1>
     a gac:VocabularyEntry ;
@@ -2566,6 +2575,12 @@
     gac:vocabOf "engines" ;
     gac:vocabOrder 2 ;
     gac:vocabValue "Eyeron" .
+
+<https://graphlaw.dev/registry#vocab/engines/3>
+    a gac:VocabularyEntry ;
+    gac:vocabOf "engines" ;
+    gac:vocabOrder 3 ;
+    gac:vocabValue "FrozenDuckdb" .
 
 <https://graphlaw.dev/registry#vocab/lease_ceilings/1>
     a gac:VocabularyEntry ;

@@ -37,12 +37,36 @@ place is refused, not tried against every engine in turn.
 
 In addition to pure RDF dataset and N3 logic dialects, GraphLaw admits declarative relational query specifications modeled in RDF Turtle under the `http://graphlaw.org/sql#` namespace.
 - **Owning Engine**: `frozen-duckdb 2.0` (`src/duckdb_eval.rs`).
-- **Validation**: Enforced via SHACL pre-flight gate (`validate_ast_shacl`). Queries omitting a bounded `WHERE` clause or containing token injection attempts are rejected before reaching the execution layer.
+- **Validation**: Enforced via SHACL pre-flight gate (`validate_ast_shacl`, invoked by `compile_turtle`). Non-conforming ASTs are rejected before reaching the execution layer with typed `AstError::ShaclViolation` refusals carrying stable `[REFUSAL-nn]` codes (`docs/refusals.md`). `sql:whereClause` is optional.
+- **Statement surface**: 35 statement classes (`SQL_STATEMENTS`/
+  `SQL_EXTENSIONS`, `src/sql_statement_kinds.rs`, generated from
+  `ggen/sql-dialect/`); the runtime executes 33 to completion and refuses
+  `ConnectStatement`/`DisconnectStatement` with typed refusals (sql-rdf Rec.
+  section 5). Every statement node carries a required integer
+  `sql:statementIndex` — missing or non-integer is
+  `REFUSAL_01_MALFORMED_AST` (`src/sql_ast.rs`, section 4 StatementBaseShape).
+- **Receipt**: `ExecutionReceipt` (`src/duckdb_eval.rs`) is identified by
+  `H_query = BLAKE3(Canon(G_AST) || P_params)` — RDFC-1.0 canonical AST graph
+  bytes concatenated with the typed parameter buffer (sql-rdf Rec. 1.4) —
+  plus `query_iri`, parameterized `sql_statement`, `rows_emitted`,
+  `execution_ms`, and materialized `result_triples`.
+- **Connections**: default `GraphLawDuckDB::open_in_memory` runs unsigned
+  extensions off; `allowing_unsigned_extensions` is the opt-in boundary. The
+  de-skipped §6.2 extension court (`tests/duckdb_statement_kinds.rs`,
+  `section6_2_certified_checks_run_through_compiled_ast_graphs`) proves the
+  five certified extensions (`core_functions`, `icu`, `json`, `parquet`,
+  `tpch`) answer through compiled AST graphs on a real unsigned-extensions
+  connection, no skip branch.
+- **Mixing discipline**: legacy aliases (`sql:selectList`, `sql:fromTable`,
+  `sql:whereClause`) stay legal alongside `sql:select`/`sql:from`/`sql:where`,
+  but dual-carrying either pair is REFUSAL-01 — exactly one projection list,
+  one data source clause, one filter clause (`src/sql_ast.rs`; never silently
+  ignored).
 - **Output**: Vectorized execution directly over Parquet partitions or in-memory tables, emitting typed RDF statements accompanied by a BLAKE3 query execution receipt.
 
 ## Support matrix
 
-The 13 dialects of `Dialect` (`src/dialect.rs`), and what the current surface
+The 14 dialects of `Dialect` (`src/dialect.rs`), and what the current surface
 supports:
 
 | Dialect    | Engine | sniff | check | parse/convert | canonicalize |
@@ -60,6 +84,7 @@ supports:
 | ShExC      | PurRDF | yes (needs `shex`/`shexc` hint vs TriG) | yes | no (validation only) | no |
 | ShExJ      | PurRDF | yes (`"type":"Schema"`) | yes | no (validation only) | no |
 | Sparql     | PurRDF | yes (SELECT/CONSTRUCT/ASK/… keywords) | yes | no (query/update text) | no |
+| SqlRdf     | frozen-duckdb | yes (`sql:SelectStatement`, or a `sql` hint) | yes | no (query AST) | no |
 
 Notes, grounded in the code:
 
