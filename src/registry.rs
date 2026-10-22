@@ -880,6 +880,16 @@ pub const LAW_STEPS: &[LawStepRow] = &[
     },
 ];
 
+/// Ops dispatched by the native ABI but compiled out of the wasm target
+/// (feature `duckdb`; frozen-duckdb does not compile to wasm32). Deliberately
+/// absent from `OPS`/`capabilities`/the wasm mirror so the hashed registry
+/// document stays target-invariant and native≡wasm byte courts hold.
+#[cfg(feature = "duckdb")]
+pub const NATIVE_ONLY_OPS: &[&str] = &["duckdb"];
+/// No native-only ops compiled in.
+#[cfg(not(feature = "duckdb"))]
+pub const NATIVE_ONLY_OPS: &[&str] = &[];
+
 /// ABI op names in registry order.
 pub fn op_names() -> Vec<&'static str> {
     OPS.iter().map(|o| o.name).collect()

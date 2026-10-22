@@ -283,7 +283,7 @@
     "hooks_max_state_quads": 1000000,
     "max_atoms_per_field": 10000,
     "max_json_depth": 64,
-    "max_outstanding_alloc_bytes": 268435456,
+    "max_outstanding_alloc_bytes": 16777216,
     "max_plan_actions": 1000,
     "max_plan_total_atoms": 100000,
     "max_policy_entries": 100000,
@@ -2380,7 +2380,7 @@
     "owl-rl",
     "d"
   ],
-  "registry_blake3": "blake3:b6fb56566c9779bc4ccaab7c18bd746eb306a82c8b1275ed01123cdf5e51cd7d",
+  "registry_blake3": "blake3:0debaedbc40b72b1fb0c6003b59dac24a1d7a7c48b9344dd8befd2ede69ad044",
   "schema": "graphlaw.capability-registry/1",
   "surface_blake3": "blake3:c143fcfe72db271e5789a8074abae8f8ceb6526f36b340340891b89ad744f65e"
 }

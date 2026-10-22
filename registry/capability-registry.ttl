@@ -300,7 +300,7 @@
     gac:limitScope "wasm" ;
     gac:limitSource "src/abi.rs" ;
     gac:limitUnit "bytes" ;
-    gac:limitValue 268435456 .
+    gac:limitValue 16777216 .
 
 <https://graphlaw.dev/registry#limit/max_plan_actions>
     a gac:Limit ;
@@ -2551,7 +2551,7 @@
     gac:dialectCount 13 ;
     gac:graphlawVersion "26.10.21" ;
     gac:opCount 14 ;
-    gac:registryBlake3 "blake3:b6fb56566c9779bc4ccaab7c18bd746eb306a82c8b1275ed01123cdf5e51cd7d" ;
+    gac:registryBlake3 "blake3:0debaedbc40b72b1fb0c6003b59dac24a1d7a7c48b9344dd8befd2ede69ad044" ;
     gac:schemaId "graphlaw.capability-registry/1" ;
     gac:surfaceBlake3 "blake3:c143fcfe72db271e5789a8074abae8f8ceb6526f36b340340891b89ad744f65e" .
 

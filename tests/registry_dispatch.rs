@@ -16,6 +16,15 @@ fn names() -> Vec<String> {
         .collect()
 }
 
+/// Registry op names plus the registered native-only (feature-gated, compiled
+/// out of the wasm target) surface — the complete dispatch contract of the
+/// native ABI.
+fn full_names() -> Vec<String> {
+    let mut full = names();
+    full.extend(registry::NATIVE_ONLY_OPS.iter().map(|s| s.to_string()));
+    full
+}
+
 /// Arm names of `fn dispatch`, parsed from source: one `"op" => ...` per line, up to the
 /// `other =>` fallthrough.
 fn dispatch_arms() -> Vec<String> {
@@ -28,13 +37,29 @@ fn dispatch_arms() -> Vec<String> {
         .find("unknown op")
         .expect("dispatch fallthrough `unknown op` present");
     let mut arms = Vec::new();
+    let mut prev_cfg = false;
     for line in body[..end].lines() {
         let t = line.trim_start();
+        // A `#[cfg(...)]` attribute on the arm above means the arm is
+        // feature-gated (op-15 `duckdb` is native-only). Include it only when
+        // this build actually has the feature, matching the compiled binary.
+        if t.starts_with("#[cfg(feature = \"duckdb\")]") {
+            prev_cfg = true;
+            continue;
+        }
+        let _ = cfg!(feature = "duckdb");
         if let Some(rest) = t.strip_prefix('"')
             && let Some(q) = rest.find('"')
             && rest[q + 1..].trim_start().starts_with("=>")
         {
-            arms.push(rest[..q].to_string());
+            if !prev_cfg || cfg!(feature = "duckdb") {
+                arms.push(rest[..q].to_string());
+            }
+            prev_cfg = false;
+            continue;
+        }
+        if !t.is_empty() {
+            prev_cfg = false;
         }
     }
     arms
@@ -67,7 +92,9 @@ fn dispatch_arms_equal_registry_op_names_as_sets() {
         arms.len(),
         "duplicate dispatch arm: {arms:?}"
     );
-    let reg = names();
+    // Native-only ops (feature `duckdb`) are registered in the registry
+    // module but deliberately absent from OPS/capabilities/the wasm mirror.
+    let reg = full_names();
     let reg_set: BTreeSet<_> = reg.iter().cloned().collect();
     assert_eq!(reg_set.len(), reg.len(), "duplicate registry op: {reg:?}");
     let only_dispatch: Vec<_> = arm_set.difference(&reg_set).collect();
@@ -80,7 +107,7 @@ fn dispatch_arms_equal_registry_op_names_as_sets() {
 
 #[test]
 fn every_registry_op_is_dispatched_not_unknown() {
-    for name in names() {
+    for name in full_names() {
         let resp = call_json(&json!({"op": name}));
         assert!(
             !is_unknown_op(&resp),

@@ -94,7 +94,7 @@
     "max_datalog_rules": 10000,
     "max_json_depth": 64,
     "max_law_steps": 1000,
-    "max_outstanding_alloc_bytes": 268435456,
+    "max_outstanding_alloc_bytes": 16777216,
     "max_plan_actions": 1000,
     "max_policy_entries": 100000,
     "max_request_bytes": 16777216,
@@ -104,7 +104,7 @@
     "n3_max_total_bytes": 268435456,
     "n3_max_total_steps": 50000000
   },
-  "manifest_blake3": "blake3:60284879adb38fbbf50396e83216b384882ae914ad8692516003314bed53a826",
+  "manifest_blake3": "blake3:2321b6c70ad38e438cbdd16019c9225e64f4bc7c643d1517cdfc7ac4ab8f9f43",
   "notes": "op `duckdb` (op-15) is native-only behind the `duckdb` cargo feature and is deliberately absent from this wasm op table (frozen-duckdb does not compile to wasm32); its bounds are enforced in src/duckdb_op.rs: DuckDB memory_limit=32MiB and threads=1 compile-time pragmas (GAP-2), chunk rows <= 10000 and chunk bytes <= 16 MiB typed ResourceLimit refusals (GAP-4), MAX_OUTSTANDING_ALLOC_BYTES is 16 MiB for the wasm32 target via split-config (GAP-1)",
   "ops": [
     {

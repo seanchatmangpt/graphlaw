@@ -4,5 +4,5 @@
 # wasm: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm (rust 1.96.0);
 #   observed 2026-09-30: two builds, each after `cargo clean -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`, same target dir (dependency crates cached, not rebuilt), same machine, produced identical bytes. Not verified across separate target dirs or machines.
 wasm cbc80f07346f025d4e1cd001f21d15474928cb055d4b1a9c0ac7c31c5938dc6a 6654496 graphlaw_wasm.wasm
-registry blake3:b6fb56566c9779bc4ccaab7c18bd746eb306a82c8b1275ed01123cdf5e51cd7d - capability-registry.json
+registry blake3:0debaedbc40b72b1fb0c6003b59dac24a1d7a7c48b9344dd8befd2ede69ad044 - capability-registry.json
 surface blake3:c143fcfe72db271e5789a8074abae8f8ceb6526f36b340340891b89ad744f65e - capability-registry.json

@@ -23,14 +23,10 @@ pub const MAX_REQUEST_BYTES: usize = 16777216;
 pub const MAX_JSON_DEPTH: usize = 64;
 
 /// Upper bound on bytes handed to the host and not yet freed; alloc returns null above it.
-/// Split-config per GAP-1 (docs/wasm-duckdb-op15-design.md): 16 MiB for the
-/// wasm32 target (mirrors `graphlaw::abi::MAX_OUTSTANDING_ALLOC_BYTES` under
-/// `cfg(target_arch = "wasm32")`), 256 MiB when the crate is tested natively.
-#[cfg(target_arch = "wasm32")]
+/// 16 MiB per GAP-1 (docs/wasm-duckdb-op15-design.md), target-uniform with
+/// `graphlaw::abi::MAX_OUTSTANDING_ALLOC_BYTES` so the registry digest matches
+/// across native and wasm builds.
 pub const MAX_OUTSTANDING_BYTES: usize = 16777216;
-/// Native-test value of [`MAX_OUTSTANDING_BYTES`].
-#[cfg(not(target_arch = "wasm32"))]
-pub const MAX_OUTSTANDING_BYTES: usize = 268435456;
 
 /// Op table, ordered by `wja:opOrder`.
 pub const OPS: &[&str] = &[

@@ -10,7 +10,7 @@
 //!     reachable only through a hostile host misreporting len to gl_call, and
 //!     is asserted here; gl_call(0, 0) yields the typed missing-buffer
 //!     refusal. A host that allocates and never frees cannot fill linear
-//!     memory: gl_alloc returns null once MAX_OUTSTANDING_BYTES (256 MiB) is
+//!     memory: gl_alloc returns null once MAX_OUTSTANDING_BYTES (16 MiB, GAP-1) is
 //!     outstanding, and freeing restores the budget exactly.
 //! (b) a compute-explosive workload: N3 string-doubling (nested expansion
 //!     inside the rules evaluator) plus a depth-explosive JSON body - both
@@ -29,7 +29,7 @@
 //!   gl_alloc (null return, wasm/src/ffi.rs alloc_buf) for honest hosts, and
 //!   at the typed request_bytes ResourceLimit (graphlaw/src/abi.rs call)
 //!   behind a hostile len misreport to gl_call.
-//! - MAX_OUTSTANDING_BYTES (268,435,456 B) - enforced INSIDE the module
+//! - MAX_OUTSTANDING_BYTES (16,777,216 B, GAP-1 re-baseline) - enforced INSIDE the module
 //!   (ffi.rs reserve): bounds a host's outstanding, unfreed buffers.
 //! - Linear-memory ceiling - NOT declared by the imported memory's type
 //!   (maximum is None); in raw WASI the guest grows memory per its own
@@ -51,7 +51,9 @@ use wasmi_wasi::{WasiCtx, WasiCtxBuilder};
 
 /// Spec ABI pins (wasm/src/abi_meta.rs, ggen-rendered).
 const MAX_REQUEST_BYTES: u32 = 16_777_216;
-const MAX_OUTSTANDING_BYTES: usize = 268_435_456;
+// GAP-1 (docs/wasm-duckdb-op15-design.md): re-derived to 16 MiB so an
+// alloc-success-then-OOM-trap is impossible under the 64 MiB host wall.
+const MAX_OUTSTANDING_BYTES: usize = 16_777_216;
 const MAX_JSON_DEPTH: u32 = 64;
 
 /// Resolve the real artifact. GWS-2 bounded poll on the build state: the
@@ -242,7 +244,10 @@ fn boundary_map_memory_has_no_declared_maximum_module_caps_hold_the_line() {
     drop(h);
 
     // At the cap exactly, the request still works (16 MiB honest buffer).
-    let mut h = host().lock().unwrap_or_else(|e| e.into_inner());
+    // Private instance: an at-cap alloc consumes the whole outstanding budget
+    // (16 MiB = cap), so this probe must not share the module with the other
+    // courts.
+    let mut h = Host::new();
     let body = padded_capabilities(MAX_REQUEST_BYTES as usize);
     let ptr = h
         .alloc(body.len() as u32)
@@ -260,7 +265,9 @@ fn bulk_focus_node_injection_over_request_cap_is_typed_never_a_trap() {
     // gl_alloc over the request cap returns null (never traps); a hostile
     // host that misreports len to gl_call gets the typed request_bytes
     // ResourceLimit; gl_call(0, 0) yields the typed missing-buffer refusal.
-    let mut h = host().lock().unwrap_or_else(|e| e.into_inner());
+    // Private instance: the over-cap null check and the at-cap alloc (16 MiB
+    // fills the outstanding budget) must not starve the shared instance.
+    let mut h = Host::new();
     assert_eq!(
         h.alloc(MAX_REQUEST_BYTES + 1),
         None,
@@ -269,7 +276,13 @@ fn bulk_focus_node_injection_over_request_cap_is_typed_never_a_trap() {
     let ptr = h
         .alloc(MAX_REQUEST_BYTES)
         .expect("at-cap alloc must succeed");
-    let (op, olen) = h.call_raw(ptr, MAX_REQUEST_BYTES + 1); // hostile misreport
+    drop(h);
+    // Hostile-misreport leg rides the shared host with a small buffer.
+    let mut h = host().lock().unwrap_or_else(|e| e.into_inner());
+    let small = padded_capabilities(64);
+    let ptr = h.alloc(small.len() as u32).expect("small alloc");
+    h.write_body(ptr, &small);
+    let (op, olen) = h.call_raw(ptr, (MAX_REQUEST_BYTES + 1) as u32); // hostile misreport
     let out = h.read_out(op, olen);
     let r: Value = serde_json::from_slice(&out).expect("response is JSON");
     drop(h);

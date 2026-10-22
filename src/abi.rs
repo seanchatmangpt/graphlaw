@@ -63,15 +63,14 @@ pub const MAX_DATALOG_FACTS: usize = 100_000;
 /// Ceiling, in bytes, on host-visible buffers (`gl_alloc` buffers and `gl_call`
 /// responses) the wasm module holds at once; `gl_alloc` returns null beyond it.
 ///
-/// Split-config (GAP-1, docs/wasm-duckdb-op15-design.md): 16 MiB for the wasm
-/// target so alloc-success-then-OOM-trap is impossible under the smalt 64 MiB
-/// wall (DuckDB's 32 MiB compile-time pragma leaves headroom); 256 MiB native,
-/// where no linear-memory wall exists.
-#[cfg(target_arch = "wasm32")]
+/// 16 MiB per GAP-1 (docs/wasm-duckdb-op15-design.md): under the smalt 64 MiB
+/// sandbox wall, alloc-success-then-OOM-trap is impossible (DuckDB's 32 MiB
+/// compile-time pragma leaves headroom). The value is target-uniform so the
+/// hashed registry document (and therefore `registry_blake3`) is identical for
+/// native and wasm builds — op_examples' native-vs-wasm byte court depends on
+/// it. Enforcement lives in the wasm shell (`wasm/src/ffi.rs`); native callers
+/// do not allocate through `gl_alloc`.
 pub const MAX_OUTSTANDING_ALLOC_BYTES: usize = 16 * 1024 * 1024;
-/// Native-target value of [`MAX_OUTSTANDING_ALLOC_BYTES`].
-#[cfg(not(target_arch = "wasm32"))]
-pub const MAX_OUTSTANDING_ALLOC_BYTES: usize = 256 * 1024 * 1024;
 
 /// A refusal plus optional machine-readable `details` (`{"code": ...}`).
 #[derive(Debug, Clone)]
