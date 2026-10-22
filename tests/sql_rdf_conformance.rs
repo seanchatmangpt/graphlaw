@@ -1,0 +1,554 @@
+//! E3 conformance-report rung for `docs/reference/sql-rdf-rec.md`.
+//!
+//! This rung IS the conformance report: one `#[test]` per already-courtable
+//! normative clause group, each delegating to the REAL public evidence the
+//! existing courts use (no duplicated engines, no mocks — rec §6.1). Prose-only
+//! clauses (§1, §2, §6.1, §8) are NOT-COURTABLE here and are marked as such;
+//! their court evidence lives in the Chicago execution lanes.
+//!
+//! Gate: `cargo test --test sql_rdf_conformance`
+//!
+//! ANTI-VACUITY (inline-flip per court, scripts/mutation_court.sh discipline):
+//! every refusal gate below carries an inline FLIP check — the benign twin of
+//! the refusing document MUST compile — so a gate that refuses everything
+//! (or silently admits everything) fails this file.
+
+use graphlaw::sql_ast::{compile_turtle, SqlLiteral, REFUSAL_01_MALFORMED_AST, REFUSAL_02_UNIMPLEMENTED, REFUSAL_03_SCOPE_INTEGRITY};
+use graphlaw::sql_statement_kinds::{SQL_EXTENSIONS, SQL_STATEMENTS};
+use graphlaw::tier::REFUSAL_04_CAPABILITY_REFUSAL;
+
+/// The rec §4 normative shape inventory, read from the shapes file itself.
+const SQL_AST_TTL: &str = include_str!("../ontologies/sql-ast.ttl");
+/// The rec §5 refusal taxonomy registry.
+const REFUSALS_MD: &str = include_str!("../docs/refusals.md");
+
+// ---------------------------------------------------------------------------
+// NOT-COURTABLE here (prose clauses): rec §1 (philosophical foundations),
+// §2 (conformance notation), §6.1 (Chicago testing doctrine — enforced by the
+// execution courts' structure itself), §8 (epilogue). No normative machine-
+// checkable invariant is stated in these sections beyond what the tests below
+// and the execution courts already witness.
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Rec §3.2 — Normative statement inventory: 35 classes, Connect/Disconnect
+// refuse typed (REFUSAL-02), never a generic crash.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn section3_2_inventory_is_35_classes_with_typed_engine_refusals() {
+    assert_eq!(SQL_STATEMENTS.len(), 35, "rec §3.2: MUST recognize all 35 statement classes");
+    let names: Vec<&str> = SQL_STATEMENTS.iter().map(|(n, _)| *n).collect();
+    for expected in [
+        "SelectStatement",
+        "InsertStatement",
+        "UpdateStatement",
+        "DeleteStatement",
+        "MergeIntoStatement",
+        "ConnectStatement",
+        "DisconnectStatement",
+    ] {
+        assert!(names.contains(&expected), "rec §3.2 inventory missing {expected}");
+    }
+
+    // The two engine-refusal classes refuse typed at compile time with the
+    // stable REFUSAL-02 marker — the same public compile surface the PEG
+    // execution courts use (no duplication).
+    for kind in ["ConnectStatement", "DisconnectStatement"] {
+        let doc = format!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n@prefix ex: <http://example.org/queries#> .\nex:S a sql:{kind} ; sql:statementIndex 1 .\n"
+        );
+        let err = compile_turtle(&doc).unwrap_err().to_string();
+        assert!(
+            err.contains("compile refusal") && err.contains("REFUSAL-02"),
+            "{kind}: expected typed REFUSAL-02 compile refusal, got: {err}"
+        );
+        assert!(
+            err.contains(REFUSAL_02_UNIMPLEMENTED) || err.contains("UnimplementedStatementRefusal"),
+            "{kind}: refusal must carry the UnimplementedStatementRefusal category: {err}"
+        );
+        // FLIP: the same document shaped as a SelectStatement must compile —
+        // the refusal is attributable to the statement class, not the shape.
+        let benign = format!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n@prefix ex: <http://example.org/queries#> .\nex:S a sql:SelectStatement ; sql:statementIndex 1 ; sql:fromTable [ sql:tableName \"t\" ] ; sql:selectList ( [ sql:columnName \"c\" ] ) .\n"
+        );
+        assert!(
+            compile_turtle(&benign).is_ok(),
+            "{kind} flip: benign SelectStatement twin must compile"
+        );
+    }
+    emit_conformance_report();
+}
+
+// ---------------------------------------------------------------------------
+// Rec §4 — Closed-world SHACL shapes: the four normative shape names exist in
+// ontologies/sql-ast.ttl, and the shape gates refuse via the real compiler
+// (missing index, bad operator, malformed list).
+// ---------------------------------------------------------------------------
+
+#[test]
+fn section4_shape_names_present_and_gates_refuse() {
+    for shape in [
+        "sql:StatementBaseShape",
+        "sql:SelectStatementShape",
+        "sql:BinaryExpressionShape",
+        "sql:OrderedListShape",
+    ] {
+        assert!(
+            SQL_AST_TTL.contains(shape),
+            "rec §4 shape {shape} must be declared in ontologies/sql-ast.ttl"
+        );
+    }
+
+    // Gate 1: StatementBaseShape — missing/non-integer sql:statementIndex is REFUSAL-01.
+    let missing_index = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/queries#> .
+ex:Q a sql:SelectStatement ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList ( [ sql:columnName "batch_id" ] ) .
+"#;
+    let err = compile_turtle(missing_index).unwrap_err().to_string();
+    assert!(err.contains("REFUSAL-01"), "missing index: {err}");
+    assert!(err.contains("statementIndex"), "missing index: {err}");
+    // FLIP: with the index present the same shape must compile.
+    let with_index = missing_index.replace(
+        "    sql:fromTable",
+        "    sql:statementIndex 1 ;\n    sql:fromTable",
+    );
+    assert!(
+        compile_turtle(&with_index).is_ok(),
+        "flip: adding sql:statementIndex must admit the document"
+    );
+
+    // Gate 2: BinaryExpressionShape operator enum — a token outside
+    // (= != < <= > >= AND OR + - * / % LIKE ILIKE) is REFUSAL-01.
+    let bad_operator = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <http://example.org/queries#> .
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList ( [ sql:columnName "batch_id" ] ) ;
+    sql:whereClause [
+        sql:operator "SOUNDS-LIKE"^^<http://www.w3.org/2001/XMLSchema#string> ;
+        sql:leftOperand [ sql:columnName "batch_id" ] ;
+        sql:rightOperand [ sql:literalValue "alpha" ]
+    ] .
+"#;
+    let err = compile_turtle(bad_operator).unwrap_err().to_string();
+    assert!(err.contains("REFUSAL-01"), "bad operator: {err}");
+    assert!(err.contains("SOUNDS-LIKE"), "bad operator: {err}");
+    // FLIP: the same predicate with an in-vocabulary operator must compile.
+    let good_operator = bad_operator.replace("SOUNDS-LIKE", "=");
+    assert!(
+        compile_turtle(&good_operator).is_ok(),
+        "flip: in-vocabulary operator must admit the document"
+    );
+
+    // Gate 3: OrderedListShape — a list node without its rdf:rest cell (an
+    // unclosed chain) refuses as a typed malformed-AST error (REFUSAL-01
+    // family: MalformedList/MissingProperty per docs/refusals.md), never a
+    // silent fold or a crash.
+    let malformed_list = r#"
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/queries#> .
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList [
+        rdf:first [ sql:columnName "batch_id" ] ;
+        rdf:rest [ rdf:first [ sql:columnName "shard" ] ]
+    ] .
+"#;
+    let err = compile_turtle(malformed_list).unwrap_err().to_string();
+    assert!(
+        err.contains("rest") || err.contains("Malformed") || err.contains("REFUSAL-01"),
+        "malformed list must refuse typed, got: {err}"
+    );
+    // FLIP: close the list chain (rdf:rest rdf:nil) — the twin must compile.
+    let closed_list = malformed_list.replace(
+        "rdf:first [ sql:columnName \"shard\" ] ]",
+        "rdf:first [ sql:columnName \"shard\" ] ; rdf:rest rdf:nil ]",
+    );
+    assert!(
+        compile_turtle(&closed_list).is_ok(),
+        "flip: closing the rdf:rest chain must admit the document"
+    );
+    emit_conformance_report();
+}
+
+// ---------------------------------------------------------------------------
+// Rec §5 — Formal typed refusal taxonomy: all four codes exist BOTH as rows in
+// docs/refusals.md AND as typed constants in src, and fire through the real
+// compiler.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn section5_refusal_codes_in_register_and_in_src() {
+    // Register side: every code and its category identifier is documented.
+    for (code, category) in [
+        ("REFUSAL-01", "MalformedAstRefusal"),
+        ("REFUSAL-02", "UnimplementedStatementRefusal"),
+        ("REFUSAL-03", "ScopeIntegrityRefusal"),
+        ("REFUSAL-04", "CapabilityRefusal"),
+    ] {
+        assert!(
+            REFUSALS_MD.contains(code) && REFUSALS_MD.contains(category),
+            "docs/refusals.md must register {code} ({category})"
+        );
+    }
+
+    // Source side: the typed constants exist and carry the stable codes
+    // (referencing them here IS the existence court — they must compile).
+    assert!(REFUSAL_01_MALFORMED_AST.contains("REFUSAL-01"));
+    assert!(REFUSAL_01_MALFORMED_AST.contains("MalformedAstRefusal"));
+    assert!(REFUSAL_02_UNIMPLEMENTED.contains("REFUSAL-02"));
+    assert!(REFUSAL_02_UNIMPLEMENTED.contains("UnimplementedStatementRefusal"));
+    assert!(REFUSAL_03_SCOPE_INTEGRITY.contains("REFUSAL-03"));
+    assert!(REFUSAL_03_SCOPE_INTEGRITY.contains("ScopeIntegrityRefusal"));
+    assert_eq!(REFUSAL_04_CAPABILITY_REFUSAL, "REFUSAL-04");
+
+    // REFUSAL-03 fires through the real compiler: aggregate in a WHERE
+    // position (rec §5 trigger example).
+    let aggregate_in_where = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <http://example.org/queries#> .
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList ( [ sql:columnName "batch_id" ] ) ;
+    sql:whereClause [
+        sql:operator "=" ;
+        sql:leftOperand [
+            sql:functionName "sum" ;
+            sql:arguments ( [ sql:columnName "latency_ms" ] )
+        ] ;
+        sql:rightOperand [ sql:literalValue "400"^^xsd:integer ]
+    ] .
+"#;
+    let err = compile_turtle(aggregate_in_where).unwrap_err().to_string();
+    assert!(err.contains("REFUSAL-03"), "aggregate in WHERE must be REFUSAL-03: {err}");
+    // FLIP: the same aggregate projected (not filtered) must compile.
+    let aggregate_in_select = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <http://example.org/queries#> .
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList ( [ sql:functionName "sum" ; sql:arguments ( [ sql:columnName "latency_ms" ] ) ] ) .
+"#;
+    assert!(
+        compile_turtle(aggregate_in_select).is_ok(),
+        "flip: the aggregate in projection position must be admitted"
+    );
+    emit_conformance_report();
+}
+
+// ---------------------------------------------------------------------------
+// Rec §6.2 — Certified built-in extensions: the five certified expected values
+// as constants, cross-checked against the generated SQL_EXTENSIONS table.
+// ---------------------------------------------------------------------------
+
+/// Rec §6.2 certified results: (extension, certified integer result).
+const CERTIFIED_EXTENSION_RESULTS: &[(&str, i64)] = &[
+    ("core_functions", 6),
+    ("icu", 1),
+    ("json", 1),
+    ("parquet", 1),
+    ("tpch", 25),
+];
+
+#[test]
+fn section6_2_certified_extension_values_match_generated_table() {
+    for (name, certified) in CERTIFIED_EXTENSION_RESULTS {
+        let row = SQL_EXTENSIONS
+            .iter()
+            .find(|(n, _, _, _)| n == name)
+            .unwrap_or_else(|| panic!("rec §6.2 extension {name} missing from SQL_EXTENSIONS"));
+        assert_eq!(
+            row.3, *certified,
+            "rec §6.2 certified result for {name}: table says {}, rec says {certified}",
+            row.3
+        );
+    }
+    emit_conformance_report();
+}
+
+// ---------------------------------------------------------------------------
+// Rec §7.1 — Target parameterized SQL projection: compiling the §7 sample
+// graph yields the exact MERGE fragment with $1 and the SETTLED parameter.
+// ---------------------------------------------------------------------------
+
+/// The rec §7 sample graph, verbatim per `docs/reference/sql-rdf-rec.md` §7.
+fn section7_merge_graph() -> String {
+    let body = r#"_:mergeStatement a sql:MergeIntoStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable [
+        a sql:TableIdentifier ;
+        sql:schemaName "main" ;
+        sql:tableName "regional_sales"
+    ] ;
+    sql:usingSource [
+        a sql:SelectStatement ;
+        sql:statementIndex 1 ;
+        sql:select (
+            [ a sql:ColumnIdentifier ;
+              sql:columnName "region_id" ;
+              sql:scope sql:ViewScope ]
+            [ a sql:FunctionExpression ;
+              sql:functionName "sum" ;
+              sql:arguments ( [ a sql:ColumnIdentifier ; sql:columnName "amount" ; sql:scope sql:ProcessScope ] ) ;
+              sql:alias "total_invoiced" ;
+              sql:scope sql:ViewScope ]
+        ) ;
+        sql:from (
+            [ a sql:TableIdentifier ;
+              sql:schemaName "staging" ;
+              sql:tableName "invoices" ]
+        ) ;
+        sql:where [
+            a sql:BinaryExpression ;
+            sql:left [ a sql:ColumnIdentifier ; sql:columnName "status" ; sql:scope sql:ProcessScope ] ;
+            sql:operator "=" ;
+            sql:right [ a sql:LiteralExpression ; sql:value "SETTLED" ; sql:datatype xsd:string ]
+        ] ;
+        sql:groupBy (
+            [ a sql:ColumnIdentifier ; sql:columnName "region_id" ; sql:scope sql:ProcessScope ]
+        )
+    ] ;
+    sql:mergeOn [
+        a sql:BinaryExpression ;
+        sql:left [ a sql:ColumnIdentifier ; sql:qualifier "main.regional_sales" ; sql:columnName "region_id" ; sql:scope sql:ProcessScope ] ;
+        sql:operator "=" ;
+        sql:right [ a sql:ColumnIdentifier ; sql:qualifier "src" ; sql:columnName "region_id" ; sql:scope sql:ProcessScope ]
+    ] ;
+    sql:whenMatched [
+        a sql:MergeUpdateAction ;
+        sql:setAssignments (
+            [ a sql:Assignment ;
+              sql:targetColumn "revenue" ;
+              sql:valueExpression [
+                  a sql:BinaryExpression ;
+                  sql:left [ a sql:ColumnIdentifier ; sql:qualifier "main.regional_sales" ; sql:columnName "revenue" ; sql:scope sql:ProcessScope ] ;
+                  sql:operator "+" ;
+                  sql:right [ a sql:ColumnIdentifier ; sql:qualifier "src" ; sql:columnName "total_invoiced" ; sql:scope sql:ProcessScope ]
+              ]
+            ]
+        )
+    ] ."#;
+    format!("@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n{body}")
+}
+
+#[test]
+fn section7_1_compiles_to_target_parameterized_projection() {
+    let compiled = compile_turtle(&section7_merge_graph()).unwrap();
+    // Whitespace/paren-normalized comparison — same normalization the
+    // sql_rdf_dialect court uses for this clause.
+    let norm = |s: &str| {
+        s.chars()
+            .map(|c| if c == '(' || c == ')' { ' ' } else { c })
+            .collect::<String>()
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_ascii_lowercase()
+    };
+    let expected = norm(
+        "MERGE INTO main.regional_sales USING (SELECT region_id, SUM(amount) AS total_invoiced \
+         FROM staging.invoices WHERE status = $1 GROUP BY region_id) AS src \
+         ON main.regional_sales.region_id = src.region_id \
+         WHEN MATCHED THEN UPDATE SET revenue = (main.regional_sales.revenue + src.total_invoiced);",
+    );
+    assert_eq!(norm(&compiled.sql), expected, "\nactual: {}\n", compiled.sql);
+    // §7.1 extracted parameter buffer: exactly the SETTLED string literal.
+    assert_eq!(
+        compiled.params,
+        vec![SqlLiteral::String("SETTLED".into())],
+        "rec §7.1 extracted parameter buffer"
+    );
+    emit_conformance_report();
+}
+
+// ---------------------------------------------------------------------------
+// E3 — conformance-report emission: the rung prints its receipt table as
+// Markdown rows behind the CONFORMANCE_REPORT=<path> env gate. When the gate
+// is unset, emission is additive: every court above passes unchanged.
+// ---------------------------------------------------------------------------
+
+/// One row of the clause receipt table. `Status` is either `COURTED` (a
+/// `#[test]` in this file witnesses it) or `PROSE-ONLY` (no normative
+/// machine-checkable invariant beyond what the execution courts witness —
+/// rec §1, §2, §6.1, §8). Including the PROSE-ONLY rows makes the clause
+/// inventory exhaustive and machine-checked.
+struct ClauseRow {
+    clause: &'static str,
+    section: &'static str,
+    requirement: &'static str,
+    status: &'static str,
+    witness: &'static str,
+}
+
+const CLAUSE_TABLE: &[ClauseRow] = &[
+    ClauseRow {
+        clause: "§1",
+        section: "Philosophical foundations",
+        requirement: "No normative machine-checkable invariant stated",
+        status: "PROSE-ONLY",
+        witness: "rec §1; court evidence lives in the Chicago execution lanes",
+    },
+    ClauseRow {
+        clause: "§2",
+        section: "Conformance notation",
+        requirement: "No normative machine-checkable invariant stated",
+        status: "PROSE-ONLY",
+        witness: "rec §2; RFC 2119 key words as document text",
+    },
+    ClauseRow {
+        clause: "§3.2",
+        section: "Normative statement inventory",
+        requirement: "35 statement classes recognized; Connect/Disconnect refuse typed REFUSAL-02",
+        status: "COURTED",
+        witness: "section3_2_inventory_is_35_classes_with_typed_engine_refusals",
+    },
+    ClauseRow {
+        clause: "§4",
+        section: "Closed-world SHACL shapes",
+        requirement: "Shape gates refuse typed (REFUSAL-01 family) via the real compiler",
+        status: "COURTED",
+        witness: "section4_shape_names_present_and_gates_refuse",
+    },
+    ClauseRow {
+        clause: "§5",
+        section: "Formal typed refusal taxonomy",
+        requirement: "REFUSAL-01..04 in register AND in src; REFUSAL-03 fires through the compiler",
+        status: "COURTED",
+        witness: "section5_refusal_codes_in_register_and_in_src",
+    },
+    ClauseRow {
+        clause: "§6.1",
+        section: "Chicago testing doctrine",
+        requirement: "No mocks; real collaborators, real table readbacks",
+        status: "PROSE-ONLY",
+        witness: "rec §6.1; enforced by the execution courts' structure itself",
+    },
+    ClauseRow {
+        clause: "§6.2",
+        section: "Certified built-in extensions",
+        requirement: "Five certified extension results match the generated SQL_EXTENSIONS table",
+        status: "COURTED",
+        witness: "section6_2_certified_extension_values_match_generated_table",
+    },
+    ClauseRow {
+        clause: "§7.1",
+        section: "Target-parameterized SQL projection",
+        requirement: "§7 sample graph compiles to the exact MERGE fragment with $1 and the SETTLED param",
+        status: "COURTED",
+        witness: "section7_1_compiles_to_target_parameterized_projection",
+    },
+    ClauseRow {
+        clause: "§8",
+        section: "Epilogue",
+        requirement: "No normative machine-checkable invariant stated",
+        status: "PROSE-ONLY",
+        witness: "rec §8",
+    },
+];
+
+/// Render the clause receipt table as Markdown rows (no pipes in cell text —
+/// the cell contents above are pipe-free by construction).
+fn render_clause_table() -> String {
+    let mut out = String::from(
+        "| Clause | Section | Requirement | Status | Witness |\n|---|---|---|---|---|\n",
+    );
+    for r in CLAUSE_TABLE {
+        out.push_str(&format!(
+            "| {} | {} | {} | {} | {} |\n",
+            r.clause, r.section, r.requirement, r.status, r.witness
+        ));
+    }
+    out
+}
+
+/// Emission is idempotent across the courts in this file (each calls this at
+/// its end); the file is written at most once per process.
+fn emit_conformance_report() {
+    use std::sync::Once;
+    static EMIT: Once = Once::new();
+    EMIT.call_once(|| {
+        let Ok(path) = std::env::var("CONFORMANCE_REPORT") else {
+            return; // additive: gate unset, nothing written, tests unchanged
+        };
+        let table = render_clause_table();
+        let totals = format!(
+            "\nTotals: {} clauses — {} COURTED, {} PROSE-ONLY.\n",
+            CLAUSE_TABLE.len(),
+            CLAUSE_TABLE.iter().filter(|r| r.status == "COURTED").count(),
+            CLAUSE_TABLE.iter().filter(|r| r.status == "PROSE-ONLY").count(),
+        );
+        // BLAKE3 of the table text binds the report to the producing binary:
+        // the hash is computed from the exact rows this binary rendered, plus
+        // the crate version of the binary that produced them.
+        let binding = blake3::hash(
+            format!(
+                "graphlaw v{} || {}",
+                env!("CARGO_PKG_VERSION"),
+                table
+            )
+            .as_bytes(),
+        );
+        let body = format!(
+            "# sql-rdf conformance report\n\n<!-- GENERATED by tests/sql_rdf_conformance.rs \
+             (CONFORMANCE_REPORT gate). Regenerate: CONFORMANCE_REPORT=docs/reference-generated/\
+             sql-rdf-conformance.md cargo test --test sql_rdf_conformance. Never hand-edit. -->\n\n\
+             Producer: graphlaw v{} (tests/sql_rdf_conformance.rs)\n\n\
+             {table}{totals}\nTable BLAKE3: `{}`\n",
+            env!("CARGO_PKG_VERSION"),
+            binding.to_hex(),
+        );
+        if let Some(parent) = std::path::Path::new(&path).parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        std::fs::write(&path, body)
+            .unwrap_or_else(|e| panic!("CONFORMANCE_REPORT={path}: cannot write report: {e}"));
+    });
+}
+
+/// docs_release_claims-style assertion: the report emitter is exercised on
+/// every run; with CONFORMANCE_REPORT unset emission is additive (the gate is
+/// skipped) and the clause inventory — including the PROSE-ONLY rows for §1,
+/// §2, §6.1, §8 — stays exhaustive so no clause can silently vanish.
+#[test]
+fn report_emission_is_additive_and_clause_inventory_is_exhaustive() {
+    // Additive contract: with CONFORMANCE_REPORT unset the emitter is a
+    // filesystem no-op and every court in this file passes unchanged; with it
+    // set, emission must not perturb any assertion above. Either way the
+    // in-memory inventory below stays complete.
+    assert_eq!(CLAUSE_TABLE.len(), 9, "clause inventory: 9 rec clause groups");
+    for clause in ["§1", "§2", "§6.1", "§8"] {
+        let row = CLAUSE_TABLE
+            .iter()
+            .find(|r| r.clause == clause)
+            .unwrap_or_else(|| panic!("PROSE-ONLY clause {clause} missing from the inventory"));
+        assert_eq!(row.status, "PROSE-ONLY", "{clause} must stay PROSE-ONLY here");
+    }
+    assert_eq!(
+        CLAUSE_TABLE.iter().filter(|r| r.status == "COURTED").count(),
+        5,
+        "five clause groups carry in-file court witnesses"
+    );
+    for r in CLAUSE_TABLE {
+        assert!(!r.requirement.contains('|') && !r.witness.contains('|'),
+            "cell text must stay pipe-free for Markdown: {}", r.clause);
+    }
+    // Exercising the emitter here is safe under both gate states: with the
+    // gate set it writes the report; unset it is a no-op.
+    emit_conformance_report();
+}
+
+// Every court above registers its clause as witnessed by appending
+// emit_conformance_report() at its end; the Once makes emission idempotent.

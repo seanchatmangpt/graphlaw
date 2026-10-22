@@ -33,6 +33,15 @@ fn registry_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("registry")
 }
 
+/// Tests in this file read and (in two courts) rewrite the shared registry
+/// files under `registry/`. Cargo runs tests in parallel threads, so every
+/// file-touching test holds this lock to keep the read/write interleaving
+/// serialized (a read of a half-written file is a race, not a finding).
+fn registry_file_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 fn read(name: &str) -> String {
     let p = registry_dir().join(name);
     std::fs::read_to_string(&p).unwrap_or_else(|e| panic!("cannot read {}: {e}", p.display()))
@@ -137,6 +146,7 @@ fn emit(flag: &str) -> String {
 
 #[test]
 fn a_committed_json_and_ttl_equal_emission() {
+    let _g = registry_file_lock();
     assert_eq!(
         read("capability-registry.json"),
         emit("--print-json"),
@@ -151,6 +161,7 @@ fn a_committed_json_and_ttl_equal_emission() {
 
 #[test]
 fn b_emitter_check_flag_accepts_committed_files() {
+    let _g = registry_file_lock();
     let exe = env!("CARGO_BIN_EXE_graphlaw-registry");
     let out = Command::new(exe)
         .arg("--check")
@@ -168,6 +179,7 @@ fn b_emitter_check_flag_accepts_committed_files() {
 
 #[test]
 fn c_registry_digest_and_surface_digest_recompute() {
+    let _g = registry_file_lock();
     let doc = json_doc();
     let mut without = doc.clone();
     without.as_object_mut().unwrap().remove("registry_blake3");
@@ -199,6 +211,7 @@ fn c_registry_digest_and_surface_digest_recompute() {
 
 #[test]
 fn d_json_file_format_is_canonical_pretty() {
+    let _g = registry_file_lock();
     let text = read("capability-registry.json");
     assert!(text.is_ascii(), "registry json must be ASCII-only");
     assert!(!text.contains('\r'), "registry json must use LF");
@@ -297,6 +310,7 @@ fn check_fields(fields: &Value, schema: &Value, vocab: &[String], ctx: &str) {
 
 #[test]
 fn e_schema_file_is_2020_12_and_pins_the_contract() {
+    let _g = registry_file_lock();
     let s = schema();
     assert_eq!(s["$schema"], "https://json-schema.org/draft/2020-12/schema");
     assert_eq!(
@@ -310,6 +324,7 @@ fn e_schema_file_is_2020_12_and_pins_the_contract() {
 
 #[test]
 fn f_registry_json_satisfies_schema_rules() {
+    let _g = registry_file_lock();
     let doc = json_doc();
     let s = schema();
     let vocab = type_vocab(&s);
@@ -405,6 +420,7 @@ fn f_registry_json_satisfies_schema_rules() {
 
 #[test]
 fn g_negative_controls_for_schema_rules_reject_mutations() {
+    let _g = registry_file_lock();
     // Positive control first: the committed document passes the same rule set.
     let s = schema();
     let vocab = type_vocab(&s);
@@ -451,6 +467,7 @@ fn has_message(report: &Value, needle: &str) -> bool {
 
 #[test]
 fn h_ttl_parses_with_quads() {
+    let _g = registry_file_lock();
     let resp = call_json(&json!({
         "op": "parse",
         "text": read("capability-registry.ttl"),
@@ -462,6 +479,7 @@ fn h_ttl_parses_with_quads() {
 
 #[test]
 fn i_committed_ttl_conforms_to_shapes() {
+    let _g = registry_file_lock();
     let report = shacl_report(&read("capability-registry.ttl"));
     assert_eq!(
         report["conforms"],
@@ -480,6 +498,7 @@ fn with_appended(extra: &str) -> String {
 
 #[test]
 fn j_duplicate_op_order_is_non_conforming() {
+    let _g = registry_file_lock();
     // Control: unmodified ttl conforms.
     assert_eq!(
         shacl_report(&read("capability-registry.ttl"))["conforms"],
@@ -501,6 +520,7 @@ fn j_duplicate_op_order_is_non_conforming() {
 
 #[test]
 fn j2_model_shapes_reject_malformed_model_rows() {
+    let _g = registry_file_lock();
     let mutant = with_appended(
         "<https://graphlaw.dev/registry#model/ZzBad> a gac:Model ;\n  \
          gac:modelName \"ZzBad\" ; gac:modelOrder 0 .\n\
@@ -514,6 +534,7 @@ fn j2_model_shapes_reject_malformed_model_rows() {
 
 #[test]
 fn k_unknown_field_type_is_non_conforming() {
+    let _g = registry_file_lock();
     assert_eq!(
         shacl_report(&read("capability-registry.ttl"))["conforms"],
         true
@@ -545,6 +566,7 @@ fn k_unknown_field_type_is_non_conforming() {
 
 #[test]
 fn l_op_count_mismatch_is_non_conforming() {
+    let _g = registry_file_lock();
     assert_eq!(
         shacl_report(&read("capability-registry.ttl"))["conforms"],
         true
@@ -566,6 +588,7 @@ fn l_op_count_mismatch_is_non_conforming() {
 
 #[test]
 fn m_inconsistent_variant_tagging_is_non_conforming() {
+    let _g = registry_file_lock();
     assert_eq!(
         shacl_report(&read("capability-registry.ttl"))["conforms"],
         true
@@ -586,6 +609,7 @@ fn m_inconsistent_variant_tagging_is_non_conforming() {
 
 #[test]
 fn artifacts_pin_file_carries_the_live_registry_and_surface_digests() {
+    let _g = registry_file_lock();
     let text = read("ARTIFACTS.blake3");
     let rows: Vec<Vec<&str>> = text
         .lines()
@@ -598,6 +622,10 @@ fn artifacts_pin_file_carries_the_live_registry_and_surface_digests() {
             .unwrap_or_else(|| panic!("ARTIFACTS.blake3 has no `{kind}` row"))
     };
     assert_eq!(find("registry")[1], graphlaw::registry::registry_blake3());
+    assert_eq!(
+        find("receipt-surface")[1],
+        graphlaw::registry::receipt_surface_blake3()
+    );
     assert_eq!(find("surface")[1], graphlaw::registry::surface_blake3());
     let wasm = find("wasm");
     assert_eq!(wasm[1].len(), 64, "wasm digest is 64 hex chars");
@@ -617,7 +645,101 @@ fn artifacts_pin_file_carries_the_live_registry_and_surface_digests() {
 }
 
 #[test]
+fn artifacts_write_repin_matches_live_digests() {
+    let _g = registry_file_lock();
+    // Real write path over the real committed file (Chicago: no mocks).
+    let path = registry_dir().join("ARTIFACTS.blake3");
+    let before = std::fs::read_to_string(&path).expect("ARTIFACTS.blake3 readable");
+
+    // Run the emitter's --write for real, then verify the committed rows equal the
+    // live digests. Snapshot-restore keeps the tree clean on failure.
+    let out = |flag: &str| {
+        let exe = env!("CARGO_BIN_EXE_graphlaw-registry");
+        Command::new(exe).arg(flag).output().expect("emitter runs")
+    };
+    let write_out = out("--write");
+    let after = std::fs::read_to_string(&path).unwrap_or_default();
+    let restore = |body: &str| std::fs::write(&path, body).expect("ARTIFACTS.blake3 restore");
+    let result = std::panic::catch_unwind(|| {
+        assert!(
+            write_out.status.success(),
+            "--write failed: {}{}",
+            String::from_utf8_lossy(&write_out.stdout),
+            String::from_utf8_lossy(&write_out.stderr)
+        );
+        assert!(
+            String::from_utf8_lossy(&write_out.stdout).contains("repinned"),
+            "--write must report the ARTIFACTS repin"
+        );
+        // The write is idempotent over an already-pinned file.
+        assert_eq!(after, before, "--write must be idempotent when rows are fresh");
+
+        // Every owned row equals the live computed digest.
+        let rows: Vec<Vec<&str>> = after
+            .lines()
+            .filter(|l| !l.starts_with('#') && !l.trim().is_empty())
+            .map(|l| l.split_whitespace().collect())
+            .collect();
+        let find = |kind: &str| {
+            rows.iter()
+                .find(|r| r[0] == kind)
+                .unwrap_or_else(|| panic!("no `{kind}` row after --write"))
+        };
+        assert_eq!(find("registry")[1], graphlaw::registry::registry_blake3());
+        assert_eq!(find("surface")[1], graphlaw::registry::surface_blake3());
+        assert_eq!(
+            find("receipt-surface")[1],
+            graphlaw::registry::receipt_surface_blake3()
+        );
+
+        // The wasm row is byte-identical before and after: the bin never touches it.
+        let wasm_before = before
+            .lines()
+            .find(|l| l.starts_with("wasm "))
+            .expect("wasm row before");
+        assert_eq!(find("wasm").join(" "), wasm_before, "wasm row untouched");
+        // Header carries the ownership note.
+        assert!(after.contains("re-pinned by the wasm rebuild flow"));
+
+        // And --check accepts what --write produced.
+        let check_out = out("--check");
+        assert!(
+            check_out.status.success(),
+            "--check refuses freshly written files: {}{}",
+            String::from_utf8_lossy(&check_out.stdout),
+            String::from_utf8_lossy(&check_out.stderr)
+        );
+    });
+    if result.is_err() {
+        restore(&before);
+    }
+    assert!(result.is_ok(), "artifacts_write_repin_matches_live_digests failed");
+}
+
+#[test]
+fn artifacts_check_flags_stale_owned_row() {
+    let _g = registry_file_lock();
+    // Negative control: a mutated digest in an owned row must make --check exit 1.
+    let path = registry_dir().join("ARTIFACTS.blake3");
+    let before = std::fs::read_to_string(&path).expect("ARTIFACTS.blake3 readable");
+    let mut mutant = before.replacen(
+        &format!("registry {}", graphlaw::registry::registry_blake3()),
+        &format!("registry blake3:{}", "0".repeat(64)),
+        1,
+    );
+    assert_ne!(mutant, before, "mutation applied");
+    std::fs::write(&path, &mutant).expect("write mutant");
+    let exe = env!("CARGO_BIN_EXE_graphlaw-registry");
+    let out = Command::new(exe).arg("--check").output().expect("emitter runs");
+    mutant = before.clone(); // restore before asserting on the exit
+    std::fs::write(&path, &mutant).expect("restore");
+    assert_eq!(out.status.code(), Some(1), "--check must flag a stale row");
+    assert!(String::from_utf8_lossy(&out.stdout).contains("DRIFT"));
+}
+
+#[test]
 fn limits_track_source_constants() {
+    let _g = registry_file_lock();
     let doc = json_doc();
     let s = schema();
     let limits = doc["limits"].as_object().expect("limits object");
@@ -661,6 +783,7 @@ fn limits_track_source_constants() {
 
 #[test]
 fn limit_meta_keys_equal_limit_keys() {
+    let _g = registry_file_lock();
     let doc = json_doc();
     let limits: Vec<&String> = doc["limits"].as_object().unwrap().keys().collect();
     let meta: Vec<&String> = doc["limit_meta"].as_object().unwrap().keys().collect();
@@ -689,6 +812,7 @@ fn limit_meta_keys_equal_limit_keys() {
 
 #[test]
 fn models_cover_the_typed_surface() {
+    let _g = registry_file_lock();
     let doc = json_doc();
     let names: Vec<&str> = doc["models"]
         .as_array()
@@ -751,6 +875,7 @@ fn models_cover_the_typed_surface() {
 
 #[test]
 fn wasm_outstanding_cap_has_one_source_of_truth() {
+    let _g = registry_file_lock();
     let src =
         std::fs::read_to_string(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("wasm/src/lib.rs"))
             .expect("wasm source readable");
@@ -759,4 +884,49 @@ fn wasm_outstanding_cap_has_one_source_of_truth() {
         "wasm/src/lib.rs must use graphlaw::abi::MAX_OUTSTANDING_ALLOC_BYTES"
     );
     assert!(src.contains("graphlaw::abi::MAX_OUTSTANDING_ALLOC_BYTES"));
+}
+
+#[test]
+fn receipt_surface_pin_matches_live_files_and_refuses_drift() {
+    let _g = registry_file_lock();
+    let pin = graphlaw::registry::receipt_surface_blake3();
+    assert!(pin.starts_with("blake3:") && pin.len() == 71, "{pin}");
+    assert_eq!(
+        json_doc()["receipt_surface_blake3"],
+        json!(pin),
+        "registry JSON carries the receipt-surface pin"
+    );
+
+    // The embedded receipt-surface document: schema, per-file digests and byte
+    // counts recompute against the real on-disk sources (Chicago: no mocks).
+    let surface = json_doc()["receipt_surface"].clone();
+    assert_eq!(surface["schema"], json!("graphlaw.receipt-surface/1"));
+    let files = surface["files"].as_array().expect("files array");
+    assert_eq!(files.len(), 2, "duckdb_eval + sql_ast pinned");
+    for f in files {
+        let path = f["path"].as_str().expect("path");
+        let bytes = std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(path))
+            .unwrap_or_else(|e| panic!("{path} readable: {e}"));
+        assert_eq!(
+            f["blake3"],
+            json!(format!("blake3:{}", hex(blake3::hash(&bytes).as_bytes()))),
+            "{path} per-file digest"
+        );
+        assert_eq!(f["bytes"], json!(bytes.len()), "{path} byte count");
+        // Drift negative control: flipping one byte must change the digest.
+        let mut mutated = bytes.clone();
+        mutated[0] ^= 0xFF;
+        assert_ne!(
+            hex(blake3::hash(&mutated).as_bytes()),
+            f["blake3"].as_str().unwrap().trim_start_matches("blake3:"),
+            "{path} drift control"
+        );
+    }
+
+    // The pin is the canonical digest of the embedded document (same invariants
+    // as surface_blake3: canonical bytes, not pretty file bytes).
+    assert_eq!(blake3_of(&surface), pin, "pin == canonical(embedded doc)");
+
+    // Zero digest is never the pin.
+    assert_ne!(pin, format!("blake3:{}", "0".repeat(64)));
 }

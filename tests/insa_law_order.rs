@@ -47,10 +47,32 @@ const LAWFUL_EDGES: [&str; 8] = [
     "tx-rest-seal",
 ];
 
+/// True when the pack ontology exists at its canonical (or overridden) path.
+/// CI machines without the sibling marketplace checkout must skip loudly
+/// rather than panic (same pattern as refusal_crosswalk_differential.rs).
+fn ontology_available() -> bool {
+    let path = std::env::var("INSA_LAW_PACK_ONTOLOGY").unwrap_or_else(|_| ONTOLOGY_PATH.to_string());
+    std::path::Path::new(&path).is_file()
+}
+
 fn ontology_bytes() -> Vec<u8> {
     let path = std::env::var("INSA_LAW_PACK_ONTOLOGY").unwrap_or_else(|_| ONTOLOGY_PATH.to_string());
     std::fs::read(&path)
         .unwrap_or_else(|e| panic!("read {path}: {e}"))
+}
+
+/// Loud typed skip: name the missing pack path so CI logs show why, never a
+/// silent pass or a bare panic on a machine without the sibling checkout.
+fn require_ontology() -> bool {
+    if ontology_available() {
+        return true;
+    }
+    let path = std::env::var("INSA_LAW_PACK_ONTOLOGY").unwrap_or_else(|_| ONTOLOGY_PATH.to_string());
+    eprintln!(
+        "BLOCKED: insa-law-pack ontology absent at {path} \
+         (set INSA_LAW_PACK_ONTOLOGY to override); courts skipped"
+    );
+    false
 }
 
 fn pinned_ontology() -> LawState {
@@ -152,11 +174,17 @@ fn derive_link_ok(state: &LawState) -> LawState {
 
 #[test]
 fn ontology_matches_pinned_blake3() {
+    if !require_ontology() {
+        return;
+    }
     let _ = pinned_ontology();
 }
 
 #[test]
 fn exactly_8_transitions_form_the_linear_chain() {
+    if !require_ontology() {
+        return;
+    }
     let ont = pinned_ontology();
 
     let n = scalar(
@@ -232,6 +260,9 @@ fn state_stem(i: usize) -> &'static str {
 
 #[test]
 fn chain_length_declaration_matches_reality() {
+    if !require_ontology() {
+        return;
+    }
     let ont = pinned_ontology();
     let got = rows(
         &ont,
@@ -251,6 +282,9 @@ fn chain_length_declaration_matches_reality() {
 
 #[test]
 fn lawful_trace_passes_n3_and_sparql_legs() {
+    if !require_ontology() {
+        return;
+    }
     let edges = LAWFUL_EDGES;
     let state = combined(edges);
 
@@ -272,6 +306,9 @@ fn lawful_trace_passes_n3_and_sparql_legs() {
 
 #[test]
 fn transposed_pair_is_flagged_by_both_legs() {
+    if !require_ontology() {
+        return;
+    }
     // Transpose edges 5 and 4 (receiver->fruit before motion->receiver).
     let mut edges = LAWFUL_EDGES;
     edges.swap(3, 4);
@@ -317,6 +354,9 @@ fn transposed_pair_is_flagged_by_both_legs() {
 
 #[test]
 fn reversed_trace_is_flagged() {
+    if !require_ontology() {
+        return;
+    }
     // Stronger corruption: fully reversed chain (Rest edge first).
     let mut edges = LAWFUL_EDGES;
     edges.reverse();

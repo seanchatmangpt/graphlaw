@@ -29,12 +29,33 @@ fn duckdb_revision_matches_cargo_pin() {
         .iter()
         .filter(|a| a.authority == "frozen-duckdb")
     {
+        // The Cargo pin is a caret-compatible major.minor ("2.0"); the exact revision
+        // (2.0.0) must resolve in the lockfile, keeping pin<->authority agreement.
         assert!(
-            toml.contains(&format!("version = \"{}\"", a.revision)),
+            toml.contains(&format!(
+                "frozen-duckdb = {{ version = \"{}\"",
+                a.revision
+                    .split('.')
+                    .take(2)
+                    .collect::<Vec<_>>()
+                    .join(".")
+            )),
             "{} claims frozen-duckdb {} but Cargo.toml disagrees",
             a.capability,
             a.revision
         );
+        let lock = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.lock"));
+        if let Ok(lock) = lock {
+            assert!(
+                lock.contains(&format!(
+                    "name = \"frozen-duckdb\"\nversion = \"{}\"",
+                    a.revision
+                )),
+                "{} claims frozen-duckdb {} but Cargo.lock resolves differently",
+                a.capability,
+                a.revision
+            );
+        }
     }
 }
 

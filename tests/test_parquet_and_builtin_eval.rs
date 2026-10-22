@@ -5,35 +5,34 @@
 
 use graphlaw::duckdb_eval::GraphLawDuckDB;
 use graphlaw::rules::builtins::{builtin_eval_sql, BuiltinContext};
-use graphlaw::sql_ast::{
-    validate_ast_shacl, AggregateFunction, AstError, Operator, RdfAstGraphReader, SelectStatement,
-    SqlExpr, SqlLiteral, TableRef,
-};
+use graphlaw::sql_ast::{validate_ast_shacl, RdfAstGraphReader};
 use purrdf::TermValue;
 use std::collections::HashMap;
 use std::fs;
 
 // =============================================================================
-// Mock AST Reader for Testing Builtins
+// Document-backed AST reader fixture (SQLRDF-17): supplies the admitted
+// Turtle AST document so builtin eval compiles it via `compile_turtle`
+// (hand-built ASTs are a typed REFUSAL-04 at eval).
 // =============================================================================
 
-struct MockAstReader {
-    statements: HashMap<String, SelectStatement>,
+struct AstReaderFixture {
+    docs: HashMap<String, String>,
 }
 
-impl MockAstReader {
+impl AstReaderFixture {
     fn new() -> Self {
         Self {
-            statements: HashMap::new(),
+            docs: HashMap::new(),
         }
     }
 
-    fn register(&mut self, iri: &str, stmt: SelectStatement) {
-        self.statements.insert(iri.to_string(), stmt);
+    fn register(&mut self, iri: &str, doc: &str) {
+        self.docs.insert(iri.to_string(), doc.to_string());
     }
 }
 
-impl RdfAstGraphReader for MockAstReader {
+impl RdfAstGraphReader for AstReaderFixture {
     type Node = String;
 
     fn get_single_object(&self, _subject: &Self::Node, _predicate: &str) -> Option<Self::Node> {
@@ -52,13 +51,25 @@ impl RdfAstGraphReader for MockAstReader {
         Some(node.clone())
     }
 
-    fn extract_select_statement(&self, query_node: &Self::Node) -> Result<SelectStatement, AstError> {
-        self.statements
-            .get(query_node)
-            .cloned()
-            .ok_or_else(|| AstError::MissingProperty("AST definition".to_string(), query_node.clone()))
+    fn query_document_turtle(&self) -> Option<String> {
+        self.docs.values().next().cloned()
+    }
+
+    fn object_count(&self, _node: &Self::Node, _predicate: &str) -> usize {
+        0
+    }
+
+    fn iri_object_count(&self, _node: &Self::Node, _pred: &str) -> usize {
+        0
     }
 }
+
+/// Shared prefix for the admitted AST graph documents in this court file.
+const DOC_PREFIX: &str = r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix fn:  <http://graphlaw.org/functions#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:  <http://example.org/queries#> .
+"#;
 
 // =============================================================================
 // Test 1: Parquet Hive Partitioning & Zone Map Querying
@@ -89,59 +100,41 @@ fn test_parquet_hive_partition_and_zonemap_query() {
     db.register_parquet_view("telemetry_events", &glob, true)
         .expect("Registration failed");
 
-    // 3. Define RDF AST targeting the view:
-    // SELECT batch_id, SUM(cost) AS total_cost FROM telemetry_events 
-    // WHERE (tenant_id = $1) AND (latency_ms > $2) GROUP BY batch_id
-    let ast = SelectStatement {
-        from: TableRef {
-            name: "telemetry_events".to_string(),
-            alias: None,
-        },
-        joins: vec![],
-        select_list: vec![
-            SqlExpr::ColumnRef {
-                column: "batch_id".to_string(),
-                table_alias: None,
-            },
-            SqlExpr::Alias {
-                expr: Box::new(SqlExpr::FunctionCall {
-                    function: AggregateFunction::Sum,
-                    argument: Box::new(SqlExpr::ColumnRef {
-                        column: "cost".to_string(),
-                        table_alias: None,
-                    }),
-                }),
-                alias: "total_cost".to_string(),
-            },
-        ],
-        where_clause: Some(SqlExpr::Binary {
-            op: Operator::And,
-            left: Box::new(SqlExpr::Binary {
-                op: Operator::Equals,
-                left: Box::new(SqlExpr::ColumnRef {
-                    column: "tenant_id".to_string(),
-                    table_alias: None,
-                }),
-                right: Box::new(SqlExpr::Literal(SqlLiteral::String("tenant-A".to_string()))),
-            }),
-            right: Box::new(SqlExpr::Binary {
-                op: Operator::GreaterThan,
-                left: Box::new(SqlExpr::ColumnRef {
-                    column: "latency_ms".to_string(),
-                    table_alias: None,
-                }),
-                right: Box::new(SqlExpr::Literal(SqlLiteral::Integer(500))),
-            }),
-        }),
-        group_by: vec![SqlExpr::ColumnRef {
-            column: "batch_id".to_string(),
-            table_alias: None,
-        }],
-        limit: None,
-        offset: None,
-    };
+    // 3. Admitted AST graph targeting the view:
+    // SELECT batch_id, SUM(cost) AS total_cost FROM telemetry_events
+    // WHERE (tenant_id = 'tenant-A' AND latency_ms > 500) GROUP BY batch_id
+    let doc = DOC_PREFIX.to_string()
+        + r#"
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList (
+        [ sql:columnName "batch_id" ]
+        [
+            sql:aliasName "total_cost" ;
+            sql:expression [
+                sql:function fn:SUM ;
+                sql:argument [ sql:columnName "cost" ]
+            ]
+        ]
+    ) ;
+    sql:whereClause [
+        sql:operator sql:And ;
+        sql:leftOperand [
+            sql:operator sql:Equals ;
+            sql:leftOperand  [ sql:columnName "tenant_id" ] ;
+            sql:rightOperand [ sql:literalValue "tenant-A" ]
+        ] ;
+        sql:rightOperand [
+            sql:operator sql:GreaterThan ;
+            sql:leftOperand  [ sql:columnName "latency_ms" ] ;
+            sql:rightOperand [ sql:literalValue "500"^^xsd:integer ]
+        ]
+    ] ;
+    sql:groupBy ( [ sql:columnName "batch_id" ] ) .
+"#;
+    let compiled = graphlaw::sql_ast::compile_turtle(&doc).expect("admitted AST graph must compile");
 
-    let compiled = ast.compile().unwrap();
     let query_iri = "http://example.org/queries/parquet-q1";
 
     // 4. Verify explain plan (zone-map and parquet filter pushdown)
@@ -209,47 +202,32 @@ fn test_builtin_eval_sql_admission_and_fail_closed_rejection() {
         )
         .expect("Failed to seed DuckDB tables");
 
-    let ast = SelectStatement {
-        from: TableRef {
-            name: "telemetry_events".to_string(),
-            alias: None,
-        },
-        joins: vec![],
-        select_list: vec![
-            SqlExpr::ColumnRef {
-                column: "batch_id".to_string(),
-                table_alias: None,
-            },
-            SqlExpr::Alias {
-                expr: Box::new(SqlExpr::FunctionCall {
-                    function: AggregateFunction::Sum,
-                    argument: Box::new(SqlExpr::ColumnRef {
-                        column: "cost".to_string(),
-                        table_alias: None,
-                    }),
-                }),
-                alias: "total_cost".to_string(),
-            },
-        ],
-        where_clause: Some(SqlExpr::Binary {
-            op: Operator::GreaterThan,
-            left: Box::new(SqlExpr::ColumnRef {
-                column: "latency_ms".to_string(),
-                table_alias: None,
-            }),
-            right: Box::new(SqlExpr::Literal(SqlLiteral::Integer(400))),
-        }),
-        group_by: vec![SqlExpr::ColumnRef {
-            column: "batch_id".to_string(),
-            table_alias: None,
-        }],
-        limit: None,
-        offset: None,
-    };
+    let doc = DOC_PREFIX.to_string()
+        + r#"
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList (
+        [ sql:columnName "batch_id" ]
+        [
+            sql:aliasName "total_cost" ;
+            sql:expression [
+                sql:function fn:SUM ;
+                sql:argument [ sql:columnName "cost" ]
+            ]
+        ]
+    ) ;
+    sql:whereClause [
+        sql:operator sql:GreaterThan ;
+        sql:leftOperand  [ sql:columnName "latency_ms" ] ;
+        sql:rightOperand [ sql:literalValue "400"^^xsd:integer ]
+    ] ;
+    sql:groupBy ( [ sql:columnName "batch_id" ] ) .
+"#;
 
     let query_iri = "http://example.org/queries#CostAgg";
-    let mut reader = MockAstReader::new();
-    reader.register(query_iri, ast);
+    let mut reader = AstReaderFixture::new();
+    reader.register(query_iri, &doc);
 
     let ctx = BuiltinContext { db: &db };
 
@@ -342,8 +320,8 @@ fn test_shacl_ast_preflight_gate() {
     let res = validate_ast_shacl(malformed_ast_ttl, shapes_ttl);
     assert!(res.is_err(), "AST missing fromTable must be refused by SHACL gate");
     println!("Observed SHACL refusal message: {:?}", res);
-    if let Err(AstError::ShaclViolation(msg)) = res {
-        assert!(!msg.is_empty(), "Violation message must not be empty");
+    if let Err(e) = res {
+        assert!(!e.to_string().is_empty(), "Violation message must not be empty");
     } else {
         panic!("Expected ShaclViolation error, got {:?}", res);
     }

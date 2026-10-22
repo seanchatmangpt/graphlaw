@@ -70,7 +70,9 @@ fn semantic(slow: bool) -> Vec<PathBuf> {
 /// Dialects each extension may legitimately be written in.
 fn allowed(p: &Path) -> &'static [Dialect] {
     match ext(p) {
-        "ttl" => &[Dialect::Turtle, Dialect::NTriples],
+        // SQL-in-RDF is by definition Turtle carrying `sql:SelectStatement`,
+        // so a .ttl extension is legitimate for the SqlRdf dialect too.
+        "ttl" => &[Dialect::Turtle, Dialect::NTriples, Dialect::SqlRdf],
         "n3" => &[Dialect::Turtle, Dialect::N3, Dialect::NTriples],
         "rdf" | "owl" => &[Dialect::RdfXml],
         "nt" => &[Dialect::NTriples],

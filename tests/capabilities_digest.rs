@@ -200,7 +200,7 @@ fn existing_capabilities_fields_are_unchanged() {
     );
     assert_eq!(
         caps["other_dialects"],
-        json!(["n3", "sparql", "shexc", "shexj"])
+        json!(["n3", "sparql", "sql", "shexc", "shexj"])
     );
     assert_eq!(caps["ops"].as_array().unwrap().len(), 14);
 }

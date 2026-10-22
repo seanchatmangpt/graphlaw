@@ -6,35 +6,34 @@
 
 use graphlaw::duckdb_eval::GraphLawDuckDB;
 use graphlaw::rules::builtins::{builtin_eval_sql, BuiltinContext};
-use graphlaw::sql_ast::{
-    validate_ast_shacl, AggregateFunction, AstError, Operator, RdfAstGraphReader, SelectStatement,
-    SqlExpr, SqlLiteral, TableRef,
-};
+use graphlaw::sql_ast::{compile_turtle, RdfAstGraphReader};
 use purrdf::TermValue;
 use std::collections::HashMap;
 use std::fs;
 
 // =============================================================================
-// Mock AST Reader
+// Document-backed AST reader fixture (SQLRDF-17): supplies the admitted
+// Turtle AST document so builtin eval compiles it via `compile_turtle`
+// (hand-built ASTs are a typed REFUSAL-04 at eval).
 // =============================================================================
 
-struct MockEdgeAstReader {
-    statements: HashMap<String, SelectStatement>,
+struct EdgeAstReaderFixture {
+    docs: HashMap<String, String>,
 }
 
-impl MockEdgeAstReader {
+impl EdgeAstReaderFixture {
     fn new() -> Self {
         Self {
-            statements: HashMap::new(),
+            docs: HashMap::new(),
         }
     }
 
-    fn register(&mut self, iri: &str, stmt: SelectStatement) {
-        self.statements.insert(iri.to_string(), stmt);
+    fn register(&mut self, iri: &str, doc: &str) {
+        self.docs.insert(iri.to_string(), doc.to_string());
     }
 }
 
-impl RdfAstGraphReader for MockEdgeAstReader {
+impl RdfAstGraphReader for EdgeAstReaderFixture {
     type Node = String;
 
     fn get_single_object(&self, _subject: &Self::Node, _predicate: &str) -> Option<Self::Node> {
@@ -53,13 +52,25 @@ impl RdfAstGraphReader for MockEdgeAstReader {
         Some(node.clone())
     }
 
-    fn extract_select_statement(&self, query_node: &Self::Node) -> Result<SelectStatement, AstError> {
-        self.statements
-            .get(query_node)
-            .cloned()
-            .ok_or_else(|| AstError::MissingProperty("AST definition".to_string(), query_node.clone()))
+    fn query_document_turtle(&self) -> Option<String> {
+        self.docs.values().next().cloned()
+    }
+
+    fn object_count(&self, _node: &Self::Node, _predicate: &str) -> usize {
+        0
+    }
+
+    fn iri_object_count(&self, _node: &Self::Node, _predicate: &str) -> usize {
+        0
     }
 }
+
+/// Shared prefix for the admitted AST graph documents in this court file.
+const DOC_PREFIX: &str = r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix fn:  <http://graphlaw.org/functions#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:  <http://graphlaw.org/queries#> .
+"#;
 
 // =============================================================================
 // Test 1: 10,000:1 Edge Event Compaction & Semantic Proof Generation
@@ -95,58 +106,40 @@ fn test_edge_zero_trust_semantic_compaction_10000_to_1() {
     // 2. Mount local buffer as zero-copy virtual table
     db.register_parquet_view("dense_sensor_stream", &format!("{}/dense_sensor_stream.parquet", base_dir), false).unwrap();
 
-    // 3. Define reduction AST:
-    // SELECT session_id, MAX(temp_celsius) AS max_temp, SUM(duration_seconds) AS total_duration
-    // FROM dense_sensor_stream WHERE temp_celsius > $1 GROUP BY session_id
-    let ast = SelectStatement {
-        from: TableRef {
-            name: "dense_sensor_stream".to_string(),
-            alias: None,
-        },
-        joins: vec![],
-        select_list: vec![
-            SqlExpr::ColumnRef {
-                column: "session_id".to_string(),
-                table_alias: None,
-            },
-            SqlExpr::Alias {
-                expr: Box::new(SqlExpr::FunctionCall {
-                    function: AggregateFunction::Max,
-                    argument: Box::new(SqlExpr::ColumnRef {
-                        column: "temp_celsius".to_string(),
-                        table_alias: None,
-                    }),
-                }),
-                alias: "max_temp".to_string(),
-            },
-            SqlExpr::Alias {
-                expr: Box::new(SqlExpr::FunctionCall {
-                    function: AggregateFunction::Sum,
-                    argument: Box::new(SqlExpr::ColumnRef {
-                        column: "duration_seconds".to_string(),
-                        table_alias: None,
-                    }),
-                }),
-                alias: "excursion_duration".to_string(),
-            },
-        ],
-        where_clause: Some(SqlExpr::Binary {
-            op: Operator::GreaterThan,
-            left: Box::new(SqlExpr::ColumnRef {
-                column: "temp_celsius".to_string(),
-                table_alias: None,
-            }),
-            right: Box::new(SqlExpr::Literal(SqlLiteral::Float(-20.0))),
-        }),
-        group_by: vec![SqlExpr::ColumnRef {
-            column: "session_id".to_string(),
-            table_alias: None,
-        }],
-        limit: None,
-        offset: None,
-    };
+    // 3. Admitted AST graph for the reduction:
+    // SELECT session_id, MAX(temp_celsius) AS max_temp, SUM(duration_seconds) AS excursion_duration
+    // FROM dense_sensor_stream WHERE temp_celsius > -20.0 GROUP BY session_id
+    let doc = DOC_PREFIX.to_string()
+        + r#"
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "dense_sensor_stream" ] ;
+    sql:selectList (
+        [ sql:columnName "session_id" ]
+        [
+            sql:aliasName "max_temp" ;
+            sql:expression [
+                sql:function fn:MAX ;
+                sql:argument [ sql:columnName "temp_celsius" ]
+            ]
+        ]
+        [
+            sql:aliasName "excursion_duration" ;
+            sql:expression [
+                sql:function fn:SUM ;
+                sql:argument [ sql:columnName "duration_seconds" ]
+            ]
+        ]
+    ) ;
+    sql:whereClause [
+        sql:operator sql:GreaterThan ;
+        sql:leftOperand  [ sql:columnName "temp_celsius" ] ;
+        sql:rightOperand [ sql:literalValue "-20.0"^^xsd:double ]
+    ] ;
+    sql:groupBy ( [ sql:columnName "session_id" ] ) .
+"#;
+    let compiled = compile_turtle(&doc).expect("admitted AST graph must compile");
 
-    let compiled = ast.compile().unwrap();
     let query_iri = "http://graphlaw.org/queries/EdgeCompactionQuery";
 
     // 4. Vectorized execution in embedded frozen-duckdb
@@ -202,47 +195,32 @@ fn test_edge_offline_sovereignty_and_fail_closed_lockout() {
         INSERT INTO local_device_buffer VALUES ('DEV-002', 'vibration_g', 5.8, 120);",
     ).unwrap();
 
-    let ast = SelectStatement {
-        from: TableRef {
-            name: "local_device_buffer".to_string(),
-            alias: None,
-        },
-        joins: vec![],
-        select_list: vec![
-            SqlExpr::ColumnRef {
-                column: "device_id".to_string(),
-                table_alias: None,
-            },
-            SqlExpr::Alias {
-                expr: Box::new(SqlExpr::FunctionCall {
-                    function: AggregateFunction::Max,
-                    argument: Box::new(SqlExpr::ColumnRef {
-                        column: "value_float".to_string(),
-                        table_alias: None,
-                    }),
-                }),
-                alias: "max_vibration".to_string(),
-            },
-        ],
-        where_clause: Some(SqlExpr::Binary {
-            op: Operator::Equals,
-            left: Box::new(SqlExpr::ColumnRef {
-                column: "metric_type".to_string(),
-                table_alias: None,
-            }),
-            right: Box::new(SqlExpr::Literal(SqlLiteral::String("vibration_g".to_string()))),
-        }),
-        group_by: vec![SqlExpr::ColumnRef {
-            column: "device_id".to_string(),
-            table_alias: None,
-        }],
-        limit: None,
-        offset: None,
-    };
+    let doc = DOC_PREFIX.to_string()
+        + r#"
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "local_device_buffer" ] ;
+    sql:selectList (
+        [ sql:columnName "device_id" ]
+        [
+            sql:aliasName "max_vibration" ;
+            sql:expression [
+                sql:function fn:MAX ;
+                sql:argument [ sql:columnName "value_float" ]
+            ]
+        ]
+    ) ;
+    sql:whereClause [
+        sql:operator sql:Equals ;
+        sql:leftOperand  [ sql:columnName "metric_type" ] ;
+        sql:rightOperand [ sql:literalValue "vibration_g" ]
+    ] ;
+    sql:groupBy ( [ sql:columnName "device_id" ] ) .
+"#;
 
     let query_iri = "http://graphlaw.org/queries/LocalSafetyCheck";
-    let mut reader = MockEdgeAstReader::new();
-    reader.register(query_iri, ast);
+    let mut reader = EdgeAstReaderFixture::new();
+    reader.register(query_iri, &doc);
 
     let ctx = BuiltinContext { db: &db };
 

@@ -1,4 +1,4 @@
-#![cfg(all(feature = "abi", feature = "duckdb"))]
+#![cfg(feature = "abi")]
 //! GWS-4 design court: in-WASM duckdb cannot read the host filesystem, so the
 //! cold-chain case study's `register_parquet_view`/hive-partition path
 //! (`src/duckdb_eval.rs::register_parquet_view`) cannot work as-written inside
@@ -205,6 +205,7 @@ fn agg_query() -> SelectStatement {
         from: TableRef {
             name: "cold_chain".into(),
             alias: None,
+            schema: None,
         },
         joins: vec![],
         select_list: vec![
@@ -227,6 +228,8 @@ fn agg_query() -> SelectStatement {
         }],
         limit: None,
         offset: None,
+        having: None,
+        order_by: Vec::new(),
     }
 }
 
@@ -358,16 +361,13 @@ fn gws4_a_corpus_injected_as_linear_memory_buffer_loads_into_duckdb_eval() {
     let envelope = wire_envelope(&csv);
     assert!(envelope.len() < MAX_REQUEST_BYTES, "envelope under the bound");
     let r = host().lock().unwrap_or_else(|e| e.into_inner()).inject(&envelope);
-    // Typed: op-15 `duckdb` landed NATIVE-only (feature `duckdb`; the wasm
-    // module's op table does not include it), so the compiled wasm module
-    // refuses the injected corpus envelope with `unknown op \`duckdb\`` —
-    // typed JSON, never a trap. The bytes crossed the boundary; the in-wasm
-    // eval leg is the typed gap this court proves the design for.
+    // The wasm module dispatches `duckdb` with the other ops. This envelope
+    // has no `mode`, so the op refuses it. The bytes crossed the boundary
+    // and the response is typed JSON.
     assert_eq!(r["ok"], false, "{r}");
-    assert!(
-        r["error"]["message"].as_str().unwrap().contains("unknown op `duckdb`"),
-        "{r}"
-    );
+    let message = r["error"]["message"].as_str().unwrap();
+    assert!(message.contains("mode"), "{r}");
+    assert!(!message.contains("unknown op"), "{r}");
 
     // (a'') a buffer the module DOES accept, at corpus scale, crosses and
     // processes fully inside wasm: the case-study RDF projection of the same

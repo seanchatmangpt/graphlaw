@@ -1,96 +1,6 @@
-//! Integration test for Regulated Life-Sciences Cold-Chain Biologics Verification.
-
 use graphlaw::duckdb_eval::GraphLawDuckDB;
-use graphlaw::sql_ast::{
-    validate_ast_shacl, RdfAstGraphReader,
-};
-use purrdf::TermValue;
-use std::collections::HashMap;
+use graphlaw::sql_ast::validate_ast_shacl;
 use std::fs;
-
-struct RdfDatasetReader {
-    outgoing: HashMap<String, HashMap<String, Vec<RdfTerm>>>,
-}
-
-#[derive(Clone, Debug)]
-enum RdfTerm {
-    Iri(String),
-    Literal { lexical: String, datatype: Option<String> },
-}
-
-impl RdfDatasetReader {
-    fn from_turtle(turtle: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let dataset = purrdf::parse_dataset(turtle.as_bytes(), "text/turtle", None)
-            .map_err(|e| format!("Failed to parse turtle: {:?}", e))?;
-        let mut outgoing: HashMap<String, HashMap<String, Vec<RdfTerm>>> = HashMap::new();
-
-        for quad in dataset.quads() {
-            let subj = match dataset.term_value(quad.s) {
-                TermValue::Iri(i) => i,
-                TermValue::Blank { label, scope } => format!("_:{}_{}", label, scope.0),
-                _ => continue,
-            };
-
-            let pred = match dataset.term_value(quad.p) {
-                TermValue::Iri(i) => i,
-                _ => continue,
-            };
-
-            let term = match dataset.term_value(quad.o) {
-                TermValue::Iri(i) => RdfTerm::Iri(i),
-                TermValue::Blank { label, scope } => RdfTerm::Iri(format!("_:{}_{}", label, scope.0)),
-                TermValue::Literal { lexical_form, datatype, .. } => RdfTerm::Literal {
-                    lexical: lexical_form,
-                    datatype: Some(datatype),
-                },
-                _ => continue,
-            };
-
-            outgoing
-                .entry(subj)
-                .or_default()
-                .entry(pred)
-                .or_default()
-                .push(term);
-        }
-
-        Ok(Self { outgoing })
-    }
-}
-
-impl RdfAstGraphReader for RdfDatasetReader {
-    type Node = String;
-
-    fn get_single_object(&self, subject: &Self::Node, predicate: &str) -> Option<Self::Node> {
-        self.outgoing
-            .get(subject)?
-            .get(predicate)?
-            .first()
-            .and_then(|term| match term {
-                RdfTerm::Iri(i) => Some(i.clone()),
-                _ => None,
-            })
-    }
-
-    fn get_datatype_literal(
-        &self,
-        subject: &Self::Node,
-        predicate: &str,
-    ) -> Option<(String, Option<String>)> {
-        self.outgoing
-            .get(subject)?
-            .get(predicate)?
-            .first()
-            .and_then(|term| match term {
-                RdfTerm::Literal { lexical, datatype } => Some((lexical.clone(), datatype.clone())),
-                _ => None,
-            })
-    }
-
-    fn get_iri(&self, node: &Self::Node) -> Option<String> {
-        Some(node.clone())
-    }
-}
 
 #[test]
 fn test_cold_chain_biologics_verification_flow() {
@@ -134,6 +44,7 @@ fn test_cold_chain_biologics_verification_flow() {
         @prefix ex:   <http://biopharma.org/queries#> .
 
         ex:ColdChainExcursionQuery a sql:SelectStatement ;
+            sql:statementIndex 1 ;
             sql:fromTable [
                 sql:tableName "ocel_events" ;
                 sql:tableAlias "e"
@@ -187,11 +98,11 @@ fn test_cold_chain_biologics_verification_flow() {
 
     validate_ast_shacl(query_ast_ttl, shapes_ttl).expect("SHACL validation must pass");
 
-    // 4. Compile and evaluate
-    let reader = RdfDatasetReader::from_turtle(query_ast_ttl).unwrap();
+    // 4. Compile and evaluate (SQLRDF-17: admission is compile_turtle —
+    // hand-built/hand-extracted ASTs are a typed REFUSAL-04 at eval).
+    let compiled = graphlaw::sql_ast::compile_turtle(query_ast_ttl)
+        .expect("admitted AST graph must compile");
     let query_node = "http://biopharma.org/queries#ColdChainExcursionQuery".to_string();
-    let ast = reader.extract_select_statement(&query_node).unwrap();
-    let compiled = ast.compile().unwrap();
 
     let receipt = db.eval_ast_query(
         &query_node,
