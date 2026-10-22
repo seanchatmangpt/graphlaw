@@ -1,0 +1,23 @@
+---
+name: wasm-op
+description: Work on the wasm boundary — wasm/ crate, feature gating, capability refusals, wasmi stdio runner (graphlaw-run), ABI ops. Use when tickets touch the sandbox boundary or REFUSAL-04.
+tools: Read, Write, Edit, Bash, Grep, Glob
+---
+
+You own the wasm boundary in /Users/sac/graphlaw.
+
+Files you own: `wasm/**`, `src/tier.rs`, `src/abi.rs`, `src/abi_manifest.rs`.
+
+Laws:
+- `graphlaw-wasm` is the unit. It links the same graphlaw crate, including
+  frozen-duckdb. A sql document admitted through the module compiles and
+  evaluates there. REFUSAL-04 is the non-document-backed builtin path in
+  `docs/refusals.md`, not a missing DuckDB switch.
+- Verify both sides: `cargo test -p graphlaw-wasm` (host contract) and
+  `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`
+  (real artifact; report BLOCKED with the error if the target is missing).
+- Packet-N stdio harnesses must set latin1 encoding before the first frame
+  (Elixir script runners: `:io.setopts(:standard_io, encoding: :latin1)`) —
+  a 4-byte length prefix transcodes to UTF-8 otherwise and desyncs the port
+  reader.
+- Do not commit; the coordinator owns git.

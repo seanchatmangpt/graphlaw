@@ -1,0 +1,534 @@
+[
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git worktree add /tmp/x"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git -C ~/xaas worktree add /tmp/x main"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "cd /tmp && git worktree add ../y"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "x=$(git worktree add a b)"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "env GIT_DIR=x git worktree add a"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "ls\ngit --no-pager worktree add a"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git worktree list"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git worktree remove --force /tmp/x"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "python3 -c \"s='refusal of git worktree add'\""
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git commit -m \"docs: never use git worktree add\""
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git clone https://x/y.git ~/wt/y"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git clone https://x/y.git /tmp/y"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "echo see ~/wt/v26922"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "EnterWorktree",
+   "tool_input": {
+    "name": "a"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Agent",
+   "tool_input": {
+    "prompt": "x",
+    "isolation": "worktree"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Agent",
+   "tool_input": {
+    "prompt": "x"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Workflow",
+   "tool_input": {
+    "script": "agent(p, {isolation: 'worktree'})"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Write",
+   "tool_input": {
+    "file_path": "/Users/sac/wt/v26922/x.md"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Write",
+   "tool_input": {
+    "file_path": "/Users/sac/xaas/x.md"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git clone u /private/tmp/y"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git clone u ~/zoela-wt/y"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Write",
+   "tool_input": {
+    "file_path": "/Users/sac/bcinr/.claude/worktrees/agent-x/src/a.rs"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "cp -R ~/zoela ~/zoela2"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git -C /Users/sac/zoela-wt/a commit -m x"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "rsync -a ~/ex4pm/ /private/tmp/e"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git clone --depth 1 https://github.com/x/y.git ~/ggen-wt2/y"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git clone https://github.com/x/y.git ~/wt-v26926/y"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "cd ~/xaas-worktrees/a && git commit -m x"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "ditto ~/zoela /private/tmp/zz"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Write",
+   "tool_input": {
+    "file_path": "/Users/sac/zoela-wt/a/lib/x.ex"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Write",
+   "tool_input": {
+    "file_path": "/Users/sac/bcinr/src/a.rs"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git worktree prune"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git -C ~/zoela fetch ~/zoela-wt/a 'refs/heads/*:refs/preserve/x/*'"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Write",
+   "tool_input": {
+    "file_path": "/private/tmp/claude-501/-Users-sac/90d06f90-3c25-4b15-bede-3d0e7e58ac78/scratchpad/v26925/lanes/topo/notes.md"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "mv ~/zoela-wt/a ~/.Trash/a-retired"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "cp -R ~/zoela/lib /private/tmp/claude-501/x/lib-copy"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "cp README.md /tmp/r.md"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git -C /Users/sac/bcinr commit -m 'fix'"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git clone https://github.com/x/y.git ~/y"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git commit -m \"docs: never git clone into /tmp/x\""
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git stash"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git stash push -m wip"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git stash pop"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git stash apply stash@{1}"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git stash list"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git stash save \"lane wip\""
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git -C ~/xaas stash list"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "cd ~/xaas && git stash push"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "x=$(git stash list)"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "sudo git stash pop"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git --no-pager stash list"
+   }
+  }
+ ],
+ [
+  "DENY",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "ls\nenv GIT_DIR=.git git stash push"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git status"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git stashlist --help"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git commit -m \"stash cleanup\""
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "echo \"never git stash in lanes\""
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git log --grep=stash -5"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "grep -rn stash lib/ | head"
+   }
+  }
+ ],
+ [
+  "allow",
+  {
+   "tool_name": "Bash",
+   "tool_input": {
+    "command": "git show HEAD:docs/stash-notes.md"
+   }
+  }
+ ]
+]

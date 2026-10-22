@@ -2,7 +2,7 @@
   "name": "@seanchatmangpt/graphlaw",
   "version": "26.10.21",
   "description": "GraphLaw: library-backed RDF law-state composition (parse, SPARQL, SHACL, ShEx, N3, entailment, datalog, hooks, law, policy) over a WASM ABI",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE-P28-SIL.md",
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -11,6 +11,7 @@
     "dist-bundler/",
     "wasm/",
     "LICENSE",
+    "LICENSE-P28-SIL.md",
     "README.md",
     "CHANGELOG.md",
     "THESIS.md"

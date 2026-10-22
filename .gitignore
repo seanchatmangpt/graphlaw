@@ -1,9 +1,19 @@
 target/
 
+# per-lane / per-court build roots (lane leases, never committed)
+/target-*/
+
 # native mutation court
 mutants.out*/
 target-lane*/
 target-mutants/
+
+# nested ggen runtime state (signing keys, receipt logs)
+ggen/sql-dialect/.ggen/
+ggen/sql-dialect/.ggen-v2/
+
+# session-local runtime state
+.claude/scheduled_tasks.lock
 
 # generated/runtime state (signing keys, receipt logs)
 .ggen/
