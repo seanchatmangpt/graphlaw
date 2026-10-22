@@ -18,10 +18,12 @@
 //!
 //! Deterministic: a seeded xorshift64* PRNG drives class selection, truncation
 //! points and payload mutation — same seed, same inputs, same verdicts.
-//! 240 fuzz iterations + focused boundary cases (>= 200 required by GWS-9).
+//! 1100 fuzz iterations + focused boundary cases (>= 1000 required by
+//! GWS-SEC-FUZZ); refusal-class histogram printed on PASS.
 #![cfg(not(target_arch = "wasm32"))]
 
 use serde_json::{Value, json};
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
@@ -312,11 +314,30 @@ const SQL_TOKENS: &[&str] = &[
 /// Counter of hostile calls (printed in the receipt line at the end).
 static FUZZ_CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
+/// Refusal-class histogram (GWS-SEC-FUZZ receipt evidence): verdict class
+/// (`ok:true` vs each `error.kind`) per hostile call.
+static HISTO: OnceLock<Mutex<BTreeMap<String, usize>>> = OnceLock::new();
+
+fn histo() -> &'static Mutex<BTreeMap<String, usize>> {
+    HISTO.get_or_init(|| Mutex::new(BTreeMap::new()))
+}
+
+fn record(verdict_class: &str) {
+    let mut m = histo().lock().unwrap_or_else(|e| e.into_inner());
+    *m.entry(verdict_class.to_string()).or_insert(0) += 1;
+}
+
 fn hostile(body: &[u8], class: &str, desc: &str) -> Value {
     FUZZ_CALLS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let mut h = host().lock().unwrap_or_else(|e| e.into_inner());
     let r = h.raw_call(body);
     assert_typed(&r, class, desc);
+    if r["ok"] == json!(true) {
+        record("ok:true (admitted)");
+    } else {
+        let kind = r["error"]["kind"].as_str().unwrap_or("UNTYPED");
+        record(&format!("refusal:{kind}"));
+    }
     drop(h);
     canary();
     r
@@ -452,10 +473,11 @@ ex:NodeShape a sh:NodeShape ;
         }
     }
 
-    // ---- main deterministic fuzz loop: 240 iterations across all classes
+    // ---- main deterministic fuzz loop: 1100 iterations across all classes
+    // (GWS-SEC-FUZZ requires >= 1000 adversarial frames with a class histogram)
     let mut rng = Rng(SEED);
     let pad: &[u8] = br#"{"op":"parse","text":"","dialect":"turtle"}"#;
-    for i in 0..240u32 {
+    for i in 0..1100u32 {
         let class = rng.below(6);
         let body: Vec<u8> = match class {
             0 => nested(rng.below(2_000) as usize), // a: random depths 0..2000
@@ -502,11 +524,18 @@ ex:NodeShape a sh:NodeShape ;
 
     let n = FUZZ_CALLS.load(std::sync::atomic::Ordering::Relaxed);
     assert!(
-        n >= 200,
-        "court ran only {n} hostile calls; GWS-9 requires >= 200"
+        n >= 1000,
+        "court ran only {n} hostile calls; GWS-SEC-FUZZ requires >= 1000"
     );
+    let hist = histo().lock().unwrap_or_else(|e| e.into_inner());
+    let total: usize = hist.values().sum();
+    assert_eq!(total, n, "histogram lost calls");
+    println!("GWS-SEC-FUZZ refusal-class histogram ({n} hostile frames):");
+    for (k, v) in hist.iter() {
+        println!("  {k}: {v}");
+    }
     println!(
-        "GWS-9 PASS: {n} hostile calls, 0 panics/traps, every refusal typed (kind in vocabulary), instance survived all calls (canary after each)."
+        "GWS-SEC-FUZZ PASS: {n} hostile frames, 0 panics/traps/hangs, every refusal typed (kind in vocabulary), instance survived all calls (canary after each)."
     );
 }
 
