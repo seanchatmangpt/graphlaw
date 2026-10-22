@@ -1,0 +1,238 @@
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+sql: a dcterms:source .
+sql:grammarSource dcterms:source "/Users/sac/frozen-duckdb/target/wasm-build/duckdb/src/parser/peg/grammar/statements/common.gram" .
+
+sql:ExternalResourceStatement a sql:StatementKind ;
+    sql:name "ExternalResourceStatement" ;
+    sql:example "SHOW EXTERNAL RESOURCES" ;
+    sql:order 1 .
+
+sql:ExtensionRepositoryStatement a sql:StatementKind ;
+    sql:name "ExtensionRepositoryStatement" ;
+    sql:example "SET allow_extension_repositories='allowed'; CREATE OR REPLACE EXTENSION REPOSITORY repo WITH PREFIX '/tmp/graphlaw-ext-repo' USING PUBLIC KEY 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB'" ;
+    sql:order 2 .
+
+sql:CreateStatement a sql:StatementKind ;
+    sql:name "CreateStatement" ;
+    sql:example "CREATE TABLE t2(id INTEGER)" ;
+    sql:order 3 .
+
+sql:SelectStatement a sql:StatementKind ;
+    sql:name "SelectStatement" ;
+    sql:example "SELECT 1" ;
+    sql:order 4 .
+
+sql:SetStatement a sql:StatementKind ;
+    sql:name "SetStatement" ;
+    sql:example "SET threads = 1" ;
+    sql:order 5 .
+
+sql:PragmaStatement a sql:StatementKind ;
+    sql:name "PragmaStatement" ;
+    sql:example "PRAGMA version" ;
+    sql:order 6 .
+
+sql:CallStatement a sql:StatementKind ;
+    sql:name "CallStatement" ;
+    sql:example "CALL pragma_database_size()" ;
+    sql:order 7 .
+
+sql:InsertStatement a sql:StatementKind ;
+    sql:name "InsertStatement" ;
+    sql:example "INSERT INTO t VALUES (2, 'b')" ;
+    sql:order 8 .
+
+sql:DropStatement a sql:StatementKind ;
+    sql:name "DropStatement" ;
+    sql:example "DROP TABLE IF EXISTS t2" ;
+    sql:order 9 .
+
+sql:CopyStatement a sql:StatementKind ;
+    sql:name "CopyStatement" ;
+    sql:example "COPY t TO '/tmp/graphlaw-sql-dialect-t.csv' (FORMAT CSV)" ;
+    sql:order 10 .
+
+sql:ExplainStatement a sql:StatementKind ;
+    sql:name "ExplainStatement" ;
+    sql:example "EXPLAIN SELECT 1" ;
+    sql:order 11 .
+
+sql:UpdateStatement a sql:StatementKind ;
+    sql:name "UpdateStatement" ;
+    sql:example "UPDATE t SET name = 'c' WHERE id = 1" ;
+    sql:order 12 .
+
+sql:PrepareStatement a sql:StatementKind ;
+    sql:name "PrepareStatement" ;
+    sql:example "PREPARE q AS SELECT 1" ;
+    sql:order 13 .
+
+sql:ExecuteStatement a sql:StatementKind ;
+    sql:name "ExecuteStatement" ;
+    sql:example "PREPARE q AS SELECT 1; EXECUTE q" ;
+    sql:order 14 .
+
+sql:AlterStatement a sql:StatementKind ;
+    sql:name "AlterStatement" ;
+    sql:example "ALTER TABLE t ADD COLUMN extra INTEGER" ;
+    sql:order 15 .
+
+sql:TransactionStatement a sql:StatementKind ;
+    sql:name "TransactionStatement" ;
+    sql:example "BEGIN" ;
+    sql:order 16 .
+
+sql:DeleteStatement a sql:StatementKind ;
+    sql:name "DeleteStatement" ;
+    sql:example "DELETE FROM t WHERE id = 2" ;
+    sql:order 17 .
+
+sql:AttachStatement a sql:StatementKind ;
+    sql:name "AttachStatement" ;
+    sql:example "ATTACH ':memory:' AS mem" ;
+    sql:order 18 .
+
+sql:UseStatement a sql:StatementKind ;
+    sql:name "UseStatement" ;
+    sql:example "ATTACH ':memory:' AS mem2; USE mem2" ;
+    sql:order 19 .
+
+sql:DetachStatement a sql:StatementKind ;
+    sql:name "DetachStatement" ;
+    sql:example "ATTACH ':memory:' AS mem3; DETACH mem3" ;
+    sql:order 20 .
+
+sql:CheckpointStatement a sql:StatementKind ;
+    sql:name "CheckpointStatement" ;
+    sql:example "CHECKPOINT" ;
+    sql:order 21 .
+
+sql:VacuumStatement a sql:StatementKind ;
+    sql:name "VacuumStatement" ;
+    sql:example "VACUUM" ;
+    sql:order 22 .
+
+sql:ResetStatement a sql:StatementKind ;
+    sql:name "ResetStatement" ;
+    sql:example "RESET threads" ;
+    sql:order 23 .
+
+sql:ExportStatement a sql:StatementKind ;
+    sql:name "ExportStatement" ;
+    sql:example "EXPORT DATABASE '/tmp/graphlaw-sql-dialect-export'" ;
+    sql:order 24 .
+
+sql:ImportStatement a sql:StatementKind ;
+    sql:name "ImportStatement" ;
+    sql:example "ATTACH '/tmp/graphlaw-import-src.duckdb' AS src; USE src; CREATE OR REPLACE TABLE only_src(id INTEGER); EXPORT DATABASE '/tmp/graphlaw-sql-dialect-import'; USE memory; IMPORT DATABASE '/tmp/graphlaw-sql-dialect-import'" ;
+    sql:order 25 .
+
+sql:CommentStatement a sql:StatementKind ;
+    sql:name "CommentStatement" ;
+    sql:example "COMMENT ON TABLE main.t IS 'graphlaw'" ;
+    sql:order 26 .
+
+sql:DeallocateStatement a sql:StatementKind ;
+    sql:name "DeallocateStatement" ;
+    sql:example "PREPARE q AS SELECT 1; DEALLOCATE q" ;
+    sql:order 27 .
+
+sql:TruncateStatement a sql:StatementKind ;
+    sql:name "TruncateStatement" ;
+    sql:example "TRUNCATE main.t" ;
+    sql:order 28 .
+
+sql:LoadStatement a sql:StatementKind ;
+    sql:name "LoadStatement" ;
+    sql:example "LOAD icu" ;
+    sql:order 29 .
+
+sql:InstallStatement a sql:StatementKind ;
+    sql:name "InstallStatement" ;
+    sql:example "INSTALL tpch FROM '/Users/sac/.duckdb/extensions'" ;
+    sql:order 30 .
+
+sql:UpdateExtensionsStatement a sql:StatementKind ;
+    sql:name "UpdateExtensionsStatement" ;
+    sql:example "UPDATE EXTENSIONS" ;
+    sql:order 31 .
+
+sql:AnalyzeStatement a sql:StatementKind ;
+    sql:name "AnalyzeStatement" ;
+    sql:example "ANALYZE main.t" ;
+    sql:order 32 .
+
+sql:MergeIntoStatement a sql:StatementKind ;
+    sql:name "MergeIntoStatement" ;
+    sql:example "MERGE INTO main.t USING (SELECT 1 AS id, 'z' AS name) s ON main.t.id = s.id WHEN MATCHED THEN UPDATE SET name = s.name" ;
+    sql:order 33 .
+
+sql:ConnectStatement a sql:StatementKind ;
+    sql:name "ConnectStatement" ;
+    sql:example "CONNECT LOCAL" ;
+    sql:order 34 .
+
+sql:DisconnectStatement a sql:StatementKind ;
+    sql:name "DisconnectStatement" ;
+    sql:example "DISCONNECT" ;
+    sql:order 35 .
+
+sql:extensionRoot dcterms:source "/Users/sac/frozen-duckdb/target/wasm-build/duckdb/extension" .
+
+sql:ext_autocomplete a sql:Extension ;
+    sql:name "autocomplete" ;
+    sql:setup "LOAD autocomplete" ;
+    sql:check "SELECT 1" ;
+    sql:expect 1 ;
+    sql:order 1 .
+
+sql:ext_core_functions a sql:Extension ;
+    sql:name "core_functions" ;
+    sql:setup "SELECT 1" ;
+    sql:check "SELECT list_sum([1, 2, 3])" ;
+    sql:expect 6 ;
+    sql:order 2 .
+
+sql:ext_delta a sql:Extension ;
+    sql:name "delta" ;
+    sql:setup "LOAD delta" ;
+    sql:check "SELECT 1" ;
+    sql:expect 1 ;
+    sql:order 3 .
+
+sql:ext_icu a sql:Extension ;
+    sql:name "icu" ;
+    sql:setup "SELECT 1" ;
+    sql:check "SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END FROM icu_calendar_names()" ;
+    sql:expect 1 ;
+    sql:order 4 .
+
+sql:ext_json a sql:Extension ;
+    sql:name "json" ;
+    sql:setup "SELECT 1" ;
+    sql:check "SELECT json_extract('{\"a\": 1}', '$.a')::INTEGER" ;
+    sql:expect 1 ;
+    sql:order 5 .
+
+sql:ext_parquet a sql:Extension ;
+    sql:name "parquet" ;
+    sql:setup "COPY (SELECT 1 AS id) TO '/tmp/graphlaw-sql-dialect.parquet' (FORMAT PARQUET)" ;
+    sql:check "SELECT count(*) FROM read_parquet('/tmp/graphlaw-sql-dialect.parquet')" ;
+    sql:expect 1 ;
+    sql:order 6 .
+
+sql:ext_tpcds a sql:Extension ;
+    sql:name "tpcds" ;
+    sql:setup "LOAD tpcds; CALL dsdgen(sf = 0)" ;
+    sql:check "SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END FROM call_center" ;
+    sql:expect 1 ;
+    sql:order 7 .
+
+sql:ext_tpch a sql:Extension ;
+    sql:name "tpch" ;
+    sql:setup "CALL dbgen(sf = 0.01)" ;
+    sql:check "SELECT count(*) FROM nation" ;
+    sql:expect 25 ;
+    sql:order 8 .

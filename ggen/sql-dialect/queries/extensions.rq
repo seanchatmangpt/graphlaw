@@ -1,0 +1,12 @@
+PREFIX sql: <http://graphlaw.org/sql#>
+
+SELECT ?name ?setup ?check ?expect ?ord
+WHERE {
+  ?s a sql:Extension ;
+     sql:name ?name ;
+     sql:setup ?setup ;
+     sql:check ?check ;
+     sql:expect ?expect ;
+     sql:order ?ord .
+}
+ORDER BY ?ord

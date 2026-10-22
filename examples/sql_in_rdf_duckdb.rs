@@ -4,7 +4,7 @@
 //!
 //! Run with:
 //! ```bash
-//! cargo run --features duckdb --example sql_in_rdf_duckdb
+//! cargo run --example sql_in_rdf_duckdb
 //! ```
 
 use graphlaw::duckdb_eval::GraphLawDuckDB;
@@ -199,6 +199,7 @@ impl RdfDatasetReader {
         let from = TableRef {
             name: table_name,
             alias: table_alias,
+            schema: None,
         };
 
         // Unroll projection list (rdf:List)
@@ -253,6 +254,8 @@ impl RdfDatasetReader {
             select_list,
             where_clause,
             group_by,
+            having: None,
+            order_by: Vec::new(),
             limit,
             offset,
         })
@@ -290,6 +293,19 @@ impl RdfAstGraphReader for RdfDatasetReader {
 
     fn get_iri(&self, node: &Self::Node) -> Option<String> {
         Some(node.clone())
+    }
+
+    fn object_count(&self, _node: &Self::Node, _predicate: &str) -> usize {
+        0
+    }
+
+    fn iri_object_count(&self, node: &Self::Node, predicate: &str) -> usize {
+        self.outgoing
+            .get(node)
+            .and_then(|preds| preds.get(predicate))
+            .map_or(0, |terms| {
+                terms.iter().filter(|t| matches!(t, RdfTerm::Iri(_))).count()
+            })
     }
 }
 

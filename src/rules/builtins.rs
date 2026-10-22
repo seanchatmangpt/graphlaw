@@ -76,14 +76,22 @@ pub fn builtin_eval_sql<R: RdfAstGraphReader<Node = String>>(
     let subject_prefix = args[1];
     let vocab_prefix = args[2];
 
-    // 1. Extract AST using reader
-    let ast = reader
-        .extract_select_statement(&query_node)
-        .map_err(|e| BuiltinError::AstError(e.to_string()))?;
+    // 1. SQLRDF-17: the builtin admits ONLY graph-backed queries. The
+    // reader must be document-backed — it supplies the admitted Turtle AST
+    // document, which is compiled by the same `compile_turtle` law the ABI
+    // op-15 uses, so the receipt is BLAKE3(Canon(G_AST) || P_params)
+    // (sql-rdf Rec. section 1.4) with canon pinned at compile time. The
+    // legacy `extract_select_statement -> SelectStatement::compile()` path
+    // produced hand-built `CompiledQuery`s with no canon bytes; that path
+    // and the eval fallback it relied on are DELETED, not gated.
+    let turtle = reader.query_document_turtle().ok_or_else(|| {
+        BuiltinError::AstError(
+            "REFUSAL-04 CapabilityRefusal: reader is not document-backed — builtin eval admits only graph-backed queries compiled via compile_turtle (SQLRDF-17)".to_string(),
+        )
+    })?;
 
-    // 2. Compile to parameterized SQL
-    let compiled = ast
-        .compile()
+    // 2. Compile the admitted AST graph to parameterized SQL
+    let compiled = crate::sql_ast::compile_turtle(&turtle)
         .map_err(|e| BuiltinError::AstError(e.to_string()))?;
 
     // 3. Vectorized pushdown to embedded frozen-duckdb

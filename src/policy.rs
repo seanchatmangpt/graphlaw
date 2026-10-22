@@ -65,6 +65,21 @@ pub struct PolicyRefused {
     pub message: String,
 }
 
+impl std::fmt::Display for PolicyRefused {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "policy refused {} on state `{}` action `{}`: {}",
+            self.kind.as_str(),
+            self.state,
+            self.action,
+            self.message
+        )
+    }
+}
+
+impl std::error::Error for PolicyRefused {}
+
 impl PolicyRefused {
     fn new(kind: PolicyRefusalKind, state: &str, action: &str, message: String) -> Self {
         Self {

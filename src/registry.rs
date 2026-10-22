@@ -167,7 +167,7 @@ pub struct DialectRow {
 }
 
 /// Engines that own dialects.
-pub const ENGINES: &[&str] = &["PurRdf", "Eyeron"];
+pub const ENGINES: &[&str] = &["PurRdf", "Eyeron", "FrozenDuckdb"];
 /// Refusal kinds.
 pub const REFUSAL_KINDS: &[&str] = &[
     "NotSemanticContent",
@@ -270,6 +270,12 @@ pub const OTHER_DIALECTS: &[DialectRow] = &[
         name: "sparql",
         aliases: &["rq"],
         response_name: "Sparql",
+        media_type: None,
+    },
+    DialectRow {
+        name: "sql",
+        aliases: &[],
+        response_name: "SqlRdf",
         media_type: None,
     },
     DialectRow {
@@ -880,15 +886,10 @@ pub const LAW_STEPS: &[LawStepRow] = &[
     },
 ];
 
-/// Ops dispatched by the native ABI but compiled out of the wasm target
-/// (feature `duckdb`; frozen-duckdb does not compile to wasm32). Deliberately
-/// absent from `OPS`/`capabilities`/the wasm mirror so the hashed registry
-/// document stays target-invariant and native≡wasm byte courts hold.
-#[cfg(feature = "duckdb")]
+/// Dispatch ops kept out of the hashed `OPS` list so `capabilities` and the
+/// registry digest stay stable. The wasm module dispatches them with the rest
+/// of the ABI.
 pub const NATIVE_ONLY_OPS: &[&str] = &["duckdb"];
-/// No native-only ops compiled in.
-#[cfg(not(feature = "duckdb"))]
-pub const NATIVE_ONLY_OPS: &[&str] = &[];
 
 /// ABI op names in registry order.
 pub fn op_names() -> Vec<&'static str> {
@@ -961,6 +962,30 @@ fn surface_document() -> Value {
     })
 }
 
+/// Canonical receipt-surface document: BLAKE3 digests of the receipt-critical
+/// compiler/eval sources, pinned so a receipt's standing can be tied to the
+/// exact bytes of the code that minted it.
+fn receipt_surface_document() -> Value {
+    const FILES: &[(&str, &[u8])] = &[
+        ("src/duckdb_eval.rs", include_bytes!("duckdb_eval.rs")),
+        ("src/sql_ast.rs", include_bytes!("sql_ast.rs")),
+    ];
+    let files: Vec<Value> = FILES
+        .iter()
+        .map(|(path, bytes)| {
+            json!({
+                "path": path,
+                "blake3": blake3_of(bytes),
+                "bytes": bytes.len(),
+            })
+        })
+        .collect();
+    json!({
+        "schema": "graphlaw.receipt-surface/1",
+        "files": files,
+    })
+}
+
 fn blake3_of(bytes: &[u8]) -> String {
     let digest = blake3::hash(bytes);
     let mut out = String::with_capacity(7 + 64);
@@ -993,6 +1018,8 @@ fn base_document() -> Value {
         "graphlaw_version": env!("CARGO_PKG_VERSION"),
         "abi_version": ABI_VERSION,
         "surface_blake3": surface_blake3(),
+        "receipt_surface_blake3": receipt_surface_blake3(),
+        "receipt_surface": receipt_surface_document(),
         "authorities": crate::BACKEND_AUTHORITIES.iter().map(|a| json!({
             "capability": a.capability, "authority": a.authority,
         })).collect::<Vec<_>>(),
@@ -1481,6 +1508,14 @@ pub fn surface_blake3() -> String {
     blake3_of(canonical(&surface_document()).as_bytes())
 }
 
+/// `blake3:<hex>` of the canonical receipt-surface document (per-file digests of
+/// `src/duckdb_eval.rs` and `src/sql_ast.rs`, the receipt-minting surface).
+/// Same invariants as [`surface_blake3`]: digest over canonical bytes, never
+/// over any pretty-printed serialization.
+pub fn receipt_surface_blake3() -> String {
+    blake3_of(canonical(&receipt_surface_document()).as_bytes())
+}
+
 /// `blake3:<hex>` of the canonical registry document with `registry_blake3` removed.
 pub fn registry_blake3() -> String {
     document()
@@ -1699,6 +1734,11 @@ fn graph(doc: &Value) -> Graph {
     );
     g.add(r, "gac:abiVersion", int_of(doc, "abi_version"));
     g.add(r, "gac:surfaceBlake3", lit(&text_of(doc, "surface_blake3")));
+    g.add(
+        r,
+        "gac:receiptSurfaceBlake3",
+        lit(&text_of(doc, "receipt_surface_blake3")),
+    );
     g.add(
         r,
         "gac:registryBlake3",
@@ -1926,7 +1966,7 @@ mod tests {
     fn surface_matches_contract_shape() {
         assert_eq!(OPS.len(), 14);
         assert_eq!(rdf_dialect_names().len(), 9);
-        assert_eq!(other_dialect_names().len(), 4);
+        assert_eq!(other_dialect_names().len(), 5);
         assert_eq!(op_names()[0], "capabilities");
         assert_eq!(op_names()[13], "policy");
         assert!(surface_blake3().starts_with("blake3:"));

@@ -16,8 +16,29 @@
 # Core AST Classes
 # =============================================================================
 
+# Root Classes (sql-rdf Rec section 3.1)
+sql:ASTNode a owl:Class ;
+    rdfs:label "AST Node" ;
+    rdfs:comment "Abstract superclass of all SQL Abstract Syntax Tree elements." .
+
 sql:Statement a owl:Class ;
-    rdfs:subClassOf owl:Thing .
+    rdfs:subClassOf sql:ASTNode ;
+    rdfs:label "SQL Statement" ;
+    rdfs:comment "Top-level relational statement capable of compilation and execution." .
+
+# Major Statement Families (section 3.1)
+sql:DataQueryStatement a owl:Class ;
+    rdfs:subClassOf sql:Statement .
+sql:DataManipulationStatement a owl:Class ;
+    rdfs:subClassOf sql:Statement .
+sql:DataDefinitionStatement a owl:Class ;
+    rdfs:subClassOf sql:Statement .
+sql:TransactionStatement a owl:Class ;
+    rdfs:subClassOf sql:Statement .
+sql:SessionStatement a owl:Class ;
+    rdfs:subClassOf sql:Statement .
+sql:ExtensionStatement a owl:Class ;
+    rdfs:subClassOf sql:Statement .
 
 sql:SelectStatement a owl:Class ;
     rdfs:subClassOf sql:Statement .
@@ -56,6 +77,37 @@ sql:Function a owl:Class ;
 # Structural Properties
 # =============================================================================
 
+# Clause Relations (section 3.3). The normative names below are subproperties
+# of sql:hasClause; the legacy aliases (selectList/fromTable/whereClause) remain
+# accepted during the alias window.
+sql:hasClause a rdf:Property ;
+    rdfs:domain sql:Statement ;
+    rdfs:range sql:ASTNode .
+
+sql:select a rdf:Property ;
+    rdfs:subPropertyOf sql:hasClause ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range rdf:List ;
+    rdfs:comment "Ordered projection list evaluated under sql:ViewScope." .
+
+sql:from a rdf:Property ;
+    rdfs:subPropertyOf sql:hasClause ;
+    rdfs:domain sql:Statement ;
+    rdfs:range rdf:List ;
+    rdfs:comment "List of data sources, joins, or table-valued functions." .
+
+sql:where a rdf:Property ;
+    rdfs:subPropertyOf sql:hasClause ;
+    rdfs:domain sql:Statement ;
+    rdfs:range sql:Expression ;
+    rdfs:comment "Filtering expression evaluated under sql:ProcessScope." .
+
+sql:having a rdf:Property ;
+    rdfs:subPropertyOf sql:hasClause ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range sql:Expression .
+
+# Legacy alias, kept legal during the alias window (SQLRDF-01).
 sql:fromTable a owl:ObjectProperty ;
     rdfs:domain sql:SelectStatement ;
     rdfs:range sql:TableRef .
@@ -94,29 +146,59 @@ sql:whereClause a owl:ObjectProperty ;
     rdfs:range sql:Expression .
 
 sql:groupBy a owl:ObjectProperty ;
+    rdfs:subPropertyOf sql:hasClause ;
     rdfs:domain sql:SelectStatement ;
     rdfs:range rdf:List .
 
 sql:havingClause a owl:ObjectProperty ;
     rdfs:domain sql:SelectStatement ;
-    rdfs:range sql:Expression .
+    rdfs:range sql:Expression ;
+    rdfs:comment "Legacy alias of sql:having; retained during the alias window (SQLRDF-01)." .
 
 sql:orderBy a owl:ObjectProperty ;
+    rdfs:subPropertyOf sql:hasClause ;
     rdfs:domain sql:SelectStatement ;
     rdfs:range rdf:List .
 
 sql:limit a owl:DatatypeProperty ;
+    rdfs:subPropertyOf sql:hasClause ;
     rdfs:domain sql:SelectStatement ;
     rdfs:range xsd:nonNegativeInteger .
 
 sql:offset a owl:DatatypeProperty ;
+    rdfs:subPropertyOf sql:hasClause ;
     rdfs:domain sql:SelectStatement ;
     rdfs:range xsd:nonNegativeInteger .
+
+# Statement invariant (section 4): every statement carries an execution index.
+sql:statementIndex a owl:DatatypeProperty ;
+    rdfs:domain sql:Statement ;
+    rdfs:range xsd:integer .
+
+# Scoping (section 3.3)
+sql:Scope a owl:Class .
+sql:ViewScope a sql:Scope ;
+    rdfs:comment "Scope for terms exposed directly in query outputs." .
+sql:ProcessScope a sql:Scope ;
+    rdfs:comment "Scope for terms evaluated internally in predicates or joins." .
+
+sql:scope a owl:ObjectProperty ;
+    rdfs:domain sql:ASTNode ;
+    rdfs:range sql:Scope .
 
 # Operators & Expressions
 sql:operator a owl:ObjectProperty ;
     rdfs:domain sql:BinaryExpression ;
     rdfs:range sql:Operator .
+
+# Operators & Expressions
+sql:left a owl:ObjectProperty ;
+    rdfs:domain sql:BinaryExpression ;
+    rdfs:range sql:ASTNode .
+
+sql:right a owl:ObjectProperty ;
+    rdfs:domain sql:BinaryExpression ;
+    rdfs:range sql:ASTNode .
 
 sql:leftOperand a owl:ObjectProperty ;
     rdfs:domain sql:BinaryExpression ;
@@ -155,6 +237,16 @@ sql:aliasName a owl:DatatypeProperty ;
     rdfs:domain sql:Alias ;
     rdfs:range xsd:string .
 
+# Section 3.3/7 attribute spellings read by the compiler (rec section 7 uses
+# sql:alias on projection expressions and sql:value on literal expressions).
+sql:alias a owl:DatatypeProperty ;
+    rdfs:domain sql:ASTNode ;
+    rdfs:range xsd:string .
+
+sql:value a owl:DatatypeProperty ;
+    rdfs:domain sql:ASTNode ;
+    rdfs:range xsd:string .
+
 sql:literalValue a owl:DatatypeProperty ;
     rdfs:domain sql:Literal .
 
@@ -182,18 +274,131 @@ fn:MAX              a sql:Function ; rdfs:label "MAX" .
 # SHACL Structural Invariant Shapes (Anti-Injection & Soundness)
 # =============================================================================
 
+sql:StatementBaseShape a sh:NodeShape ;
+    sh:targetClass sql:Statement ;
+    sh:property [
+        sh:path sql:statementIndex ;
+        sh:datatype xsd:integer ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message "Every statement MUST contain an integer execution sequence index." ;
+    ] .
+
 sql:SelectStatementShape a sh:NodeShape ;
     sh:targetClass sql:SelectStatement ;
+    # Alias window: legacy documents carry exactly one sql:fromTable; normative
+    # section 4 documents carry at most one ordered sql:from list.
+    # Alias window: a source clause in one of the two forms — legacy
+    # sql:fromTable (one TableRef) or normative sql:from (one ordered list,
+    # rec section 4/7). sh:or, not sh:xone: the from branch would otherwise be
+    # satisfied vacuously on legacy documents that carry only fromTable.
+    sh:or (
+        [ sh:path sql:fromTable ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:node sql:TableRefShape ;
+          sh:severity sh:Violation ;
+          sh:message "A SelectStatement MUST carry exactly one alias fromTable with a well-formed table name." ; ]
+        [ sh:path sql:from ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:node sql:OrderedListShape ;
+          sh:severity sh:Violation ;
+          sh:message "A SelectStatement MUST carry exactly one ordered sql:from clause (rec section 4)." ; ]
+    ) ;
+    # Exactly one projection list: either the normative sql:select (section 4)
+    # or the legacy alias sql:selectList — never zero, never both.
+    # A nil (empty) projection list satisfies neither branch's value-existence
+    # intent; the xone-level message keeps the refusal typed instead of the
+    # generic "Node <Q>: violation" (fuzz D1).
+    sh:message "[REFUSAL-01] MalformedAstRefusal: a SelectStatement MUST contain exactly one projection list (sql:select, or legacy alias sql:selectList — never zero, never both; an empty rdf:nil list is never an implicit SELECT *)." ;
+    sh:xone (
+        [ sh:path sql:select ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:node sql:OrderedListShape ;
+          sh:severity sh:Violation ;
+          sh:message "A SelectStatement MUST contain exactly one projection list." ; ]
+        [ sh:path sql:selectList ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:severity sh:Violation ;
+          sh:message "A SelectStatement MUST contain exactly one projection list (alias sql:selectList)." ; ]
+    ) ;
+    # Alias window: sh:class sql:Expression is withheld — data documents do not
+    # carry the ontology's rdfs:subClassOf axioms, so the validator's asserted
+    # type closure would reject normative sql:BinaryExpression values.
     sh:property [
-        sh:path sql:fromTable ;
+        sh:path sql:where ;
+        sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message "At most one sql:where expression." ;
+    ] .
+
+sql:BinaryExpressionShape a sh:NodeShape ;
+    sh:targetClass sql:BinaryExpression ;
+    # Alias window: operand/operator are the normative names; leftOperand/
+    # rightOperand and operator IRIs are the legacy aliases.
+    # Alias window: sh:class sql:ASTNode is withheld (same asserted-closure
+    # limitation as sql:where above).
+    sh:xone (
+        [ sh:path sql:left ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:severity sh:Violation ;
+          sh:message "A BinaryExpression MUST carry exactly one sql:left AST node." ; ]
+        [ sh:path sql:leftOperand ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:severity sh:Violation ;
+          sh:message "A BinaryExpression MUST carry exactly one operand (alias sql:leftOperand)." ; ]
+    ) ;
+    sh:xone (
+        [ sh:path sql:right ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:severity sh:Violation ;
+          sh:message "A BinaryExpression MUST carry exactly one sql:right AST node." ; ]
+        [ sh:path sql:rightOperand ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:severity sh:Violation ;
+          sh:message "A BinaryExpression MUST carry exactly one operand (alias sql:rightOperand)." ; ]
+    ) ;
+    sh:xone (
+        # Normative section 4 form: an xsd:string token from the fixed enum.
+        [ sh:path sql:operator ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:datatype xsd:string ;
+          sh:in ( "=" "!=" "<" "<=" ">" ">=" "AND" "OR" "+" "-" "*" "/" "%" "LIKE" "ILIKE" ) ;
+          sh:severity sh:Violation ;
+          sh:message "Expression operator MUST be an approved comparison, logical, or arithmetic token." ; ]
+        # Legacy alias form: an operator IRI.
+        [ sh:path sql:operator ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:in ( sql:Equals sql:NotEquals sql:GreaterThan sql:GreaterThanOrEq
+                  sql:LessThan sql:LessThanOrEq sql:And sql:Or sql:Like ) ;
+          sh:severity sh:Violation ;
+          sh:message "Expression operator MUST be a legacy operator IRI (alias window)." ; ]
+    ) .
+
+sql:OrderedListShape a sh:NodeShape ;
+    sh:property [
+        sh:path rdf:first ;
         sh:minCount 1 ;
         sh:maxCount 1 ;
-        sh:node sql:TableRefShape ;
+        sh:severity sh:Violation ;
+        sh:message "An ordered list node MUST carry exactly one rdf:first." ;
     ] ;
     sh:property [
-        sh:path sql:selectList ;
+        sh:path rdf:rest ;
         sh:minCount 1 ;
         sh:maxCount 1 ;
+        sh:severity sh:Violation ;
+        sh:message "An ordered list node MUST carry exactly one rdf:rest." ;
     ] .
 
 sql:TableRefShape a sh:NodeShape ;

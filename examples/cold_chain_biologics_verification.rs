@@ -98,6 +98,19 @@ impl RdfAstGraphReader for RdfDatasetReader {
     fn get_iri(&self, node: &Self::Node) -> Option<String> {
         Some(node.clone())
     }
+
+    fn object_count(&self, _node: &Self::Node, _predicate: &str) -> usize {
+        0
+    }
+
+    fn iri_object_count(&self, node: &Self::Node, predicate: &str) -> usize {
+        self.outgoing
+            .get(node)
+            .and_then(|preds| preds.get(predicate))
+            .map_or(0, |terms| {
+                terms.iter().filter(|t| matches!(t, RdfTerm::Iri(_))).count()
+            })
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

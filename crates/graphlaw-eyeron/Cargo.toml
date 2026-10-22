@@ -4,14 +4,14 @@ version = "0.7.8"
 edition = "2021"
 rust-version = "1.96"
 authors = ["Jos De Roo", "Sean Chatman"]
-license = "MIT"
+license = "MIT AND LicenseRef-P28-SIL-2.1.0"
 description = "Eyeron, a native Rust Notation3 reasoner, vendored for GraphLaw with a WASI clock fix"
 repository = "https://github.com/seanchatmangpt/graphlaw"
 homepage = "https://github.com/eyereasoner/eyeron"
 readme = "README.md"
 keywords = ["n3", "notation3", "reasoner", "rdf", "semantic-web"]
 categories = ["parser-implementations", "science"]
-include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE.md", "/UPSTREAM.md"]
+include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE.md", "/LICENSE-P28-SIL.md", "/UPSTREAM.md"]
 
 [lib]
 # Keeps `use eyeron::...` working for every consumer.

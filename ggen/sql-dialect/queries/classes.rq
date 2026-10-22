@@ -1,0 +1,9 @@
+PREFIX sql: <http://graphlaw.org/sql#>
+
+SELECT ?name ?ord
+WHERE {
+  ?s a sql:StatementKind ;
+     sql:name ?name ;
+     sql:order ?ord .
+}
+ORDER BY ?ord

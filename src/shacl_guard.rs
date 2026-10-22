@@ -66,6 +66,18 @@ pub struct DepthExceeded {
     pub observed: usize,
 }
 
+impl std::fmt::Display for DepthExceeded {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "SHACL shape nesting depth exceeded: observed {}",
+            self.observed
+        )
+    }
+}
+
+impl std::error::Error for DepthExceeded {}
+
 /// Refuse `shapes_ttl` if its shape-nesting depth exceeds
 /// [`MAX_SHACL_VALIDATION_DEPTH`], returning the observed depth.
 ///

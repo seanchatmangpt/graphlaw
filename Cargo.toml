@@ -4,10 +4,10 @@ version = "26.10.21"
 edition = "2024"
 rust-version = "1.96"
 authors = ["Sean Chatman"]
-license = "MIT"
+license = "MIT AND LicenseRef-P28-SIL-2.1.0"
 description = "GraphLaw: library-backed RDF law-state composition over PurRDF and Eyeron"
 readme = "README.md"
-include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE", "/MIGRATION.md", "/CHANGELOG.md", "/SECURITY.md", "/CONTRIBUTING.md", "/docs/**", "/examples/**"]
+include = ["/src/**", "/build.rs", "/Cargo.toml", "/README.md", "/LICENSE", "/LICENSE-P28-SIL.md", "/MIGRATION.md", "/CHANGELOG.md", "/SECURITY.md", "/CONTRIBUTING.md", "/docs/**", "/examples/**"]
 repository = "https://github.com/seanchatmangpt/graphlaw"
 keywords = ["rdf", "n3", "datalog", "shacl", "shex"]
 categories = ["data-structures", "parser-implementations"]
@@ -32,7 +32,7 @@ path = "src/lib.rs"
 
 [dependencies]
 purrdf = "=2.0.2"
-frozen-duckdb = { path = "/Users/sac/frozen-duckdb/crates/frozen-duckdb", version = "2.0.0-dev", optional = true }
+frozen-duckdb = { version = "2.0", optional = true }
 # SECURITY (supply-chain note): sha2 0.10.9 remains in the tree ONLY as a
 # transitive dep of the purrdf family (purrdf-core 2.0.2 declares sha2 = "0.10")
 # and ed25519-dalek 2.2.0 (sha2 = "0.10", exact-pinned per GOALS.md invariant 3).
@@ -55,12 +55,17 @@ serde = { version = "1", features = ["derive"] }
 regex = { version = "1", optional = true }
 serde_json = "1"
 eyeron = { package = "graphlaw-eyeron", version = "0.7.8", path = "crates/graphlaw-eyeron" }
+rtrb = { version = "0.3", optional = true }
 [features]
+# P28-SIL §3.2: SPSC evidentiary ring + query ledger (src/evidence_ring.rs,
+# src/query_ledger.rs). Default OFF; native-only (drainer thread, host files);
+# rtrb is the lock-free SPSC core.
+evidentiary-ring = ["dep:rtrb"]
 # `abi` on by default: the JSON request/response ABI (src/abi.rs) carries no
 # extra dependencies (serde_json is a required dep), and without it the
 # default dev profile cannot compile the abi-backed bins, examples, and
 # integration tests (E0432 on graphlaw::abi under plain `cargo test`).
-default = ["abi"]
+default = ["abi", "duckdb"]
 # Capture/rewrite tooling for packs/self-monitoring-pack (replaces the former
 # Python scripts). Off by default so the library stays dependency-light.
 pack-tools = ["dep:regex"]
@@ -107,6 +112,18 @@ name = "graphlaw-registry"
 path = "src/bin/graphlaw_registry.rs"
 required-features = ["abi"]
 
+# Charter A08 measurement-isolation lane: tc_hot_01/tc_hot_02 are
+# harness=false bench binaries (custom main, not libtest). Minimal unblock
+# after a concurrent lane edit dropped the [[bench]] sections.
+[[bench]]
+name = "tc_hot_01"
+harness = false
+
+# TC-HOT-02: duckdb-generated parquet corpus, compiled-query throughput court.
+[[bench]]
+name = "tc_hot_02"
+harness = false
+
 [package.metadata.docs.rs]
 all-features = true
 
@@ -121,6 +138,7 @@ wasmi_wasi = { version = "2", optional = true }
 wasmi = "2"
 wasmi_wasi = "2"
 serde_json = "1"
+hdrhistogram = "7"
 
 # Carried patch (see vendor/README.md): gives WASI the std clock/RNG path instead
 # of the browser-only `js_sys` calls, which panic on any wasm32 target that is
@@ -216,37 +234,30 @@ required-features = ["abi"]
 name = "graphlaw-attest"
 path = "src/bin/graphlaw_attest.rs"
 
-# GLR-11: duckdb targets (native-only; require the `duckdb` feature)
 [[example]]
 name = "sql_in_rdf_duckdb"
 path = "examples/sql_in_rdf_duckdb.rs"
-required-features = ["duckdb"]
 
 [[test]]
 name = "test_edge_sovereign_ingestion"
 path = "tests/test_edge_sovereign_ingestion.rs"
-required-features = ["duckdb"]
 
 [[test]]
 name = "gws4_ipc_injection_court"
 path = "tests/gws4_ipc_injection_court.rs"
-required-features = ["duckdb"]
 
 [[test]]
 name = "test_parquet_and_builtin_eval"
 path = "tests/test_parquet_and_builtin_eval.rs"
-required-features = ["duckdb"]
 
 [[test]]
 name = "test_cold_chain_ocel"
 path = "tests/test_cold_chain_ocel.rs"
-required-features = ["duckdb"]
+
 [[test]]
 name = "wasm_duckdb_op"
 path = "tests/wasm_duckdb_op.rs"
-required-features = ["duckdb"]
 
 [[example]]
 name = "cold_chain_biologics_verification"
 path = "examples/cold_chain_biologics_verification.rs"
-required-features = ["duckdb"]

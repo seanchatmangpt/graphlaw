@@ -98,7 +98,14 @@ impl fmt::Display for StoreError {
     }
 }
 
-impl std::error::Error for StoreError {}
+impl std::error::Error for StoreError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            StoreError::Attestation { error, .. } => Some(error),
+            _ => None,
+        }
+    }
+}
 
 impl From<std::io::Error> for StoreError {
     fn from(e: std::io::Error) -> Self {

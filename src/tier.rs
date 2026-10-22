@@ -1,4 +1,4 @@
-//! Two-tier document routing (R04): RDF datasets vs N3 logic rule sets.
+//! Document routing: RDF datasets, N3 logic rule sets, and SQL-in-RDF queries.
 //!
 //! A [`Dialect`] names a syntax; a [`Tier`] names the *semantics* the document
 //! carries. Media-type dialects (Turtle, TriG, ...) carry an RDF dataset;
@@ -15,6 +15,14 @@
 use std::sync::Arc;
 
 use crate::dialect::{Dialect, Refusal, RefusalKind, parse_rdf, sniff};
+
+/// Stable conformance code (sql-rdf Recommendation §5, `docs/reference/sql-rdf-rec.md`):
+/// `CapabilityRefusal`. Stable wire discriminator; the register is `docs/refusals.md`.
+///
+/// SQL-in-RDF admission compiles in this crate on every build, including the wasm
+/// module, through the same `compile_turtle` path as `Dialect::SqlRdf`. The code
+/// marks a query that is not document-backed (`rules::builtins`), not a missing feature.
+pub const REFUSAL_04_CAPABILITY_REFUSAL: &str = "REFUSAL-04";
 
 /// The semantics a document carries: an RDF dataset, or an N3 logic rule set.
 ///
@@ -38,6 +46,8 @@ pub enum Tier {
     Rdf,
     /// The document denotes N3 logic: rules (and facts) owned by Eyeron.
     N3Logic,
+    /// The document denotes a SQL-in-RDF query owned by frozen-duckdb.
+    Relational,
 }
 
 impl Dialect {
@@ -53,6 +63,7 @@ impl Dialect {
     pub const fn tier(self) -> Tier {
         match self {
             Dialect::N3 => Tier::N3Logic,
+            Dialect::SqlRdf => Tier::Relational,
             _ => Tier::Rdf,
         }
     }
@@ -107,6 +118,8 @@ pub enum Admitted {
     Dataset(Arc<purrdf::RdfDataset>),
     /// The document validated as an N3 rule set (tier `N3Logic`).
     Rules(RuleSet),
+    /// The document validated and compiled as SQL-in-RDF (tier `Relational`).
+    Query(crate::sql_ast::CompiledQuery),
 }
 
 fn tier_mismatch(dialect: Dialect, message: String) -> Refusal {
@@ -115,6 +128,48 @@ fn tier_mismatch(dialect: Dialect, message: String) -> Refusal {
         dialect: Some(dialect),
         engine: Some(dialect.engine()),
         message,
+    }
+}
+
+/// Validate and compile `bytes` as a SQL-in-RDF query. No dataset is admitted.
+///
+/// Same compiler the other dialects call for `Dialect::SqlRdf` (`compile_turtle`).
+/// The wasm module links this path; it does not refuse the document for lack of a feature.
+fn admit_sql_rdf(bytes: &[u8]) -> Result<crate::sql_ast::CompiledQuery, Refusal> {
+    let text = std::str::from_utf8(bytes)
+        .map_err(|e| Refusal::engine(Dialect::SqlRdf, format!("input is not UTF-8: {e}")))?;
+    crate::sql_ast::compile_turtle(text).map_err(|e| Refusal::engine(Dialect::SqlRdf, e.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SQL_DOC: &str = r#"
+        @prefix sql: <http://graphlaw.org/sql#> .
+        @prefix ex: <http://example.org/queries#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+        ex:Q a sql:SelectStatement ;
+            sql:statementIndex 1 ;
+            sql:fromTable [ sql:tableName "telemetry_events" ] ;
+            sql:selectList ( [ sql:columnName "batch_id" ] ) ;
+            sql:whereClause [
+                sql:operator sql:GreaterThan ;
+                sql:leftOperand [ sql:columnName "latency_ms" ] ;
+                sql:rightOperand [ sql:literalValue "400"^^xsd:integer ]
+            ] ."#;
+
+    /// SQL-in-RDF admits through the same compiler on every build of this crate,
+    /// including the graphlaw linked into the wasm module.
+    #[test]
+    fn sql_document_admitted() {
+        let admitted = admit_declared(
+            SQL_DOC.as_bytes(),
+            DialectDecl { tier: Tier::Relational, dialect: Dialect::SqlRdf },
+            None,
+        )
+        .unwrap();
+        assert!(matches!(admitted, Admitted::Query(_)));
     }
 }
 
@@ -167,6 +222,7 @@ pub fn admit_declared(bytes: &[u8], decl: DialectDecl, base: Option<&str>) -> Re
     match decl.tier {
         Tier::Rdf => parse_rdf_tier_checked(bytes, decl.dialect, base).map(Admitted::Dataset),
         Tier::N3Logic => validate_n3_rules(bytes, base).map(Admitted::Rules),
+        Tier::Relational => admit_sql_rdf(bytes).map(Admitted::Query),
     }
 }
 
@@ -183,6 +239,9 @@ pub fn admit_bytes_tiered(
         Some(decl) => admit_declared(bytes, decl, base),
         None => {
             let dialect = sniff(bytes, hint)?;
+            if dialect.tier() == Tier::Relational {
+                return admit_sql_rdf(bytes).map(Admitted::Query);
+            }
             match parse_rdf(bytes, dialect, base) {
                 Ok(dataset) => Ok(Admitted::Dataset(dataset)),
                 Err(e) => {

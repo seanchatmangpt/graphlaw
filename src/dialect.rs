@@ -52,6 +52,8 @@ pub enum Dialect {
     ShExJ,
     /// SPARQL query or update text.
     Sparql,
+    /// SQL-in-RDF: a Turtle document whose query is a `sql:SelectStatement`.
+    SqlRdf,
 }
 
 /// The upstream crate that owns a dialect.
@@ -76,6 +78,8 @@ pub enum Engine {
     PurRdf,
     /// Eyeron owns the dialect.
     Eyeron,
+    /// frozen-duckdb owns the dialect.
+    FrozenDuckdb,
 }
 
 impl Dialect {
@@ -83,6 +87,7 @@ impl Dialect {
     pub const fn engine(self) -> Engine {
         match self {
             Dialect::N3 => Engine::Eyeron,
+            Dialect::SqlRdf => Engine::FrozenDuckdb,
             _ => Engine::PurRdf,
         }
     }
@@ -704,6 +709,7 @@ pub fn sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> {
     match hint.as_deref() {
         Some("shex" | "shexc") => return Ok(Dialect::ShExC),
         Some("trig") => return Ok(Dialect::TriG),
+        Some("sql") => return Ok(Dialect::SqlRdf),
         _ => {}
     }
     if head.contains("<TriX") {
@@ -776,7 +782,100 @@ pub fn sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> {
             _ => Dialect::NTriples,
         });
     }
+    if let Some(routed) = route_sql_rdf(head) {
+        return routed;
+    }
     Ok(Dialect::Turtle)
+}
+
+/// SQL-in-RDF is Turtle that carries the `sql:` vocabulary. A type assertion
+/// (`a sql:SelectStatement`) selects [`Dialect::SqlRdf`]. A `sql:` term used
+/// in predicate position (term followed by an object) without any statement
+/// class is [`RefusalKind::Ambiguous`] and demands the `sql` hint. Mere
+/// vocabulary declarations (`sql:X a owl:Class`) and object-position mentions
+/// (`sh:targetClass sql:SelectStatement`) are plain Turtle — the sql-rdf
+/// ontology and SHACL shapes themselves must keep routing as Turtle.
+fn route_sql_rdf(head: &str) -> Option<Result<Dialect, Refusal>> {
+    const SQL: &str = "sql:";
+    const SQL_IRI: &str = "http://graphlaw.org/sql#";
+
+    // Whitespace-collapsed token stream: assertions and usages may span lines.
+    // Turtle comments are stripped first (`#` to end of line, but never inside
+    // a `<...>` IRI, where `#` is a fragment separator).
+    let mut stripped = String::with_capacity(head.len());
+    let mut in_iri = false;
+    let mut in_comment = false;
+    for c in head.chars() {
+        if in_comment {
+            if c == '\n' {
+                in_comment = false;
+                stripped.push(c);
+            }
+            continue;
+        }
+        match c {
+            '<' => {
+                in_iri = true;
+                stripped.push(c);
+            }
+            '>' => {
+                in_iri = false;
+                stripped.push(c);
+            }
+            '#' if !in_iri => in_comment = true,
+            '\n' => {
+                in_iri = false;
+                stripped.push(c);
+            }
+            _ => stripped.push(c),
+        }
+    }
+    let toks: Vec<&str> = stripped.split_whitespace().collect();
+
+    let ends_with_statement = |tok: &str| -> bool {
+        let rest = tok
+            .strip_prefix(SQL)
+            .or_else(|| tok.strip_prefix(SQL_IRI));
+        match rest {
+            Some(r) => !r.is_empty() && r.ends_with("Statement"),
+            None => false,
+        }
+    };
+
+    // Type assertion: `a sql:*Statement` (or `rdf:type sql:*Statement`).
+    // Trailing punctuation (`;` `,` `.`) is trimmed from the token first.
+    let has_select = toks
+        .iter()
+        .zip(toks.iter().skip(1))
+        .any(|(prev, tok)| {
+            let class = tok.trim_end_matches([';', ',', '.']);
+            (*prev == "a" || *prev == "rdf:type") && ends_with_statement(class)
+        });
+    if has_select {
+        return Some(Ok(Dialect::SqlRdf));
+    }
+
+    // Predicate-position usage: a sql: term token followed by an object token
+    // (literal, IRI, number, or blank-node/collection open). Prefix
+    // declarations, subject-position declarations (`sql:X a owl:Class`), and
+    // object-position mentions (`sh:path sql:statementIndex ;`) are not usage.
+    let is_sql_tok = |t: &str| {
+        (t.starts_with(SQL) && t.len() > SQL.len())
+            || (t.starts_with(SQL_IRI) && t.len() > SQL_IRI.len())
+    };
+    let object_start = |b: &[u8]| {
+        matches!(b.first(), Some(c) if c == &b'"' || c == &b'<' || c == &b'[' || c == &b'(' || c.is_ascii_digit())
+    };
+    let used = toks
+        .windows(2)
+        .any(|w| is_sql_tok(w[0]) && object_start(w[1].as_bytes()));
+    if used {
+        return Some(Err(Refusal::routing(
+            RefusalKind::Ambiguous,
+            "sql: vocabulary without sql:SelectStatement; supply a `sql` hint",
+        )));
+    }
+    None
 }
 
 /// Ask the owning engine to accept `bytes` as `dialect`, discarding the result.
@@ -867,6 +966,20 @@ pub fn check_typed(
                     byte_offset: None,
                     snippet: None,
                     message: format!("{e:?}"),
+                })
+            })
+        }
+        Dialect::SqlRdf => {
+            crate::sql_ast::compile_turtle(text()?).map(|_| ()).map_err(|e| {
+                Box::new(ParseRefusal {
+                    dialect,
+                    engine: dialect.engine(),
+                    reason: ReasonClass::Syntax,
+                    line: None,
+                    col: None,
+                    byte_offset: None,
+                    snippet: None,
+                    message: e.to_string(),
                 })
             })
         }
@@ -986,6 +1099,10 @@ pub fn admit_bytes(
         crate::tier::Admitted::Rules(_) => Err(Refusal::routing(
             RefusalKind::Unsupported,
             "N3 rules cannot become a LawState; use tier::admit_declared",
+        )),
+        crate::tier::Admitted::Query(_) => Err(Refusal::routing(
+            RefusalKind::Unsupported,
+            "SQL-in-RDF cannot become a LawState; use tier::admit_bytes_tiered",
         )),
     }
 }

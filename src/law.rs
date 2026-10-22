@@ -466,6 +466,7 @@ pub const N3_MAX_TOTAL_STEPS: usize = 50_000_000;
 ///     _ => false, // required: new variants may be added
 /// };
 /// assert!(limited);
+/// let _as_error: &dyn std::error::Error = &e;
 /// ```
 #[derive(Debug, Clone)]
 #[non_exhaustive]
@@ -483,6 +484,32 @@ pub enum N3Error {
     },
     /// Parse error, semantic error, or other Eyeron refusal.
     Refused(Refusal),
+}
+
+impl std::fmt::Display for N3Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            N3Error::Limit {
+                limit,
+                observed,
+                max,
+                summary,
+            } => write!(
+                f,
+                "n3 limit `{limit}` exceeded: observed {observed}, max {max} ({summary})"
+            ),
+            N3Error::Refused(reason) => write!(f, "{reason}"),
+        }
+    }
+}
+
+impl std::error::Error for N3Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            N3Error::Refused(reason) => Some(reason),
+            N3Error::Limit { .. } => None,
+        }
+    }
 }
 
 /// Forward-reason `input` with GraphLaw's resource limits; returns the N3 text
@@ -704,7 +731,14 @@ impl std::fmt::Display for LawError {
     }
 }
 
-impl std::error::Error for LawError {}
+impl std::error::Error for LawError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            LawError::Refused(reason) => Some(reason),
+            _ => None,
+        }
+    }
+}
 
 impl From<Refusal> for LawError {
     fn from(r: Refusal) -> Self {

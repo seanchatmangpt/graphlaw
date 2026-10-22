@@ -1,0 +1,34 @@
+[project]
+name = "graphlaw-sql-dialect"
+version = "1.0.0"
+description = "SQL statement dialect generated from the DuckDB 2.0.0-dev PEG Statement rule"
+authors = ["graphlaw"]
+license = "MIT"
+
+[ontology]
+source = "ontology/statements.ttl"
+standard_only = false
+
+[generation]
+output_dir = "."
+
+[[generation.rules]]
+name = "sql-statement-kinds"
+query = { file = "queries/statements.rq" }
+template = { file = "templates/kinds.tera" }
+output_file = "sql_statement_kinds.rs"
+mode = "Overwrite"
+
+[[generation.rules]]
+name = "sql-extensions"
+query = { file = "queries/extensions.rq" }
+template = { file = "templates/extensions.tera" }
+output_file = "sql_extensions.rs"
+mode = "Overwrite"
+
+[[generation.rules]]
+name = "sql-statement-classes"
+query = { file = "queries/classes.rq" }
+template = { file = "templates/statement_classes.ttl.tera" }
+output_file = "statement_classes.ttl"
+mode = "Overwrite"

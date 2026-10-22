@@ -31,19 +31,28 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(all(target_os = "wasi", not(feature = "wasi-patched-deps")))]
+#[cfg(all(target_os = "wasi", not(graphlaw_wasi_clock_patched)))]
 compile_error!(
     "graphlaw from crates.io cannot run SPARQL on WASI: upstream reads the clock through \
-     JavaScript on every wasm32 target, which traps outside the browser. Use the prebuilt \
+     JavaScript on every wasm32 target, which traps outside the browser. The \
+     `wasi-patched-deps` feature does not apply the fix. Use the prebuilt \
      graphlaw.wasm attached to each GitHub release, or build inside the graphlaw repository \
      workspace (`cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`), which \
-     applies the vendored fix."
+     vendors the clock gate and lets build.rs set graphlaw_wasi_clock_patched."
 );
 
+/// True when `build.rs` saw the vendored `purrdf-sparql-eval` clock gate
+/// (`target_os = "unknown"`). False on a crates.io build, which does not
+/// ship `vendor/` and therefore cannot compile for WASI.
+pub const WASI_CLOCK_PATCH_APPLIED: bool = cfg!(graphlaw_wasi_clock_patched);
+
 #[cfg(feature = "abi")]
+#[cfg_attr(docsrs, doc(cfg(feature = "abi")))]
 pub mod abi;
 #[cfg(feature = "abi")]
+#[cfg_attr(docsrs, doc(cfg(feature = "abi")))]
 pub mod abi_manifest;
 pub mod attest;
 pub mod dialect;
@@ -52,15 +61,19 @@ pub mod law;
 pub mod plan;
 pub mod policy;
 #[cfg(feature = "abi")]
+#[cfg_attr(docsrs, doc(cfg(feature = "abi")))]
 pub mod qualification;
+pub mod query_ledger;
 pub mod receipt;
 pub mod receipt_chain;
 pub mod receipt_store;
 pub use receipt_chain::{ReceiptRecord, validator::ReceiptValidator};
 #[cfg(feature = "abi")]
+#[cfg_attr(docsrs, doc(cfg(feature = "abi")))]
 pub mod registry;
 pub mod shacl_guard;
 #[cfg(feature = "pack-tools")]
+#[cfg_attr(docsrs, doc(cfg(feature = "pack-tools")))]
 pub mod smon;
 pub mod tier;
 
@@ -72,7 +85,7 @@ pub use purrdf;
 /// API stability; prefer the curated modules below.
 pub use eyeron;
 
-/// RDF 1.2 data model, codecs, builders, and related primitives.
+/// Unstable re-export of PurRDF's RDF API. Not covered by GraphLaw's stability promise.
 pub mod rdf {
     pub use purrdf::{
         CanonHash, RdfDataset, RdfDatasetBuilder, RdfDiagnostic, RdfLiteral, SerializeGraph,
@@ -81,37 +94,37 @@ pub mod rdf {
     };
 }
 
-/// SPARQL parser, algebra, evaluator, prepared execution, and result formats.
+/// Unstable re-export of PurRDF's SPARQL API (`purrdf::sparql::*`). Not covered by GraphLaw's stability promise.
 pub mod sparql {
     pub use purrdf::sparql::*;
 }
 
-/// SHACL parsing, validation, reports, rules, and schema projections.
+/// Unstable re-export of PurRDF's SHACL API. Not covered by GraphLaw's stability promise.
 pub mod shacl {
     pub use purrdf::shapes::*;
 }
 
-/// ShEx 2.1 parsing, structure checking, and validation.
+/// Unstable re-export of PurRDF's ShEx API. Not covered by GraphLaw's stability promise.
 pub mod shex {
     pub use purrdf::shex::*;
 }
 
-/// Deterministic semi-naive Datalog, stratification, chase, and proofs.
+/// Unstable re-export of PurRDF's Datalog API. Not covered by GraphLaw's stability promise.
 pub mod datalog {
     pub use purrdf::datalog::*;
 }
 
-/// RDF, RDFS, OWL-RL, OWL-Direct, and RIF entailment.
+/// Unstable re-export of PurRDF's entailment API. Not covered by GraphLaw's stability promise.
 pub mod entailment {
     pub use purrdf::entail::*;
 }
 
-/// Streaming RDF event model.
+/// Unstable re-export of PurRDF's event API. Not covered by GraphLaw's stability promise.
 pub mod events {
     pub use purrdf::events::*;
 }
 
-/// Notation3 parsing, forward/backward reasoning, built-ins, limits, and proofs.
+/// Unstable re-export of Eyeron's Notation3 API. Not covered by GraphLaw's stability promise.
 pub mod n3 {
     pub use eyeron::{
         CompletionStatus, EyeronError, PreparedReasoner, RdfFormat, ReasonerError, ReasonerLimit,
@@ -179,7 +192,7 @@ pub const BACKEND_AUTHORITIES: &[BackendAuthority] = &[
     BackendAuthority {
         capability: "Vectorized columnar execution, Parquet scan, and SIMD aggregations",
         authority: "frozen-duckdb",
-        revision: "2.0.0-dev",
+        revision: "2.0.0",
     },
 ];
 
@@ -187,14 +200,17 @@ pub const BACKEND_AUTHORITIES: &[BackendAuthority] = &[
 pub const LEGACY_FALLBACK_ENABLED: bool = false;
 
 pub mod sql_ast;
-/// Native-only SQL evaluation (frozen-duckdb). Compiled out of the wasm target;
-/// rules referencing `gl:evalSql` without the `duckdb` feature are typed-refused
-/// at admission (see docs/refusals.md).
-#[cfg(feature = "duckdb")]
+pub mod sql_statement_kinds;
+/// P28-SIL §3.2 SPSC evidentiary ring + NDJSON receipt ledger (native-only,
+/// feature `evidentiary-ring`, default OFF until TC-HOT-01/02 bench it).
+#[cfg(all(feature = "evidentiary-ring", not(target_arch = "wasm32")))]
+#[cfg_attr(docsrs, doc(cfg(feature = "evidentiary-ring")))]
+pub mod evidence_ring;
+/// Compiled-plan cache for SQL evaluation. Linked into the wasm module with the rest of the kernel.
+pub mod query_cache;
+/// SQL evaluation against frozen-duckdb. Linked into the wasm module with the rest of the kernel.
 pub mod duckdb_eval;
-/// ABI op-15 `duckdb`: cursor-streamed analytical eval (native-only, feature
-/// `duckdb`; the wasm module's op table does not include it).
-#[cfg(feature = "duckdb")]
+/// ABI op `duckdb`: cursor-streamed analytical eval inside the wasm module.
 pub mod duckdb_op;
 pub mod rules;
 

@@ -90,7 +90,6 @@ impl From<Refusal> for Fail {
 
 /// Build a `Fail` from a refusal plus machine-readable `details`
 /// (crate-internal; used by `duckdb_op`).
-#[cfg(feature = "duckdb")]
 pub(crate) fn fail_with_details(refusal: Refusal, details: Value) -> Fail {
     Fail {
         refusal,
@@ -160,6 +159,16 @@ pub fn missing_buffer_response() -> Vec<u8> {
     )))
 }
 
+/// Response when `gl_call` is given a pointer this module does not own, or a
+/// length that is not the one paired with that allocation. The buffer is left
+/// untouched, so a following `gl_free` with the original length can still
+/// reclaim it. A second free is ignored by the shell rather than rebuilt.
+pub fn unknown_buffer_response() -> Vec<u8> {
+    respond(Err(bad(
+        "request buffer is not a live allocation from gl_alloc",
+    )))
+}
+
 fn bad_refusal(message: impl Into<String>) -> Refusal {
     Refusal {
         kind: RefusalKind::Unsupported,
@@ -195,6 +204,9 @@ fn respond(out: Res<Value>) -> Vec<u8> {
         }
         Err(f) => json!({"ok": false, "error": refusal_json(&f)}),
     };
+    // `Value` from `json!` / `serde_json::Value` always serializes. With the
+    // wasm profile's `panic = "abort"`, a failure here is a guest trap, not a
+    // JSON refusal — it is a bug in the response builder, not a host input.
     serde_json::to_vec(&v).expect("json serializes")
 }
 
@@ -364,6 +376,7 @@ pub fn dialect_by_name(name: &str) -> Result<Dialect, Refusal> {
         "shexc" | "shex" => Dialect::ShExC,
         "shexj" => Dialect::ShExJ,
         "sparql" | "rq" => Dialect::Sparql,
+        "sql" => Dialect::SqlRdf,
         other => return Err(bad_refusal(format!("unknown dialect `{other}`"))),
     })
 }
@@ -463,14 +476,47 @@ fn dispatch(v: &Value) -> Res<Value> {
         "hooks" => op_hooks(v),
         "law" => op_law(v),
         "policy" => op_policy(v),
-        #[cfg(feature = "duckdb")]
         "duckdb" => crate::duckdb_op::dispatch(v),
         other => Err(bad(format!("unknown op `{other}`"))),
     }
 }
 
 fn capabilities() -> Value {
-    json!({
+    // P28-SIL overflow policy: the evidentiary counters are runtime facts, not
+    // hashed surface inputs — cfg-gated additive keys (absent with the feature
+    // off, so target-invariance / digest inputs are unchanged).
+    #[cfg(all(feature = "evidentiary-ring", not(target_arch = "wasm32")))]
+    let evidentiary_counters = {
+        let ring = crate::evidence_ring::EvidenceRing::global();
+        let dropped = ring.map(|r| r.dropped_total()).unwrap_or(0);
+        // Gap markers are counted read-only from the ledger's `gaps/` dir; a
+        // full QueryLedger::open here would re-verify the chain under the
+        // drainer's exclusive handle (racy), so we only read_dir the markers.
+        let gaps = ring
+            .and_then(|r| r.ledger_dir().map(<std::path::Path>::to_path_buf))
+            .and_then(|d| {
+                std::fs::read_dir(d.join("gaps"))
+                    .ok()?
+                    .filter_map(|e| e.ok())
+                    .map(|e| e.file_name().to_string_lossy().into_owned())
+                    .try_fold(0u64, |n, name| {
+                        if name.starts_with("gap-") && name.ends_with(".json") {
+                            Ok::<_, std::io::Error>(n + 1)
+                        } else {
+                            Ok(n)
+                        }
+                    })
+                    .ok()
+            })
+            .unwrap_or(0);
+        json!({
+            "evidentiary_ring_dropped": dropped,
+            "evidentiary_ledger_gaps": gaps,
+        })
+    };
+    #[cfg(not(all(feature = "evidentiary-ring", not(target_arch = "wasm32"))))]
+    let evidentiary_counters = json!({});
+    let mut caps = json!({
         "abi": ABI_VERSION,
         "abi_version": ABI_VERSION,
         "crate": env!("CARGO_PKG_VERSION"),
@@ -483,7 +529,12 @@ fn capabilities() -> Value {
         "registry_schema": crate::registry::REGISTRY_SCHEMA,
         "registry_blake3": crate::registry::registry_blake3(),
         "surface_blake3": crate::registry::surface_blake3(),
-    })
+    });
+    let obj = caps.as_object_mut().expect("capabilities object");
+    for (k, v) in evidentiary_counters.as_object().expect("json object") {
+        obj.insert(k.clone(), v.clone());
+    }
+    caps
 }
 
 fn op_parse(v: &Value) -> Res<Value> {

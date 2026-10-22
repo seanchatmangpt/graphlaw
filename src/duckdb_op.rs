@@ -1,11 +1,13 @@
-//! ABI op-15 `duckdb`: cursor-streamed analytical eval over frozen-duckdb
-//! (native-only; compiled out of the wasm target — frozen-duckdb's native C++
-//! core does not wasm32-compile, see docs/wasm-duckdb-op15-design.md).
+//! ABI op `duckdb`: cursor-streamed analytical eval over frozen-duckdb,
+//! linked into the wasm module with the rest of the kernel.
 //!
 //! Wire (JSON over the standard ABI):
 //! - `exec`: `{"op":"duckdb","mode":"exec","views":[{name,glob,hive}],
-//!   "query_ast":"<IRI>","ast":{"text","dialect"}?,"subject_prefix",
-//!   "vocab_prefix","params":[...],"chunk_rows"?}`
+//!   "query_ast":"<IRI>","ast":{"turtle","dialect"?},"subject_prefix",
+//!   "vocab_prefix","params":[...]?,"chunk_rows"?}` — `ast.turtle` is the
+//!   Turtle AST document, compiled via `compile_turtle` (SQLRDF-17: no raw
+//!   SQL text admission; legacy `ast.text` is a typed refusal; wire `params`
+//!   must one-for-one match the AST-carried literal parameters)
 //!   → `{"ok":true,"receipt","query_hash","rows_emitted","cursor","more":bool}`
 //! - `stream`: `{"op":"duckdb","mode":"stream","cursor","max_rows"}` →
 //!   `{"ok":true,"nquads","rows","cursor"|null,"more":bool}`
@@ -24,7 +26,7 @@ use serde_json::{Value, json};
 use crate::abi::{check_limit, fail_with_details, limit, str_field, term_json, Fail};
 use crate::dialect::{Refusal, RefusalKind};
 use crate::duckdb_eval::{GraphLawDuckDB, RdfTriple};
-use crate::sql_ast::{CompiledQuery, SqlLiteral};
+use crate::sql_ast::SqlLiteral;
 
 /// DuckDB memory limit enforced on every connection (GAP-2: half the 64 MiB
 /// sandbox wall; callers cannot override it from the wire).
@@ -82,6 +84,19 @@ fn open_connection() -> Result<GraphLawDuckDB, Fail> {
 }
 
 /// Validate and bind wire params to `SqlLiteral`s.
+/// Whether a wire param equals an AST-carried literal (the SQLRDF-17
+/// one-for-one wire-vs-admission-record check in `exec`).
+fn sql_literal_matches(w: &SqlLiteral, a: &SqlLiteral) -> bool {
+    match (w, a) {
+        (SqlLiteral::String(x), SqlLiteral::String(y)) => x == y,
+        (SqlLiteral::Integer(x), SqlLiteral::Integer(y)) => x == y,
+        (SqlLiteral::Float(x), SqlLiteral::Float(y)) => x == y,
+        (SqlLiteral::Boolean(x), SqlLiteral::Boolean(y)) => x == y,
+        (SqlLiteral::Null, SqlLiteral::Null) => true,
+        _ => false,
+    }
+}
+
 fn params_of(v: &Value) -> Result<Vec<SqlLiteral>, Fail> {
     match v.get("params") {
         None | Some(Value::Null) => Ok(Vec::new()),
@@ -111,11 +126,6 @@ fn params_of(v: &Value) -> Result<Vec<SqlLiteral>, Fail> {
     }
 }
 
-/// Sanitize a single-quoted SQL string literal body.
-fn sql_quote(s: &str) -> String {
-    s.replace('\'', "''")
-}
-
 /// Mount one wire view (`{"name","glob","hive"?}`) as a DuckDB view.
 ///
 /// `.csv` globs ride `read_csv_auto` (the GWS-4 injection pattern: the corpus
@@ -140,13 +150,10 @@ fn mount_view(db: &GraphLawDuckDB, view: &Value) -> Result<(), Fail> {
         ));
     }
     if glob.ends_with(".csv") || glob.contains("*.csv") {
-        let sql = format!(
-            "CREATE OR REPLACE VIEW {name} AS SELECT * FROM read_csv_auto('{}');",
-            sql_quote(glob)
-        );
-        db.raw_connection()
-            .execute_batch(&sql)
-            .map_err(duckdb_fail)?;
+        // D1 (epoch-coverage audit): route through `register_csv_view` so the
+        // documented MUST holds — prepared-handle flush + C1 cache bump after
+        // the raw `CREATE OR REPLACE VIEW`, mirroring `register_parquet_view`.
+        db.register_csv_view(name, glob).map_err(duckdb_fail)?;
     } else {
         db.register_parquet_view(name, glob, hive)
             .map_err(duckdb_fail)?;
@@ -199,8 +206,19 @@ fn exec(v: &Value) -> Result<Value, Fail> {
     let ast = v
         .get("ast")
         .filter(|a| a.is_object())
-        .ok_or_else(|| duckdb_fail("missing `ast` object {\"text\": ...}"))?;
-    let sql = str_field(ast, "text")?;
+        .ok_or_else(|| duckdb_fail("missing `ast` object {\"turtle\": ...}"))?;
+    // SQLRDF-17 (C2 hole P1): the op admits ONLY graph-backed queries. The
+    // legacy `ast.text` raw-SQL field is refused typed — raw SQL text never
+    // executes and never mints a receipt. The caller supplies the Turtle AST
+    // document; it is compiled by the same `compile_turtle` law the native
+    // builtin uses, so the receipt is BLAKE3(Canon(G_AST) || P_params)
+    // (sql-rdf Rec. section 1.4) with canon pinned at compile time.
+    if ast.get("text").is_some() {
+        return Err(duckdb_fail(
+            "SQLRDF-17 refused: legacy `ast.text` raw SQL is not an admitted admission path — supply the Turtle AST document as `ast.turtle` (compiled via compile_turtle)",
+        ));
+    }
+    let turtle = str_field(ast, "turtle")?;
     if let Some(d) = ast.get("dialect") {
         let d = d.as_str().unwrap_or("");
         if !d.is_empty() && !d.eq_ignore_ascii_case("duckdb") {
@@ -208,10 +226,34 @@ fn exec(v: &Value) -> Result<Value, Fail> {
         }
     }
     let params = params_of(v)?;
-    let compiled = CompiledQuery {
-        sql: sql.to_string(),
-        params,
-    };
+    let mut compiled = crate::sql_ast::compile_turtle(turtle)
+        .map_err(|e| duckdb_fail(format!("AST compile refusal: {e}")))?;
+    // SQLRDF-17 F2(a): refuse non-query / catalog-mutating statements —
+    // exec opens a fresh in-memory connection per call, so a receipted DDL
+    // effect is unreachable; only the SelectStatement arm of compile_turtle
+    // (the `cacheable` classification bit) is admissible here.
+    if !compiled.cacheable {
+        return Err(duckdb_fail(
+            "SQLRDF-17/F2 refused: op-15 exec admits only graph-backed SELECT statements; catalog-mutating or non-query statements have no replayable effect on the per-call in-memory connection",
+        ));
+    }
+    // Wire `params`, when supplied, must match the AST-carried literal
+    // parameters one-for-one: the AST document is the admission record, so
+    // its literals ARE P_params; extra or missing wire params are a typed
+    // refusal, never a silent re-bind.
+    if params.len() != compiled.params.len()
+        || params
+            .iter()
+            .zip(compiled.params.iter())
+            .any(|(w, a)| !sql_literal_matches(w, a))
+    {
+        return Err(duckdb_fail(format!(
+            "SQLRDF-17 refused: wire params ({}) do not match the AST-carried literal parameters ({}); the Turtle AST document is the admission record and its literals are P_params",
+            params.len(),
+            compiled.params.len()
+        )));
+    }
+    compiled.params = params;
     let subject_prefix = str_field(v, "subject_prefix")?;
     let vocab_prefix = str_field(v, "vocab_prefix")?;
     if let Some(n) = v.get("chunk_rows") {
@@ -342,7 +384,6 @@ fn close(v: &Value) -> Result<Value, Fail> {
 /// tests/wasm_duckdb_op.rs).
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde_json::json;
 
     #[test]
