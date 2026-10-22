@@ -62,6 +62,15 @@ pub const MAX_DATALOG_RULES: usize = 10_000;
 pub const MAX_DATALOG_FACTS: usize = 100_000;
 /// Ceiling, in bytes, on host-visible buffers (`gl_alloc` buffers and `gl_call`
 /// responses) the wasm module holds at once; `gl_alloc` returns null beyond it.
+///
+/// Split-config (GAP-1, docs/wasm-duckdb-op15-design.md): 16 MiB for the wasm
+/// target so alloc-success-then-OOM-trap is impossible under the smalt 64 MiB
+/// wall (DuckDB's 32 MiB compile-time pragma leaves headroom); 256 MiB native,
+/// where no linear-memory wall exists.
+#[cfg(target_arch = "wasm32")]
+pub const MAX_OUTSTANDING_ALLOC_BYTES: usize = 16 * 1024 * 1024;
+/// Native-target value of [`MAX_OUTSTANDING_ALLOC_BYTES`].
+#[cfg(not(target_arch = "wasm32"))]
 pub const MAX_OUTSTANDING_ALLOC_BYTES: usize = 256 * 1024 * 1024;
 
 /// A refusal plus optional machine-readable `details` (`{"code": ...}`).
@@ -80,9 +89,19 @@ impl From<Refusal> for Fail {
     }
 }
 
+/// Build a `Fail` from a refusal plus machine-readable `details`
+/// (crate-internal; used by `duckdb_op`).
+#[cfg(feature = "duckdb")]
+pub(crate) fn fail_with_details(refusal: Refusal, details: Value) -> Fail {
+    Fail {
+        refusal,
+        details: Some(details),
+    }
+}
+
 type Res<T> = Result<T, Fail>;
 
-fn limit(name: &str, observed: usize, max: usize) -> Fail {
+pub(crate) fn limit(name: &str, observed: usize, max: usize) -> Fail {
     Fail {
         refusal: Refusal {
             kind: RefusalKind::ResourceLimit,
@@ -96,7 +115,7 @@ fn limit(name: &str, observed: usize, max: usize) -> Fail {
     }
 }
 
-fn check_limit(name: &str, observed: usize, max: usize) -> Res<()> {
+pub(crate) fn check_limit(name: &str, observed: usize, max: usize) -> Res<()> {
     if observed > max {
         return Err(limit(name, observed, max));
     }
@@ -320,7 +339,7 @@ fn law_err(e: LawError) -> Fail {
     }
 }
 
-fn str_field<'a>(v: &'a Value, k: &str) -> Res<&'a str> {
+pub(crate) fn str_field<'a>(v: &'a Value, k: &str) -> Res<&'a str> {
     v.get(k)
         .and_then(Value::as_str)
         .ok_or_else(|| bad(format!("missing string field `{k}`")))
@@ -383,7 +402,7 @@ fn state_field(v: &Value, k: &str) -> Res<LawState> {
     state_of(spec_of(v, k)?)
 }
 
-fn term_json(t: &TermValue) -> Value {
+pub(crate) fn term_json(t: &TermValue) -> Value {
     match t {
         TermValue::Iri(i) => json!({"type": "uri", "value": i}),
         TermValue::Blank { label, .. } => json!({"type": "bnode", "value": label}),
@@ -445,6 +464,8 @@ fn dispatch(v: &Value) -> Res<Value> {
         "hooks" => op_hooks(v),
         "law" => op_law(v),
         "policy" => op_policy(v),
+        #[cfg(feature = "duckdb")]
+        "duckdb" => crate::duckdb_op::dispatch(v),
         other => Err(bad(format!("unknown op `{other}`"))),
     }
 }

@@ -780,6 +780,15 @@ pub const REFUSAL_CODES: &[RefusalCodeRow] = &[
         )],
     },
     RefusalCodeRow {
+        code: "DuckDb",
+        kind: Some("DuckDb"),
+        fields: &[req(
+            "message",
+            "string",
+            "Diagnostic text from the embedded DuckDB substrate (op `duckdb`, feature `duckdb`, native-only).",
+        )],
+    },
+    RefusalCodeRow {
         code: "UnverifiedLeaseRefused",
         kind: Some("Unsupported"),
         fields: &[],

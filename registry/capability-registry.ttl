@@ -2193,6 +2193,23 @@
     gac:opRefusalKind "Unsupported" ;
     gac:opSummary "Evaluate a SPARQL query over a dataset." .
 
+<https://graphlaw.dev/registry#refusal-code/DuckDb/message>
+    a gac:CapabilityField ;
+    gac:fieldDoc "Diagnostic text from the embedded DuckDB substrate (op `duckdb`, feature `duckdb`, native-only)." ;
+    gac:fieldName "message" ;
+    gac:fieldNullable false ;
+    gac:fieldOrder 1 ;
+    gac:fieldOwner <https://graphlaw.dev/registry#refusal-code/DuckDb> ;
+    gac:fieldRequired true ;
+    gac:fieldSide "detail" ;
+    gac:fieldType "string" .
+
+<https://graphlaw.dev/registry#refusal-code/DuckDb>
+    a gac:RefusalCode ;
+    gac:refusalCodeKind "DuckDb" ;
+    gac:refusalCodeName "DuckDb" ;
+    gac:refusalCodeOrder 8 .
+
 <https://graphlaw.dev/registry#refusal-code/LeaseRefused/lease_id>
     a gac:CapabilityField ;
     gac:fieldDoc "Id of the refused lease." ;
@@ -2402,7 +2419,7 @@
     a gac:RefusalCode ;
     gac:refusalCodeKind "EngineRejected" ;
     gac:refusalCodeName "PolicyRefused" ;
-    gac:refusalCodeOrder 9 .
+    gac:refusalCodeOrder 10 .
 
 <https://graphlaw.dev/registry#refusal-code/ReceiptRefused/reason/enum/1>
     a gac:EnumValue ;
@@ -2526,7 +2543,7 @@
     a gac:RefusalCode ;
     gac:refusalCodeKind "Unsupported" ;
     gac:refusalCodeName "UnverifiedLeaseRefused" ;
-    gac:refusalCodeOrder 8 .
+    gac:refusalCodeOrder 9 .
 
 <https://graphlaw.dev/registry#registry>
     a gac:Registry ;
@@ -2534,7 +2551,7 @@
     gac:dialectCount 13 ;
     gac:graphlawVersion "26.10.21" ;
     gac:opCount 14 ;
-    gac:registryBlake3 "blake3:aa636fd1fb3d7b70f5492595d6a03fd7d6c04923133a463989bcfcea8245990d" ;
+    gac:registryBlake3 "blake3:b6fb56566c9779bc4ccaab7c18bd746eb306a82c8b1275ed01123cdf5e51cd7d" ;
     gac:schemaId "graphlaw.capability-registry/1" ;
     gac:surfaceBlake3 "blake3:c143fcfe72db271e5789a8074abae8f8ceb6526f36b340340891b89ad744f65e" .
 

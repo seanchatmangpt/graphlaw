@@ -136,6 +136,10 @@ pub enum RefusalKind {
     /// given to an RDF parser, or N3 logic sniffed with no tier declaration.
     /// See `crate::tier`.
     TierMismatch,
+    /// The embedded DuckDB execution substrate (ABI op `duckdb`, feature
+    /// `duckdb`, native-only) failed or the request misused it. Never traps:
+    /// the caller gets this typed refusal instead.
+    DuckDb,
 }
 
 /// A typed refusal naming the engine and dialect that refused.

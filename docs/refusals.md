@@ -22,6 +22,7 @@ the [capability registry](capability-registry.md)).
 | `ResourceLimit` | `RefusalKind::ResourceLimit` | `limit`, `observed`, `max` (N3 limits always carry `max`) | Shrink the request. Limits: `request_bytes`, `json_depth`, `atoms_per_field`, `plan_actions`, `policy_entries` (constants `abi::MAX_*`), plus the N3 reasoner limits `n3_iterations`, `n3_match_steps`, `n3_term_bytes`, `n3_total_bytes`, `n3_derived_facts` (constants `law::N3_*`). |
 | `Refused` | `LawError::Refused` | `kind` | Upstream engine or routing refusal raised inside a `law` step; `kind` is a `RefusalKind` name (below). |
 | `PolicyRefused` | `policy::PolicyRefused` | `policy_kind`, `state`, `action` | See policy kinds below. |
+| `DuckDb` | `RefusalKind::DuckDb` | `message` | The embedded DuckDB substrate (ABI op `duckdb`, feature `duckdb`, native-only; `src/duckdb_op.rs`) failed or the request misused it — unknown/expired cursor, bad view mount, unsupported param, engine error. Never traps. Chunk limits ride `ResourceLimit` with `limit` = `duckdb_chunk_rows` / `duckdb_chunk_bytes` / `duckdb_views`. |
 | `AstError` | `sql_ast::AstError` | `reason` (`InjectionAttempt`, `MissingWhereClause`, `ShapeViolation`) | Refusal during SQL AST validation before query dispatch to `frozen-duckdb`. Bounded WHERE clause is mandatory, and identifiers must adhere to regex `^[a-zA-Z_][a-zA-Z0-9_]*$`. |
 
 ## `Refused {kind}`
@@ -33,7 +34,8 @@ the [capability registry](capability-registry.md)).
 
 `NotSemanticContent` (empty, HTML or HTTP error body), `Ambiguous` (add a dialect hint),
 `EngineRejected` (the owning engine rejected the document), `Unsupported` (valid but unusable
-here, for example blank nodes in plan atoms, or a malformed ABI request), `ResourceLimit`.
+here, for example blank nodes in plan atoms, or a malformed ABI request), `ResourceLimit`,
+`DuckDb` (the native-only embedded DuckDB substrate failed; op `duckdb`, feature `duckdb`).
 
 ## Lease reasons (`LeaseRefused.reason`)
 

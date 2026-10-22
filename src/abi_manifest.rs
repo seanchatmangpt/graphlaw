@@ -134,6 +134,7 @@ fn base_manifest() -> Value {
             "default_max_skew_secs": DEFAULT_MAX_SKEW_SECS,
         },
         "ops": ops,
+        "notes": "op `duckdb` (op-15) is native-only behind the `duckdb` cargo feature and is deliberately absent from this wasm op table (frozen-duckdb does not compile to wasm32); its bounds are enforced in src/duckdb_op.rs: DuckDB memory_limit=32MiB and threads=1 compile-time pragmas (GAP-2), chunk rows <= 10000 and chunk bytes <= 16 MiB typed ResourceLimit refusals (GAP-4), MAX_OUTSTANDING_ALLOC_BYTES is 16 MiB for the wasm32 target via split-config (GAP-1)",
         "response_envelope": {
             "success": {"ok": true, "extra": "op-specific fields"},
             "refusal": {"ok": false, "error": {
@@ -179,7 +180,14 @@ pub fn manifest_json_pretty() -> String {
 /// # Errors
 /// Propagates filesystem errors.
 pub fn write_manifest(path: &std::path::Path) -> std::io::Result<()> {
-    std::fs::write(path, manifest_json_pretty())
+    // Atomic replace: the abi_manifest_court runs `write_manifest` concurrently
+    // with `manifest_is_byte_identical_or_classified_additive` reading the same
+    // committed file; an in-place truncate raced a reader into
+    // "EOF while parsing a value" (witnessed under full-suite parallel load).
+    // Write-then-rename never exposes a truncated file.
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, manifest_json_pretty())?;
+    std::fs::rename(&tmp, path)
 }
 
 #[cfg(test)]

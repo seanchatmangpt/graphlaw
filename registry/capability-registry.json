@@ -2300,10 +2300,27 @@
       "order": 7
     },
     {
+      "code": "DuckDb",
+      "fields": [
+        {
+          "default": null,
+          "doc": "Diagnostic text from the embedded DuckDB substrate (op `duckdb`, feature `duckdb`, native-only).",
+          "enum": null,
+          "name": "message",
+          "nullable": false,
+          "order": 1,
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "kind": "DuckDb",
+      "order": 8
+    },
+    {
       "code": "UnverifiedLeaseRefused",
       "fields": [],
       "kind": "Unsupported",
-      "order": 8
+      "order": 9
     },
     {
       "code": "PolicyRefused",
@@ -2346,7 +2363,7 @@
         }
       ],
       "kind": "EngineRejected",
-      "order": 9
+      "order": 10
     }
   ],
   "refusal_kinds": [
@@ -2363,7 +2380,7 @@
     "owl-rl",
     "d"
   ],
-  "registry_blake3": "blake3:aa636fd1fb3d7b70f5492595d6a03fd7d6c04923133a463989bcfcea8245990d",
+  "registry_blake3": "blake3:b6fb56566c9779bc4ccaab7c18bd746eb306a82c8b1275ed01123cdf5e51cd7d",
   "schema": "graphlaw.capability-registry/1",
   "surface_blake3": "blake3:c143fcfe72db271e5789a8074abae8f8ceb6526f36b340340891b89ad744f65e"
 }
