@@ -24,10 +24,7 @@ fn releasing_section(readme: &str) -> &str {
         .or_else(|| readme.find("## Releasing"))
         .expect("README must carry a Releasing section");
     let rest = &readme[start..];
-    let end = rest
-        .find("\n## ")
-        .map(|i| i + 1)
-        .unwrap_or(rest.len());
+    let end = rest.find("\n## ").map(|i| i + 1).unwrap_or(rest.len());
     &rest[..end]
 }
 

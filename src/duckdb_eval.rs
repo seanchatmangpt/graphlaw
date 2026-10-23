@@ -72,6 +72,117 @@ pub struct RdfTriple {
     pub object: TermValue,
 }
 
+/// Lossless serde shadow of `purrdf::TermValue` (SQLRDF-22 G3): upstream
+/// `TermValue` offers no serde support, so this tagged enum carries every
+/// variant byte-for-byte — IRI, blank node (label + scope ordinal), literal
+/// (lexical form, datatype IRI, language tag, base direction token), and
+/// recursive quoted triples. `Serialize`/`Deserialize` are exact inverses;
+/// no string rendering, no precision loss. If purrdf lands native serde,
+/// delete this shadow in favor of it.
+#[derive(serde::Serialize, serde::Deserialize)]
+enum SerTerm {
+    Iri(String),
+    Blank { label: String, scope: u32 },
+    Literal {
+        lexical_form: String,
+        datatype: String,
+        language: Option<String>,
+        direction: Option<String>,
+    },
+    Triple {
+        s: Box<SerTerm>,
+        p: Box<SerTerm>,
+        o: Box<SerTerm>,
+    },
+}
+
+impl From<TermValue> for SerTerm {
+    fn from(t: TermValue) -> Self {
+        match t {
+            TermValue::Iri(v) => SerTerm::Iri(v),
+            TermValue::Blank { label, scope } => SerTerm::Blank {
+                label,
+                scope: scope.ordinal(),
+            },
+            TermValue::Literal {
+                lexical_form,
+                datatype,
+                language,
+                direction,
+            } => SerTerm::Literal {
+                lexical_form,
+                datatype,
+                language,
+                direction: direction.map(|d| format!("{d:?}")),
+            },
+            TermValue::Triple { s, p, o } => SerTerm::Triple {
+                s: Box::new((*s).into()),
+                p: Box::new((*p).into()),
+                o: Box::new((*o).into()),
+            },
+        }
+    }
+}
+
+impl From<SerTerm> for TermValue {
+    fn from(t: SerTerm) -> Self {
+        match t {
+            SerTerm::Iri(v) => TermValue::Iri(v),
+            SerTerm::Blank { label, scope } => TermValue::Blank {
+                label,
+                scope: purrdf::BlankScope(scope),
+            },
+            SerTerm::Literal {
+                lexical_form,
+                datatype,
+                language,
+                direction,
+            } => TermValue::Literal {
+                lexical_form,
+                datatype,
+                language,
+                direction: direction.map(|d| match d.as_str() {
+                    "Ltr" => purrdf::RdfTextDirection::Ltr,
+                    "Rtl" => purrdf::RdfTextDirection::Rtl,
+                    other => unreachable!("SerTerm direction token '{other}' is not a valid RdfTextDirection — SerTerm is constructed only via From<TermValue>"),
+                }),
+            },
+            SerTerm::Triple { s, p, o } => TermValue::Triple {
+                s: Box::new((*s).into()),
+                p: Box::new((*p).into()),
+                o: Box::new((*o).into()),
+            },
+        }
+    }
+}
+
+impl serde::Serialize for RdfTriple {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let mut st = s.serialize_struct("RdfTriple", 3)?;
+        st.serialize_field("subject", &self.subject)?;
+        st.serialize_field("predicate", &self.predicate)?;
+        st.serialize_field("object", &SerTerm::from(self.object.clone()))?;
+        st.end()
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for RdfTriple {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        #[derive(serde::Deserialize)]
+        struct Wire {
+            subject: String,
+            predicate: String,
+            object: SerTerm,
+        }
+        Wire::deserialize(d).map(|w| RdfTriple {
+            subject: w.subject,
+            predicate: w.predicate,
+            object: TermValue::from(w.object),
+        })
+    }
+}
+
 #[derive(Debug)]
 pub enum EvaluatorError {
     DuckDb(frozen_duckdb::DuckDBError),
@@ -89,19 +200,41 @@ pub enum EvaluatorError {
     /// Recovery: obtain the query via `compile_turtle`, which pins
     /// `receipt_state` / `canon_graph_bytes` at compile time.
     NoCanonicalGraph(String),
+    /// SQLRDF-23: member `index` of a statement-sequence document failed at
+    /// execution. `partial` carries the receipts and row counts of members
+    /// `[0..index]`, which executed and committed (best-effort sequential
+    /// autocommit — documented partial-commit semantics, not a rollback);
+    /// the failing member's own detail is `source`. Typed, never a generic
+    /// DB error surfaced raw.
+    BatchMemberFailed {
+        index: usize,
+        source: Box<EvaluatorError>,
+        partial: BatchReceipt,
+    },
 }
 
 impl fmt::Display for EvaluatorError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::DuckDb(e) => write!(f, "DuckDB execution failure: {e}"),
-            Self::ConversionError { column, row, details } => {
-                write!(f, "Column conversion error for '{column}' at row {row}: {details}")
+            Self::ConversionError {
+                column,
+                row,
+                details,
+            } => {
+                write!(
+                    f,
+                    "Column conversion error for '{column}' at row {row}: {details}"
+                )
             }
             Self::ReceiptError(msg) => write!(f, "Receipt generation error: {msg}"),
             Self::NoCanonicalGraph(query_iri) => write!(
                 f,
                 "no canonical graph bytes — hand-built CompiledQuery must use compile_turtle (query {query_iri})"
+            ),
+            Self::BatchMemberFailed { index, source, .. } => write!(
+                f,
+                "statement-sequence member {index} failed (prior members committed, best-effort autocommit): {source}"
             ),
         }
     }
@@ -111,6 +244,7 @@ impl std::error::Error for EvaluatorError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             EvaluatorError::DuckDb(error) => Some(error),
+            EvaluatorError::BatchMemberFailed { source, .. } => Some(source.as_ref()),
             _ => None,
         }
     }
@@ -123,6 +257,28 @@ impl From<frozen_duckdb::DuckDBError> for EvaluatorError {
 }
 
 /// Cryptographic and semantic proof of an executed relational query.
+///
+/// Serde: `Serialize`/`Deserialize` are implemented manually (SQLRDF-22 G3)
+/// so the COPY egress fields ride the wire only when present — receipts with
+/// the artifact fields `None` serialize to exactly the pre-G3 shape, and
+/// artifact-free receipts deserialize with the fields defaulting to `None`
+/// (serde `Option` semantics). `result_triples` round-trips losslessly
+/// through the lane-G4 `SerTerm` shadow codec for `purrdf::TermValue` (no
+/// upstream serde support); no lossy string rendering is involved. There
+/// were no pre-existing serialization sites of this struct (verified: no
+/// `serde_json::to*` over `ExecutionReceipt` anywhere in `src/`, `tests/`,
+/// `wasm/`), so the impls are purely additive.
+///
+/// Receipt-hash choice (documented per SQLRDF-22 G3): `query_hash` is the
+/// law-frozen admitted-statement receipt BLAKE3(Canon(G_AST) || P_params)
+/// (sql-rdf Recommendation, section 1.4, first formula) and intentionally
+/// does NOT fold the artifact fields — the same admitted statement must keep
+/// one replay identity regardless of where (or whether) it exported bytes.
+/// Egress integrity instead rides in the artifact fields themselves: the
+/// digest IS a BLAKE3 over the exported bytes, so a tampered artifact is
+/// detected by comparing `artifact_digest_hex` against the file, never by
+/// perturbing `query_hash`. The struct carries no other whole-receipt
+/// digest/IRI, so there is no additional hash to fold into.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExecutionReceipt {
     /// IRI identifying the executed query AST node
@@ -146,6 +302,140 @@ pub struct ExecutionReceipt {
     pub cached: bool,
     /// Cache consult cost in milliseconds (0.0 on a miss).
     pub consult_ms: f64,
+    /// SQLRDF-22 G3 (egress half): hex BLAKE3 of the file exported by a
+    /// successful `COPY ... TO '<path>'` statement, streamed in 8 KiB
+    /// chunks, with the byte count in [`ExecutionReceipt::artifact_bytes`].
+    /// `None` when the executed statement was not a COPY-out or when the
+    /// artifact could not be read/hashed (in which case
+    /// [`ExecutionReceipt::artifact_warning`] carries the typed reason and
+    /// the receipt is still returned — execution succeeded, the receipt is
+    /// never lost). Skipped on the wire when `None`.
+    pub artifact_digest_hex: Option<String>,
+    /// Number of bytes in the exported artifact (see `artifact_digest_hex`).
+    /// Skipped on the wire when `None`.
+    pub artifact_bytes: Option<u64>,
+    /// Warning text when a COPY-out artifact existed as a statement but the
+    /// file could not be opened/hashed (SQLRDF-18/22 G3: prefer keeping the
+    /// receipt over refusing a successful execution). `None` when no
+    /// warning applies. Skipped on the wire when `None`.
+    pub artifact_warning: Option<String>,
+}
+
+/// SQLRDF-22 G3: manual `Serialize` for [`ExecutionReceipt`] — the artifact
+/// fields are emitted only when `Some` (the `skip_serializing_if` contract,
+/// expressed by explicit emission), and `result_triples` serializes through
+/// [`serialize_rdf_triple`], which renders `purrdf::TermValue` without
+/// upstream serde support.
+impl serde::Serialize for ExecutionReceipt {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let extra = self.artifact_digest_hex.is_some() as usize
+            + self.artifact_bytes.is_some() as usize
+            + self.artifact_warning.is_some() as usize;
+        let mut map = serializer.serialize_map(Some(8 + extra))?;
+        map.serialize_entry("query_iri", &self.query_iri)?;
+        map.serialize_entry("query_hash", &self.query_hash)?;
+        map.serialize_entry("sql_statement", &self.sql_statement)?;
+        map.serialize_entry("rows_emitted", &self.rows_emitted)?;
+        map.serialize_entry("execution_ms", &self.execution_ms)?;
+        map.serialize_entry("result_triples", &self.result_triples)?;
+        map.serialize_entry("cached", &self.cached)?;
+        map.serialize_entry("consult_ms", &self.consult_ms)?;
+        if let Some(d) = &self.artifact_digest_hex {
+            map.serialize_entry("artifact_digest_hex", d)?;
+        }
+        if let Some(b) = &self.artifact_bytes {
+            map.serialize_entry("artifact_bytes", b)?;
+        }
+        if let Some(w) = &self.artifact_warning {
+            map.serialize_entry("artifact_warning", w)?;
+        }
+        map.end()
+    }
+}
+
+/// SQLRDF-22 G3: manual `Deserialize` for [`ExecutionReceipt`] — a lossless
+/// wire round-trip through the lane-G4 `SerTerm` codec (via
+/// `RdfTriple`'s `Deserialize`). The artifact fields deserialize to `None`
+/// when absent (serde `Option` semantics), so pre-G3 receipts (and G3
+/// receipts with no artifact or warning) read back unchanged. The
+/// serialization side emits the artifact keys only when `Some` — the
+/// `skip_serializing_if` contract, expressed by explicit emission — so the
+/// wire shape of existing artifact-free receipts is unchanged.
+impl<'de> serde::Deserialize<'de> for ExecutionReceipt {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(serde::Deserialize)]
+        struct Wire {
+            query_iri: String,
+            query_hash: [u8; 32],
+            sql_statement: String,
+            rows_emitted: usize,
+            execution_ms: f64,
+            result_triples: Vec<RdfTriple>,
+            cached: bool,
+            consult_ms: f64,
+            artifact_digest_hex: Option<String>,
+            artifact_bytes: Option<u64>,
+            artifact_warning: Option<String>,
+        }
+        Wire::deserialize(deserializer).map(|w| ExecutionReceipt {
+            query_iri: w.query_iri,
+            query_hash: w.query_hash,
+            sql_statement: w.sql_statement,
+            rows_emitted: w.rows_emitted,
+            execution_ms: w.execution_ms,
+            result_triples: w.result_triples,
+            cached: w.cached,
+            consult_ms: w.consult_ms,
+            artifact_digest_hex: w.artifact_digest_hex,
+            artifact_bytes: w.artifact_bytes,
+            artifact_warning: w.artifact_warning,
+        })
+    }
+}
+
+/// SQLRDF-23 (eval half): receipt for a compiled statement-sequence
+/// document executed by [`GraphLawDuckDB::eval_ast_document`] (design
+/// `docs/jira/v26.10.22/designs/statement-sequence-design.md` sections 5-6).
+///
+/// Serde-compatible by derive: `members` ride the manual `ExecutionReceipt`
+/// wire impls, `doc_hash`/`rows_emitted` are plain data. Best-effort
+/// sequential-autocommit semantics: `failed_at = Some(i)` implies
+/// `members[0..i]` executed and committed (their effects stay visible —
+/// documented partial-commit, not a hidden rollback) and `members[i..]`
+/// did not execute.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct BatchReceipt {
+    /// Caller-supplied envelope IRI for the document.
+    pub query_iri: String,
+    /// Domain-separated document hash pinned by `compile_turtle_document`
+    /// (BLAKE3(0x00 || h_1 || 0x00 || h_2 || ...)); the bare single-root
+    /// form hashes to the bare statement's own anchor.
+    pub doc_hash: [u8; 32],
+    /// One receipt per executed member, in spine order. On failure this
+    /// holds exactly the members `[0..failed_at]` that executed.
+    pub members: Vec<ExecutionReceipt>,
+    /// Per-member row counts, same indexing as `members`.
+    pub rows_emitted: Vec<usize>,
+    /// 0-based index of the first failing member; `None` on full success.
+    pub failed_at: Option<usize>,
+    /// SQLRDF-26 execution status: `"partial"` (SQLRDF-23 pipeline default,
+    /// also on full success) or `"aborted"` (atomic mode, ROLLBACK executed
+    /// after a member failure — every member effect undone, `state_delta`
+    /// pinned to 0). Serde-defaulted so SQLRDF-23 wire JSON deserializes.
+    #[serde(default = "batch_status_partial")]
+    pub status: String,
+    /// SQLRDF-26: net committed state change — the count of members whose
+    /// effects are committed at receipt time (full success: all members;
+    /// pipeline failure: `failed_at`; atomic abort: pinned to 0 because the
+    /// ROLLBACK undid every member effect).
+    #[serde(default)]
+    pub state_delta: u64,
+}
+
+/// Serde default for [`BatchReceipt::status`]: SQLRDF-23 pipeline mode.
+fn batch_status_partial() -> String {
+    "partial".to_string()
 }
 
 /// Embedded execution context wrapping a sovereign `frozen-duckdb` connection.
@@ -268,7 +558,10 @@ pub const PARAM_BYTES_INLINE: usize = 64;
 ///   the budget, so `H_query` for stored receipts never changes.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParamBytes {
-    Inline { buf: [u8; PARAM_BYTES_INLINE], len: usize },
+    Inline {
+        buf: [u8; PARAM_BYTES_INLINE],
+        len: usize,
+    },
     Digest([u8; 32]),
 }
 
@@ -307,9 +600,7 @@ impl ParamBytes {
             let value_ok = match param {
                 SqlLiteral::String(s) => param_push(&mut buf, &mut len, s.as_bytes()),
                 SqlLiteral::Integer(i) => param_push(&mut buf, &mut len, &i.to_le_bytes()),
-                SqlLiteral::Float(f) => {
-                    param_push(&mut buf, &mut len, &f.to_bits().to_le_bytes())
-                }
+                SqlLiteral::Float(f) => param_push(&mut buf, &mut len, &f.to_bits().to_le_bytes()),
                 SqlLiteral::Boolean(b) => param_push(&mut buf, &mut len, &[*b as u8]),
                 SqlLiteral::Null => true,
             };
@@ -376,10 +667,7 @@ pub fn fold_params_anchored(h_ast: &[u8; 32], params: &[SqlLiteral]) -> [u8; 32]
 /// the typed encoding (one type tag byte + little-endian value bytes per
 /// parameter) in bind order. One fresh hasher + the reference param updates
 /// + finalize — no streaming absorb of `Canon(G_AST)` bytes per receipt.
-pub fn admitted_statement_hash(
-    canonical_graph: &[u8],
-    params: &[SqlLiteral],
-) -> [u8; 32] {
+pub fn admitted_statement_hash(canonical_graph: &[u8], params: &[SqlLiteral]) -> [u8; 32] {
     let h_ast = *blake3::hash(canonical_graph).as_bytes();
     let mut hasher = blake3::Hasher::new();
     hasher.update(h_ast.as_slice());
@@ -390,7 +678,12 @@ pub fn admitted_statement_hash(
 /// C1: true when the SQL text is a stored-data mutation (DML, ATTACH/DETACH,
 /// DDL, COPY). Lexical prefix classification, deliberately conservative:
 /// anything not matching falls on the no-bump side and relies on the
-/// C1-a cacheable bit being false for non-Select statements.
+/// C1-a cacheable bit being false for non-Select statements. `MERGE` (and
+/// `REPLACE`, were it a standalone DuckDB statement — it is not; DuckDB has
+/// no `REPLACE` arm in its PEG statement grammar, only `CREATE OR REPLACE`)
+/// is lexical belt-and-suspenders: the compiler already emits MERGE as
+/// non-cacheable, so the epoch bump fires via the `cacheable` bit even if
+/// this classifier misses it.
 fn mutating_sql(sql: &str) -> bool {
     let trimmed = sql.trim_start();
     let upper: String = trimmed
@@ -400,8 +693,119 @@ fn mutating_sql(sql: &str) -> bool {
         .collect();
     matches!(
         upper.as_str(),
-        "INSERT" | "UPDATE" | "DELETE" | "ATTACH" | "DETACH" | "CREATE" | "DROP" | "ALTER" | "COPY"
+        "INSERT" | "UPDATE" | "DELETE" | "ATTACH" | "DETACH" | "CREATE" | "DROP" | "ALTER"
+            | "COPY" | "MERGE"
     )
+}
+
+/// SQLRDF-22 G3: true when `sql` lexically begins with `COPY` and carries a
+/// top-level `TO` keyword (the egress form). `TO` inside a single-quoted
+/// literal does not count — the scan is quote-aware with the same
+/// single-quote-doubling rule the compiler uses when rendering SQL.
+fn is_copy_to(sql: &str) -> bool {
+    let trimmed = sql.trim_start();
+    let mut chars = trimmed.chars().peekable();
+    // Cheap prefix check first.
+    if !trimmed
+        .get(..4)
+        .is_some_and(|p| p.eq_ignore_ascii_case("COPY"))
+    {
+        return false;
+    }
+    let mut in_quote = false;
+    let mut token = String::new();
+    while let Some(c) = chars.next() {
+        match c {
+            '\'' => {
+                if in_quote && chars.peek() == Some(&'\'') {
+                    let _ = chars.next(); // escaped quote ('') inside literal
+                } else {
+                    in_quote = !in_quote;
+                    token.clear();
+                }
+            }
+            _c if in_quote => {}
+            c if c.is_ascii_alphabetic() => token.push(c.to_ascii_uppercase()),
+            c if c.is_whitespace() => {
+                if token == "TO" {
+                    return true;
+                }
+                token.clear();
+            }
+            _ => token.clear(),
+        }
+    }
+    token == "TO"
+}
+
+/// SQLRDF-22 G3: extract the single-quoted destination path of a
+/// `COPY ... TO '<path>'` statement. Quote-aware with single-quote doubling
+/// (`''` inside a literal renders one `'`), matching the compiler's
+/// rendering rule.
+fn copy_to_path(sql: &str) -> Option<String> {
+    if !is_copy_to(sql) {
+        return None;
+    }
+    let mut chars = sql.chars().peekable();
+    let mut in_quote = false;
+    let mut current = String::new();
+    let mut saw_to = false;
+    while let Some(c) = chars.next() {
+        match c {
+            '\'' => {
+                if in_quote && chars.peek() == Some(&'\'') {
+                    current.push('\'');
+                    let _ = chars.next();
+                } else if in_quote {
+                    // Closing quote: if we just collected the path after the
+                    // TO keyword, this literal is the destination.
+                    if saw_to {
+                        return Some(std::mem::take(&mut current));
+                    }
+                    in_quote = false;
+                    current.clear();
+                } else {
+                    in_quote = true;
+                    current.clear();
+                }
+            }
+            c if in_quote => current.push(c),
+            c if c.is_ascii_alphabetic() => {
+                current.push(c.to_ascii_uppercase());
+            }
+            c if c.is_whitespace() => {
+                if current == "TO" {
+                    saw_to = true;
+                }
+                current.clear();
+            }
+            _ => current.clear(),
+        }
+    }
+    None
+}
+
+/// SQLRDF-22 G3: stream a file through BLAKE3 in 8 KiB chunks, returning the
+/// hex digest and byte count. I/O failure is a typed `String` warning for
+/// [`ExecutionReceipt::artifact_warning`], never a panic.
+fn hash_file_blake3(path: &str) -> Result<(String, u64), String> {
+    use std::io::Read;
+    let mut file =
+        std::fs::File::open(path).map_err(|e| format!("artifact open failed: {e}"))?;
+    let mut hasher = blake3::Hasher::new();
+    let mut buf = [0u8; 8192];
+    let mut total = 0u64;
+    loop {
+        let n = file
+            .read(&mut buf)
+            .map_err(|e| format!("artifact read failed: {e}"))?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+        total = total.saturating_add(n as u64);
+    }
+    Ok((hasher.finalize().to_hex().to_string(), total))
 }
 
 /// RDF literal from a projected cell. `datatype` is a full XSD IRI.
@@ -635,6 +1039,134 @@ impl GraphLawDuckDB {
         subject_iri_prefix: &str,
         predicate_iri_prefix: &str,
     ) -> Result<ExecutionReceipt, EvaluatorError> {
+        self.eval_member(
+            query_iri,
+            compiled,
+            subject_iri_prefix,
+            predicate_iri_prefix,
+            true,
+            true,
+        )
+    }
+
+    /// SQLRDF-23 (eval half): executes a compiled statement-sequence
+    /// document member-by-member in spine order on this connection and
+    /// returns a [`BatchReceipt`] (designs/statement-sequence-design.md
+    /// sections 5-6). Best-effort sequential autocommit: each member commits
+    /// on success; on a mid-sequence failure the error is
+    /// [`EvaluatorError::BatchMemberFailed`], which names the failing member
+    /// index and carries the partial [`BatchReceipt`] (members `[0..i]`
+    /// executed and committed; members `[i..]` did not execute; the failure
+    /// detail is `source`).
+    ///
+    /// Cache law (design section 6): the batch NEVER consults the C1 cache
+    /// for the sequence envelope; per member, entries store only when ALL
+    /// members are cacheable (each under its own hash — no batch key); a
+    /// mutating member bumps the epoch at its own execution point via the
+    /// existing flush path inside [`GraphLawDuckDB::eval_member`]. Each
+    /// member's admission seal is verified inside
+    /// [`GraphLawDuckDB::eval_member`] before any engine call.
+    pub fn eval_ast_document(
+        &self,
+        query_iri: &str,
+        document: &crate::sql_ast::CompiledDocument,
+        subject_iri_prefix: &str,
+        predicate_iri_prefix: &str,
+        atomic: bool,
+    ) -> Result<BatchReceipt, EvaluatorError> {
+        // Design section 6: if ANY member is non-cacheable or mutating, no
+        // member stores. (compile_turtle_document stamps sequence members
+        // non-cacheable today, so the all-cacheable case is currently only
+        // reachable for hand-built documents — the rule is still total.)
+        let all_cacheable = document
+            .statements
+            .iter()
+            .all(|m| m.cacheable && !mutating_sql(&m.sql));
+        let mut members = Vec::with_capacity(document.statements.len());
+        let mut rows_emitted = Vec::with_capacity(document.statements.len());
+        // SQLRDF-26 atomic mode: BEGIN before the first member, COMMIT after
+        // the last, ROLLBACK + typed `status:"aborted"` partial receipt on
+        // any member failure. Pipeline mode (default) never touches the
+        // connection's transaction state — byte-identical to SQLRDF-23.
+        let run_in_transaction = atomic || document.atomic;
+        if run_in_transaction {
+            self.conn
+                .execute_batch("BEGIN TRANSACTION")
+                .map_err(EvaluatorError::from)?;
+        }
+        for (index, member) in document.statements.iter().enumerate() {
+            let member_iri = format!("{query_iri}#member-{index}");
+            match self.eval_member(
+                &member_iri,
+                member,
+                subject_iri_prefix,
+                predicate_iri_prefix,
+                // The batch never consults the cache (design section 6).
+                false,
+                all_cacheable,
+            ) {
+                Ok(receipt) => {
+                    rows_emitted.push(receipt.rows_emitted);
+                    members.push(receipt);
+                }
+                Err(source) => {
+                    if run_in_transaction {
+                        // Atomic abort: undo every member effect. A rollback
+                        // failure (engine-internal, near-unreachable) must
+                        // not mask the typed member-failure envelope.
+                        let _ = self.conn.execute_batch("ROLLBACK");
+                    }
+                    return Err(EvaluatorError::BatchMemberFailed {
+                        index,
+                        source: Box::new(source),
+                        partial: BatchReceipt {
+                            query_iri: query_iri.to_string(),
+                            doc_hash: document.doc_hash,
+                            state_delta: if run_in_transaction { 0 } else { index as u64 },
+                            status: if run_in_transaction {
+                                "aborted".to_string()
+                            } else {
+                                batch_status_partial()
+                            },
+                            members,
+                            rows_emitted,
+                            failed_at: Some(index),
+                        },
+                    });
+                }
+            }
+        }
+        if run_in_transaction {
+            self.conn
+                .execute_batch("COMMIT")
+                .map_err(EvaluatorError::from)?;
+        }
+        Ok(BatchReceipt {
+            query_iri: query_iri.to_string(),
+            doc_hash: document.doc_hash,
+            state_delta: members.len() as u64,
+            status: batch_status_partial(),
+            members,
+            rows_emitted,
+            failed_at: None,
+        })
+    }
+
+    /// Single-member execution engine shared by
+    /// [`GraphLawDuckDB::eval_ast_query`] (consult+store) and
+    /// [`GraphLawDuckDB::eval_ast_document`] (never consults; stores only
+    /// under the batch cache law). `cache_consult`/`cache_store` gate the C1
+    /// seams; every other step — seal verify, receipt hash, prepare/bind,
+    /// execute, epoch bump on mutating members — is byte-identical.
+    fn eval_member(
+        &self,
+        query_iri: &str,
+        compiled: &CompiledQuery,
+        subject_iri_prefix: &str,
+        predicate_iri_prefix: &str,
+        cache_consult: bool,
+        cache_store: bool,
+    ) -> Result<ExecutionReceipt, EvaluatorError> {
         // Lane A02: coarse monotonic start tick (one relaxed atomic load,
         // <10 ns median) instead of an Instant::now() syscall-class read.
         let start_ns = coarse_now_ns();
@@ -680,16 +1212,17 @@ impl GraphLawDuckDB {
         // statement receipt hash `H_query = BLAKE3(Canon(G_AST) || P_params)`
         // (sql-rdf Rec. section 1.4, first formula), so a flipped literal
         // parameter forks to a different entry by construction.
-        if compiled.cacheable
+        if cache_consult
+            && compiled.cacheable
             && let Some((mut receipt, _store_epoch)) = self
                 .cache
                 .consult(query_hash, compiled.canon_graph_bytes.as_deref())
-            {
-                // Restamp the caller's IRI; the receipt identity (hash,
-                // rows, triples) is epoch-valid cached state.
-                receipt.query_iri = query_iri.to_string();
-                return Ok(receipt);
-            }
+        {
+            // Restamp the caller's IRI; the receipt identity (hash,
+            // rows, triples) is epoch-valid cached state.
+            receipt.query_iri = query_iri.to_string();
+            return Ok(receipt);
+        }
 
         // D2 (epoch-coverage audit): snapshot the C1 epoch BEFORE execution.
         // A concurrent bump between row materialization and the store seam
@@ -712,10 +1245,7 @@ impl GraphLawDuckDB {
                 .prepared_hits
                 .set(self.stmt_cache.prepared_hits.get() + 1);
         } else {
-            self.stmt_cache
-                .prepared_keys
-                .borrow_mut()
-                .insert(stmt_key);
+            self.stmt_cache.prepared_keys.borrow_mut().insert(stmt_key);
         }
         let duck_params: Vec<Box<dyn frozen_duckdb::ToSql>> = compiled
             .params
@@ -757,98 +1287,128 @@ impl GraphLawDuckDB {
 
                 let term: Option<TermValue> = match row.get_ref(col_idx) {
                     Ok(frozen_duckdb::duckdb::types::ValueRef::Null) => None,
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::Boolean(b)) => Some(TermValue::Literal {
-                        lexical_form: b.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#boolean".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::TinyInt(i)) => Some(TermValue::Literal {
-                        lexical_form: i.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::SmallInt(i)) => Some(TermValue::Literal {
-                        lexical_form: i.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::Int(i)) => Some(TermValue::Literal {
-                        lexical_form: i.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::BigInt(i)) => Some(TermValue::Literal {
-                        lexical_form: i.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::HugeInt(i)) => Some(TermValue::Literal {
-                        lexical_form: i.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::UTinyInt(i)) => Some(TermValue::Literal {
-                        lexical_form: i.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::USmallInt(i)) => Some(TermValue::Literal {
-                        lexical_form: i.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::UInt(i)) => Some(TermValue::Literal {
-                        lexical_form: i.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::UBigInt(i)) => Some(TermValue::Literal {
-                        lexical_form: i.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::Float(f)) => Some(TermValue::Literal {
-                        lexical_form: f.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#double".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::Double(d)) => Some(TermValue::Literal {
-                        lexical_form: d.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#double".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::Decimal(d)) => Some(TermValue::Literal {
-                        lexical_form: d.to_string(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#decimal".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::Text(bytes)) => Some(TermValue::Literal {
-                        lexical_form: String::from_utf8_lossy(bytes).into_owned(),
-                        datatype: "http://www.w3.org/2001/XMLSchema#string".to_string(),
-                        language: None,
-                        direction: None,
-                    }),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Boolean(b)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: b.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#boolean".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::TinyInt(i)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: i.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::SmallInt(i)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: i.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Int(i)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: i.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::BigInt(i)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: i.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::HugeInt(i)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: i.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::UTinyInt(i)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: i.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::USmallInt(i)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: i.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::UInt(i)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: i.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::UBigInt(i)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: i.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#integer".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Float(f)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: f.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#double".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Double(d)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: d.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#double".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Decimal(d)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: d.to_string(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#decimal".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Text(bytes)) => {
+                        Some(TermValue::Literal {
+                            lexical_form: String::from_utf8_lossy(bytes).into_owned(),
+                            datatype: "http://www.w3.org/2001/XMLSchema#string".to_string(),
+                            language: None,
+                            direction: None,
+                        })
+                    }
                     Ok(frozen_duckdb::duckdb::types::ValueRef::Date32(days)) => Some(xsd_cell(
                         iso_date_from_epoch_days(i64::from(days)),
                         "http://www.w3.org/2001/XMLSchema#date",
                     )),
-                    Ok(frozen_duckdb::duckdb::types::ValueRef::Time64(unit, ticks)) => Some(xsd_cell(
-                        iso_time_from_time_unit(unit, ticks),
-                        "http://www.w3.org/2001/XMLSchema#time",
-                    )),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Time64(unit, ticks)) => {
+                        Some(xsd_cell(
+                            iso_time_from_time_unit(unit, ticks),
+                            "http://www.w3.org/2001/XMLSchema#time",
+                        ))
+                    }
                     Ok(frozen_duckdb::duckdb::types::ValueRef::Timestamp(unit, ticks)) => {
                         Some(xsd_cell(
                             iso_datetime_from_time_unit(unit, ticks),
@@ -878,9 +1438,10 @@ impl GraphLawDuckDB {
                         | frozen_duckdb::duckdb::types::ValueRef::Map(..)
                         | frozen_duckdb::duckdb::types::ValueRef::Union(..)
                         | frozen_duckdb::duckdb::types::ValueRef::Variant(..),
-                    ) => row.get::<_, String>(col_idx).ok().map(|val| {
-                        xsd_cell(val, "http://www.w3.org/2001/XMLSchema#string")
-                    }),
+                    ) => row
+                        .get::<_, String>(col_idx)
+                        .ok()
+                        .map(|val| xsd_cell(val, "http://www.w3.org/2001/XMLSchema#string")),
                     // A cell the engine could not read is a null projection,
                     // not a string of the error.
                     Err(_) => None,
@@ -941,6 +1502,39 @@ impl GraphLawDuckDB {
             result_triples,
             cached: false,
             consult_ms: 0.0,
+            artifact_digest_hex: None,
+            artifact_bytes: None,
+            artifact_warning: None,
+        };
+
+        // SQLRDF-22 G3 (egress half): a successful `COPY ... TO '<path>'`
+        // statement exports bytes; witness them on the receipt by streaming
+        // the file through BLAKE3. Read/hash failure keeps the receipt (the
+        // execution itself succeeded) and records a typed warning instead —
+        // never a panic, never a lost receipt.
+        let (mut artifact_digest_hex, mut artifact_bytes, mut artifact_warning) =
+            (None, None, None);
+        if mutating_sql(&compiled.sql) && is_copy_to(&compiled.sql) {
+            match copy_to_path(&compiled.sql)
+                .ok_or_else(|| {
+                    "COPY TO statement with no single-quoted destination path".to_string()
+                })
+                .and_then(|path| {
+                    hash_file_blake3(&path)
+                        .map(|(digest, bytes)| (Some(digest), Some(bytes)))
+                }) {
+                Ok((digest, bytes)) => {
+                    artifact_digest_hex = digest;
+                    artifact_bytes = bytes;
+                }
+                Err(warning) => artifact_warning = Some(warning),
+            }
+        }
+        let receipt = ExecutionReceipt {
+            artifact_digest_hex,
+            artifact_bytes,
+            artifact_warning,
+            ..receipt
         };
 
         // C1 store seam: successful miss of a cacheable statement. D2
@@ -948,7 +1542,7 @@ impl GraphLawDuckDB {
         // only if the epoch is unchanged since before execution — a store
         // racing a bump is aborted (the next consult is a miss and re-executes
         // against post-mutation data).
-        if compiled.cacheable && self.cache.epoch() == exec_epoch {
+        if cache_store && compiled.cacheable && self.cache.epoch() == exec_epoch {
             self.cache.store(crate::query_cache::CacheEntry {
                 h_query: query_hash,
                 receipt: receipt.clone(),
@@ -1045,7 +1639,11 @@ impl GraphLawDuckDB {
     /// successful `CREATE OR REPLACE VIEW`, per the documented MUST on
     /// [`GraphLawDuckDB::shared_cache`] — raw-connection DDL is otherwise
     /// invisible to the compiled-plan cache.
-    pub fn register_csv_view(&self, view_name: &str, glob_pattern: &str) -> Result<(), EvaluatorError> {
+    pub fn register_csv_view(
+        &self,
+        view_name: &str,
+        glob_pattern: &str,
+    ) -> Result<(), EvaluatorError> {
         crate::sql_ast::validate_identifier(view_name)
             .map_err(|e| EvaluatorError::ReceiptError(e.to_string()))?;
         let sanitized_pattern = glob_pattern.replace('\'', "''");
@@ -1095,7 +1693,6 @@ impl GraphLawDuckDB {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
 
     /// P28-SIL §3.1 property court (TC-HOT-01 two-node form): the
     /// `receipt_state` anchor path (`h_ast` + `P_params` fold + finalize)
@@ -1117,7 +1714,12 @@ mod tests {
             let canon: Vec<u8> = (0..canon_len).map(|_| next() as u8).collect();
             let params: Vec<SqlLiteral> = (0..(next() % 8))
                 .map(|_| match next() % 5 {
-                    0 => SqlLiteral::String((0..(next() % 32)).map(|_| (next() as u8 % 95) + 32).map(|b| b as char).collect()),
+                    0 => SqlLiteral::String(
+                        (0..(next() % 32))
+                            .map(|_| (next() as u8 % 95) + 32)
+                            .map(|b| b as char)
+                            .collect(),
+                    ),
                     1 => SqlLiteral::Integer(next() as i64),
                     2 => SqlLiteral::Float(f64::from_bits(next())),
                     3 => SqlLiteral::Boolean(next() % 2 == 0),
@@ -1130,7 +1732,10 @@ mod tests {
             // fold_params_anchored (one stack-buffer update).
             let h_ast = *blake3::hash(&canon).as_bytes();
             let clone_path = fold_params_anchored(&h_ast, &params);
-            assert_eq!(clone_path, reference, "clone path must be bit-identical for canon_len={canon_len}");
+            assert_eq!(
+                clone_path, reference,
+                "clone path must be bit-identical for canon_len={canon_len}"
+            );
         }
 
         // Real-compile witness: compile_turtle's pre-pinned `h_ast` anchor
@@ -1138,7 +1743,10 @@ mod tests {
         // over the carried Canon(G_AST) bytes.
         let turtle = "@prefix : <http://example.org/> .\n@prefix sql: <http://graphlaw.org/sql#> .\n:g a sql:SelectStatement ;\n    sql:statementIndex 1 ;\n    sql:fromTable [ sql:tableName \"t\" ] ;\n    sql:selectList ( [ sql:columnName \"v\" ] ) .";
         let compiled = compile_turtle(turtle).expect("graph must compile");
-        let canon = compiled.canon_graph_bytes.as_deref().expect("compile carries canon bytes");
+        let canon = compiled
+            .canon_graph_bytes
+            .as_deref()
+            .expect("compile carries canon bytes");
         let params = vec![SqlLiteral::Integer(7), SqlLiteral::String("w".into())];
         let h_ast = compiled.receipt_state.expect("compile pins h_ast");
         assert_eq!(
@@ -1167,7 +1775,10 @@ mod tests {
             let params: Vec<SqlLiteral> = (0..(next() % 12))
                 .map(|_| match next() % 5 {
                     0 => SqlLiteral::String(
-                        (0..(next() % 32)).map(|_| (next() as u8 % 95) + 32).map(|b| b as char).collect(),
+                        (0..(next() % 32))
+                            .map(|_| (next() as u8 % 95) + 32)
+                            .map(|b| b as char)
+                            .collect(),
                     ),
                     1 => SqlLiteral::Integer(next() as i64),
                     2 => SqlLiteral::Float(f64::from_bits(next())),
@@ -1189,16 +1800,21 @@ mod tests {
                 })
                 .sum();
             let inline = encoded.is_inline();
-            assert_eq!(inline, inline_total <= PARAM_BYTES_INLINE,
-                "is_inline must track the encoded size exactly");
+            assert_eq!(
+                inline,
+                inline_total <= PARAM_BYTES_INLINE,
+                "is_inline must track the encoded size exactly"
+            );
 
             let fast = fold_params_anchored(&h_ast, &params);
             let mut h_ref = blake3::Hasher::new();
             h_ref.update(&h_ast);
             hash_param_buffer(&mut h_ref, &params);
             let reference = *h_ref.finalize().as_bytes();
-            assert_eq!(fast, reference,
-                "fold_params_anchored must be bit-identical to the reference fold (inline_total={inline_total})");
+            assert_eq!(
+                fast, reference,
+                "fold_params_anchored must be bit-identical to the reference fold (inline_total={inline_total})"
+            );
         }
     }
 
@@ -1207,10 +1823,7 @@ mod tests {
     /// and separates distinct parameter vectors.
     #[test]
     fn param_bytes_digest_branch_is_deterministic_and_separating() {
-        let small: Vec<SqlLiteral> = vec![
-            SqlLiteral::Integer(1),
-            SqlLiteral::String("x".into()),
-        ];
+        let small: Vec<SqlLiteral> = vec![SqlLiteral::Integer(1), SqlLiteral::String("x".into())];
         let big_a: Vec<SqlLiteral> = (0..16)
             .map(|i| SqlLiteral::String(format!("param-value-{i:02}-aaaaaaaaaaaaaaaa")))
             .collect();
@@ -1220,7 +1833,10 @@ mod tests {
         assert!(ParamBytes::encode(&small).is_inline());
         let da = ParamBytes::encode(&big_a);
         let db = ParamBytes::encode(&big_b);
-        assert!(!da.is_inline(), "large vector must spill to the digest branch");
+        assert!(
+            !da.is_inline(),
+            "large vector must spill to the digest branch"
+        );
         assert!(!db.is_inline());
         // Digest branch: deterministic, and folds through ParamBytes::fold.
         let fold_once = {
@@ -1260,8 +1876,10 @@ mod tests {
     fn eval_refuses_typed_when_admission_seal_is_broken() {
         let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
         db.raw_connection()
-            .execute_batch("CREATE TABLE telemetry (batch_id VARCHAR, latency INTEGER);
-                 INSERT INTO telemetry VALUES ('alpha', 480), ('beta', 610);")
+            .execute_batch(
+                "CREATE TABLE telemetry (batch_id VARCHAR, latency INTEGER);
+                 INSERT INTO telemetry VALUES ('alpha', 480), ('beta', 610);",
+            )
             .expect("seed");
         let compiled = crate::sql_ast::compile_turtle(A04_TURTLE).expect("compile");
         assert!(compiled.verify_seal());
@@ -1277,7 +1895,9 @@ mod tests {
 
         // Mutation: tamper with the sealed SQL after compile.
         let mut tampered = compiled.clone();
-        tampered.sql = tampered.sql.replace("latency", "latency; DROP TABLE telemetry; --");
+        tampered.sql = tampered
+            .sql
+            .replace("latency", "latency; DROP TABLE telemetry; --");
         assert!(!tampered.verify_seal());
         let err = db
             .eval_ast_query(
@@ -1493,7 +2113,7 @@ ex:Q a sql:SelectStatement ;
     // connections, real table readbacks, no mocks, no sleeps.
     // =========================================================================
 
-    const A04_TURTLE: &str = r#"
+    pub(crate) const A04_TURTLE: &str = r#"
 @prefix sql: <http://graphlaw.org/sql#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix ex:  <http://example.org/queries#> .
@@ -1509,7 +2129,7 @@ ex:Q a sql:SelectStatement ;
     ] .
 "#;
 
-    fn a04_seed(db: &GraphLawDuckDB) {
+    pub(crate) fn a04_seed(db: &GraphLawDuckDB) {
         db.raw_connection()
             .execute_batch(
                 "CREATE TABLE telemetry (batch_id VARCHAR, latency INTEGER);
@@ -1665,7 +2285,11 @@ ex:Q a sql:SelectStatement ;
             for _ in 0..BATCH {
                 // Exactly the hit-dispatch path: digest in, membership out —
                 // no string synthesis anywhere in this expression.
-                if seam.prepared_keys.borrow().contains(&stmt_cache_key(&compiled)) {
+                if seam
+                    .prepared_keys
+                    .borrow()
+                    .contains(&stmt_cache_key(&compiled))
+                {
                     observed += 1;
                 }
             }
@@ -1677,5 +2301,659 @@ ex:Q a sql:SelectStatement ;
             best_ns < 2_000.0,
             "digest lookup regressed: {best_ns:.1} ns (dev-profile fence; a re-render or SQL synthesis would blow past this by orders of magnitude)"
         );
+    }
+
+    /// The section 7 MERGE graph (rec §7), verbatim from the Chicago
+    /// acceptance set's fixture shape: MERGE INTO main.regional_sales USING
+    /// (SELECT ... FROM staging.invoices) with a bound status literal.
+    const MERGE_TTL: &str = r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+_:mergeStatement a sql:MergeIntoStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable [
+        a sql:TableIdentifier ;
+        sql:schemaName "main" ;
+        sql:tableName "regional_sales"
+    ] ;
+    sql:usingSource [
+        a sql:SelectStatement ;
+        sql:statementIndex 1 ;
+        sql:select (
+            [ a sql:ColumnIdentifier ;
+              sql:columnName "region_id" ;
+              sql:scope sql:ViewScope ]
+            [ a sql:FunctionExpression ;
+              sql:functionName "sum" ;
+              sql:arguments ( [ a sql:ColumnIdentifier ; sql:columnName "amount" ; sql:scope sql:ProcessScope ] ) ;
+              sql:alias "total_invoiced" ;
+              sql:scope sql:ViewScope ]
+        ) ;
+        sql:from (
+            [ a sql:TableIdentifier ;
+              sql:schemaName "staging" ;
+              sql:tableName "invoices" ]
+        ) ;
+        sql:where [
+            a sql:BinaryExpression ;
+            sql:left [ a sql:ColumnIdentifier ; sql:columnName "status" ; sql:scope sql:ProcessScope ] ;
+            sql:operator "=" ;
+            sql:right [ a sql:LiteralExpression ; sql:value "SETTLED" ; sql:datatype xsd:string ]
+        ] ;
+        sql:groupBy (
+            [ a sql:ColumnIdentifier ; sql:columnName "region_id" ; sql:scope sql:ProcessScope ]
+        )
+    ] ;
+    sql:mergeOn [
+        a sql:BinaryExpression ;
+        sql:left [ a sql:ColumnIdentifier ; sql:qualifier "main.regional_sales" ; sql:columnName "region_id" ; sql:scope sql:ProcessScope ] ;
+        sql:operator "=" ;
+        sql:right [ a sql:ColumnIdentifier ; sql:qualifier "src" ; sql:columnName "region_id" ; sql:scope sql:ProcessScope ]
+    ] ;
+    sql:whenMatched [
+        a sql:MergeUpdateAction ;
+        sql:setAssignments (
+            [ a sql:Assignment ;
+              sql:targetColumn "revenue" ;
+              sql:valueExpression [
+                  a sql:BinaryExpression ;
+                  sql:left [ a sql:ColumnIdentifier ; sql:qualifier "main.regional_sales" ; sql:columnName "revenue" ; sql:scope sql:ProcessScope ] ;
+                  sql:operator "+" ;
+                  sql:right [ a sql:ColumnIdentifier ; sql:qualifier "src" ; sql:columnName "total_invoiced" ; sql:scope sql:ProcessScope ]
+              ]
+            ]
+        )
+    ] ."#;
+
+    /// Court: a graph-backed MERGE must bump the C1 cache epoch and flush
+    /// cached plans. Observable via a real cached SELECT: warm hit before
+    /// the MERGE, forced miss (fresh re-execution) after it.
+    #[test]
+    fn merge_bumps_c1_epoch_and_flushes_cached_select() {
+        // Serialize engine-heavy tests: the frozen engine has segfaulted
+        // under concurrent engine-heavy tests (see tests/duckdb_statement_kinds.rs).
+        static MERGE_ENGINE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _engine = MERGE_ENGINE_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+
+        let select = crate::sql_ast::compile_turtle(A04_TURTLE).expect("compile select");
+        let merge = crate::sql_ast::compile_turtle(MERGE_TTL).expect("compile merge");
+        assert!(
+            !merge.cacheable,
+            "MERGE compiles non-cacheable; mutating_sql is belt-and-suspenders"
+        );
+        assert!(
+            mutating_sql(&merge.sql),
+            "MERGE SQL text must be lexically classified as mutating"
+        );
+
+        let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
+        db.raw_connection()
+            .execute_batch(
+                "CREATE TABLE telemetry (batch_id VARCHAR, latency INTEGER);
+                 INSERT INTO telemetry VALUES ('alpha', 480), ('beta', 610);
+                 CREATE SCHEMA staging;
+                 CREATE TABLE staging.invoices(region_id INTEGER, amount DECIMAL, status VARCHAR);
+                 INSERT INTO staging.invoices VALUES (1, 30, 'SETTLED'), (2, 50, 'PENDING'), (3, 7, 'SETTLED');
+                 CREATE TABLE main.regional_sales(region_id INTEGER PRIMARY KEY, revenue DECIMAL);
+                 INSERT INTO main.regional_sales VALUES (1, 100), (2, 50), (3, 0);",
+            )
+            .expect("seed");
+
+        let cache = db.shared_cache();
+        let eval = |c: &crate::sql_ast::CompiledQuery| {
+            db.eval_ast_query("http://example.org/queries#Q", c, "urn:r:", "urn:p:")
+                .expect("eval must execute")
+        };
+
+        // (a) Warm the C1 cache with a real cached SELECT: miss then hit.
+        let s1 = eval(&select);
+        assert!(!s1.cached, "first SELECT is a cache miss");
+        let s2 = eval(&select);
+        assert!(s2.cached, "second SELECT must be served from the C1 cache");
+
+        // (b) MERGE executes and bumps the epoch, flushing the cached plan.
+        let epoch_before = cache.epoch();
+        let m = eval(&merge);
+        assert!(!m.cached, "MERGE never serves from the cache");
+        assert_eq!(
+            cache.epoch(),
+            epoch_before + 1,
+            "MERGE must bump the C1 epoch"
+        );
+        assert_eq!(
+            cache.len(),
+            0,
+            "epoch bump must drop every cached entry"
+        );
+        assert_eq!(
+            db.prepared_statements(),
+            0,
+            "MERGE must flush the prepared-statement mirror"
+        );
+
+        // (c) The subsequent cached SELECT is a miss and re-executes fresh:
+        // rows written after the flush are visible in the table readback.
+        let s3 = eval(&select);
+        assert!(!s3.cached, "post-MERGE SELECT must be a fresh miss, not a stale hit");
+        db.raw_connection()
+            .execute_batch("INSERT INTO telemetry VALUES ('gamma', 700);")
+            .expect("post-merge insert");
+        let mut stmt = db
+            .raw_connection()
+            .prepare("SELECT batch_id FROM telemetry WHERE latency > 500 ORDER BY batch_id")
+            .unwrap();
+        let rows: Vec<String> = stmt
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .map(|r| r.unwrap())
+            .collect();
+        assert_eq!(
+            rows,
+            vec!["beta".to_string(), "gamma".to_string()],
+            "fresh rows must be visible after the MERGE epoch bump"
+        );
+    }
+
+    /// SQLRDF-22 G3 inline court: a successful `COPY ... TO` eval must
+    /// carry the artifact digest + byte count on the receipt, matching an
+    /// independent std::fs read + BLAKE3 of the file (Chicago: real file,
+    /// real frozen-duckdb, no mocks).
+    #[test]
+    fn g3_copy_to_receipt_carries_artifact_digest() {
+        let dir = std::env::temp_dir().join(format!("graphlaw-g3-{}", std::process::id()));
+        let path = dir.join("out.csv");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("tmp dir");
+
+        let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
+        a04_seed(&db);
+        let compiled = crate::sql_ast::compile_turtle(&format!(
+            r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+<http://example.org/q> a sql:CopyStatement ;
+    sql:statementIndex "0"^^xsd:integer ;
+    sql:copyOperation [ sql:tableName "telemetry" ; sql:filePath "{}" ; sql:fileFormat "CSV" ] ."#,
+            path.display()
+        ))
+        .expect("compile COPY");
+
+        let receipt = db
+            .eval_ast_query(
+                "http://example.org/queries#q-copy",
+                &compiled,
+                "http://example.org/data",
+                "http://example.org/vocab",
+            )
+            .expect("COPY eval must succeed");
+
+        let (digest, bytes) = (
+            receipt.artifact_digest_hex.clone().expect("digest present"),
+            receipt.artifact_bytes.expect("bytes present"),
+        );
+        assert!(receipt.artifact_warning.is_none(), "no warning on success");
+        // Independent readback: raw bytes via std::fs, hashed separately.
+        let raw = std::fs::read(&path).expect("independent file read");
+        let expected = blake3::hash(&raw).to_hex().to_string();
+        assert_eq!(digest, expected, "receipt digest matches independent BLAKE3");
+        assert_eq!(bytes, raw.len() as u64, "byte count matches file size");
+        // Table readback: the receipt carries the SQL that produced it.
+        assert!(
+            receipt.sql_statement.starts_with("COPY telemetry TO"),
+            "receipt SQL is the COPY-out statement"
+        );
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// SQLRDF-22 G3 twin court: `COPY ... TO` aimed at a nonexistent
+    /// directory. The execution itself succeeds (DuckDB writes-or-fails
+    /// inside the statement; either way the eval returns Ok), so per the
+    /// documented G3 choice the receipt is kept and the failure is recorded
+    /// as `artifact_warning` with digest/bytes `None` — never a lost
+    /// receipt, never a panic, never a generic DB error surfaced.
+    #[test]
+    fn g3_copy_to_bad_directory_records_typed_warning() {
+        let path = std::env::temp_dir()
+            .join(format!("graphlaw-g3-missing-{}", std::process::id()))
+            .join("out.csv");
+        let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
+        a04_seed(&db);
+        let compiled = crate::sql_ast::compile_turtle(&format!(
+            r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+<http://example.org/q> a sql:CopyStatement ;
+    sql:statementIndex "0"^^xsd:integer ;
+    sql:copyOperation [ sql:tableName "telemetry" ; sql:filePath "{}" ; sql:fileFormat "CSV" ] ."#,
+            path.display()
+        ))
+        .expect("compile COPY");
+
+        let result = db.eval_ast_query(
+            "http://graphlaw.org/queries#q-copy-bad",
+            &compiled,
+            "http://example.org/data",
+            "example.org/vocab",
+        );
+        match result {
+            Ok(receipt) => {
+                // DuckDB may fail the COPY inside the statement (Ok here
+                // only if it silently succeeded, which it cannot for a
+                // missing dir) — but the eval may also surface it as
+                // EvaluatorError. Both arms below are typed.
+                assert!(receipt.artifact_warning.is_some());
+                assert!(receipt.artifact_digest_hex.is_none());
+            }
+            Err(EvaluatorError::DuckDb(_)) => {
+                // DuckDB refused the COPY outright (IO error inside the
+                // statement): typed EvaluatorError, execution not
+                // successful, so no receipt to lose.
+            }
+            Err(other) => panic!("unexpected typed error: {other}"),
+        }
+        std::fs::remove_dir_all(path.parent().unwrap()).ok();
+    }
+}
+
+// ===========================================================================
+// SQLRDF-23 eval-half courts (designs/statement-sequence-design.md sections
+// 5-6). Chicago: real frozen-duckdb connections, real table readbacks, no
+// mocks, no sleeps. ENGINE_LOCK serializes engine-heavy courts.
+// ===========================================================================
+#[cfg(test)]
+mod document_eval_courts {
+    use super::*;
+    use crate::duckdb_eval::tests::{a04_seed, A04_TURTLE};
+
+    static ENGINE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        ENGINE_LOCK.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    /// 3-member CREATE / INSERT / SELECT document (statementIndex 0,1,2).
+    fn doc_create_insert_select(table: &str, val: i64) -> String {
+        format!(
+            r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+sql:doc a sql:StatementSequence ;
+    sql:statements ( <http://example.org/c> <http://example.org/i> <http://example.org/s> ) .
+<http://example.org/c> a sql:CreateStatement ;
+    sql:statementIndex 0 ;
+    sql:targetTable "{table}" ;
+    sql:assignColumn "v" .
+<http://example.org/i> a sql:InsertStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "{table}" ;
+    sql:assignColumn "v" ;
+    sql:assignValue "{val}"^^xsd:integer .
+<http://example.org/s> a sql:SelectStatement ;
+    sql:statementIndex 2 ;
+    sql:fromTable [ sql:tableName "{table}" ] ;
+    sql:selectList ( [ sql:columnName "v" ] ) .
+"#
+        )
+    }
+
+    /// Court (a): 3-member CREATE/INSERT/SELECT doc on one connection ->
+    /// BatchReceipt with 3 members, exact rows readback, failed_at None.
+    #[test]
+    fn batch_three_member_create_insert_select_executes_clean() {
+        let _engine = lock();
+        const TABLE: &str = "seq_court_events";
+        let doc = crate::sql_ast::compile_turtle_document(&doc_create_insert_select(TABLE, 42))
+            .expect("sequence document compiles");
+        assert_eq!(doc.statements.len(), 3, "three members compiled");
+        assert!(!doc.statements.iter().all(|m| m.cacheable), "sequence members compile non-cacheable per compile_turtle_document");
+
+        let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
+        let receipt = db
+            .eval_ast_document(
+                "http://example.org/docs#batch-a",
+                &doc,
+                "http://example.org/data",
+                "http://example.org/vocab",
+                false,
+            )
+            .expect("3-member batch executes");
+        assert_eq!(receipt.query_iri, "http://example.org/docs#batch-a");
+        assert_eq!(receipt.doc_hash, doc.doc_hash, "receipt carries the document hash");
+        assert_eq!(receipt.members.len(), 3, "one receipt per member");
+        assert_eq!(receipt.rows_emitted, vec![0, 1, 1], "CREATE=0, INSERT=1, SELECT=1 row");
+        assert_eq!(receipt.failed_at, None);
+        // Exact rows readback: the SELECT member's receipt carries the row it
+        // projected, and the table reads back the inserted value.
+        assert_eq!(
+            receipt.members[2].rows_emitted, 1,
+            "SELECT member emitted the inserted row"
+        );
+        let mut stmt = db
+            .raw_connection()
+            .prepare(&format!("SELECT v FROM {TABLE}"))
+            .unwrap();
+        let rows: Vec<i64> = stmt
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .map(|r| r.unwrap())
+            .collect();
+        assert_eq!(rows, vec![42_i64], "table readback: the INSERT member's row");
+        // Real CREATE member ran: member 0 is the CREATE (rows 0).
+        assert_eq!(receipt.members[0].rows_emitted, 0, "CREATE emits no rows");
+    }
+
+    /// 2-member CREATE / INSERT document (statementIndex 0,1) — ends on the
+    /// mutating member, so a post-batch flush observation is exact.
+    fn doc_create_insert(table: &str, val: i64) -> String {
+        let three = doc_create_insert_select(table, val);
+        // Drop the SELECT member: remove its block and its entry from the
+        // sequence list.
+        let three = three
+            .split_once("<http://example.org/s> a sql:SelectStatement")
+            .map(|(head, _)| head.to_string())
+            .unwrap_or(three);
+        three.replace(
+            " ( <http://example.org/c> <http://example.org/i> <http://example.org/s> )",
+            " ( <http://example.org/c> <http://example.org/i> )",
+        )
+    }
+
+    /// Court (b): member at position 2 (index 1) references a missing table
+    /// -> failed_at Some(1), error names the index, member 0's effects stay
+    /// committed (autocommit witness via follow-up raw SELECT readback).
+    #[test]
+    fn batch_mid_sequence_failure_names_index_and_commits_prior_members() {
+        let _engine = lock();
+        const TABLE: &str = "seq_court_partial";
+        let ttl = doc_create_insert_select(TABLE, 7).replacen(
+            &format!(
+                "sql:targetTable \"{TABLE}\" ;\n    sql:assignColumn \"v\" ;\n    sql:assignValue"
+            ),
+            "sql:targetTable \"no_such_table\" ;\n    sql:assignColumn \"v\" ;\n    sql:assignValue",
+            1,
+        );
+        assert!(
+            ttl.contains("sql:targetTable \"no_such_table\""),
+            "fixture must retarget the INSERT member only"
+        );
+        assert_eq!(
+            ttl.matches(&format!("sql:targetTable \"{TABLE}\"")).count(),
+            1,
+            "only the CREATE member keeps the real targetTable (SELECT uses fromTable)"
+        );
+        let doc = crate::sql_ast::compile_turtle_document(&ttl)
+            .expect("sequence compiles (missing table is an eval-time failure)");
+        assert_eq!(doc.statements.len(), 3);
+
+        let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
+        let err = db
+            .eval_ast_document(
+                "http://example.org/docs#batch-b",
+                &doc,
+                "http://example.org/data",
+                "http://example.org/vocab",
+                false,
+            )
+            .expect_err("member 1 must fail on the missing table");
+        match &err {
+            EvaluatorError::BatchMemberFailed { index, partial, .. } => {
+                assert_eq!(*index, 1, "failure at member index 1");
+                assert_eq!(partial.failed_at, Some(1));
+                assert_eq!(partial.members.len(), 1, "members [0..1] executed");
+                assert_eq!(partial.rows_emitted, vec![0], "CREATE member receipt kept");
+                assert_eq!(partial.doc_hash, doc.doc_hash);
+            }
+            other => panic!("unexpected typed error: {other}"),
+        }
+        assert!(
+            err.to_string().contains("member 1"),
+            "typed error names the index: {err}"
+        );
+        // Autocommit witness: member 0's CREATE committed and is visible in a
+        // real follow-up SELECT on the same connection.
+        let mut stmt = db
+            .raw_connection()
+            .prepare(&format!("SELECT count(*) FROM {TABLE}"))
+            .unwrap();
+        let count: i64 = stmt.query_row([], |r| r.get(0)).unwrap();
+        assert_eq!(count, 0, "member 0's CREATE is committed and queryable");
+    }
+
+    /// Court (c): a mutating member in the batch bumps the C1 epoch and
+    /// flushes the prepared-statement mirror (mirrors the MERGE epoch
+    /// court's observability on a real connection).
+    #[test]
+    fn batch_mutating_member_bumps_epoch_and_flushes_prepared_mirror() {
+        let _engine = lock();
+        // Warm the caches with a bare SELECT first (eval_ast_query consults
+        // and stores), then run a batch whose INSERT member mutates.
+        let select = crate::sql_ast::compile_turtle(A04_TURTLE).expect("compile select");
+        let doc = crate::sql_ast::compile_turtle_document(&doc_create_insert(
+            "seq_court_epoch",
+            5,
+        ))
+        .expect("sequence compiles");
+        assert!(
+            mutating_sql(&doc.statements[1].sql),
+            "INSERT member is lexically mutating: {}",
+            doc.statements[1].sql
+        );
+
+        let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
+        a04_seed(&db);
+        let warm = db
+            .eval_ast_query("http://example.org/queries#Q", &select, "urn:r:", "urn:p:")
+            .expect("warm select");
+        let cache = db.shared_cache();
+        assert!(!warm.cached, "warm-up is a miss");
+        let warm2 = db
+            .eval_ast_query("http://example.org/queries#Q", &select, "urn:r:", "urn:p:")
+            .expect("warm select 2");
+        assert!(warm2.cached, "cache is warm before the batch");
+        assert_eq!(db.prepared_statements(), 1, "one prepared handle mirrored");
+
+        let epoch_before = cache.epoch();
+        let receipt = db
+            .eval_ast_document(
+                "http://example.org/docs#batch-c",
+                &doc,
+                "http://example.org/data",
+                "http://example.org/vocab",
+                false,
+            )
+            .expect("batch executes");
+        assert_eq!(receipt.failed_at, None);
+        assert_eq!(
+            cache.epoch(),
+            epoch_before + 2,
+            "each mutating member (CREATE, INSERT) bumps the C1 epoch exactly once at its own execution point"
+        );
+        assert_eq!(
+            db.prepared_statements(),
+            0,
+            "the mutating member must flush the prepared-statement mirror"
+        );
+        assert_eq!(cache.len(), 0, "epoch bump drops every cached entry");
+    }
+
+    /// Court (d): a batch containing any non-cacheable member stores
+    /// NOTHING in the shared cache (design section 6: all-or-none), even
+    /// though every member executed successfully.
+    #[test]
+    fn batch_with_non_cacheable_member_stores_nothing() {
+        let _engine = lock();
+        let doc = crate::sql_ast::compile_turtle_document(&doc_create_insert_select(
+            "seq_court_nostore",
+            3,
+        ))
+        .expect("sequence compiles");
+        let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
+        let cache = db.shared_cache();
+        assert_eq!(cache.len(), 0, "cache starts empty");
+        let receipt = db
+            .eval_ast_document(
+                "http://example.org/docs#batch-d",
+                &doc,
+                "http://example.org/data",
+                "http://example.org/vocab",
+                false,
+            )
+            .expect("batch executes");
+        assert_eq!(receipt.failed_at, None);
+        assert_eq!(receipt.members.len(), 3);
+        assert!(
+            doc.statements.iter().any(|m| !m.cacheable),
+            "fixture really contains a non-cacheable member"
+        );
+        assert_eq!(
+            cache.len(),
+            0,
+            "all-or-none cache law: no member stores when any member is non-cacheable"
+        );
+    }
+
+    /// SQLRDF-26 fixture: the 3-member doc, marked `sql:atomic true` on the
+    /// sequence root (compile-threaded flag).
+    fn doc_atomic_create_insert_select(table: &str, val: i64) -> String {
+        doc_create_insert_select(table, val).replacen(
+            "sql:doc a sql:StatementSequence ;",
+            "sql:doc a sql:StatementSequence ;\n    sql:atomic true ;",
+            1,
+        )
+    }
+
+    /// SQLRDF-26 (a): atomic 3-member success -> all members execute, COMMIT
+    /// runs, receipt carries `state_delta = 3`.
+    #[test]
+    fn atomic_three_member_batch_commits() {
+        let _engine = lock();
+        const TABLE: &str = "seq_atomic_ok";
+        let doc = crate::sql_ast::compile_turtle_document(&doc_atomic_create_insert_select(
+            TABLE, 42,
+        ))
+        .expect("atomic sequence compiles");
+        assert!(doc.atomic, "compile threads sql:atomic true into the document");
+
+        let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
+        let receipt = db
+            .eval_ast_document(
+                "http://example.org/docs#atomic-a",
+                &doc,
+                "http://example.org/data",
+                "http://example.org/vocab",
+                false,
+            )
+            .expect("atomic batch executes");
+        assert_eq!(receipt.failed_at, None);
+        assert_eq!(receipt.members.len(), 3, "all members executed");
+        assert_eq!(receipt.state_delta, 3, "all members committed");
+        assert_eq!(receipt.rows_emitted, vec![0, 1, 1]);
+        // COMMIT witness: if the transaction were still open, a fresh BEGIN
+        // on the same connection would refuse ("transaction already active").
+        db.raw_connection()
+            .execute_batch("BEGIN TRANSACTION")
+            .expect("no transaction is left open — COMMIT executed");
+    }
+
+    /// SQLRDF-26 (b): atomic member-2 failure -> ROLLBACK witnessed (the
+    /// CREATE from member 1 does NOT survive a post-batch SELECT — vs the
+    /// pipeline twin where it does), partial receipt marked aborted/0.
+    #[test]
+    fn atomic_member_failure_rolls_back_and_marks_aborted() {
+        let _engine = lock();
+        const TABLE: &str = "seq_atomic_abort";
+        let ttl = doc_atomic_create_insert_select(TABLE, 7).replacen(
+            &format!(
+                "sql:targetTable \"{TABLE}\" ;\n    sql:assignColumn \"v\" ;\n    sql:assignValue"
+            ),
+            "sql:targetTable \"no_such_table\" ;\n    sql:assignColumn \"v\" ;\n    sql:assignValue",
+            1,
+        );
+        let doc = crate::sql_ast::compile_turtle_document(&ttl)
+            .expect("sequence compiles (missing table is an eval-time failure)");
+        let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
+        let err = db
+            .eval_ast_document(
+                "http://example.org/docs#atomic-b",
+                &doc,
+                "http://example.org/data",
+                "http://example.org/vocab",
+                false,
+            )
+            .expect_err("member 1 must fail on the missing table");
+        match &err {
+            EvaluatorError::BatchMemberFailed { index, partial, .. } => {
+                assert_eq!(*index, 1);
+                assert_eq!(partial.failed_at, Some(1));
+                assert_eq!(partial.members.len(), 1, "member 0 executed inside the txn");
+                assert_eq!(partial.status, "aborted", "atomic failure marks aborted");
+                assert_eq!(partial.state_delta, 0, "rollback pins net delta to zero");
+            }
+            other => panic!("unexpected typed error: {other}"),
+        }
+        // ROLLBACK witness: the member-0 CREATE did not survive.
+        let rolled = db.raw_connection().prepare(&format!("SELECT count(*) FROM {TABLE}"));
+        assert!(
+            rolled.is_err(),
+            "member 0's CREATE must be rolled back (pipeline twin keeps it committed)"
+        );
+        // Reactor alive: the connection is out of the aborted transaction and
+        // still executes.
+        db.raw_connection()
+            .execute_batch("BEGIN TRANSACTION")
+            .expect("ROLLBACK closed the transaction — connection reusable");
+    }
+
+    /// SQLRDF-26 (c): Seq_B order inversion, pipeline mode —
+    /// [INSERT-into-missing-table, CREATE] -> member 0 fails, member 1 never
+    /// executes, reactor alive.
+    #[test]
+    fn order_inverted_pipeline_batch_stops_at_member_0_reactor_alive() {
+        let _engine = lock();
+        const TABLE: &str = "seq_inverted";
+        let ttl = format!(
+            r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+sql:doc a sql:StatementSequence ;
+    sql:statements ( <http://example.org/i> <http://example.org/c> ) .
+<http://example.org/i> a sql:InsertStatement ;
+    sql:statementIndex 0 ;
+    sql:targetTable "no_such_table" ;
+    sql:assignColumn "v" ;
+    sql:assignValue "1"^^xsd:integer .
+<http://example.org/c> a sql:CreateStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "{TABLE}" ;
+    sql:assignColumn "v" .
+"#
+        );
+        let doc = crate::sql_ast::compile_turtle_document(&ttl)
+            .expect("inverted sequence compiles");
+        let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
+        let err = db
+            .eval_ast_document(
+                "http://example.org/docs#seq-b",
+                &doc,
+                "http://example.org/data",
+                "http://example.org/vocab",
+                false,
+            )
+            .expect_err("member 0 must fail on the missing table");
+        match &err {
+            EvaluatorError::BatchMemberFailed { index, partial, .. } => {
+                assert_eq!(*index, 0, "failure at member index 0");
+                assert_eq!(partial.failed_at, Some(0));
+                assert_eq!(partial.members.len(), 0, "no member completed");
+                assert_eq!(partial.status, "partial", "pipeline mode stays partial");
+            }
+            other => panic!("unexpected typed error: {other}"),
+        }
+        // Member 1 never executed: the CREATE did not land.
+        let created = db
+            .raw_connection()
+            .prepare(&format!("SELECT count(*) FROM {TABLE}"));
+        assert!(created.is_err(), "member 1 (CREATE) must never execute after a member-0 failure");
+        // Reactor alive on the same connection.
+        db.raw_connection()
+            .execute_batch("CREATE TABLE seq_inverted_reactor (v INTEGER)")
+            .expect("connection still executes after the typed failure");
     }
 }

@@ -21,7 +21,7 @@
 #[path = "w3c_manifest.rs"]
 mod manifest;
 
-use manifest::{Dialect, Kind, ENTRIES};
+use manifest::{Dialect, ENTRIES, Kind};
 
 /// The W3C manifest's `mf:assumedTestBase` per dialect.
 fn base_of(d: Dialect) -> Option<&'static str> {
@@ -51,86 +51,342 @@ fn dialect_of(d: Dialect) -> graphlaw::dialect::Dialect {
 const KNOWN_DIVERGENCES: &[(Dialect, &str, &str)] = &[
     // N-Triples/N-Quads forbid long (triple-quoted) string literals; PurRdf
     // accepts them on the N-Triples/N-Quads parsers.
-    (Dialect::NTriples, "rdf-n-triples/nt-syntax-bad-string-04.nt", "long-string accepted in N-Triples"),
-    (Dialect::NTriples, "rdf-n-triples/nt-syntax-bad-string-05.nt", "long-string accepted in N-Triples"),
-    (Dialect::NQuads, "rdf-n-quads/nt-syntax-bad-string-04.nq", "long-string accepted in N-Quads"),
-    (Dialect::NQuads, "rdf-n-quads/nt-syntax-bad-string-05.nq", "long-string accepted in N-Quads"),
+    (
+        Dialect::NTriples,
+        "rdf-n-triples/nt-syntax-bad-string-04.nt",
+        "long-string accepted in N-Triples",
+    ),
+    (
+        Dialect::NTriples,
+        "rdf-n-triples/nt-syntax-bad-string-05.nt",
+        "long-string accepted in N-Triples",
+    ),
+    (
+        Dialect::NQuads,
+        "rdf-n-quads/nt-syntax-bad-string-04.nq",
+        "long-string accepted in N-Quads",
+    ),
+    (
+        Dialect::NQuads,
+        "rdf-n-quads/nt-syntax-bad-string-05.nq",
+        "long-string accepted in N-Quads",
+    ),
     // Turtle: langtag validity, relative base abuse, N3 extras not rejected.
-    (Dialect::Turtle, "rdf-turtle/turtle-syntax-bad-lang-01.ttl", "malformed langtag accepted"),
-    (Dialect::Turtle, "rdf-turtle/turtle-syntax-bad-base-03.ttl", "bad BASE accepted"),
-    (Dialect::Turtle, "rdf-turtle/turtle-syntax-bad-n3-extras-03.ttl", "N3 extra syntax accepted"),
-    (Dialect::Turtle, "rdf-turtle/turtle-syntax-bad-n3-extras-06.ttl", "N3 extra syntax accepted"),
+    (
+        Dialect::Turtle,
+        "rdf-turtle/turtle-syntax-bad-lang-01.ttl",
+        "malformed langtag accepted",
+    ),
+    (
+        Dialect::Turtle,
+        "rdf-turtle/turtle-syntax-bad-base-03.ttl",
+        "bad BASE accepted",
+    ),
+    (
+        Dialect::Turtle,
+        "rdf-turtle/turtle-syntax-bad-n3-extras-03.ttl",
+        "N3 extra syntax accepted",
+    ),
+    (
+        Dialect::Turtle,
+        "rdf-turtle/turtle-syntax-bad-n3-extras-06.ttl",
+        "N3 extra syntax accepted",
+    ),
     // TriG: same PurRdf gaps as Turtle (langtag, BASE, N3 extras) plus
     // TriG-specific graph-level rules not enforced (lists/collections/BNodes
     // as graph labels, bad STRUCT) — all registered 2026-10-20 (lane H08).
-    (Dialect::Trig, "rdf-trig/trig-syntax-bad-base-03.trig", "bad BASE accepted"),
-    (Dialect::Trig, "rdf-trig/trig-syntax-bad-lang-01.trig", "malformed langtag accepted"),
-    (Dialect::Trig, "rdf-trig/trig-syntax-bad-n3-extras-03.trig", "N3 extra syntax accepted"),
-    (Dialect::Trig, "rdf-trig/trig-syntax-bad-n3-extras-06.trig", "N3 extra syntax accepted"),
-    (Dialect::Trig, "rdf-trig/trig-syntax-bad-struct-12.trig", "bad STRUCT accepted"),
-    (Dialect::Trig, "rdf-trig/trig-syntax-bad-list-01.trig", "bad list syntax accepted"),
-    (Dialect::Trig, "rdf-trig/trig-syntax-bad-list-02.trig", "bad list syntax accepted"),
-    (Dialect::Trig, "rdf-trig/trig-syntax-bad-list-03.trig", "bad list syntax accepted"),
-    (Dialect::Trig, "rdf-trig/trig-syntax-bad-list-04.trig", "bad list syntax accepted"),
-    (Dialect::Trig, "rdf-trig/trig-graph-bad-10.trig", "blank-node graph label accepted"),
-    (Dialect::Trig, "rdf-trig/trig-graph-bad-11.trig", "collection graph label accepted"),
-    (Dialect::Trig, "rdf-trig/trig-bnodeplist-graph-bad-01.trig", "bnode-list graph label accepted"),
-    (Dialect::Trig, "rdf-trig/trig-collection-graph-bad-01.trig", "collection graph label accepted"),
-    (Dialect::Trig, "rdf-trig/trig-collection-graph-bad-02.trig", "collection graph label accepted"),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-syntax-bad-base-03.trig",
+        "bad BASE accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-syntax-bad-lang-01.trig",
+        "malformed langtag accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-syntax-bad-n3-extras-03.trig",
+        "N3 extra syntax accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-syntax-bad-n3-extras-06.trig",
+        "N3 extra syntax accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-syntax-bad-struct-12.trig",
+        "bad STRUCT accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-syntax-bad-list-01.trig",
+        "bad list syntax accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-syntax-bad-list-02.trig",
+        "bad list syntax accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-syntax-bad-list-03.trig",
+        "bad list syntax accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-syntax-bad-list-04.trig",
+        "bad list syntax accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-graph-bad-10.trig",
+        "blank-node graph label accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-graph-bad-11.trig",
+        "collection graph label accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-bnodeplist-graph-bad-01.trig",
+        "bnode-list graph label accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-collection-graph-bad-01.trig",
+        "collection graph label accepted",
+    ),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-collection-graph-bad-02.trig",
+        "collection graph label accepted",
+    ),
     // RDF/XML: semantic-constraint errors the XML parser does not enforce
     // (illegal container/aboutEach/rdf-ID names, empty-property-element
     // corner cases, syntax-incomplete cases) — registered 2026-10-20 (lane H08).
-    (Dialect::RdfXml, "rdf-xml/rdf-containers-syntax-vs-schema/error001.rdf", "container semantics not enforced"),
-    (Dialect::RdfXml, "rdf-xml/rdf-containers-syntax-vs-schema/error002.rdf", "container semantics not enforced"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-abouteach/error001.rdf", "aboutEach not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-abouteach/error002.rdf", "aboutEach not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-difference-between-ID-and-about/error1.rdf", "duplicate ID not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-empty-property-elements/error001.rdf", "empty property element not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-empty-property-elements/error002.rdf", "empty property element not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-empty-property-elements/error003.rdf", "empty property element not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-id/error001.rdf", "bad rdf:ID not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-id/error002.rdf", "bad rdf:ID not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-id/error003.rdf", "bad rdf:ID not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-id/error004.rdf", "bad rdf:ID not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-id/error005.rdf", "bad rdf:ID not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-id/error006.rdf", "bad rdf:ID not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-id/error007.rdf", "bad rdf:ID not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-001.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-002.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-003.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-004.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-005.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-006.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-007.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-008.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-009.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-010.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-011.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-012.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-013.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-014.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-015.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-016.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-017.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-018.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-019.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-rdf-names-use/error-020.rdf", "reserved rdf: name not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-syntax-incomplete/error001.rdf", "incomplete syntax not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-syntax-incomplete/error004.rdf", "incomplete syntax not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-syntax-incomplete/error005.rdf", "incomplete syntax not rejected"),
-    (Dialect::RdfXml, "rdf-xml/rdfms-syntax-incomplete/error006.rdf", "incomplete syntax not rejected"),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdf-containers-syntax-vs-schema/error001.rdf",
+        "container semantics not enforced",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdf-containers-syntax-vs-schema/error002.rdf",
+        "container semantics not enforced",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-abouteach/error001.rdf",
+        "aboutEach not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-abouteach/error002.rdf",
+        "aboutEach not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-difference-between-ID-and-about/error1.rdf",
+        "duplicate ID not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-empty-property-elements/error001.rdf",
+        "empty property element not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-empty-property-elements/error002.rdf",
+        "empty property element not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-empty-property-elements/error003.rdf",
+        "empty property element not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-id/error001.rdf",
+        "bad rdf:ID not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-id/error002.rdf",
+        "bad rdf:ID not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-id/error003.rdf",
+        "bad rdf:ID not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-id/error004.rdf",
+        "bad rdf:ID not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-id/error005.rdf",
+        "bad rdf:ID not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-id/error006.rdf",
+        "bad rdf:ID not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-id/error007.rdf",
+        "bad rdf:ID not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-001.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-002.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-003.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-004.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-005.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-006.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-007.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-008.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-009.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-010.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-011.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-012.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-013.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-014.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-015.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-016.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-017.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-018.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-019.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-rdf-names-use/error-020.rdf",
+        "reserved rdf: name not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-syntax-incomplete/error001.rdf",
+        "incomplete syntax not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-syntax-incomplete/error004.rdf",
+        "incomplete syntax not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-syntax-incomplete/error005.rdf",
+        "incomplete syntax not rejected",
+    ),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/rdfms-syntax-incomplete/error006.rdf",
+        "incomplete syntax not rejected",
+    ),
 ];
 
 /// Positive tests the owning engine (PurRdf) currently refuses.
 const KNOWN_POSITIVE_DIVERGENCES: &[(Dialect, &str, &str)] = &[
     // `123.E+1` is a valid Turtle DOUBLE ([0-9]+ '.' [0-9]* EXPONENT);
     // PurRdf requires a digit after the decimal point.
-    (Dialect::Turtle, "rdf-turtle/turtle-syntax-number-11.ttl", "DOUBLE with empty fraction digits refused"),
+    (
+        Dialect::Turtle,
+        "rdf-turtle/turtle-syntax-number-11.ttl",
+        "DOUBLE with empty fraction digits refused",
+    ),
     // Same PurRdf DOUBLE lexer gap surfaces on the TriG parser.
-    (Dialect::Trig, "rdf-trig/trig-syntax-number-11.trig", "DOUBLE with empty fraction digits refused"),
+    (
+        Dialect::Trig,
+        "rdf-trig/trig-syntax-number-11.trig",
+        "DOUBLE with empty fraction digits refused",
+    ),
     // `rdf:ID="xmlnewthing"`-style qualified-name IRIs resolved relative to a
     // base are refused by PurRdf's XML-qname IRI grammar.
-    (Dialect::RdfXml, "rdf-xml/unrecognised-xml-attributes/test002.rdf", "relative qname IRI refused"),
+    (
+        Dialect::RdfXml,
+        "rdf-xml/unrecognised-xml-attributes/test002.rdf",
+        "relative qname IRI refused",
+    ),
 ];
 
 fn is_known_divergence(dialect: Dialect, path: &str) -> bool {
@@ -214,7 +470,10 @@ fn w3c_turtle_conformance() {
     let receipt = run_dialect(Dialect::Turtle, entries_for(Dialect::Turtle));
     assert_eq!(receipt.passed, 73, "turtle positive count drifted");
     assert_eq!(receipt.refused, 90, "turtle negative count drifted");
-    assert_eq!(receipt.known_diverged, 5, "turtle known-diverged count drifted — update KNOWN_DIVERGENCES");
+    assert_eq!(
+        receipt.known_diverged, 5,
+        "turtle known-diverged count drifted — update KNOWN_DIVERGENCES"
+    );
     assert_eq!(receipt.total, 168);
 }
 
@@ -223,7 +482,10 @@ fn w3c_ntriples_conformance() {
     let receipt = run_dialect(Dialect::NTriples, entries_for(Dialect::NTriples));
     assert_eq!(receipt.passed, 41, "ntriples positive count drifted");
     assert_eq!(receipt.refused, 27, "ntriples negative count drifted");
-    assert_eq!(receipt.known_diverged, 2, "ntriples known-diverged count drifted — update KNOWN_DIVERGENCES");
+    assert_eq!(
+        receipt.known_diverged, 2,
+        "ntriples known-diverged count drifted — update KNOWN_DIVERGENCES"
+    );
     assert_eq!(receipt.total, 70);
 }
 
@@ -232,7 +494,10 @@ fn w3c_nquads_conformance() {
     let receipt = run_dialect(Dialect::NQuads, entries_for(Dialect::NQuads));
     assert_eq!(receipt.passed, 53, "nquads positive count drifted");
     assert_eq!(receipt.refused, 32, "nquads negative count drifted");
-    assert_eq!(receipt.known_diverged, 2, "nquads known-diverged count drifted — update KNOWN_DIVERGENCES");
+    assert_eq!(
+        receipt.known_diverged, 2,
+        "nquads known-diverged count drifted — update KNOWN_DIVERGENCES"
+    );
     assert_eq!(receipt.total, 87);
 }
 
@@ -241,7 +506,10 @@ fn w3c_trig_conformance() {
     let receipt = run_dialect(Dialect::Trig, entries_for(Dialect::Trig));
     assert_eq!(receipt.passed, 98, "trig positive count drifted");
     assert_eq!(receipt.refused, 101, "trig negative count drifted");
-    assert_eq!(receipt.known_diverged, 15, "trig known-diverged count drifted — update KNOWN_DIVERGENCES");
+    assert_eq!(
+        receipt.known_diverged, 15,
+        "trig known-diverged count drifted — update KNOWN_DIVERGENCES"
+    );
     assert_eq!(receipt.total, 214);
 }
 
@@ -250,7 +518,10 @@ fn w3c_rdfxml_conformance() {
     let receipt = run_dialect(Dialect::RdfXml, entries_for(Dialect::RdfXml));
     assert_eq!(receipt.passed, 131, "rdfxml positive count drifted");
     assert_eq!(receipt.refused, 2, "rdfxml negative count drifted");
-    assert_eq!(receipt.known_diverged, 40, "rdfxml known-diverged count drifted — update KNOWN_DIVERGENCES");
+    assert_eq!(
+        receipt.known_diverged, 40,
+        "rdfxml known-diverged count drifted — update KNOWN_DIVERGENCES"
+    );
     assert_eq!(receipt.total, 173);
 }
 
@@ -258,11 +529,12 @@ fn w3c_rdfxml_conformance() {
 fn w3c_known_divergences_are_exhaustive() {
     // every registered divergence must correspond to a real negative manifest
     // entry — no stale register rows.
-    for (d, p, _) in KNOWN_DIVERGENCES.iter().chain(KNOWN_POSITIVE_DIVERGENCES.iter()) {
+    for (d, p, _) in KNOWN_DIVERGENCES
+        .iter()
+        .chain(KNOWN_POSITIVE_DIVERGENCES.iter())
+    {
         assert!(
-            ENTRIES
-                .iter()
-                .any(|(ed, ep, _)| ed == d && *ep == *p),
+            ENTRIES.iter().any(|(ed, ep, _)| ed == d && *ep == *p),
             "stale KNOWN_DIVERGENCES row: {p}"
         );
     }
@@ -271,7 +543,13 @@ fn w3c_known_divergences_are_exhaustive() {
 #[test]
 fn w3c_conformance_receipt_summary() {
     let mut receipts = Vec::new();
-    for d in [Dialect::Turtle, Dialect::NTriples, Dialect::NQuads, Dialect::Trig, Dialect::RdfXml] {
+    for d in [
+        Dialect::Turtle,
+        Dialect::NTriples,
+        Dialect::NQuads,
+        Dialect::Trig,
+        Dialect::RdfXml,
+    ] {
         receipts.push(run_dialect(d, entries_for(d)));
     }
     // every manifest entry lands in exactly one bucket: totals sum to manifest length
@@ -290,11 +568,41 @@ fn w3c_conformance_receipt_summary() {
     assert_eq!(
         receipts,
         vec![
-            ConformanceReceipt { dialect: Dialect::Turtle, passed: 73, refused: 90, known_diverged: 5, total: 168 },
-            ConformanceReceipt { dialect: Dialect::NTriples, passed: 41, refused: 27, known_diverged: 2, total: 70 },
-            ConformanceReceipt { dialect: Dialect::NQuads, passed: 53, refused: 32, known_diverged: 2, total: 87 },
-            ConformanceReceipt { dialect: Dialect::Trig, passed: 98, refused: 101, known_diverged: 15, total: 214 },
-            ConformanceReceipt { dialect: Dialect::RdfXml, passed: 131, refused: 2, known_diverged: 40, total: 173 },
+            ConformanceReceipt {
+                dialect: Dialect::Turtle,
+                passed: 73,
+                refused: 90,
+                known_diverged: 5,
+                total: 168
+            },
+            ConformanceReceipt {
+                dialect: Dialect::NTriples,
+                passed: 41,
+                refused: 27,
+                known_diverged: 2,
+                total: 70
+            },
+            ConformanceReceipt {
+                dialect: Dialect::NQuads,
+                passed: 53,
+                refused: 32,
+                known_diverged: 2,
+                total: 87
+            },
+            ConformanceReceipt {
+                dialect: Dialect::Trig,
+                passed: 98,
+                refused: 101,
+                known_diverged: 15,
+                total: 214
+            },
+            ConformanceReceipt {
+                dialect: Dialect::RdfXml,
+                passed: 131,
+                refused: 2,
+                known_diverged: 40,
+                total: 173
+            },
         ]
     );
 }

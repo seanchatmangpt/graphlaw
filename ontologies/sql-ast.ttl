@@ -170,6 +170,37 @@ sql:offset a owl:DatatypeProperty ;
     rdfs:domain sql:SelectStatement ;
     rdfs:range xsd:nonNegativeInteger .
 
+# SQLRDF-25 gap 2: WITH clause (standard + recursive CTEs).
+sql:withClause a owl:ObjectProperty ;
+    rdfs:subPropertyOf sql:hasClause ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range rdf:List ;
+    rdfs:comment "Ordered list of sql:cte nodes; serialized as WITH [RECURSIVE] name (cols) AS (query), ... before the main SELECT. WITH RECURSIVE is promoted for the whole list when any member carries sql:recursive true." .
+
+sql:cte a owl:Class ;
+    rdfs:subClassOf owl:Thing ;
+    rdfs:comment "One WITH arm: a named sub-select." .
+
+sql:cteName a owl:DatatypeProperty ;
+    rdfs:domain sql:cte ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Required CTE identifier (validated like every identifier; REFUSAL-01 outside the alphabet)." .
+
+sql:cteColumns a owl:ObjectProperty ;
+    rdfs:domain sql:cte ;
+    rdfs:range rdf:List ;
+    rdfs:comment "Optional rdf:List of sql:columnName literals naming the CTE's columns." .
+
+sql:cteQuery a owl:ObjectProperty ;
+    rdfs:domain sql:cte ;
+    rdfs:range sql:SelectStatement ;
+    rdfs:comment "Required nested SelectStatement root; absent is typed REFUSAL-01 arm CTE_NO_QUERY (47) — the rendered SQL would be 'name AS ()'." .
+
+sql:recursive a owl:DatatypeProperty ;
+    rdfs:domain sql:cte ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "Marks the CTE recursive; promotes the WITH list to WITH RECURSIVE." .
+
 # Statement invariant (section 4): every statement carries an execution index.
 sql:statementIndex a owl:DatatypeProperty ;
     rdfs:domain sql:Statement ;
@@ -256,6 +287,46 @@ sql:functionName a owl:DatatypeProperty ;
 sql:arguments a rdf:Property ;
     rdfs:domain sql:ASTNode ;
     rdfs:range rdf:List .
+
+# Window functions (SQLRDF-25): sql:windowFunction discriminates the window
+# node; sql:partitionBy / sql:orderBy are ordered rdf:Lists; sql:frame carries
+# sql:frameUnit ("ROWS"|"RANGE"), sql:frameStart and optional sql:frameEnd
+# bound tokens. sql:qualify is the statement-level window-filter clause.
+sql:WindowFunction a owl:Class ;
+    rdfs:subClassOf sql:Expression .
+
+sql:windowFunction a owl:ObjectProperty ;
+    rdfs:domain sql:WindowFunction ;
+    rdfs:range sql:Expression .
+
+sql:partitionBy a rdf:Property ;
+    rdfs:domain sql:WindowFunction ;
+    rdfs:range rdf:List .
+
+sql:frame a rdf:Property ;
+    rdfs:domain sql:WindowFunction ;
+    rdfs:range sql:Frame .
+
+sql:Frame a owl:Class ;
+    rdfs:subClassOf sql:ASTNode .
+
+sql:frameUnit a owl:DatatypeProperty ;
+    rdfs:domain sql:Frame ;
+    rdfs:range xsd:string .
+
+sql:frameStart a owl:DatatypeProperty ;
+    rdfs:domain sql:Frame ;
+    rdfs:range xsd:string .
+
+sql:frameEnd a owl:DatatypeProperty ;
+    rdfs:domain sql:Frame ;
+    rdfs:range xsd:string .
+
+sql:qualify a rdf:Property ;
+    rdfs:subPropertyOf sql:hasClause ;
+    rdfs:domain sql:SelectStatement ;
+    rdfs:range sql:Expression ;
+    rdfs:comment "Window-filtering predicate (SQLRDF-25); rendered after HAVING, before ORDER BY/LIMIT." .
 
 # Order-by direction token ("ASC" | "DESC", ASC default; malformed is
 # REFUSAL-01, never a silent fold).
@@ -544,3 +615,28 @@ sql:MergeUpdateActionShape a sh:NodeShape ;
 # of each, compiler MissingProperty) is enforced at the compiler arm; a list-
 # item shape is not expressible against the rdf:List head under the section 4
 # collection-shape pattern used by this file.
+
+# =============================================================================
+# Statement Sequence (rec section 7)
+# =============================================================================
+
+sql:StatementSequence a owl:Class ;
+    rdfs:subClassOf sql:ASTNode ;
+    rdfs:label "Statement Sequence" ;
+    rdfs:comment "Ordered root carrying a list of top-level statements for multi-statement documents." .
+
+sql:statements a owl:ObjectProperty ;
+    rdfs:domain sql:StatementSequence ;
+    rdfs:range rdf:List ;
+    rdfs:comment "Ordered list head of the statements in the sequence (rdf:List, rec section 7)." .
+
+sql:StatementSequenceShape a sh:NodeShape ;
+    sh:targetClass sql:StatementSequence ;
+    sh:property [
+        sh:path sql:statements ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node sql:OrderedListShape ;
+        sh:severity sh:Violation ;
+        sh:message "A StatementSequence MUST carry exactly one sql:statements list head." ;
+    ] .

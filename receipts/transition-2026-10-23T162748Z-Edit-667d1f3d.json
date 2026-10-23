@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "667d1f3d2b42902030f252340569abb8083ce8ee4db0bc84d15f1061c4644b44",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T162748Z-Edit-667d1f3d.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/explanation/eh-closure-story.md",
+  "timestamp_utc": "2026-10-23T162748Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "db0e05418b6234a4949ae514d1ae47f15cdfd7796be3df179dcffb11e77caf50",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T185419Z-Edit-db0e0541.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/frozen-duckdb/crates/frozen-duckdb-sys/wasi_posix.c",
+  "timestamp_utc": "2026-10-23T185419Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

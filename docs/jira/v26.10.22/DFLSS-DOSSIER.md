@@ -78,7 +78,7 @@ Landed (code + courts):
 | --- | --- | --- |
 | R1 canon-once | `CompiledQuery.canon_graph_bytes` — `src/sql_ast/ast.rs:335` (field), `src/sql_ast.rs:1238` (initializer); pointers re-verified 2026-10-22, the earlier `src/sql_ast.rs:367/383/511` pointers predate the module split | chicago 9/9, lib 17/17, dialect 25/25 at 12:57 PDT (re-run 33/0 on 2026-10-22), trust 10/0 (re-run 10/0) |
 | M3 receipt_state (fold path) | fold 184–216 ns/op inside TC-HOT-01 budget | [designs/hot-path-baseline.md](designs/hot-path-baseline.md) |
-| C1-a cache store | `src/query_cache.rs` (epoch-bounded, F1–F5) | `cargo test --test query_cache_court` → 7 passed; 0 failed (0.08s), re-executed 13:5x PDT |
+| C1-a cache store | `src/query_cache.rs` (epoch-bounded, F1–F5) | `cargo test --test query_cache_court` → re-measured 2026-10-23: 8 passed / 0 failed (at 13:5x: 7 passed / 0 failed, 0.08s) |
 | Evidentiary SPSC ring | `src/evidence_ring.rs`, feature `evidentiary-ring` (`Cargo.toml:63`), default-off | ring court 10/0 (re-run 2026-10-22; 6/0 at filing) incl. `joint_ring_to_query_ledger_court`; max push **292 ns** vs 10 µs fence; 1M-push no-blocking property test |
 | Cold-path query ledger | `src/query_ledger.rs` (F1–F7 + format court) | `cargo test --test query_ledger_court` → re-executed by THIS lane at dossier assembly (~14:0x PDT), embedded output: `test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s`, exit 0 (re-run 9/0 on 2026-10-22, finished 0.37s) |
 | Prepared-statement seam | LRU 256; `$N`-bound params so same digest+params hits the cached handle | part of the Phase-2 landing batch |
@@ -277,3 +277,45 @@ From cwd `/Users/sac/graphlaw`:
 Deltas vs the as-of-14:0x counts above: ring 6→10, cache 7→8, dialect
 25→33, laundering 11→23, conformance 5→7; chicago 9/0, ledger 9/0,
 trust_attest 10/0 unchanged.
+
+## Wave update 2026-10-23 (EH closure + in-wasm DuckDB)
+
+Map of the CTQ matrix (§2) to witnessed status as of this wave. Counts are
+re-read from the register/receipts at use time; aspirational claims in §4
+stay flagged as such.
+
+### CTQ status
+
+- **CTQ-1 (in-WASM op dispatch)**: WITNESSED — capability gates removed;
+  wasm32 link with Tag×1 confirmed; Court C instantiation PASS under
+  wasmtime 48 `wasm_exceptions`. Full op execution pending the dtor-runner
+  trap (SQLRDF-24).
+- **CTQ-2 (full lifecycle)**: WITNESSED host-side — `duckdb_op` 16/0,
+  session lifecycle courts, document sequences 18/0 + 32/0. In-wasm
+  TC-FIBO-03 (SHACL refusal) + TC-FIBO-08 (COPY egress) ALIVE;
+  TC-01/02 pending-artifact.
+- **CTQ-3 (admission latency)**: UNCHANGED — the SPC court owns the only
+  measured latency claims (H_query fold 184-216 ns budget vs ≤250 gate).
+  No new latency claims are made by this wave.
+- **CTQ-4 (structural containment)**: WITNESSED — REFUSAL-05 at both
+  layers (shape `xone`→`or` message + compiler arm), 36/0 dialect +
+  8/0 conformance registered, TC-FIBO-03 refusal with DB byte-identical.
+- **CTQ-5 (receipt determinism)**: WITNESSED — receipt chain VERIFIED at
+  773 receipts; epoch CAS/flush courts green (MERGE epoch, document
+  batches); H_query law unchanged.
+
+### FMEA update (§4)
+
+- **F4 superseded**: the wasm-boundary capability-leak row is closed by
+  the capability promotion + REFUSAL-05 double-layer refusal; the leak
+  channel it guarded no longer exists on this head.
+- **NEW row F5**: artifact dtor-runner trap — effect: full op execution
+  inside wasm aborts at teardown; severity S9, occurrence O4, detection
+  D2 → RPN 72. Mitigation: uniform new-EH libc++/libunwind candidates +
+  opcode gates. Status: OPEN (tracked as SQLRDF-24).
+
+### Honesty note
+
+The "42 ns admission" figure remains an aspirational §4 target, not a
+witnessed measurement; the only measured latency claims remain the SPC
+court's H_query fold budget (CTQ-3 above).

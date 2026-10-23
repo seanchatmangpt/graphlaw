@@ -119,3 +119,126 @@ Per-lane standing is recorded in RECEIPTS.md, not duplicated here.
 - Compile-freeze SLA ~10 min; minimal unblock fixes disclosed in both lanes'
   reports.
 - Conflict rules: A2/D1 share docs/refusals.md — A2 read-only, D1 writer.
+- Archive law (appended 2026-10-23, EH-closure wave): any future `libduckdb.a`
+  rebuild MUST carry `-mllvm -wasm-use-legacy-eh=0` (with `-fwasm-exceptions`);
+  wasmtime 48 is the only hosting runtime for the New-EH artifact; wasmi
+  courts stay pinned to the legacy artifact class.
+
+## Coordinator discipline (appended 2026-10-23, lane M16)
+
+Witnessed defect class (2026-10-22/23 waves): the coordinator killed lane Z22
+mid-edit, leaving the shared compile broken for ~10 minutes until the SLA
+resolved it; four lanes separately reported false-green exits from pipe tails.
+
+1. **No TaskStop on a lane holding an uncommitted shared edit.** Before killing
+   a lane with in-flight edits to shared `src/` (or any shared surface), either
+   (a) message the lane to revert its edit and confirm the revert landed, or
+   (b) wait out the compile-freeze SLA resolution. A mid-edit kill converts one
+   lane's in-flight state into a whole-fleet compile freeze — the SLA is a
+   repair budget, not a license.
+2. **Post-kill ground truth is the coordinator's first act.** Immediately after
+   any lane kill: run `cargo check` on the shared tree and `git diff` the
+   killed lanes' lease paths. Do not redispatch or re-lease until the tree is
+   witnessed compiling and the killed lanes' partial edits are inventoried
+   (revert, adopt, or disclose per the compile-freeze SLA).
+3. **PIPESTATUS law: exit codes from pipes are not receipts.** `cmd1 | cmd2 |
+   tail` reports the LAST command's exit status — a lane reading `$?` after a
+   pipe has reported PASS off a `tail` that always exits 0 (witnessed 4x this
+   wave). Under zsh use the `pipefail` option or check the pipe-status array
+   (`$pipestatus`; bash: `PIPESTATUS`); the receipt must embed the exit code of
+   the gate command itself, not of a formatter/filter downstream of it.
+
+---
+
+## Waves K/M/N/P + operator directives (appended 2026-10-23, lane P3/DOC)
+
+- **Wave K — adversarial null-hypothesis run** (2026-10-22/23): per-lane
+  verdicts recorded in RECEIPTS.md ("Wave K — adversarial null-hypothesis run",
+  line 900).
+- **Wave M — mistake-proofing guards landed**:
+  - M00 archive: superseded docs moved to `docs/archive/`.
+  - M01 anchor gate + M19: doc-staleness findings 31 → 0.
+  - M02 witness gate: +178 unreceipted-claim findings surfaced.
+  - M03 count gate: +29 stale-count findings surfaced.
+  - M04 oracle gate; M06 64-byte receipt tamper court; M07/N7 real readbacks;
+    M08 in flight (not landed).
+  - M09/N1 machine-shaped receipts; M10 receipt vector pin; M11 exit-capture.
+  - M12 register completeness; M13 js regen 198 passed / 0 failed.
+  - M14 flag court; M15 corpus depth 17; M16 kill discipline (see coordinator
+    discipline above); M17 bins; M18 fleet_cleanup reclaimed 68.69 GiB.
+- **Wave PM — pm4pytest migration**: PM1 cut; PM2 e2e WORKS; PM3 15/0
+  black-box; PM4–PM8 in flight.
+- **Operator directives honored**: safety snapshot dab6a73 pushed; docs
+  archived to `docs/archive/`; pm4pytest adopted as external oracle.
+
+## Wave EH — DFLSS-GL EH-closure (~30 lanes, 2026-10-23)
+
+Dispatch table (coordinator-dispatched lanes; per-lane receipts in
+RECEIPTS.md "DFLSS-GL EH-closure wave", W1–W14 rows):
+
+| Lane | Purpose | Mode |
+|---|---|---|
+| EH-01 | gate removal, src/lib.rs + src/abi.rs (W4) | REPAIR |
+| EH-02 | registry/capabilities ungate (W4) | REPAIR |
+| EH-03 | op-15 gate lift (W4) | REPAIR |
+| EH-04 | MERGE classification court (W5, 12/0 + flip) | REPAIR |
+| EH-05 | REFUSAL-05 compiler arm (W11, PENDING) | REPAIR |
+| EH-06 | ggen WHERE shapes (W6) | REPAIR |
+| EH-07 | ast_governance mirror (W6) | REPAIR |
+| EH-08 | wasmtime host bin (W12, PENDING) | REPAIR |
+| EH-09 | lifecycle EH court (W10, PENDING) | REPAIR |
+| EH-10 | wired-op court flip (W7) | REPAIR |
+| EH-11 | gws4 court | REPAIR |
+| EH-12 | registry courts (W7, 7/0 + 14/0) | VERIFY |
+| EH-13 | refusals register, REFUSAL-05 row (W7) | DOC |
+| EH-14 | SQLRDF-21 + FIBO docs (W8) | DOC |
+| EH-15 | WASM docs (W8) | DOC |
+| EH-16 | ARCH/DIALECTS docs (W8) | DOC |
+| EH-17 | pm4pytest survey (W13, PENDING) | RESEARCH |
+| EH-18 | COPY/ATTACH audit | AUDIT |
+| EH-19 | FIBO fixtures | REPAIR |
+| EH-20 | abi_manifest note | DOC |
+| EH-21 | size court | VERIFY |
+| EH-22 | RECEIPTS append | DOC |
+| EH-23 | registry courts 2 | VERIFY |
+| EH-24 | dialect court fixtures | REPAIR |
+| EH-25 | host-side court | REPAIR |
+| EH-26 | pm4pytest driver (PENDING) | REPAIR |
+| EH-27 | CI update | LANDED |
+| EH-28 | pin-receipt draft | DOC |
+| EH-29 | residual-claims sweep | AUDIT |
+| EH-30 | xone shape repair (OPEN) | REPAIR |
+| EH-31 | session mode (OPEN: duckdb_op persistent sessions) | REPAIR |
+| EH-32 | REFUSAL-05 court fixtures (W11, PENDING) | REPAIR |
+
+Standing: W1–W8 GREEN (RECEIPTS.md rows); CI landed; size court landed;
+OPEN/PENDING rows: EH-05/32 (REFUSAL-05 arm + fixtures), EH-08 (wasmtime
+host bin), EH-09 (lifecycle EH court), EH-13 open pending receipt, EH-17/26
+(pm4pytest), EH-30 (xone shape repair), EH-31 (session mode). W14 mutation
++ SPC BLOCKED on clean tree/commit.
+
+### Status refresh — 2026-10-23 (append-only; table above not rewritten)
+
+GREEN since table was written (receipts in RECEIPTS.md unless noted):
+
+- EH-20: abi_manifest note landed (2/0 court).
+- WASM boundary: wasm contract 10/0 + wasm32 build check clean.
+- EH-21: size court 4/0.
+- Registry ascii fix landed.
+- EH-32/05: REFUSAL-05 pin courts 36/0; conformance arm 8/0.
+- Session ABI court 9/9; host-side court (EH-25) 8/8.
+- EH-24: dialect fixtures 36/0 + chicago 12/0.
+- Memory-wall port 8/8.
+- graphlaw-run pre-flight exit 96 witnessed live.
+- Docs: how-to, index, CHANGELOG/MIGRATION, OD-1 fill (EH-15/16/22/28).
+- Pin-receipt draft witnessed: built digest 259cf5b0…, Tag×1.
+- pack-smoke PASS after THESIS.md drop; npm re-band landed.
+
+V-verification lanes all GREEN except items noted below.
+
+Still OPEN:
+
+- duckdb-open trap (`uninitialized element`) under diagnosis.
+- EH-10: wired-op court flip still silent — no flip witnessed.
+- Common-Host, fuzz, and abi ports not yet landed.
+- Test census (compile-abort vs failure split) not yet landed.

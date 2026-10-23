@@ -46,10 +46,7 @@ fn scratch(name: &str) -> PathBuf {
 
 #[test]
 fn help_exits_zero_for_both_bins() {
-    for (mut c, marker) in [
-        (t2t(), "--transcript"),
-        (broaden(), "--in-ttl"),
-    ] {
+    for (mut c, marker) in [(t2t(), "--transcript"), (broaden(), "--in-ttl")] {
         let o = out(c.arg("--help"));
         let so = stdout(&o);
         assert_eq!(o.status.code(), Some(0), "stdout={so}");
@@ -155,7 +152,12 @@ fn tiny_inline_transcript_runs_end_to_end() {
         ttl.to_str().unwrap(),
     ]));
     let so = stdout(&o);
-    assert_eq!(o.status.code(), Some(0), "stdout={so} stderr={}", stderr(&o));
+    assert_eq!(
+        o.status.code(),
+        Some(0),
+        "stdout={so} stderr={}",
+        stderr(&o)
+    );
     assert!(
         so.contains("wrote:") && so.contains("total extracted turns: 2"),
         "expected run summary, got:\n{so}"

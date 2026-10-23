@@ -1,7 +1,9 @@
-//! Runs the *compiled* WebAssembly module in a real wasm runtime (wasmi) and
-//! drives every dialect and capability through the JSON ABI, exactly as a host
-//! such as Elixir/Wasmex would. Set `GRAPHLAW_WASM` to test a prebuilt module;
-//! otherwise the module is built once into `target/wasm-abi`.
+//! Runs the *compiled* WebAssembly module in a real wasm runtime (wasmtime 48
+//! with W3C exceptions enabled — wasmi 2 rejects the DuckDB-linked artifact's
+//! exception tag section, audit row 3) and drives every dialect and capability
+//! through the JSON ABI, exactly as a host such as Elixir/Wasmex would. Set
+//! `GRAPHLAW_WASM` to test a prebuilt module; otherwise the module is built
+//! once into `target/wasm-abi`.
 #![cfg(not(target_arch = "wasm32"))]
 
 use std::path::PathBuf;
@@ -9,8 +11,9 @@ use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 
 use serde_json::{Value, json};
-use wasmi::{Engine, Instance, Linker, Memory, Module, Store, TypedFunc};
-use wasmi_wasi::{WasiCtx, WasiCtxBuilder};
+use wasmtime::{Config, Engine, Instance, Linker, Memory, Module, Store, TypedFunc};
+use wasmtime_wasi::p1::{WasiP1Ctx, add_to_linker_sync};
+use wasmtime_wasi::WasiCtxBuilder;
 
 fn wasm_path() -> PathBuf {
     if let Some(p) = std::env::var_os("GRAPHLAW_WASM") {
@@ -41,7 +44,7 @@ fn wasm_path() -> PathBuf {
 }
 
 struct Host {
-    store: Store<WasiCtx>,
+    store: Store<WasiP1Ctx>,
     memory: Memory,
     alloc: TypedFunc<u32, u32>,
     free: TypedFunc<(u32, u32), ()>,
@@ -51,7 +54,11 @@ struct Host {
 impl Host {
     fn new() -> Self {
         let bytes = std::fs::read(wasm_path()).expect("wasm artifact");
-        let engine = Engine::default();
+        // W3C exceptions must be on: the DuckDB-linked artifact carries an
+        // exception tag section (id 13) that a default engine rejects.
+        let mut cfg = Config::new();
+        cfg.wasm_exceptions(true);
+        let engine = Engine::new(&cfg).expect("engine");
         let module = Module::new(&engine, &bytes[..]).expect("valid wasm");
         // The only imports allowed are WASI's (clock, random, stdio): no JavaScript glue.
         for i in module.imports() {
@@ -63,23 +70,23 @@ impl Host {
                 i.name()
             );
         }
-        let mut store = Store::new(&engine, WasiCtxBuilder::new().build());
-        let mut linker = <Linker<WasiCtx>>::new(&engine);
-        wasmi_wasi::add_to_linker(&mut linker, |ctx| ctx).expect("links WASI");
+        let mut store = Store::new(&engine, WasiCtxBuilder::new().build_p1());
+        let mut linker = <Linker<WasiP1Ctx>>::new(&engine);
+        add_to_linker_sync(&mut linker, |ctx| ctx).expect("links WASI");
         let instance: Instance = linker
-            .instantiate_and_start(&mut store, &module)
+            .instantiate(&mut store, &module)
             .expect("instantiates");
         // Reactor-style modules expose `_initialize`; hosts must call it once.
-        if let Ok(init) = instance.get_typed_func::<(), ()>(&store, "_initialize") {
+        if let Ok(init) = instance.get_typed_func::<(), ()>(&mut store, "_initialize") {
             init.call(&mut store, ()).expect("_initialize");
         }
         let memory = instance
-            .get_memory(&store, "memory")
+            .get_memory(&mut store, "memory")
             .expect("exports memory");
         Host {
-            alloc: instance.get_typed_func(&store, "gl_alloc").unwrap(),
-            free: instance.get_typed_func(&store, "gl_free").unwrap(),
-            call: instance.get_typed_func(&store, "gl_call").unwrap(),
+            alloc: instance.get_typed_func(&mut store, "gl_alloc").unwrap(),
+            free: instance.get_typed_func(&mut store, "gl_free").unwrap(),
+            call: instance.get_typed_func(&mut store, "gl_call").unwrap(),
             store,
             memory,
         }

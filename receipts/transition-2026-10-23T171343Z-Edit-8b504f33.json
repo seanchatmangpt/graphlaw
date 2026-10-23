@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "8b504f335b30b9806e3cbeac75873f10e81c6262d317e42988c972edbb9e5045",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T171343Z-Edit-8b504f33.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/src/sql_ast/refusals.rs",
+  "timestamp_utc": "2026-10-23T171343Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

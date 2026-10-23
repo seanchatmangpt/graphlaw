@@ -32,9 +32,7 @@
 //! proves the two-node hash is a real function of `P_params` (a mutated
 //! param is detectable), not that a signer cannot lie.
 
-use graphlaw::duckdb_eval::{
-    GraphLawDuckDB, admitted_statement_hash, fold_params_anchored,
-};
+use graphlaw::duckdb_eval::{GraphLawDuckDB, admitted_statement_hash, fold_params_anchored};
 use graphlaw::sql_ast::{SqlLiteral, compile_turtle};
 
 /// The §4 SELECT document (rec §4, `docs/reference/sql-rdf-rec.md`), fixed
@@ -125,10 +123,9 @@ fn wo08_two_verifiers_agree_on_h_query() {
             "http://example.org/data",
             "http://example.org/vocab",
         )
-    .expect("verifier B eval must succeed");
+        .expect("verifier B eval must succeed");
     assert_eq!(
-        h_a,
-        receipt_b.query_hash,
+        h_a, receipt_b.query_hash,
         "verifier B's own receipt H_query must be byte-identical to A's"
     );
 

@@ -22,13 +22,11 @@ use std::time::Instant;
 
 fn main() {
     let mut args = std::env::args().skip(1);
-    let path = args
-        .next()
-        .unwrap_or_else(|| {
-            eprintln!("usage: cargo run --example gws8_shacl_native -- <request.json> <n>");
-            eprintln!("fixture: examples/fixtures/gws8_request.json");
-            std::process::exit(2);
-        });
+    let path = args.next().unwrap_or_else(|| {
+        eprintln!("usage: cargo run --example gws8_shacl_native -- <request.json> <n>");
+        eprintln!("fixture: examples/fixtures/gws8_request.json");
+        std::process::exit(2);
+    });
     let n: u32 = args
         .next()
         .unwrap_or_else(|| {

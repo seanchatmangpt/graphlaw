@@ -32,10 +32,7 @@ fn duckdb_revision_matches_cargo_pin() {
         // The requirement names the published revision. `2.0` would still
         // accept 2.0.0, whose build script emits `dylib=duckdb`.
         assert!(
-            toml.contains(&format!(
-                "frozen-duckdb = {{ version = \"{}\"",
-                a.revision
-            )),
+            toml.contains(&format!("frozen-duckdb = {{ version = \"{}\"", a.revision)),
             "{} claims frozen-duckdb {} but Cargo.toml disagrees",
             a.capability,
             a.revision

@@ -17,39 +17,42 @@ use graphlaw::receipt_chain::{
 };
 
 /// The committed fixture's `record` object, verbatim JSON. Canonical copy:
-    /// `tests/fixtures/fm_chain_009.json`; this pin makes any one-sided edit
-    /// fail loudly (shared-fixture drift guard, seam #28).
-    const FIXTURE_BLAKE3: &str = "d52282d8c48e9021ff6f78e413d8a79dbffbc6b28e28db9a9d855f5810bb3185";
+/// `tests/fixtures/fm_chain_009.json`; this pin makes any one-sided edit
+/// fail loudly (shared-fixture drift guard, seam #28).
+const FIXTURE_BLAKE3: &str = "d52282d8c48e9021ff6f78e413d8a79dbffbc6b28e28db9a9d855f5810bb3185";
 
-    /// Path of the canonical fixture, relative to CARGO_MANIFEST_DIR.
-    const FIXTURE_PATH: &str = "tests/fixtures/fm_chain_009.json";
+/// Path of the canonical fixture, relative to CARGO_MANIFEST_DIR.
+const FIXTURE_PATH: &str = "tests/fixtures/fm_chain_009.json";
 
-    /// Load the fixture bytes and verify the pin before any test consumes it.
-    fn fixture_bytes() -> Vec<u8> {
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(FIXTURE_PATH);
-        let bytes = std::fs::read(&path).expect("fixture file readable");
-        let got = hex::encode(blake3::hash(&bytes).as_bytes());
-        assert_eq!(got, FIXTURE_BLAKE3, "fixture drift: {FIXTURE_PATH} changed; if intentional, re-pin FIXTURE_BLAKE3 AND mirror the byte-identical copy in affidavit-core/tests/fixtures/fm_chain_009.json");
-        bytes
-    }
+/// Load the fixture bytes and verify the pin before any test consumes it.
+fn fixture_bytes() -> Vec<u8> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(FIXTURE_PATH);
+    let bytes = std::fs::read(&path).expect("fixture file readable");
+    let got = hex::encode(blake3::hash(&bytes).as_bytes());
+    assert_eq!(
+        got, FIXTURE_BLAKE3,
+        "fixture drift: {FIXTURE_PATH} changed; if intentional, re-pin FIXTURE_BLAKE3 AND mirror the byte-identical copy in affidavit-core/tests/fixtures/fm_chain_009.json"
+    );
+    bytes
+}
 
-    /// Fixture as a &str for serde_json::from_str consumers.
-    fn fixture_json() -> String {
-        String::from_utf8(fixture_bytes()).expect("fixture is utf-8")
-    }
+/// Fixture as a &str for serde_json::from_str consumers.
+fn fixture_json() -> String {
+    String::from_utf8(fixture_bytes()).expect("fixture is utf-8")
+}
 
-    #[test]
-    fn fixture_pin_detects_one_sided_edits() {
-        // Re-hashes independently of fixture_bytes' internal check so a pin
-        // regression is a distinct, named failure.
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(FIXTURE_PATH);
-        let bytes = std::fs::read(&path).expect("fixture file readable");
-        assert_eq!(
-            hex::encode(blake3::hash(&bytes).as_bytes()),
-            FIXTURE_BLAKE3,
-            "FM-CHAIN-009 fixture edited without re-pinning in both repos"
-        );
-    }
+#[test]
+fn fixture_pin_detects_one_sided_edits() {
+    // Re-hashes independently of fixture_bytes' internal check so a pin
+    // regression is a distinct, named failure.
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(FIXTURE_PATH);
+    let bytes = std::fs::read(&path).expect("fixture file readable");
+    assert_eq!(
+        hex::encode(blake3::hash(&bytes).as_bytes()),
+        FIXTURE_BLAKE3,
+        "FM-CHAIN-009 fixture edited without re-pinning in both repos"
+    );
+}
 
 #[test]
 fn receipt_record_version_is_frozen() {

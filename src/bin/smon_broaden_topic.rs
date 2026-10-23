@@ -40,7 +40,9 @@ fn check_args() -> Result<(), ToolError> {
                 .get(i + 1)
                 .ok_or_else(|| format!("{a} needs a value (see --help)"))?;
             if v.starts_with("--") {
-                return Err(format!("{a} needs a value; found another flag `{v}` (see --help)"));
+                return Err(format!(
+                    "{a} needs a value; found another flag `{v}` (see --help)"
+                ));
             }
             i += 2;
         } else {

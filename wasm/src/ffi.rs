@@ -47,8 +47,8 @@
 // Native builds only exercise the helpers through tests; the exports are wasm32-only.
 #![cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 
-use crate::abi_meta::MAX_REQUEST_BYTES;
 use crate::abi_meta::MAX_OUTSTANDING_BYTES;
+use crate::abi_meta::MAX_REQUEST_BYTES;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 /// Bytes handed to the host (`_alloc` buffers and `_call` responses) and not yet freed.
@@ -61,7 +61,8 @@ use std::sync::Mutex;
 fn reserve(bytes: usize) -> bool {
     OUTSTANDING
         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
-            n.checked_add(bytes).filter(|total| *total <= MAX_OUTSTANDING_BYTES)
+            n.checked_add(bytes)
+                .filter(|total| *total <= MAX_OUTSTANDING_BYTES)
         })
         .is_ok()
 }
@@ -233,11 +234,7 @@ fn pack_response(response: Vec<u8>) -> u64 {
     }
     // The response itself would exceed the outstanding cap. Hand back a small
     // typed limit error, counted when it fits.
-    let err = graphlaw::abi::limit_response(
-        "outstanding_bytes",
-        budget,
-        MAX_OUTSTANDING_BYTES,
-    );
+    let err = graphlaw::abi::limit_response("outstanding_bytes", budget, MAX_OUTSTANDING_BYTES);
     let err_budget = err.len().max(1);
     if reserve(err_budget) {
         return publish_response(err, err_budget);

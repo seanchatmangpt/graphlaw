@@ -43,7 +43,7 @@
     "Eyeron",
     "FrozenDuckdb"
   ],
-  "graphlaw_version": "26.10.21",
+  "graphlaw_version": "26.10.22",
   "law_steps": [
     {
       "ceiling": "observe",
@@ -92,6 +92,12 @@
       "order": 4
     },
     {
+      "ceiling": "observe",
+      "fields": [],
+      "name": "sql",
+      "order": 5
+    },
+    {
       "ceiling": "construct",
       "fields": [
         {
@@ -106,7 +112,7 @@
         }
       ],
       "name": "hooks",
-      "order": 5
+      "order": 6
     },
     {
       "ceiling": "select",
@@ -123,13 +129,13 @@
         }
       ],
       "name": "plan",
-      "order": 6
+      "order": 7
     },
     {
       "ceiling": null,
       "fields": [],
       "name": "record-receipts",
-      "order": 7
+      "order": 8
     },
     {
       "ceiling": "observe",
@@ -146,7 +152,7 @@
         }
       ],
       "name": "require-receipt",
-      "order": 8
+      "order": 9
     },
     {
       "ceiling": "observe",
@@ -173,7 +179,7 @@
         }
       ],
       "name": "require-signed-receipt",
-      "order": 9
+      "order": 10
     }
   ],
   "lease_ceilings": [
@@ -1976,7 +1982,7 @@
     {
       "aliases": [],
       "kind": "other",
-      "media_type": null,
+      "media_type": "text/turtle",
       "name": "sql",
       "order": 12,
       "response_name": "SqlRdf"
@@ -2100,23 +2106,23 @@
   "receipt_surface": {
     "files": [
       {
-        "blake3": "blake3:3c52e1af3f712c7991f92001b158b29ae21872d068cf201dd2d6a09cd19907f6",
-        "bytes": 74573,
+        "blake3": "blake3:52cdcb759cf16d62e1a02ad1e303775be60cb40b57441559803d15683cecc46b",
+        "bytes": 119831,
         "path": "src/duckdb_eval.rs"
       },
       {
-        "blake3": "blake3:9f2822c0db33e84b5f3d5d9ddb795ac3e714746f7e8ab3766777de46df11f819",
-        "bytes": 100074,
+        "blake3": "blake3:26fcff71d94b7ffd5397a39b2590dd0cb868cfe8f2149790923ccab6b55bd0ca",
+        "bytes": 147962,
         "path": "src/sql_ast.rs"
       },
       {
-        "blake3": "blake3:c644b87aa5e349cfac550c5639347868fc2a10339d14ff1d14ce0a49b3a21051",
-        "bytes": 19098,
+        "blake3": "blake3:b1bb31cf7615e60093a90be5120a9b72ff076fde54e6efcfa7782fd16d7be26d",
+        "bytes": 19917,
         "path": "src/sql_ast/ast.rs"
       },
       {
-        "blake3": "blake3:a0857eceb037a03a3d60d1f296eaac4ceb74f0677ebd57f3c1a5b7103104f9a2",
-        "bytes": 28243,
+        "blake3": "blake3:059ce305fdb492b1030f3f5d849af54a6b816d373f8388eb2a309b9aa4880bc8",
+        "bytes": 32315,
         "path": "src/sql_ast/refusals.rs"
       },
       {
@@ -2125,14 +2131,14 @@
         "path": "src/sql_ast/serializer.rs"
       },
       {
-        "blake3": "blake3:c6d560af2c7cb972b079436a767329507fa89bcf15812113ceb8ee4ff7b60034",
-        "bytes": 20394,
+        "blake3": "blake3:fc5e0cf549c998ed5033215c1591d44f1449229a12ce248a5ca65935cb98d967",
+        "bytes": 21372,
         "path": "ontologies/sql-ast.ttl"
       }
     ],
     "schema": "graphlaw.receipt-surface/1"
   },
-  "receipt_surface_blake3": "blake3:ba11052d068da19d848c0dd56e81a5a688dd2f3f7b85e9b221f9cf59f3f5a36a",
+  "receipt_surface_blake3": "blake3:c14f6b1d8f12e63e1544dcb093e2b2736237e2e340585f509837a6ba75d4bc90",
   "refusal_codes": [
     {
       "code": "Refused",
@@ -2349,7 +2355,7 @@
       "fields": [
         {
           "default": null,
-          "doc": "Diagnostic text from the embedded DuckDB substrate (ABI op `duckdb`, linked into the wasm module).",
+          "doc": "Diagnostic text from the DuckDB substrate (ABI op `duckdb`; dispatches inside the graphlaw-wasm unit on every target (in-module, not host-only) but stays off the hashed 14-op table for digest stability).",
           "enum": null,
           "name": "message",
           "nullable": false,
@@ -2425,7 +2431,7 @@
     "owl-rl",
     "d"
   ],
-  "registry_blake3": "blake3:e227367e13ce8110d97fe29f252bdb69e22e872a5be4117ccbce4bbc9c6477d7",
+  "registry_blake3": "blake3:cdead01f74a86a1ed7ded9a7acf2bebd99caa45221f2a0551316e35941bf59ed",
   "schema": "graphlaw.capability-registry/1",
   "surface_blake3": "blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9"
 }

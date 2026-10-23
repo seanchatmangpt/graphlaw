@@ -22,7 +22,13 @@ const DOC_PREFIX: &str = r#"@prefix sql: <http://graphlaw.org/sql#> .
 
 #[test]
 fn test_edge_zero_trust_semantic_compaction_10000_to_1() {
-    let base_dir = format!("/tmp/edge_compaction_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+    let base_dir = format!(
+        "/tmp/edge_compaction_{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
     let _ = fs::remove_dir_all(&base_dir);
     fs::create_dir_all(&base_dir).unwrap();
 
@@ -44,11 +50,21 @@ fn test_edge_zero_trust_semantic_compaction_10000_to_1() {
     db.raw_connection().execute_batch(&gen_sql).unwrap();
 
     // Measure raw physical size
-    let raw_bytes = fs::metadata(format!("{}/dense_sensor_stream.parquet", base_dir)).unwrap().len();
-    assert!(raw_bytes > 20_000, "Raw Parquet buffer should hold 10,000 events");
+    let raw_bytes = fs::metadata(format!("{}/dense_sensor_stream.parquet", base_dir))
+        .unwrap()
+        .len();
+    assert!(
+        raw_bytes > 20_000,
+        "Raw Parquet buffer should hold 10,000 events"
+    );
 
     // 2. Mount local buffer as zero-copy virtual table
-    db.register_parquet_view("dense_sensor_stream", &format!("{}/dense_sensor_stream.parquet", base_dir), false).unwrap();
+    db.register_parquet_view(
+        "dense_sensor_stream",
+        &format!("{}/dense_sensor_stream.parquet", base_dir),
+        false,
+    )
+    .unwrap();
 
     // 3. Admitted AST graph for the reduction:
     // SELECT session_id, MAX(temp_celsius) AS max_temp, SUM(duration_seconds) AS excursion_duration
@@ -87,12 +103,14 @@ ex:Q a sql:SelectStatement ;
     let query_iri = "http://graphlaw.org/queries/EdgeCompactionQuery";
 
     // 4. Vectorized execution in embedded frozen-duckdb
-    let receipt = db.eval_ast_query(
-        query_iri,
-        &compiled,
-        "http://edge.device/telemetry",
-        "http://edge.device/vocab",
-    ).unwrap();
+    let receipt = db
+        .eval_ast_query(
+            query_iri,
+            &compiled,
+            "http://edge.device/telemetry",
+            "http://edge.device/vocab",
+        )
+        .unwrap();
 
     // Exactly 1 compacted row emitted from 10,000 raw events!
     assert_eq!(receipt.rows_emitted, 1);
@@ -110,7 +128,11 @@ ex:Q a sql:SelectStatement ;
 
     // 10,000 raw events in CSV/JSON would be ~600,000 bytes; compacted RDF payload is ~350 bytes!
     let compaction_ratio = (10_000 * 60) as f64 / compacted_bytes as f64;
-    assert!(compaction_ratio > 1000.0, "Uplink compaction ratio must exceed 1,000:1 (observed: {:.1}:1)", compaction_ratio);
+    assert!(
+        compaction_ratio > 1000.0,
+        "Uplink compaction ratio must exceed 1,000:1 (observed: {:.1}:1)",
+        compaction_ratio
+    );
 
     let _ = fs::remove_dir_all(&base_dir);
 }
@@ -124,8 +146,9 @@ fn test_edge_offline_sovereignty_and_fail_closed_lockout() {
     let db = GraphLawDuckDB::open_in_memory().unwrap();
 
     // Seed mock local ring buffer with an excursion anomaly
-    db.raw_connection().execute_batch(
-        "CREATE TABLE local_device_buffer (
+    db.raw_connection()
+        .execute_batch(
+            "CREATE TABLE local_device_buffer (
             device_id VARCHAR,
             metric_type VARCHAR,
             value_float DOUBLE,
@@ -137,7 +160,8 @@ fn test_edge_offline_sovereignty_and_fail_closed_lockout() {
 
         -- Device 002: Critical bearing failure excursion (> 4.0g)
         INSERT INTO local_device_buffer VALUES ('DEV-002', 'vibration_g', 5.8, 120);",
-    ).unwrap();
+        )
+        .unwrap();
 
     let doc = DOC_PREFIX.to_string()
         + r#"

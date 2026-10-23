@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "c73783755f2dd00c8d5efeac8353382b96de2a2c7a080b49a37b7dc6c5e75ec4",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T093304Z-Write-c7378375.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/ldc-probe/mkframes.py",
+  "timestamp_utc": "2026-10-23T093304Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

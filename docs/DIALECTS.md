@@ -64,6 +64,98 @@ In addition to pure RDF dataset and N3 logic dialects, GraphLaw admits declarati
   ignored).
 - **Output**: Vectorized execution directly over Parquet partitions or in-memory tables, emitting typed RDF statements accompanied by a BLAKE3 query execution receipt.
 
+### DuckDB op session mode (persistent connections)
+
+The `duckdb` ABI op (`src/duckdb_op.rs`) carries a named-session surface:
+a `mode: "open"` call registers a persistent in-memory connection that
+later `exec`/`stream` calls reuse, so a CREATE in one call is visible to a
+later INSERT/SELECT on the same session.
+
+Wire shapes:
+
+- Open: `{"op":"duckdb","mode":"open","session":"<name>"}` →
+  `{"ok":true,"session":"<name>"}`. Same GAP-2 pragmas as every connection
+  (memory_limit 32 MiB, threads=1); callers cannot override them from the
+  wire.
+- Exec/stream: the optional `"session"` field selects the named session
+  connection; without it, `exec` opens a fresh in-memory connection per
+  call (per-call ephemeral DDL/DML — back-compat, unchanged).
+- Close: `{"op":"duckdb","mode":"close","cursor"?,"session"?}` drops a
+  cursor and/or a session; unknown handles are idempotent-ok so a
+  crash-recovery path cannot wedge on close.
+
+Typed refusals (never a trap):
+
+- Unknown or expired session on `exec` with `"session"`:
+  "unknown or expired session `<name>`" (`src/duckdb_op.rs:323`).
+- Duplicate open: "session `<name>` already exists (close it before
+  reopening)" (`src/duckdb_op.rs:530`).
+- Over-cap open: 16 live sessions max (`MAX_SESSIONS`,
+  `src/duckdb_op.rs:79`); the 17th open is a `duckdb_sessions`
+  ResourceLimit refusal (`src/duckdb_op.rs:533`).
+
+Registry semantics: the session registry is process-local and crash-only
+(`sessions()`, `src/duckdb_op.rs:83-85`) — it dies with the process, like
+cursor state. Closing a session frees its connection; a subsequent open of
+the same name succeeds.
+
+## Document sequences (`"document":true` exec)
+
+SQLRDF-23 adds a whole-document exec path to the `duckdb` ABI op. The wire
+request carries `"document":true` plus the Turtle AST document:
+
+```json
+{"op":"duckdb","mode":"exec","document":true,"query_ast":"<iri>",
+ "ast":{"turtle":"<Turtle AST document>"},
+ "subject_prefix":"...","vocab_prefix":"..."}
+```
+
+Routing (`src/duckdb_op.rs:372-374`): the flag diverts to
+`exec_document_on` (`src/duckdb_op.rs:463`) before the single-statement
+compile path; the legacy path is untouched. The document compiles via
+`compile_turtle_document` and evaluates member-by-member on the target
+connection — a named session or a fresh connection, same routing as the
+single-statement path.
+
+Laws on the document path:
+
+- **SQLRDF-17, document form**: wire `params` are refused — a non-empty
+  wire param list is a typed refusal because each sequence member's
+  literals live in the Turtle AST document itself
+  (`src/duckdb_op.rs:474-477`). The AST document is the admission record.
+- **G6 ATTACH policy**: every member passes `enforce_attach_policy`
+  before the engine sees it (`src/duckdb_op.rs:479-481`), applied
+  per member, not per document.
+- **`ast.text` stays refused** (`src/duckdb_op.rs:357-360`) — graph-backed
+  statements only.
+
+Success answers a BatchReceipt wire shape:
+
+- `query_iri` — caller-supplied envelope IRI.
+- `doc_hash` — 64-hex BLAKE3 document hash, domain-separated, pinned by
+  `compile_turtle_document` (sequence-of-1 differs from bare form by
+  design; bare identity form is bit-identical to the pre-feature path).
+- `members` — one `ExecutionReceipt` per executed member, spine order.
+- `rows_emitted` — per-member row counts, same indexing.
+- `failed_at` — `null` on full success.
+
+A mid-sequence member failure is the typed `BatchMemberFailed` envelope,
+never a generic DB error (`src/duckdb_op.rs:507-524`): details carry
+`code: "BatchMemberFailed"`, `member` (0-based index), `message`, and
+`partial_receipt` — a `BatchReceipt` (`src/duckdb_eval.rs:408-421`) whose
+`members[0..failed_at]` executed and committed (documented best-effort
+sequential autocommit, `src/duckdb_eval.rs:401-405`); `members[i..]` did
+not execute. The error type is `EvaluatorError::BatchMemberFailed`
+(`src/duckdb_eval.rs:209-212`), folded by `eval_ast_document`
+(`src/duckdb_eval.rs:1052`).
+
+Courts (lib tests, `src/duckdb_op.rs:1091+`): three-member CREATE→INSERT→
+SELECT with real table readback; failing member yields the typed
+`BatchMemberFailed` envelope with partial receipt; legacy exec without the
+flag is unchanged. Witnessed 2026-10-23 (earlier lanes, not re-run this
+session — suite runs DISK-BLOCKED): duckdb_op lib 16 passed / 0 failed
+(3 document courts), duckdb_eval lib 18/0, sql_rdf_dialect 32/0.
+
 ## Support matrix
 
 The 14 dialects of `Dialect` (`src/dialect.rs`), and what the current surface
@@ -84,7 +176,7 @@ supports:
 | ShExC      | PurRDF | yes (needs `shex`/`shexc` hint vs TriG) | yes | no (validation only) | no |
 | ShExJ      | PurRDF | yes (`"type":"Schema"`) | yes | no (validation only) | no |
 | Sparql     | PurRDF | yes (SELECT/CONSTRUCT/ASK/… keywords) | yes | no (query/update text) | no |
-| SqlRdf     | frozen-duckdb | yes (`sql:SelectStatement`, or a `sql` hint) | yes | no (query AST) | no |
+| SqlRdf     | frozen-duckdb | yes (`sql:SelectStatement`, or a `sql` hint) | yes | yes (dataset parse: `media_type` is `Some("text/turtle")`, so `parse` returns quads + canonical id; shape check runs first) | yes |
 
 Notes, grounded in the code:
 
@@ -93,7 +185,8 @@ Notes, grounded in the code:
   N-Quads via the `canonical` op / `LawState::from_dataset`. The canonical id
   is the BLAKE3 of the RDFC-1.0 canonical N-Quads.
 - `convert` serializes between RDF **dataset** dialects only
-  (`to` = target dialect name). ShExC/ShExJ/SPARQL/N3 have no serializer.
+  (`to` = target dialect name). ShExC/ShExJ/SPARQL/N3 have no serializer;
+  SqlRdf does (it denotes a Turtle dataset).
 - Ambiguities that content alone cannot resolve — TriG vs ShExC
   (brace-delimited) — return `RefusalKind::Ambiguous` demanding a hint rather
   than guessing (`sniff`, `src/dialect.rs`).
@@ -111,7 +204,7 @@ match with a wildcard):
 | `Unsupported` | Valid, but not usable in this operation. |
 | `ResourceLimit` | A documented `abi::MAX_*` cap was exceeded. |
 | `TierMismatch` | The document belongs to the other semantic tier (R04): N3 logic to an RDF parser, or N3 sniffed undeclared. See `src/tier.rs`. |
-| `DuckDb` | The frozen-duckdb execution substrate (ABI op `duckdb`) failed or the request misused it. Never traps. Absence from the hashed 14-op registry list is not this refusal and is not REFUSAL-04. |
+| `DuckDb` | The frozen-duckdb execution substrate (ABI op `duckdb`) failed or the request misused it. Never traps. The op dispatches inside the wasm unit too (frozen-duckdb links on every target; AST-compiled statements only, raw SQL text still refused — SQLRDF-17). The op staying off the hashed 14-op registry table is a digest-stability choice (`registry_blake3` moves only on an explicit digest bump; `NATIVE_ONLY_OPS`, `src/registry/definitions.rs`), not a host-only statement — absence from `capabilities.ops` is not this refusal and is not REFUSAL-04. |
 
 ## Typed parse refusals
 

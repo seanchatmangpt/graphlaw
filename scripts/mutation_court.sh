@@ -6,6 +6,15 @@
 #   scripts/mutation_court.sh --check    run the court; exit 3 when any mutant in
 #                                        src/registry.rs or in the capabilities()/
 #                                        dispatch() bodies of src/abi.rs is MISSED
+#   scripts/mutation_court.sh --leg callsite-revert
+#                                        run ONLY the callsite-revert leg: patch
+#                                        law.rs authority_for_capability to return
+#                                        Ok unconditionally (SHIM-COURT), assert
+#                                        the law_state UNKNOWN-STEP-CAPABILITY
+#                                        court FAILS under the shim, restore
+#                                        byte-exact (sha256). Exit 7 on a vacuous
+#                                        leg (test still passes under the shim)
+#                                        or on shim compile failure.
 #
 # Streaming / resumability (L27):
 #   --log <file>    tee all court output (stdout+stderr) to <file> so per-case
@@ -35,11 +44,15 @@ MODE=run
 FORCE=0
 LOG_FILE=""
 CASES=()
+LEGS=()
 while [ $# -gt 0 ]; do
   case "$1" in
     "") shift ;;
     --list) MODE=list; shift ;;
     --check) MODE=check; shift ;;
+    --leg)
+      [ $# -ge 2 ] || { echo "mutation_court: --leg requires a name" >&2; exit 2; }
+      LEGS+=("$2"); shift 2 ;;
     --force) FORCE=1; shift ;;
     --log)
       [ $# -ge 2 ] || { echo "mutation_court: --log requires a file argument" >&2; exit 2; }
@@ -51,6 +64,104 @@ while [ $# -gt 0 ]; do
     *) echo "mutation_court: unknown argument: $1 (use --list | --check | --log F | --case N | --force)" >&2; exit 2 ;;
   esac
 done
+
+# ---- legs (defined + dispatched before the dirty-tree refusal; the leg is
+# ---- self-snapshotting and byte-exact-restoring, so --leg mode never gates on
+# ---- uncommitted src/ work) -----------------------------------------------
+# callsite-revert (lane M05, K10): the law_state capability court must fail when
+# the law.rs authority helper is neutered (returns Ok unconditionally). This is
+# the non-vacuity leg: a court that still passes under the shim is a vacuous
+# gate. Shim-court protocol: sha256 baseline -> shim applied and marked
+# SHIM-COURT -> court must FLIP -> byte-exact restore verified by sha256.
+leg_callsite_revert() {
+  local law=src/law.rs
+  local snap_dir
+  snap_dir="$(mktemp -d "${TMPDIR:-/tmp}/mutation-court-leg.XXXXXX")"
+  local snap="$snap_dir/law.rs.shim-court"
+  cp -p "$law" "$snap"
+  local sha_before now
+  sha_before="$(shasum -a 256 "$law" | awk '{print $1}')"
+
+  # Shim: replace the body of authority_for_capability with an unconditional Ok
+  # (first declared authority). Marked SHIM-COURT.
+  python3 - "$law" <<'PYEOF'
+import sys
+path = sys.argv[1]
+with open(path) as f:
+    lines = f.readlines()
+sig = "pub fn authority_for_capability(capability: &str) -> Result<BackendAuthority, LawError> {"
+idx = next(i for i, l in enumerate(lines) if sig in l)
+depth = 0
+end = None
+for i in range(idx, len(lines)):
+    depth += lines[i].count("{") - lines[i].count("}")
+    if depth == 0:
+        end = i
+        break
+body = [
+    sig + "\n",
+    "    // SHIM-COURT callsite-revert: helper neutered to always-Ok (never commit this)\n",
+    "    let _ = capability;\n",
+    "    Ok(BACKEND_AUTHORITIES[0])\n",
+    "}\n",
+]
+lines[idx:end + 1] = body
+with open(path, "w") as f:
+    f.writelines(lines)
+PYEOF
+  if ! grep -q "SHIM-COURT callsite-revert" "$law"; then
+    echo "mutation_court: callsite-revert leg FAILED to apply shim" >&2
+    cp "$snap" "$law"
+    exit 7
+  fi
+
+  # The court under the shim: must FAIL (flip). A compile abort is not a flip.
+  local out rc=0
+  out="$(cargo test --test law_state transition_with_unknown_capability_refuses_typed_end_to_end 2>&1)" || rc=$?
+  if printf '%s' "$out" | grep -qE 'error\[|could not compile'; then
+    printf '%s\n' "$out" | tail -40 >&2
+    echo "mutation_court: callsite-revert shim did not COMPILE (compile abort, not a flip)" >&2
+    cp "$snap" "$law"
+    exit 7
+  fi
+  if [ "$rc" -eq 0 ]; then
+    echo "mutation_court: VACUOUS COURT: law_state capability court still PASSES with the" >&2
+    echo "  authority helper neutered to always-Ok — the gate cannot exit 1. Exit 7." >&2
+    cp "$snap" "$law"
+    exit 7
+  fi
+  echo "mutation_court: callsite-revert leg: court FLIPPED under shim (exit $rc, expected)" >&2
+  echo "mutation_court: shim output tail:" >&2
+  printf '%s\n' "$out" | tail -6 >&2
+
+  # Restore + byte-exact verification.
+  cp "$snap" "$law"
+  now="$(shasum -a 256 "$law" | awk '{print $1}')"
+  if [ "$sha_before" != "$now" ]; then
+    echo "mutation_court: RESTORE FAILED for $law (sha256 mismatch: $sha_before != $now)" >&2
+    echo "mutation_court: snapshot kept at $snap — fix src/law.rs by hand" >&2
+    exit 4
+  fi
+  echo "mutation_court: callsite-revert restore byte-exact (sha256 $now verified)" >&2
+  rm -rf "$snap_dir"
+
+  # Post-restore sanity: the court passes on the unmutated tree.
+  if ! cargo test --test law_state transition_with_unknown_capability_refuses_typed_end_to_end >/dev/null 2>&1; then
+    echo "mutation_court: post-restore sanity FAILED: court does not pass on restored tree" >&2
+    exit 4
+  fi
+}
+
+if [ "${#LEGS[@]}" -gt 0 ]; then
+  for leg in "${LEGS[@]}"; do
+    case "$leg" in
+      callsite-revert) leg_callsite_revert ;;
+      *) echo "mutation_court: unknown leg: $leg" >&2; exit 2 ;;
+    esac
+  done
+  echo "mutation_court: all requested legs passed" >&2
+  exit 0
+fi
 
 # ---- tool presence (before any state is touched) ----------------------------
 MUTANTS_BIN="${CARGO_MUTANTS:-cargo-mutants}"
@@ -145,6 +256,12 @@ if [ -n "$LOG_FILE" ]; then
   : >"$LOG_FILE"
   exec > >(tee -a "$LOG_FILE") 2>&1
   echo "mutation_court: log file: $LOG_FILE"
+fi
+
+# run/check modes: the callsite-revert leg runs before cargo-mutants starts
+# (restore is byte-verified first, so no in-place collision).
+if [ "$MODE" != list ]; then
+  leg_callsite_revert
 fi
 
 if [ "$MODE" = list ]; then

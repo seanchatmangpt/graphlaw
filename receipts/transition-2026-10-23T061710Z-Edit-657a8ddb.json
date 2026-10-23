@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "657a8ddba8b28020ae818c37e25cdae3f81add5ff5591251f0b304e90a6fd372",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T061710Z-Edit-657a8ddb.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/designs/eyeron-switchover-fixforward.md",
+  "timestamp_utc": "2026-10-23T061710Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

@@ -644,7 +644,10 @@ fn main() {
             .args(["-C", env!("CARGO_MANIFEST_DIR"), "rev-parse", "HEAD"])
             .output()
             .expect("git rev-parse");
-        String::from_utf8(out.stdout).expect("utf8").trim().to_string()
+        String::from_utf8(out.stdout)
+            .expect("utf8")
+            .trim()
+            .to_string()
     };
 
     let dir = vecdir();

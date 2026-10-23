@@ -9,6 +9,11 @@ use std::fmt;
 pub const REFUSAL_01_MALFORMED_AST: &str = "[REFUSAL-01] MalformedAstRefusal:";
 pub const REFUSAL_02_UNIMPLEMENTED: &str = "[REFUSAL-02] UnimplementedStatementRefusal:";
 pub const REFUSAL_03_SCOPE_INTEGRITY: &str = "[REFUSAL-03] ScopeIntegrityRefusal:";
+/// Appended v26.10.22 (CTQ-4): a WHERE-less UPDATE/DELETE — no `sql:whereColumn`
+/// and no `sql:whereValue` on the statement node — would render unbounded SQL
+/// that mutates every row of the target table. Compile-time typed refusal;
+/// codes are append-only (`docs/refusals.md`), never renumbered.
+pub const REFUSAL_05_UNBOUNDED_MUTATION: &str = "[REFUSAL-05] UnboundedMutationRefusal:";
 
 /// Internal message-arm discriminants (`RefusalContext::shape_id`). Each
 /// stable refusal code has a fixed table of rendering arms; the arm selects
@@ -57,6 +62,55 @@ pub mod refusal_arm {
     /// sql:LeftJoin (unknown join-type IRIs refuse typed; a MISSING joinType
     /// predicate defaults to Inner and is not an arm here).
     pub const JOIN_TYPE_IRI: u16 = 37;
+    /// REFUSAL-05 arm: an UpdateStatement/DeleteStatement node carrying
+    /// neither `sql:whereColumn` nor `sql:whereValue` — the rendered SQL would
+    /// mutate every row of the target table with no predicate. Appended
+    /// append-only; never renumbered.
+    pub const UNBOUNDED_MUTATION: u16 = 38;
+    /// REFUSAL-01 arm (SQLRDF-23, appended append-only): a document carries
+    /// more than one top-level statement root, or both a bare
+    /// `sql:*Statement` root and a `sql:StatementSequence` root. Closes the
+    /// silent lexicographic-pick hazard (`statement_kind` sorted and took
+    /// `.next()`). Recovery: exactly one root per document.
+    pub const MIXED_DOCUMENT_ROOTS: u16 = 39;
+    /// REFUSAL-01 arm (SQLRDF-23): the `sql:statementIndex` cross-check over
+    /// an `sql:StatementSequence`'s rdf:List members fails — non-integer,
+    /// duplicate, gapped, or non-ascending. The spine walk order is the
+    /// ordering source; the explicit index must agree. Recovery: renumber.
+    pub const INDEX_SEQUENCE_DISORDER: u16 = 40;
+    /// REFUSAL-01 arm (SQLRDF-23): an `sql:StatementSequence` whose
+    /// `sql:statements` rdf:List has zero members (head is rdf:nil
+    /// immediately, or `sql:statements` absent). Recovery: at least one
+    /// member.
+    pub const SEQUENCE_EMPTY: u16 = 41;
+    /// REFUSAL-01 arm (SQLRDF-25, appended v26.10.22): a window function
+    /// (`sql:windowFunction` node or hand-built `SqlExpr::WindowFn`) under a
+    /// predicate position (WHERE / JOIN ON / GROUP BY / HAVING). Mirrors the
+    /// aggregate-position law (`check_aggregate_position`); window functions
+    /// are legal only in SELECT list, ORDER BY and QUALIFY. Recovery: move the
+    /// window expression to the projection list or a QUALIFY clause.
+    pub const WINDOW_FN_POSITION: u16 = 42;
+    /// REFUSAL-01 arm (SQLRDF-25): a `sql:frame` node whose `sql:frameUnit`
+    /// is not the token `ROWS` or `RANGE`. Recovery: use ROWS or RANGE.
+    pub const FRAME_UNIT: u16 = 43;
+    /// REFUSAL-01 arm (SQLRDF-25): a frame bound token that is not one of
+    /// `CURRENT ROW`, `UNBOUNDED PRECEDING`, `UNBOUNDED FOLLOWING`,
+    /// `<n> PRECEDING`, `<n> FOLLOWING` (also the malformed-offset arm).
+    /// Recovery: use one of the five admitted bound forms.
+    pub const FRAME_BOUND: u16 = 44;
+    /// REFUSAL-01 arm (SQLRDF-25): a `sql:qualify` clause node that fails to
+    /// extract as a well-formed expression. Recovery: carry one expression.
+    pub const QUALIFY_EXPR: u16 = 45;
+    /// REFUSAL-01 arm (SQLRDF-26, appended v26.10.22): a `sql:atomic` flag on
+    /// an `sql:StatementSequence` root whose literal is not an
+    /// `xsd:boolean`-typed `true`/`false` lexical. Recovery: write
+    /// `sql:atomic true` (or `false`) with the `xsd:boolean` datatype.
+    pub const ATOMIC_LITERAL: u16 = 46;
+    /// REFUSAL-01 arm (SQLRDF-25, appended v26.10.22): a `sql:cte` node under
+    /// `sql:withClause` carries no `sql:cteQuery` — the rendered SQL would be
+    /// `name AS ()`. Recovery: attach a nested `sql:SelectStatement` root via
+    /// `sql:cteQuery`.
+    pub const CTE_NO_QUERY: u16 = 47;
     // ScopeIntegrity (REFUSAL-03) arms.
     pub const AGG_IN_POSITION: u16 = 1;
     pub const ALIASED_AGG_ARG: u16 = 2;
@@ -64,6 +118,11 @@ pub mod refusal_arm {
     pub const PROCESS_SCOPE_IN_SELECT: u16 = 4;
     pub const VIEW_SCOPE_IN_PREDICATE: u16 = 5;
     pub const SCOPE_IN_PRED_AGG_ARG: u16 = 6;
+    /// REFUSAL-03 arm (lane K5b, appended v26.10.22): a section 7 MERGE ON
+    /// expression referencing no target-qualified column — the join key is
+    /// absent, so WHEN MATCHED fan-out over the target is unbounded by
+    /// construction (every source row matches every target row).
+    pub const MERGE_ON_NO_TARGET_COLUMN: u16 = 7;
     // Internal MalformedAst-family arms (ShaclViolation carriers without a
     // stable [REFUSAL-nn] marker today — the docs/refusals.md known gap).
     pub const SHACL_DEPTH: u16 = 100;
@@ -113,6 +172,10 @@ pub enum RefusalCode {
     /// Appended v26.10.22 (lane L4): an xsd:double-typed `sql:literalValue`
     /// whose lexical form does not parse as an f64. Refuses typed.
     LiteralNotFloat = 37,
+    /// Appended v26.10.22 (CTQ-4): a WHERE-less UPDATE/DELETE statement —
+    /// neither `sql:whereColumn` nor `sql:whereValue` present — refused at
+    /// compile time before any engine call (REFUSAL-05).
+    UnboundedMutation = 5,
 }
 
 /// Fixed-size refusal context: shape id, predicate index, numeric arguments,
@@ -154,6 +217,7 @@ impl RefusalCode {
             Self::UnimplementedStatement => Some(REFUSAL_02_UNIMPLEMENTED),
             Self::ScopeIntegrity => Some(REFUSAL_03_SCOPE_INTEGRITY),
             Self::Capability => Some(crate::tier::REFUSAL_04_CAPABILITY_REFUSAL),
+            Self::UnboundedMutation => Some(REFUSAL_05_UNBOUNDED_MUTATION),
             _ => None,
         }
     }
@@ -343,6 +407,10 @@ impl fmt::Display for AstError {
                 f,
                 "SHACL AST structural violation: {REFUSAL_01_MALFORMED_AST}xsd:double literal '{id}' on {aux} does not parse as a float"
             ),
+            RefusalCode::UnboundedMutation => write!(
+                f,
+                "compile refusal: statement '{id}' {REFUSAL_05_UNBOUNDED_MUTATION} unbounded mutation refused: UPDATE/DELETE requires sql:whereColumn or sql:whereValue (compiler law is stricter than the shape: BOTH predicates are required)"
+            ),
             RefusalCode::UnsupportedTerm | RefusalCode::UnimplementedStatement => {
                 match self.ctx.shape_id {
                     arm::UNIMPLEMENTED_STATEMENT => write!(
@@ -515,6 +583,38 @@ impl fmt::Display for AstError {
                         f,
                         "SHACL AST structural violation: {marker}sql:joinType IRI '{id}' is not sql:InnerJoin or sql:LeftJoin; an unknown join-type IRI refuses typed, it never silently downgrades to Inner"
                     ),
+                    arm::MIXED_DOCUMENT_ROOTS => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}document carries more than one top-level root (bare sql:*Statement and/or sql:StatementSequence); exactly one root per document — the previous silent lexicographic pick is closed"
+                    ),
+                    arm::INDEX_SEQUENCE_DISORDER => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}sql:statementIndex cross-check failed on sequence member {id}: indices must be xsd:integer, strictly ascending from 0 with no gaps or duplicates (spine order is the ordering source)"
+                    ),
+                    arm::SEQUENCE_EMPTY => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}sql:StatementSequence {id} has an empty sql:statements list; a document sequence carries at least one member"
+                    ),
+                    arm::CTE_NO_QUERY => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}CTE {id} carries no sql:cteQuery; a WITH arm is a named sub-select, the rendered SQL would be 'name AS ()'"
+                    ),
+                    arm::WINDOW_FN_POSITION => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}window function on {id} is not allowed in this syntactic position (SQLRDF-25: window functions are legal only in the SELECT list, ORDER BY and QUALIFY; WHERE/JOIN/GROUP BY/HAVING are process-only)"
+                    ),
+                    arm::FRAME_UNIT => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}sql:frameUnit '{id}' is not ROWS or RANGE"
+                    ),
+                    arm::FRAME_BOUND => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}frame bound '{id}' is not one of CURRENT ROW, UNBOUNDED PRECEDING, UNBOUNDED FOLLOWING, <n> PRECEDING, <n> FOLLOWING"
+                    ),
+                    arm::QUALIFY_EXPR => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}sql:qualify on {id} fails to extract as one well-formed expression"
+                    ),
                     arm::SHACL_DEPTH => write!(
                         f,
                         "SHACL AST structural violation: SHACL nesting depth exceeded: observed {}, max {}",
@@ -578,6 +678,10 @@ impl fmt::Display for AstError {
                     arm::SCOPE_IN_PRED_AGG_ARG => write!(
                         f,
                         "SHACL AST structural violation: {marker}column '{id}' is {aux} inside an aggregate argument in a predicate position (section 1.3: the predicate-side argument is process-only by construction; an explicit sql:scope marker re-scopes the aggregate past review)"
+                    ),
+                    arm::MERGE_ON_NO_TARGET_COLUMN => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}sql:mergeOn expression references no target-qualified column (section 7: the ON condition is the join key; a constant-only ON matches every target row and makes WHEN MATCHED fan-out unbounded)"
                     ),
                     arm::LEGACY_MESSAGE => {
                         write!(f, "SHACL AST structural violation: {marker}{id}")

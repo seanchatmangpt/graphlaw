@@ -8,7 +8,6 @@
 
 use std::sync::Arc;
 
-
 use crate::dialect::{Dialect, Refusal, RefusalKind, RefusalMessage, parse_rdf};
 use crate::{BACKEND_AUTHORITIES, BackendAuthority};
 
@@ -93,6 +92,19 @@ pub enum Step<'a> {
     EntailRdfs,
     /// OWL 2 RL entailment closure.
     EntailOwlRl,
+    /// Admit the current dataset as SQL-in-RDF. The graph may have been
+    /// produced by an earlier step (`derive:n3`, entailment, hooks). This
+    /// gate runs `compile_turtle` and does not execute the statement.
+    AdmitSql,
+    /// Test-only probe step (capability-court lane M05): carries an arbitrary
+    /// capability string so courts can drive [`LawState::transition`] with a
+    /// capability absent from [`crate::BACKEND_AUTHORITIES`] and assert the
+    /// typed [`REFUSAL_UNKNOWN_STEP_CAPABILITY`] refusal through the public
+    /// transition path (the law.rs authority callsite). Never construct this
+    /// variant outside graphlaw's own courts; `#[non_exhaustive]` downstream
+    /// matches with a wildcard arm are unaffected.
+    #[doc(hidden)]
+    TestCapabilityProbe(&'static str),
 }
 
 impl Step<'_> {
@@ -107,6 +119,8 @@ impl Step<'_> {
             Step::RequireSignedReceipt { .. } => "admit:require-signed-receipt",
             Step::EntailRdfs => "derive:rdfs",
             Step::EntailOwlRl => "derive:owl-rl",
+            Step::AdmitSql => "admit:sql",
+            Step::TestCapabilityProbe(_) => "test:capability-probe",
         }
     }
 
@@ -114,24 +128,27 @@ impl Step<'_> {
     pub fn required_ceiling(&self) -> Ceiling {
         match self {
             Step::AdmitShacl { .. }
+            | Step::AdmitSql
             | Step::RequireReceipt { .. }
             | Step::RequireSignedReceipt { .. } => Ceiling::Observe,
             Step::Plan { .. } => Ceiling::Select,
             Step::Hooks { .. } | Step::DeriveN3 { .. } | Step::EntailRdfs | Step::EntailOwlRl => {
                 Ceiling::Construct
             }
+            Step::TestCapabilityProbe(_) => Ceiling::Observe,
         }
     }
 
     fn capability(&self) -> &'static str {
         match self {
-            Step::AdmitShacl { .. } => "SHACL",
+            Step::AdmitShacl { .. } | Step::AdmitSql => "SHACL",
             Step::DeriveN3 { .. } => "Notation3",
             Step::Hooks { .. } => "Knowledge hooks (kh: orchestration over SPARQL)",
             Step::Plan { .. } | Step::RequireReceipt { .. } | Step::RequireSignedReceipt { .. } => {
                 "RDF 1.2 / codecs / storage IR"
             }
             Step::EntailRdfs | Step::EntailOwlRl => "RDF/RDFS/OWL-RL entailment",
+            Step::TestCapabilityProbe(cap) => cap,
         }
     }
 }
@@ -802,7 +819,8 @@ impl LawState {
         let digest = blake3::hash(canon.nquads.as_bytes());
         let id = format!(
             "blake3:{}",
-            digest.as_bytes()
+            digest
+                .as_bytes()
                 .iter()
                 .map(|b| format!("{b:02x}"))
                 .collect::<String>()
@@ -944,6 +962,19 @@ impl LawState {
                 crate::receipt::require_signed(self, step, trusted)?;
                 self.clone()
             }
+            Step::AdmitSql => {
+                let bytes = purrdf::serialize_dataset(
+                    self.dataset.as_ref(),
+                    "text/turtle",
+                    purrdf::SerializeGraph::Dataset,
+                )
+                .map_err(|e| LawError::Refused(Refusal::engine(Dialect::Turtle, e)))?;
+                let turtle = String::from_utf8(bytes)
+                    .map_err(|e| LawError::Refused(Refusal::engine(Dialect::Turtle, e)))?;
+                crate::sql_ast::compile_turtle(&turtle)
+                    .map_err(|e| LawError::Refused(Refusal::engine(Dialect::SqlRdf, e)))?;
+                self.clone()
+            }
             Step::EntailRdfs | Step::EntailOwlRl => {
                 let plan = if matches!(step, Step::EntailRdfs) {
                     purrdf::entail::Materialization::Rdfs
@@ -958,14 +989,16 @@ impl LawState {
                 // Admission gate: the rules text must validate as N3 (counted,
                 // Eyeron-validated) and the carried RuleSet must correspond,
                 // before any derivation runs.
-                let validated = crate::tier::validate_n3_rules(rules.as_bytes(), None).map_err(
-                    |r| LawError::Refused(Refusal {
-                        kind: RefusalKind::TierMismatch,
-                        dialect: Some(Dialect::N3),
-                        engine: Some(Dialect::N3.engine()),
-                        message: format!("DeriveN3 rules failed N3 admission: {}", r.message).into(),
-                    }),
-                )?;
+                let validated =
+                    crate::tier::validate_n3_rules(rules.as_bytes(), None).map_err(|r| {
+                        LawError::Refused(Refusal {
+                            kind: RefusalKind::TierMismatch,
+                            dialect: Some(Dialect::N3),
+                            engine: Some(Dialect::N3.engine()),
+                            message: format!("DeriveN3 rules failed N3 admission: {}", r.message)
+                                .into(),
+                        })
+                    })?;
                 if validated.rule_count() != ruleset.rule_count() {
                     return Err(LawError::Refused(Refusal {
                         kind: RefusalKind::TierMismatch,
@@ -1029,6 +1062,9 @@ impl LawState {
                 let merged = format!("{base}{derived_nq}");
                 LawState::parse(merged.as_bytes(), Dialect::NQuads, None)?
             }
+            // Capability-court probe (lane M05): identity transition; the only
+            // observable effect is the authority resolution below.
+            Step::TestCapabilityProbe(_) => self.clone(),
         };
         let authority = authority_for_capability(step.capability())?;
         let receipt = Receipt {

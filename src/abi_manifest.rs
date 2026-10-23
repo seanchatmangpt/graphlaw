@@ -68,14 +68,54 @@ struct FrameField {
 
 /// `OcelCausalFrame::to_hash_bytes` layout (`src/receipt_chain.rs`), LE.
 const FRAME_FIELDS: &[FrameField] = &[
-    FrameField { offset: 0, len: 8, name: "instruction_id", ty: "u64-le" },
-    FrameField { offset: 8, len: 8, name: "fired_mask", ty: "u64-le" },
-    FrameField { offset: 16, len: 8, name: "denial.0", ty: "u64-le" },
-    FrameField { offset: 24, len: 32, name: "obj_refs", ty: "8x-u32-le" },
-    FrameField { offset: 56, len: 8, name: "ts_ns", ty: "u64-le" },
-    FrameField { offset: 64, len: 2, name: "activity_idx", ty: "u16-le" },
-    FrameField { offset: 66, len: 1, name: "node_kind", ty: "u8" },
-    FrameField { offset: 67, len: 32, name: "prior_hash", ty: "32x-u8-verbatim" },
+    FrameField {
+        offset: 0,
+        len: 8,
+        name: "instruction_id",
+        ty: "u64-le",
+    },
+    FrameField {
+        offset: 8,
+        len: 8,
+        name: "fired_mask",
+        ty: "u64-le",
+    },
+    FrameField {
+        offset: 16,
+        len: 8,
+        name: "denial.0",
+        ty: "u64-le",
+    },
+    FrameField {
+        offset: 24,
+        len: 32,
+        name: "obj_refs",
+        ty: "8x-u32-le",
+    },
+    FrameField {
+        offset: 56,
+        len: 8,
+        name: "ts_ns",
+        ty: "u64-le",
+    },
+    FrameField {
+        offset: 64,
+        len: 2,
+        name: "activity_idx",
+        ty: "u16-le",
+    },
+    FrameField {
+        offset: 66,
+        len: 1,
+        name: "node_kind",
+        ty: "u8",
+    },
+    FrameField {
+        offset: 67,
+        len: 32,
+        name: "prior_hash",
+        ty: "32x-u8-verbatim",
+    },
 ];
 
 /// `blake3:<hex>` of the canonical manifest bytes (digest key removed),
@@ -100,12 +140,14 @@ fn base_manifest() -> Value {
         .collect();
     let exports: Vec<Value> = EXPORTS
         .iter()
-        .map(|e| json!({
-            "name": e.name,
-            "params": e.params,
-            "result": e.result,
-            "summary": e.summary,
-        }))
+        .map(|e| {
+            json!({
+                "name": e.name,
+                "params": e.params,
+                "result": e.result,
+                "summary": e.summary,
+            })
+        })
         .collect();
     let frame_fields: Vec<Value> = FRAME_FIELDS
         .iter()
@@ -134,7 +176,7 @@ fn base_manifest() -> Value {
             "default_max_skew_secs": DEFAULT_MAX_SKEW_SECS,
         },
         "ops": ops,
-        "notes": "op `duckdb` (op-15) is dispatched by the wasm module (`src/abi.rs` routes it to `duckdb_op::dispatch`). It stays off this hashed 14-op table so `registry_blake3` does not move until an explicit digest bump. Absence from `capabilities` is not a SQL refusal and is not REFUSAL-04. SQL-in-RDF admits inside the module through `compile_turtle`. frozen-duckdb 2.0.2 emits `static=duckdb` for wasm32-wasip1. The wasm32-wasip1 link is witnessed (2026-10-22); the recorded pin `332ea218…` was not replaced. `WASI_SDK_PATH` must be a wasi-sdk root (`bin/clang`, `share/cmake/wasi-sdk-p1.cmake`). Without it, frozen-duckdb-sys `build.rs` fails typed (`WASI_SDK_PATH required`). Bounds enforced in src/duckdb_op.rs: DuckDB memory_limit=32MiB and threads=1 compile-time pragmas (GAP-2), chunk rows <= 10000 and chunk bytes <= 16 MiB typed ResourceLimit refusals (GAP-4), MAX_OUTSTANDING_ALLOC_BYTES is 16 MiB for the wasm32 target via split-config (GAP-1)",
+        "notes": "op `duckdb` (op-15) dispatches inside the module on every target; the gates that compiled that dispatch arm out of wasm32 are removed. It is unadvertised from `capabilities.ops` (and stays off the hashed 14-op table) by digest-stability choice, so `registry_blake3` does not move until an explicit digest bump — not because the op is host-only. The wasm `capabilities.authorities` list now includes `frozen-duckdb` (as the host list already did). Absence from `capabilities.ops` is not a SQL refusal and is not REFUSAL-04. SQL-in-RDF admits inside the module through `compile_turtle`. Bounds enforced in src/duckdb_op.rs: DuckDB memory_limit=32MiB and threads=1 compile-time pragmas (GAP-2), chunk rows <= 10000 and chunk bytes <= 16 MiB typed ResourceLimit refusals (GAP-4), MAX_OUTSTANDING_ALLOC_BYTES is 16 MiB for the wasm32 target via split-config (GAP-1)",
         "response_envelope": {
             "success": {"ok": true, "extra": "op-specific fields"},
             "refusal": {"ok": false, "error": {
@@ -200,7 +242,10 @@ mod tests {
         let digest = doc["manifest_blake3"].as_str().expect("digest").to_owned();
         let mut base = doc.clone();
         base.as_object_mut().unwrap().remove("manifest_blake3");
-        assert_eq!(digest, blake3_tagged(crate::registry::canonical(&base).as_bytes()));
+        assert_eq!(
+            digest,
+            blake3_tagged(crate::registry::canonical(&base).as_bytes())
+        );
     }
 
     #[test]

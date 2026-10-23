@@ -3,7 +3,15 @@
 # Design: docs/jira/v26.10.22/designs/doc-staleness-gate-design.md
 # Exit 0 = pass, 1 = findings, 2 = internal error. Loud, never silent.
 set -u
-cd "$(dirname "$0")/.." || exit 2
+# Usage: doc_staleness_gate.sh [ROOT]
+#   ROOT = scan root (default: repo root). Non-repo roots scan as a standalone
+#   tree (used for anti-vacuity flip proofs on scratch corpora).
+ROOT_ARG="${1:-}"
+if [ -n "$ROOT_ARG" ]; then
+  cd "$ROOT_ARG" || { echo "doc_staleness_gate: root '$ROOT_ARG' does not exist" >&2; exit 2; }
+else
+  cd "$(dirname "$0")/.." || exit 2
+fi
 exec python3 - "$@" <<'PYEOF'
 import os, re, sys
 
@@ -161,6 +169,52 @@ for root, dirs, files in os.walk("docs/jira"):
                 if _in_block: continue
                 fail("R4", f"{p}:{i}", "count/digest claim without a receipts/ pointer (design: doc-staleness-gate-design.md §4)")
 
+# ---------- Rule 5: `path:NNN` doc anchors must resolve to a plausible symbol line ----------
+# Defect class (witnessed 3x this session): docs cite file:line anchors that no
+# longer resolve after edits (ARCHITECTURE.md :2051 -> :1031 drift). Design:
+# docs/jira/v26.10.22/designs/doc-anchor-guard-receipt.md
+# R3 lane hardening (v26.10.22):
+#   * SYMBOLISH replaced by a real symbol regex: a Rust/shell declaration
+#     keyword or an identifier assignment. A bare `[A-Za-z_]` matched every
+#     non-empty line — a vacuous check.
+#   * `:A-B` range anchors validate BOTH endpoints.
+#   * anchor regex tightened to forbid space between ':' and the line number;
+#     near-miss patterns (`file.rs: 12`) are reported as R5-NEARMISS findings,
+#     not silently unmatched.
+ANCHOR = re.compile(r"\b([A-Za-z0-9_./-]+\.(?:rs|sh|ttl|md|toml|json)):(\d+)(?:-(\d+))?\b")
+NEARMISS = re.compile(r"\b[A-Za-z0-9_./-]+\.(?:rs|sh|ttl|md|toml|json):\s+\d")
+SYMBOLIC = re.compile(r"(pub |fn |struct |enum |mod |const |impl |use )|^\s*[A-Za-z_][A-Za-z0-9_]*\s*[:=]")
+def scan_anchors(path):
+    lines = open(path, encoding="utf-8", errors="replace").read().splitlines()
+    for i, line in enumerate(lines, 1):
+        for m in NEARMISS.finditer(line):
+            fail("R5-NEARMISS", f"{path}:{i}", f"anchor near-miss '{m.group(0).strip()}' (space between ':' and line number) — cite as file:NN with no space")
+        for m in ANCHOR.finditer(line):
+            target, ln, hi = m.group(1), int(m.group(2)), m.group(3)
+            tpath = target if os.path.exists(target) else os.path.join(os.path.dirname(path), target)
+            if not os.path.exists(tpath):
+                fail("R5", f"{path}:{i}", f"anchor target '{target}' does not exist on disk")
+                continue
+            tl = open(tpath, encoding="utf-8", errors="replace").read().splitlines()
+            hi_n = int(hi) if hi else ln
+            if ln < 1 or hi_n > len(tl):
+                fail("R5", f"{path}:{i}", f"anchor '{target}:{ln}' out of range ({len(tl)} lines)")
+                continue
+            if not SYMBOLIC.search(tl[ln - 1]):
+                fail("R5", f"{path}:{i}", f"anchor '{target}:{ln}' resolves to a line with no symbol token")
+            if hi:
+                if not SYMBOLIC.search(tl[hi_n - 1]):
+                    fail("R5", f"{path}:{i}", f"range anchor '{target}:{ln}-{hi_n}' end line {hi_n} has no symbol token")# scope (R3 lane): top-level docs, milestone INDEX files, all jira prose and
+# docs/explanation — expect a large findings list on the real tree; the findings
+# are the deliverable, the docs are not fixed in this lane.
+import glob as _glob
+_scan_set = set(_glob.glob("docs/*.md"))
+_scan_set.update(_glob.glob("docs/jira/*/INDEX.md"))
+_scan_set.update(_glob.glob(os.path.join("docs", "jira", "**", "*.md"), recursive=True))
+_scan_set.update(_glob.glob("docs/explanation/**/*.md", recursive=True))
+for p in sorted(_scan_set):
+    if os.path.isfile(p):
+        scan_anchors(p)
 print(f"doc_staleness_gate: {len(findings)} finding(s)")
 for f in findings: print(f)
 sys.exit(1 if findings else 0)

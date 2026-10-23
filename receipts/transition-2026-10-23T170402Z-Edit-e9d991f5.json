@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "e9d991f5eca89fdcf56606c8dc702b793f94e76b0a7bd674485b1bb783a07a0a",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T170402Z-Edit-e9d991f5.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/tests/rehypothecation_gate_court.rs",
+  "timestamp_utc": "2026-10-23T170402Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

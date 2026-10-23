@@ -27,7 +27,9 @@ fn quickstart_plan_matches_readme_hashes() {
     assert!(out.contains("plan-action -> blake3:c66ea90e"), "{out}");
     assert!(out.contains("plan-action -> blake3:3be6530b"), "{out}");
     assert!(
-        out.contains("final state: blake3:3be6530bdf3597afdcc5f60a2a7a0c15a952a1e8f8dd440e0a0bf49082e05896"),
+        out.contains(
+            "final state: blake3:3be6530bdf3597afdcc5f60a2a7a0c15a952a1e8f8dd440e0a0bf49082e05896"
+        ),
         "{out}"
     );
 }
@@ -35,10 +37,7 @@ fn quickstart_plan_matches_readme_hashes() {
 #[test]
 fn refused_plan_matches_readme_text() {
     let out = run_example("refused_plan");
-    assert!(
-        out.contains("REFUSED at index 1, action `paint`"),
-        "{out}"
-    );
+    assert!(out.contains("REFUSED at index 1, action `paint`"), "{out}");
     assert!(
         out.contains("<urn:d:door> <urn:p:has> <urn:v:key> ."),
         "{out}"

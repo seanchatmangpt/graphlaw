@@ -11,7 +11,9 @@ use super::ParserProfile;
 /// running out of stack aborts the whole process instead of raising an error
 /// a caller could handle.  Refusing absurd nesting while it is still an
 /// ordinary parse error keeps a hostile input from taking the process down.
-/// The deepest nesting in the example and conformance corpora is 14 levels,
+/// The deepest nesting in the example and conformance corpora is 17 levels
+/// (measured 2026-10-22 over 676 `.n3`/`.ttl` files; see
+/// `docs/jira/v26.10.22/designs/eyeron-corpus-depth-receipt.md`),
 /// and 64 stays well inside the 1 MiB stacks that debug and WebAssembly
 /// builds run on.  `crate::reasoner` holds derived terms to the same
 /// bound, so no term anywhere in the system can outgrow the stack.

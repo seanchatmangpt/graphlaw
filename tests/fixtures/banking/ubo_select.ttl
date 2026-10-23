@@ -1,0 +1,10 @@
+# UBO readback SELECT (bare single-root form). Expected SQL:
+#   SELECT child, parent, pct FROM ubo_owns ORDER BY child
+@prefix ex: <http://example.org/banking#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+
+ex:stmt1 a sql:SelectStatement ;
+    sql:statementIndex 7 ;
+    sql:fromTable [ sql:tableName "ubo_owns" ] ;
+    sql:selectList ( [ sql:columnName "child" ] [ sql:columnName "parent" ] [ sql:columnName "pct" ] ) ;
+    sql:orderBy ( [ sql:columnName "child" ] ) .

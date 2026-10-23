@@ -45,7 +45,11 @@ fn load_pinned_ontology() -> LawState {
         b
     };
     let digest = blake3::hash(body.as_bytes());
-    let hex: String = digest.as_bytes().iter().map(|b| format!("{b:02x}")).collect();
+    let hex: String = digest
+        .as_bytes()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
     assert_eq!(
         hex, PIN_BLAKE3,
         "pinned ontology body drifted from the documented blake3"
@@ -152,7 +156,10 @@ fn arena_constants_match_documented_semantics() {
     let c = ArenaConstants::from_graph(&ontology);
     // Documented semantics: fuel 3 in st:DefaultArena; gate is `>= 3`.
     assert_eq!(c.admission_fuel, 3, "st:DefaultArena st:admissionFuel");
-    assert!(c.max_fuel >= c.admission_fuel, "maxFuel bounds admissionFuel");
+    assert!(
+        c.max_fuel >= c.admission_fuel,
+        "maxFuel bounds admissionFuel"
+    );
     // Guard the generated skeleton agrees with the graph.
     // (generated/arena.rs pins ARENA_DEFAULT_ADMISSION_FUEL_MIN = 3.)
     assert_eq!(c.admission_fuel, 3);
@@ -181,7 +188,11 @@ fn sequence_of_attempts_exhausts_and_refuses() {
     let c = ArenaConstants::from_graph(&construct_lease_state(&ontology, 10));
     let (admitted, refused) = admission_sequence(c.max_fuel.min(10));
     assert_eq!(admitted.len(), 3, "fuel 10 = 3 admissions (9 units)");
-    assert_eq!(refused.len(), 1, "residue 1 < 3 hits the exhaustion boundary");
+    assert_eq!(
+        refused.len(),
+        1,
+        "residue 1 < 3 hits the exhaustion boundary"
+    );
     assert!(refused[0].contains("REFUSED"));
     // Negative witness: 2 units of fuel — below the documented gate of 3 —
     // must exhaust immediately and be refused, never admitted.
@@ -211,8 +222,8 @@ fn construct_lease_state(ontology: &LawState, lease_fuel: u64) -> LawState {
     )
     .expect("n-quads");
     // Re-serialize the lease in n-quads too so dialects match.
-    let lease_state = LawState::parse(lease_ttl.as_bytes(), Dialect::Turtle, None)
-        .expect("lease ttl parses");
+    let lease_state =
+        LawState::parse(lease_ttl.as_bytes(), Dialect::Turtle, None).expect("lease ttl parses");
     let lease_nq = graphlaw::purrdf::serialize_dataset(
         lease_state.dataset(),
         "application/n-quads",

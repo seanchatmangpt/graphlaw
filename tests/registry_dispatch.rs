@@ -16,9 +16,9 @@ fn names() -> Vec<String> {
         .collect()
 }
 
-/// Registry op names plus `duckdb`, which the module dispatches and which
-/// stays off the hashed OPS list until a digest bump. Together they are the
-/// complete dispatch contract of the native ABI.
+/// Registry op names plus `duckdb`, which is module-owned: it dispatches and
+/// executes in-unit (host and wasm, one ungated arm) and stays off the hashed
+/// 14-op OPS table. Together they are the complete dispatch contract.
 fn full_names() -> Vec<String> {
     let mut full = names();
     full.extend(registry::NATIVE_ONLY_OPS.iter().map(|s| s.to_string()));
@@ -76,8 +76,8 @@ fn dispatch_arms_equal_registry_op_names_as_sets() {
         arms.len(),
         "duplicate dispatch arm: {arms:?}"
     );
-    // `duckdb` is dispatched by the wasm module and listed in `NATIVE_ONLY_OPS`
-    // so it stays off the hashed OPS list.
+    // `duckdb` is an ungated dispatch arm listed in `NATIVE_ONLY_OPS` so it stays
+    // off the hashed OPS list; the arm executes in-unit on host and wasm alike.
     let reg = full_names();
     let reg_set: BTreeSet<_> = reg.iter().cloned().collect();
     assert_eq!(reg_set.len(), reg.len(), "duplicate registry op: {reg:?}");

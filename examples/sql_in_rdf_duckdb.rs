@@ -90,10 +90,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("  -> Rows Emitted    : {}", receipt.rows_emitted);
     println!("  -> Execution Time  : {:.3} ms", receipt.execution_ms);
-    println!("  -> Query Hash (BLAKE3): {:02x?}", &receipt.query_hash[0..8]);
+    println!(
+        "  -> Query Hash (BLAKE3): {:02x?}",
+        &receipt.query_hash[0..8]
+    );
     println!("\n=== 5. Materialized RDF Statements (Grounding Tabular State) ===");
     for stmt in &receipt.result_triples {
-        println!("  <{}> <{}> {:?}", stmt.subject, stmt.predicate, stmt.object);
+        println!(
+            "  <{}> <{}> {:?}",
+            stmt.subject, stmt.predicate, stmt.object
+        );
     }
 
     Ok(())

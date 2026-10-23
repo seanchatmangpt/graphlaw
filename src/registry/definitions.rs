@@ -764,7 +764,7 @@ pub const REFUSAL_CODES: &[RefusalCodeRow] = &[
         fields: &[req(
             "message",
             "string",
-            "Diagnostic text from the embedded DuckDB substrate (ABI op `duckdb`, linked into the wasm module).",
+            "Diagnostic text from the DuckDB substrate (ABI op `duckdb`; dispatches inside the graphlaw-wasm unit on every target (in-module, not host-only) but stays off the hashed 14-op table for digest stability).",
         )],
     },
     RefusalCodeRow {
@@ -814,6 +814,11 @@ pub const LAW_STEPS: &[LawStepRow] = &[
         fields: &[],
     },
     LawStepRow {
+        name: "sql",
+        ceiling: Some("observe"),
+        fields: &[],
+    },
+    LawStepRow {
         name: "hooks",
         ceiling: Some("construct"),
         fields: &[req("pack", "data_spec", "Hook pack as a data spec.")],
@@ -860,12 +865,14 @@ pub const LAW_STEPS: &[LawStepRow] = &[
 ];
 
 /// Dispatch ops kept off the hashed `OPS` list so `registry_blake3` stays
-/// stable until an explicit digest bump. `src/abi.rs` still routes `"duckdb"`
-/// to `crate::duckdb_op::dispatch` inside the wasm module. Absence from
+/// stable until an explicit digest bump. `"duckdb"` is module-owned: it links
+/// into the wasm unit and executes inside the module, but it stays unadvertised
+/// from `op_names()` / `capabilities.ops` (digest stability). Absence from
 /// `op_names()` / `capabilities` is not a capability refusal and is not
-/// REFUSAL-04. `tests/registry_dispatch.rs` composes the full dispatch
-/// contract as `op_names() + NATIVE_ONLY_OPS` and asserts it equals the
-/// parsed `fn dispatch` arms.
+/// REFUSAL-04.
+/// `tests/registry_dispatch.rs` composes the full native dispatch contract as
+/// `op_names() + NATIVE_ONLY_OPS` and asserts it equals the parsed `fn dispatch`
+/// arms.
 pub const NATIVE_ONLY_OPS: &[&str] = &["duckdb"];
 
 /// ABI op names in registry order.

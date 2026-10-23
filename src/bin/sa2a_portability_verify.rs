@@ -11,9 +11,9 @@ fn corpus_dir() -> PathBuf {
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("conformance/sa2a/portable/run12")
         })
 }
-fn request(v: Value) -> Value {
+fn request(v: Value) -> Result<Value, String> {
     serde_json::from_slice(&graphlaw::abi::call(v.to_string().as_bytes()))
-        .expect("GraphLaw ABI returns JSON")
+        .map_err(|e| format!("GraphLaw ABI returned non-JSON: {e}"))
 }
 fn fail(msg: String) -> ! {
     eprintln!("error: {msg}");
@@ -23,7 +23,10 @@ fn main() -> ExitCode {
     let dir = corpus_dir();
     let mut files: Vec<_> = match fs::read_dir(&dir) {
         Ok(rd) => rd,
-        Err(e) => fail(format!("cannot read run12 corpus dir {}: {e}", dir.display())),
+        Err(e) => fail(format!(
+            "cannot read run12 corpus dir {}: {e}",
+            dir.display()
+        )),
     }
     .map(|e| match e {
         Ok(e) => e.path(),
@@ -37,9 +40,13 @@ fn main() -> ExitCode {
     for path in &files {
         let text = match fs::read_to_string(path) {
             Ok(t) => t,
-            Err(e) => fail(format!("cannot read corpus file {} as UTF-8: {e}", path.display())),
+            Err(e) => fail(format!(
+                "cannot read corpus file {} as UTF-8: {e}",
+                path.display()
+            )),
         };
-        let parsed = request(json!({"op":"parse","text":text,"dialect":"turtle"}));
+        let parsed = request(json!({"op":"parse","text":text,"dialect":"turtle"}))
+            .unwrap_or_else(|e| fail(format!("{}: parse: {e}", path.display())));
         assert_eq!(
             parsed["ok"],
             true,
@@ -47,7 +54,8 @@ fn main() -> ExitCode {
             path.display(),
             parsed
         );
-        let canonical = request(json!({"op":"canonical","data":{"text":text,"dialect":"turtle"}}));
+        let canonical = request(json!({"op":"canonical","data":{"text":text,"dialect":"turtle"}}))
+            .unwrap_or_else(|e| fail(format!("{}: canonicalize: {e}", path.display())));
         assert_eq!(
             canonical["ok"],
             true,

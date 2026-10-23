@@ -21,7 +21,7 @@
 //! Run: CARGO_TARGET_DIR=target-lane-wo3 cargo run --example rss_expansion_probe
 //! Exit 0 = every rung Complete; exit 1 = any rung incomplete or RSS failure.
 
-use eyeron::{parse_n3, PreparedReasoner, ReasonerOptions};
+use eyeron::{PreparedReasoner, ReasonerOptions, parse_n3};
 use std::process::Command;
 
 fn rss_kb() -> Result<u64, String> {
@@ -71,14 +71,46 @@ struct Rung {
 
 fn main() {
     let rungs = [
-        Rung { label: "A1 rules=100    facts=1000 active=100", n_rules: 100, n_facts: 1_000, n_active: 100 },
-        Rung { label: "A2 rules=1000   facts=1000 active=100", n_rules: 1_000, n_facts: 1_000, n_active: 100 },
-        Rung { label: "A3 rules=10000  facts=1000 active=100", n_rules: 10_000, n_facts: 1_000, n_active: 100 },
-        Rung { label: "B1 rules=100    facts=100  active=100", n_rules: 100, n_facts: 100, n_active: 100 },
-        Rung { label: "B2 rules=100    facts=1000 active=100", n_rules: 100, n_facts: 1_000, n_active: 100 },
-        Rung { label: "B3 rules=100    facts=10000 active=100", n_rules: 100, n_facts: 10_000, n_active: 100 },
+        Rung {
+            label: "A1 rules=100    facts=1000 active=100",
+            n_rules: 100,
+            n_facts: 1_000,
+            n_active: 100,
+        },
+        Rung {
+            label: "A2 rules=1000   facts=1000 active=100",
+            n_rules: 1_000,
+            n_facts: 1_000,
+            n_active: 100,
+        },
+        Rung {
+            label: "A3 rules=10000  facts=1000 active=100",
+            n_rules: 10_000,
+            n_facts: 1_000,
+            n_active: 100,
+        },
+        Rung {
+            label: "B1 rules=100    facts=100  active=100",
+            n_rules: 100,
+            n_facts: 100,
+            n_active: 100,
+        },
+        Rung {
+            label: "B2 rules=100    facts=1000 active=100",
+            n_rules: 100,
+            n_facts: 1_000,
+            n_active: 100,
+        },
+        Rung {
+            label: "B3 rules=100    facts=10000 active=100",
+            n_rules: 100,
+            n_facts: 10_000,
+            n_active: 100,
+        },
     ];
-    println!("label | rules | facts | rss_before_kb | rss_during_kb | rss_after_kb | delta_kb | closure | status");
+    println!(
+        "label | rules | facts | rss_before_kb | rss_during_kb | rss_after_kb | delta_kb | closure | status"
+    );
     for r in rungs {
         run_rung(&r);
     }
@@ -90,7 +122,10 @@ fn run_rung(r: &Rung) {
     let data = parse_n3(&data_n3(r.n_facts, r.n_active), None).expect("parse data");
     let prepped = PreparedReasoner::new(program);
     let rss_parsed = rss_kb().expect("rss parsed");
-    let opts = ReasonerOptions { include_explicit: false, ..Default::default() };
+    let opts = ReasonerOptions {
+        include_explicit: false,
+        ..Default::default()
+    };
     let result = prepped.reason(&data, &opts);
     // Sampled with the full closure still resident: the "during-expansion" peak.
     let rss_peak = rss_kb().expect("rss peak");
@@ -105,11 +140,20 @@ fn run_rung(r: &Rung) {
     let rss_after = rss_kb().expect("rss after");
     println!(
         "{} | {} | {} | {} | {} | {} | {} | {} | {}",
-        r.label, r.n_rules, r.n_facts, rss_parsed, rss_peak, rss_after,
-        rss_peak as i64 - rss_parsed as i64, closure_len,
+        r.label,
+        r.n_rules,
+        r.n_facts,
+        rss_parsed,
+        rss_peak,
+        rss_after,
+        rss_peak as i64 - rss_parsed as i64,
+        closure_len,
         if complete { "Complete" } else { "INCOMPLETE" },
     );
-    println!("    derived={} limits={} errors={}", derived_len, limits, errors);
+    println!(
+        "    derived={} limits={} errors={}",
+        derived_len, limits, errors
+    );
     if !complete {
         eprintln!("FAIL rung {}: incomplete closure", r.label);
         std::process::exit(1);

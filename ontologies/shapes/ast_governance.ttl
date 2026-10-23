@@ -8,7 +8,7 @@
 <http://graphlaw.org/shapes/ast-governance>
     a owl:Ontology ;
     rdfs:label "GraphLaw SQL-AST Governance Shapes" ;
-    rdfs:comment "Phase-2 SHACL preflight for the cold-chain case study: anti-scan (a governed SELECT must carry a WHERE), and identifier pattern invariants (anti-injection) on table names. Property shapes carry IRIs so violation reports name the violated constraint addressably." ;
+    rdfs:comment "Phase-2 SHACL preflight for the cold-chain case study: anti-scan (a governed SELECT/UPDATE/DELETE must carry a WHERE constraint), and identifier pattern invariants (anti-injection) on table names. Property shapes carry IRIs so violation reports name the violated constraint addressably." ;
     owl:versionInfo "1.0.0" .
 
 # =============================================================================
@@ -81,6 +81,45 @@ sql:HasWhereClause a sh:NodeShape ;
         [ sh:path sql:whereClause ;
           sh:minCount 1 ; ]
         [ sh:path sql:where ;
+          sh:minCount 1 ; ]
+    ) .
+
+# =============================================================================
+# sql:UpdateStatementShape / sql:DeleteStatementShape — anti-scan on mutation
+# =============================================================================
+
+sql:UpdateStatementShape a sh:NodeShape ;
+    rdfs:label "Governed UPDATE statement shape" ;
+    sh:targetClass sql:UpdateStatement ;
+    # Anti-scan law: unbounded UPDATE/DELETE is a refusal at admission,
+    # never an engine-side no-op — every governed UPDATE must carry a WHERE
+    # constraint in at least one legal spelling.
+    sh:node sql:HasWhereConstraint .
+
+sql:DeleteStatementShape a sh:NodeShape ;
+    rdfs:label "Governed DELETE statement shape" ;
+    sh:targetClass sql:DeleteStatement ;
+    # Anti-scan law: unbounded UPDATE/DELETE is a refusal at admission,
+    # never an engine-side no-op — every governed DELETE must carry a WHERE
+    # constraint in at least one legal spelling.
+    sh:node sql:HasWhereConstraint .
+
+# Disjunction (alias window): a governed UPDATE or DELETE carries its WHERE
+# constraint in at least one of the four legal spellings — legacy
+# sql:whereClause, normative sql:where, or the column/value constraint pair
+# sql:whereColumn / sql:whereValue. At least one branch must be present
+# (minCount 1 on at least one); without the sh:or, a purely legacy or purely
+# column/value-constrained document would fail governance while passing
+# sql-ast.ttl.
+sql:HasWhereConstraint a sh:NodeShape ;
+    sh:or (
+        [ sh:path sql:whereClause ;
+          sh:minCount 1 ; ]
+        [ sh:path sql:where ;
+          sh:minCount 1 ; ]
+        [ sh:path sql:whereColumn ;
+          sh:minCount 1 ; ]
+        [ sh:path sql:whereValue ;
           sh:minCount 1 ; ]
     ) .
 

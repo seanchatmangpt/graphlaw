@@ -90,6 +90,7 @@
 <https://graphlaw.dev/registry#dialect/sql>
     a gac:Dialect ;
     gac:dialectKind "other" ;
+    gac:dialectMediaType "text/turtle" ;
     gac:dialectName "sql" ;
     gac:dialectOf <https://graphlaw.dev/registry#registry> ;
     gac:dialectOrder 12 ;
@@ -147,7 +148,7 @@
     a gac:LawStep ;
     gac:lawStepCeiling "construct" ;
     gac:lawStepName "hooks" ;
-    gac:lawStepOrder 5 .
+    gac:lawStepOrder 6 .
 
 <https://graphlaw.dev/registry#law-step/n3/rules>
     a gac:CapabilityField ;
@@ -187,7 +188,7 @@
     a gac:LawStep ;
     gac:lawStepCeiling "select" ;
     gac:lawStepName "plan" ;
-    gac:lawStepOrder 6 .
+    gac:lawStepOrder 7 .
 
 <https://graphlaw.dev/registry#law-step/rdfs>
     a gac:LawStep ;
@@ -198,7 +199,7 @@
 <https://graphlaw.dev/registry#law-step/record-receipts>
     a gac:LawStep ;
     gac:lawStepName "record-receipts" ;
-    gac:lawStepOrder 7 .
+    gac:lawStepOrder 8 .
 
 <https://graphlaw.dev/registry#law-step/require-receipt/step_name>
     a gac:CapabilityField ;
@@ -215,7 +216,7 @@
     a gac:LawStep ;
     gac:lawStepCeiling "observe" ;
     gac:lawStepName "require-receipt" ;
-    gac:lawStepOrder 8 .
+    gac:lawStepOrder 9 .
 
 <https://graphlaw.dev/registry#law-step/require-signed-receipt/step_name>
     a gac:CapabilityField ;
@@ -243,7 +244,7 @@
     a gac:LawStep ;
     gac:lawStepCeiling "observe" ;
     gac:lawStepName "require-signed-receipt" ;
-    gac:lawStepOrder 9 .
+    gac:lawStepOrder 10 .
 
 <https://graphlaw.dev/registry#law-step/shacl/shapes>
     a gac:CapabilityField ;
@@ -261,6 +262,12 @@
     gac:lawStepCeiling "observe" ;
     gac:lawStepName "shacl" ;
     gac:lawStepOrder 1 .
+
+<https://graphlaw.dev/registry#law-step/sql>
+    a gac:LawStep ;
+    gac:lawStepCeiling "observe" ;
+    gac:lawStepName "sql" ;
+    gac:lawStepOrder 5 .
 
 <https://graphlaw.dev/registry#limit/hooks_max_firings>
     a gac:Limit ;
@@ -2203,7 +2210,7 @@
 
 <https://graphlaw.dev/registry#refusal-code/DuckDb/message>
     a gac:CapabilityField ;
-    gac:fieldDoc "Diagnostic text from the embedded DuckDB substrate (ABI op `duckdb`, linked into the wasm module)." ;
+    gac:fieldDoc "Diagnostic text from the DuckDB substrate (ABI op `duckdb`; dispatches inside the graphlaw-wasm unit on every target (in-module, not host-only) but stays off the hashed 14-op table for digest stability)." ;
     gac:fieldName "message" ;
     gac:fieldNullable false ;
     gac:fieldOrder 1 ;
@@ -2557,10 +2564,10 @@
     a gac:Registry ;
     gac:abiVersion 1 ;
     gac:dialectCount 14 ;
-    gac:graphlawVersion "26.10.21" ;
+    gac:graphlawVersion "26.10.22" ;
     gac:opCount 14 ;
-    gac:receiptSurfaceBlake3 "blake3:ba11052d068da19d848c0dd56e81a5a688dd2f3f7b85e9b221f9cf59f3f5a36a" ;
-    gac:registryBlake3 "blake3:e227367e13ce8110d97fe29f252bdb69e22e872a5be4117ccbce4bbc9c6477d7" ;
+    gac:receiptSurfaceBlake3 "blake3:c14f6b1d8f12e63e1544dcb093e2b2736237e2e340585f509837a6ba75d4bc90" ;
+    gac:registryBlake3 "blake3:cdead01f74a86a1ed7ded9a7acf2bebd99caa45221f2a0551316e35941bf59ed" ;
     gac:schemaId "graphlaw.capability-registry/1" ;
     gac:surfaceBlake3 "blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9" .
 

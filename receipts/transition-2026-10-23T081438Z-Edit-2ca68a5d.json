@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "2ca68a5d4a995feb595c2597e4025d5620bff34f4bca754db3828e2c9a45eed8",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T081438Z-Edit-2ca68a5d.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/designs/eh-runner-decision-memo.md",
+  "timestamp_utc": "2026-10-23T081438Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

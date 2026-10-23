@@ -36,7 +36,10 @@ fn wasm_artifact() -> Result<PathBuf, String> {
             return if p.exists() {
                 Ok(p)
             } else {
-                Err(format!("GRAPHLAW_WASM set but artifact missing: {}", p.display()))
+                Err(format!(
+                    "GRAPHLAW_WASM set but artifact missing: {}",
+                    p.display()
+                ))
             };
         }
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -109,13 +112,14 @@ impl Divergence {
 fn compare(name: &str, index: usize, req: &Value) {
     let native = common::native_bytes(req);
     let wasm = common::wasm_bytes(req);
+    if name == "capabilities" {
+        compare_capabilities(&native, &wasm);
+        return;
+    }
     if native == wasm {
         return;
     }
-    let first_diff = native
-        .iter()
-        .zip(wasm.iter())
-        .position(|(a, b)| a != b);
+    let first_diff = native.iter().zip(wasm.iter()).position(|(a, b)| a != b);
     Divergence {
         op: req["op"].as_str().unwrap_or("?").to_string(),
         index,
@@ -124,6 +128,42 @@ fn compare(name: &str, index: usize, req: &Value) {
         first_diff,
     }
     .panic_for(name, req, &native, &wasm);
+}
+
+/// Host `capabilities` lists `frozen-duckdb`. The wasm module does not link
+/// that engine, so its authority list omits it. Every other field, including
+/// both digests, stays byte-for-field identical.
+fn compare_capabilities(native: &[u8], wasm: &[u8]) {
+    let n: Value = serde_json::from_slice(native).expect("native capabilities JSON");
+    let w: Value = serde_json::from_slice(wasm).expect("wasm capabilities JSON");
+    let n_auth = n["authorities"].as_array().expect("native authorities");
+    let w_auth = w["authorities"].as_array().expect("wasm authorities");
+    assert!(
+        n_auth.iter().any(|a| a["authority"] == "frozen-duckdb"),
+        "host capabilities dropped frozen-duckdb: {n}"
+    );
+    assert!(
+        w_auth.iter().all(|a| a["authority"] != "frozen-duckdb"),
+        "wasm capabilities still advertise frozen-duckdb: {w}"
+    );
+    let stripped: Vec<Value> = n_auth
+        .iter()
+        .filter(|a| a["authority"] != "frozen-duckdb")
+        .cloned()
+        .collect();
+    assert_eq!(
+        stripped.as_slice(),
+        w_auth.as_slice(),
+        "authority lists diverge beyond frozen-duckdb"
+    );
+    let mut n_rest = n.clone();
+    let mut w_rest = w.clone();
+    n_rest.as_object_mut().unwrap().remove("authorities");
+    w_rest.as_object_mut().unwrap().remove("authorities");
+    assert_eq!(
+        n_rest, w_rest,
+        "capabilities fields other than authorities diverged"
+    );
 }
 
 /// Differential ok: byte-identical and admitted on both engines.
@@ -138,7 +178,11 @@ fn diff_ok(name: &str, index: usize, req: &Value) -> Value {
 fn diff_refused(name: &str, index: usize, req: &Value) -> Value {
     compare(name, index, req);
     let v: Value = serde_json::from_slice(&common::native_bytes(req)).expect("native JSON");
-    assert_eq!(v["ok"], json!(false), "{name}: request {req} was admitted: {v}");
+    assert_eq!(
+        v["ok"],
+        json!(false),
+        "{name}: request {req} was admitted: {v}"
+    );
     v
 }
 
@@ -243,7 +287,10 @@ fn cases() -> Vec<(String, Value)> {
     let mut v: Vec<(String, Value)> = vec![
         ("capabilities".into(), json!({"op": "capabilities"})),
         // law steps: n3, rdfs, one entailment regime, datalog, hooks
-        ("law_rdfs".into(), law(rdfs_data.clone(), json!([{"step": "rdfs"}]))),
+        (
+            "law_rdfs".into(),
+            law(rdfs_data.clone(), json!([{"step": "rdfs"}])),
+        ),
         (
             "law_n3".into(),
             law(
@@ -338,7 +385,10 @@ fn cases() -> Vec<(String, Value)> {
         // all five typed refusals
         (
             "refusal_NotAdmitted".into(),
-            law(ttl(two_bad), json!([{"step": "shacl", "shapes": min_count_shapes}])),
+            law(
+                ttl(two_bad),
+                json!([{"step": "shacl", "shapes": min_count_shapes}]),
+            ),
         ),
         (
             "refusal_PlanRefused".into(),
@@ -348,7 +398,10 @@ fn cases() -> Vec<(String, Value)> {
                     {"name": "a-b", "pre": at("z"), "add": at("b"), "del": at("a")}], "goal": at("b")}}]),
             ),
         ),
-        ("refusal_PolicyRefused".into(), json!({"op": "policy", "problem": policy_problem, "policy": skewed})),
+        (
+            "refusal_PolicyRefused".into(),
+            json!({"op": "policy", "problem": policy_problem, "policy": skewed}),
+        ),
         (
             "refusal_ReceiptRequired".into(),
             law(
@@ -373,7 +426,10 @@ fn cases() -> Vec<(String, Value)> {
             "refusal_UnverifiedLeaseRefused".into(),
             unsigned_lease_req(),
         ),
-        ("policy_happy".into(), json!({"op": "policy", "problem": policy_problem, "policy": good_policy})),
+        (
+            "policy_happy".into(),
+            json!({"op": "policy", "problem": policy_problem, "policy": good_policy}),
+        ),
     ];
     v.extend(canonical_cases());
     v
@@ -389,10 +445,7 @@ fn other_key() -> graphlaw::attest::SigningKey {
     graphlaw::attest::SigningKey::from_seed([4; 32])
 }
 
-fn signed_lease_json(
-    key: &graphlaw::attest::SigningKey,
-    expires: u64,
-) -> Value {
+fn signed_lease_json(key: &graphlaw::attest::SigningKey, expires: u64) -> Value {
     use graphlaw::law::{Ceiling, Lease};
     let signed = graphlaw::attest::sign_lease(
         key,
@@ -463,7 +516,11 @@ fn all_canonical_inputs_are_byte_identical_native_vs_wasm() {
         cs.len() - refused_count,
         refused_count
     );
-    assert!(cs.len() >= 30, "court must run >= 30 canonical inputs, ran {}", cs.len());
+    assert!(
+        cs.len() >= 30,
+        "court must run >= 30 canonical inputs, ran {}",
+        cs.len()
+    );
 }
 
 /// Non-vacuity: the byte-identity gate must be able to fail. Corrupt one byte
@@ -472,7 +529,10 @@ fn all_canonical_inputs_are_byte_identical_native_vs_wasm() {
 #[test]
 fn corrupting_one_receipt_digest_byte_breaks_byte_identity() {
     if let Err(r) = wasm_artifact() {
-        skip(&r, &["corrupting_one_receipt_digest_byte_breaks_byte_identity"]);
+        skip(
+            &r,
+            &["corrupting_one_receipt_digest_byte_breaks_byte_identity"],
+        );
         return;
     }
     let req = law(
@@ -487,9 +547,7 @@ fn corrupting_one_receipt_digest_byte_breaks_byte_identity() {
     // corrupt one hex char of a blake3 digest inside the wasm response
     let hay = String::from_utf8_lossy(&wasm).into_owned();
     let marker = "blake3:";
-    let pos = hay
-        .find(marker)
-        .expect("response carries a blake3 digest");
+    let pos = hay.find(marker).expect("response carries a blake3 digest");
     let mut corrupt = wasm.clone();
     let corrupt_at = pos + marker.len();
     let flip = |b: &mut u8| {

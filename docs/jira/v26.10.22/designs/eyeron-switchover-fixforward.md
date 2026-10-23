@@ -41,8 +41,8 @@ duckdb_op.rs).
 |---|---|---|
 | `cargo check -p graphlaw-eyeron` | 0 | 0 errors |
 | `cargo test -p graphlaw-eyeron` | 0 | 21 passed; 0 failed (lib tests); 2 empty harnesses |
-| `cargo test --test sql_rdf_dialect` | 0 | 33 passed; 0 failed |
-| `cargo test --test chicago_validation` | 0 | 9 passed; 0 failed |
+| `cargo test --test sql_rdf_dialect` | 0 | re-measured 2026-10-23: 34 passed; 0 failed (at receipt: 33 passed / 0 failed) |
+| `cargo test --test chicago_validation` | 0 | re-measured 2026-10-23: 11 passed; 0 failed (at receipt: 9 passed / 0 failed) |
 
 ## Standing
 

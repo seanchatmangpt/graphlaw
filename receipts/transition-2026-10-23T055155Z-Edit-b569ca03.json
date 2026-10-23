@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "b569ca03d2c88f888f68205163e5a6b5c1d41c674c6b6823c390232835d1c973",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T055155Z-Edit-b569ca03.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/designs/oracle-guard-receipt.md",
+  "timestamp_utc": "2026-10-23T055155Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

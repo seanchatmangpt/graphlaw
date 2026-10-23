@@ -32,6 +32,15 @@
 //!    raw ABI response in the same `{"ok":true,"result":...}` envelope, so the
 //!    smalt stub-mode worker decode accepts both shapes uniformly.
 //!
+//! ## Legacy-host scope (EH-class artifact pre-flight)
+//!
+//! This is the legacy wasmi host: it courts the *pre-duckdb* artifact class.
+//! The DuckDB-linked artifact carries a wasm Tag (exception-handling) section
+//! (section id 13), which this wasmi build cannot load. Before handing bytes
+//! to the engine, the runner walks the section headers and refuses an
+//! EH-class artifact with the 96-class refusal "EH-class artifact requires
+//! graphlaw-run-eh" (exit 96) instead of a wasmi parse panic.
+//!
 //! ## Modes and exit codes (stub-compatible, courts depend on them)
 //!
 //!   (default)       eval loop until stdin EOF; exit 0.
@@ -62,6 +71,26 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+// #region agent log
+fn agent_log(hypothesis_id: &str, location: &str, message: &str, data: Value) {
+    let line = json!({
+        "sessionId": "c0cb0f",
+        "runId": "post-fix",
+        "hypothesisId": hypothesis_id,
+        "location": location,
+        "message": message,
+        "data": data,
+        "timestamp": std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0),
+    });
+    // Structured diagnostic line; stderr keeps it visible without a
+    // hardcoded home-path side channel (machine_shaped_gate finding).
+    eprintln!("{line}");
+}
+// #endregion
+
 use serde_json::{Value, json};
 use wasmi::{Engine, Instance, Linker, Memory, Module, Store, TypedFunc};
 use wasmi_wasi::{WasiCtx, WasiCtxBuilder};
@@ -76,7 +105,11 @@ enum RunError {
     /// Usage / artifact I/O fault. Exit 2.
     Usage(String),
     /// Artifact digest mismatch refusal. Exit 84 (loud, never silent serve).
-    DigestMismatch { path: PathBuf, expected: String, got: String },
+    DigestMismatch {
+        path: PathBuf,
+        expected: String,
+        got: String,
+    },
     /// EOF in the middle of a packet-4 frame. Exit 90.
     FrameEof,
     /// Stdin read error. Exit 91.
@@ -91,6 +124,9 @@ enum RunError {
     WasmInvalid(String),
     /// Module failed to instantiate/link/export the graphlaw ABI. Exit 96.
     WasmInstantiation(String),
+    /// Artifact carries a Tag (exception-handling) section: this legacy wasmi
+    /// host cannot load it; requires graphlaw-run-eh. Exit 96 (EH class).
+    EhArtifact { path: PathBuf },
     /// Guest ABI call or linear-memory access faulted. Exit 97.
     AbiFault(String),
 }
@@ -107,6 +143,7 @@ impl RunError {
             RunError::NonJsonResponse(_) => 94,
             RunError::WasmInvalid(_) => 95,
             RunError::WasmInstantiation(_) => 96,
+            RunError::EhArtifact { .. } => 96,
             RunError::AbiFault(_) => 97,
         }
     }
@@ -114,17 +151,32 @@ impl RunError {
     fn diagnostic(&self) -> String {
         match self {
             RunError::Usage(m) => format!("graphlaw-run: {m}"),
-            RunError::DigestMismatch { path, expected, got } => format!(
+            RunError::DigestMismatch {
+                path,
+                expected,
+                got,
+            } => format!(
                 "graphlaw-run: ARTIFACT DIGEST MISMATCH for {}: expected {expected}, got {got}",
                 path.display()
             ),
             RunError::Trap => "graphlaw-run: guest trap (crash mode or memory wall)".into(),
             RunError::FrameEof => "graphlaw-run: EOF mid-frame".into(),
             RunError::StdinRead(e) => format!("graphlaw-run: stdin read error: {e}"),
-            RunError::MalformedEnvelope => "graphlaw-run: malformed envelope (bad base64 payload)".into(),
-            RunError::NonJsonResponse(e) => format!("graphlaw-run: module returned non-JSON response: {e}"),
+            RunError::MalformedEnvelope => {
+                "graphlaw-run: malformed envelope (bad base64 payload)".into()
+            }
+            RunError::NonJsonResponse(e) => {
+                format!("graphlaw-run: module returned non-JSON response: {e}")
+            }
             RunError::WasmInvalid(e) => format!("graphlaw-run: invalid wasm artifact: {e}"),
-            RunError::WasmInstantiation(e) => format!("graphlaw-run: wasm instantiation failed: {e}"),
+            RunError::WasmInstantiation(e) => {
+                format!("graphlaw-run: wasm instantiation failed: {e}")
+            }
+            RunError::EhArtifact { path } => format!(
+                "graphlaw-run: EH-class artifact requires graphlaw-run-eh: {} carries a wasm \
+                 Tag (exception-handling) section, unsupported by this legacy wasmi host",
+                path.display()
+            ),
             RunError::AbiFault(e) => format!("graphlaw-run: guest ABI fault: {e}"),
         }
     }
@@ -171,12 +223,24 @@ fn run() -> Result<ExitCode, RunError> {
     if let Some(hex) = &expect_blake3 {
         let got = blake3_hex(&bytes);
         if &got != hex {
+            // #region agent log
+            agent_log(
+                "H-PIN",
+                "src/bin/graphlaw_run.rs:run",
+                "digest-mismatch",
+                json!({"expected": hex, "got": &got, "len": bytes.len()}),
+            );
+            // #endregion
             return Err(RunError::DigestMismatch {
                 path: path.clone(),
                 expected: hex.clone(),
                 got,
             });
         }
+    }
+
+    if has_tag_section(&bytes, &path)? {
+        return Err(RunError::EhArtifact { path });
     }
 
     let mut host = Host::new(&bytes)?;
@@ -208,7 +272,9 @@ fn run() -> Result<ExitCode, RunError> {
                     Err(e) => return Err(e),
                 };
                 write_frame(&mut stdout, &reply)?;
-                stdout.flush().map_err(|e| RunError::Usage(format!("stdout flush failed: {e}")))?;
+                stdout
+                    .flush()
+                    .map_err(|e| RunError::Usage(format!("stdout flush failed: {e}")))?;
             }
         }
     }
@@ -224,6 +290,59 @@ fn main() -> ExitCode {
     }
 }
 
+/// Walks wasm section headers (inline parser, mirrors the
+/// tests/wasm_size_court.rs walker) and reports whether a Tag section
+/// (id 13, exception-handling) is present.
+fn has_tag_section(bytes: &[u8], path: &std::path::Path) -> Result<bool, RunError> {
+    const TAG_SECTION_ID: u8 = 13;
+    const WASM_MAGIC: &[u8; 4] = b"\0asm";
+    if bytes.len() < 8 || !bytes.starts_with(WASM_MAGIC) {
+        // Not parseable as wasm at all: let the engine produce the typed
+        // WasmInvalid diagnostic below.
+        return Ok(false);
+    }
+    let mut i = 8usize;
+    while i < bytes.len() {
+        let id = bytes[i];
+        i += 1;
+        let mut size: u64 = 0;
+        let mut shift = 0u32;
+        loop {
+            if i >= bytes.len() {
+                return Err(RunError::WasmInvalid(format!(
+                    "{path_display}: truncated section LEB128 at byte {i}",
+                    path_display = path.display()
+                )));
+            }
+            let b = bytes[i];
+            i += 1;
+            size |= u64::from(b & 0x7f) << shift;
+            shift += 7;
+            if b & 0x80 == 0 {
+                break;
+            }
+            if shift >= 35 {
+                return Err(RunError::WasmInvalid("overlong section LEB128".into()));
+            }
+        }
+        let end = i
+            .checked_add(usize::try_from(size).map_err(|_| {
+                RunError::WasmInvalid("section size overflow".into())
+            })?)
+            .filter(|&e| e <= bytes.len())
+            .ok_or_else(|| {
+                RunError::WasmInvalid(format!(
+                    "section id {id} claims {size} bytes past EOF"
+                ))
+            })?;
+        if id == TAG_SECTION_ID {
+            return Ok(true);
+        }
+        i = end;
+    }
+    Ok(false)
+}
+
 struct Host {
     store: Store<WasiCtx>,
     memory: Memory,
@@ -235,8 +354,30 @@ struct Host {
 impl Host {
     fn new(bytes: &[u8]) -> Result<Self, RunError> {
         let engine = Engine::default();
-        let module = Module::new(&engine, bytes)
-            .map_err(|e| RunError::WasmInvalid(e.to_string()))?;
+        let module = match Module::new(&engine, bytes) {
+            Ok(module) => {
+                // #region agent log
+                agent_log(
+                    "H1",
+                    "src/bin/graphlaw_run.rs:Host::new",
+                    "module-validated",
+                    json!({"detail": format!("len={} blake3={}", bytes.len(), blake3_hex(bytes))}),
+                );
+                // #endregion
+                module
+            }
+            Err(e) => {
+                // #region agent log
+                agent_log(
+                    "H1",
+                    "src/bin/graphlaw_run.rs:Host::new",
+                    "module-rejected",
+                    json!({"detail": e.to_string()}),
+                );
+                // #endregion
+                return Err(RunError::WasmInvalid(e.to_string()));
+            }
+        };
         // The only imports allowed are WASI's (clock, random, stdio).
         for i in module.imports() {
             if i.module() != "wasi_snapshot_preview1" {
@@ -259,9 +400,9 @@ impl Host {
             init.call(&mut store, ())
                 .map_err(|e| RunError::WasmInstantiation(format!("_initialize: {e}")))?;
         }
-        let memory = instance.get_memory(&store, "memory").ok_or_else(|| {
-            RunError::WasmInstantiation("module does not export memory".into())
-        })?;
+        let memory = instance
+            .get_memory(&store, "memory")
+            .ok_or_else(|| RunError::WasmInstantiation("module does not export memory".into()))?;
         let export = |name: &'static str, e: wasmi::Error| {
             RunError::WasmInstantiation(format!("missing or mistyped export {name}: {e}"))
         };
@@ -395,58 +536,33 @@ fn call_and_decode(host: &mut Host, request_bytes: &[u8]) -> Result<Value, RunEr
     let response: Value = serde_json::from_slice(&abi_response)
         .map_err(|e| RunError::NonJsonResponse(e.to_string()))?;
     // #region agent log
-    debug_dialect_log(request_bytes, &response);
+    let req: Value = serde_json::from_slice(request_bytes).unwrap_or(Value::Null);
+    let err = response.get("error");
+    agent_log(
+        "B",
+        "src/bin/graphlaw_run.rs:call_and_decode",
+        "wasm dialect reply",
+        json!({
+            "op": req.get("op").and_then(|v| v.as_str()),
+            "dialect": req.get("dialect").and_then(|v| v.as_str()),
+            "data_dialect": req.pointer("/data/dialect").and_then(|v| v.as_str()),
+            "ok": response.get("ok"),
+            "has_id": response.get("id").and_then(|v| v.as_str()).map(|s| !s.is_empty()),
+            "quads": response.get("quads"),
+            "conforms": response.get("conforms"),
+            "valid": response.get("valid"),
+            "result_dialect": response.get("dialect"),
+            "error_kind": err.and_then(|e| e.get("kind")),
+            "error_message": err.and_then(|e| e.get("message")).and_then(|m| m.as_str()).map(|m| {
+                let mut t = m.to_string();
+                t.truncate(180);
+                t
+            }),
+        }),
+    );
     // #endregion
     Ok(response)
 }
-
-// #region agent log
-fn debug_dialect_log(request_bytes: &[u8], response: &Value) {
-    let req: Value = serde_json::from_slice(request_bytes).unwrap_or(Value::Null);
-    let op = req.get("op").and_then(Value::as_str).unwrap_or("");
-    let hypothesis_id = match op {
-        "capabilities" => "A",
-        "parse" | "sniff" | "convert" => "B",
-        "duckdb" => "C",
-        _ => "D",
-    };
-    let dialects = req
-        .pointer("/result/other_dialects")
-        .or_else(|| response.pointer("/other_dialects"));
-    let line = json!({
-        "sessionId": "c0cb0f",
-        "runId": "pre-fix",
-        "hypothesisId": hypothesis_id,
-        "location": "src/bin/graphlaw_run.rs:call_and_decode",
-        "message": "wasm dialect reply",
-        "timestamp": std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_millis() as u64)
-            .unwrap_or(0),
-        "data": {
-            "op": op,
-            "dialect": req.get("dialect").and_then(Value::as_str),
-            "ok": response.get("ok"),
-            "error_kind": response.pointer("/error/kind"),
-            "error_message": response.pointer("/error/message"),
-            "result_dialect": response.get("dialect"),
-            "has_id": response.get("id").map(|v| !v.is_null()).unwrap_or(false),
-            "quads": response.get("quads"),
-            "valid": response.get("valid"),
-            "other_dialects": dialects,
-            "rdf_dialects": response.get("rdf_dialects"),
-        }
-    });
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("/Users/sac/graphlaw/.cursor/debug-c0cb0f.log")
-    {
-        use std::io::Write;
-        let _ = writeln!(f, "{line}");
-    }
-}
-// #endregion
 
 /// Base64 decode without an extra dependency (the runner must build with only
 /// the graphlaw dependency tree). Accepts standard alphabet with padding.

@@ -13,7 +13,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use graphlaw::attest::{sign_bytes, verify_bytes, Attestation, SigningKey, TrustedKeys};
+use graphlaw::attest::{Attestation, SigningKey, TrustedKeys, sign_bytes, verify_bytes};
 
 struct Args {
     mode: Mode,
@@ -87,14 +87,37 @@ fn parse_args() -> Result<Args, String> {
     }
     match mode {
         Mode::Pubkey if seed_hex.is_none() => Err("pubkey needs --key-seed-hex".into()),
-        Mode::Pubkey => Ok(Args { mode, seed_hex, input: None, out, attestation_path, keys }),
+        Mode::Pubkey => Ok(Args {
+            mode,
+            seed_hex,
+            input: None,
+            out,
+            attestation_path,
+            keys,
+        }),
         _ => {
             let input = input.ok_or("missing --in")?;
             match mode {
                 Mode::Sign if seed_hex.is_none() => Err("sign needs --key-seed-hex".into()),
-                Mode::Sign => Ok(Args { mode, seed_hex, input: Some(input), out, attestation_path, keys }),
-                Mode::Verify if keys.is_empty() => Err("verify needs at least one --trusted-key".into()),
-                Mode::Verify => Ok(Args { mode, seed_hex, input: Some(input), out, attestation_path, keys }),
+                Mode::Sign => Ok(Args {
+                    mode,
+                    seed_hex,
+                    input: Some(input),
+                    out,
+                    attestation_path,
+                    keys,
+                }),
+                Mode::Verify if keys.is_empty() => {
+                    Err("verify needs at least one --trusted-key".into())
+                }
+                Mode::Verify => Ok(Args {
+                    mode,
+                    seed_hex,
+                    input: Some(input),
+                    out,
+                    attestation_path,
+                    keys,
+                }),
                 Mode::Pubkey => unreachable!(),
             }
         }
@@ -108,9 +131,10 @@ fn read(p: &std::path::Path) -> Result<Vec<u8>, String> {
 fn run(a: Args) -> Result<ExitCode, String> {
     if let Mode::Pubkey = a.mode {
         let seed_hex = a.seed_hex.as_deref().ok_or("pubkey needs --key-seed-hex")?;
-        let seed = graphlaw::attest::hex_decode(seed_hex)
-            .ok_or("--key-seed-hex: not hex")?;
-        let seed: [u8; 32] = seed.try_into().map_err(|_| "--key-seed-hex: need 32 bytes")?;
+        let seed = graphlaw::attest::hex_decode(seed_hex).ok_or("--key-seed-hex: not hex")?;
+        let seed: [u8; 32] = seed
+            .try_into()
+            .map_err(|_| "--key-seed-hex: need 32 bytes")?;
         println!("{}", SigningKey::from_seed(seed).verifying_key().to_hex());
         return Ok(ExitCode::SUCCESS);
     }
@@ -120,30 +144,31 @@ fn run(a: Args) -> Result<ExitCode, String> {
         Mode::Pubkey => unreachable!("handled above"),
         Mode::Sign => {
             let seed_hex = a.seed_hex.as_deref().ok_or("sign needs --key-seed-hex")?;
-            let seed = graphlaw::attest::hex_decode(seed_hex)
-                .ok_or("--key-seed-hex: not hex")?;
-            let seed: [u8; 32] = seed.try_into().map_err(|_| "--key-seed-hex: need 32 bytes")?;
+            let seed = graphlaw::attest::hex_decode(seed_hex).ok_or("--key-seed-hex: not hex")?;
+            let seed: [u8; 32] = seed
+                .try_into()
+                .map_err(|_| "--key-seed-hex: need 32 bytes")?;
             let key = SigningKey::from_seed(seed);
             let att = sign_bytes(&key, &payload);
             let json = att.to_json();
             let text = format!("{json}\n");
             match &a.out {
                 Some(p) => {
-                    std::fs::write(p, text.as_bytes()).map_err(|e| format!("{}: {e}", p.display()))?;
+                    std::fs::write(p, text.as_bytes())
+                        .map_err(|e| format!("{}: {e}", p.display()))?;
                     println!("{json}");
                 }
                 None => println!("{json}"),
             }
         }
         Mode::Verify => {
-            let ap = a
-                .attestation_path
-                .ok_or("verify needs --attestation")?;
+            let ap = a.attestation_path.ok_or("verify needs --attestation")?;
             let text = read(&ap)?;
             let text = String::from_utf8(text).map_err(|_| "attestation file is not UTF-8")?;
-            let att = Attestation::from_json(text.trim())
-            .map_err(|e| format!("attestation: {e}"))?;
-            let trusted = TrustedKeys::from_hex(&a.keys).map_err(|e| format!("--trusted-key: {e}"))?;
+            let att =
+                Attestation::from_json(text.trim()).map_err(|e| format!("attestation: {e}"))?;
+            let trusted =
+                TrustedKeys::from_hex(&a.keys).map_err(|e| format!("--trusted-key: {e}"))?;
             if let Err(e) = verify_bytes(&payload, &att, &trusted) {
                 println!("REFUSED: {e}");
                 return Ok(ExitCode::from(1));

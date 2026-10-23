@@ -150,9 +150,7 @@ fn graph_court_pure_graph_id_identical_across_dialects() {
     ];
     let mut ids: Vec<String> = Vec::new();
     for (name, text, dialect) in sources {
-        if let Some(state) =
-            admit_or_skip(&mut ledger, name, text, dialect, "pure graph court")
-        {
+        if let Some(state) = admit_or_skip(&mut ledger, name, text, dialect, "pure graph court") {
             assert_eq!(state.quad_count(), 3, "{name}: expected 3 quads");
             ids.push(state.id().to_string());
         }
@@ -177,8 +175,20 @@ fn graph_court_pure_graph_id_identical_across_dialects() {
 #[test]
 fn dataset_court_named_graph_id_matches_across_trig_and_nquads() {
     let mut ledger = Ledger::default();
-    let trig = admit_or_skip(&mut ledger, "trig", DATASET_TRIG, Dialect::TriG, "dataset court");
-    let nq = admit_or_skip(&mut ledger, "nquads", DATASET_NQ, Dialect::NQuads, "dataset court");
+    let trig = admit_or_skip(
+        &mut ledger,
+        "trig",
+        DATASET_TRIG,
+        Dialect::TriG,
+        "dataset court",
+    );
+    let nq = admit_or_skip(
+        &mut ledger,
+        "nquads",
+        DATASET_NQ,
+        Dialect::NQuads,
+        "dataset court",
+    );
     eprintln!(
         "dataset-court receipt: passes={:?} skips={:?}",
         ledger.pass, ledger.skip
@@ -222,7 +232,11 @@ fn blank_node_court_relabeling_and_cross_dialect_id() {
         .expect("bnode nquads fixture must parse");
     let b = LawState::parse(BNODE_NT_RELABELED.as_bytes(), Dialect::NQuads, None)
         .expect("relabeled bnode nquads fixture must parse");
-    assert_eq!(a.id(), b.id(), "blank-node relabeling must not move identity");
+    assert_eq!(
+        a.id(),
+        b.id(),
+        "blank-node relabeling must not move identity"
+    );
 
     // Cross-dialect: bnode graph parsed as NTriples vs NQuads (default graph)
     // must land on the same canonical id (extends canonical_abi bnode court).

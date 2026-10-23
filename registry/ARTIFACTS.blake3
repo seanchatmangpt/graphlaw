@@ -1,13 +1,19 @@
 # graphlaw working-tree artifact pins. The wasm row pins the bytes built from this tree (per-release digests live in each release's GitHub assets and CHANGELOG). Format: <kind> <blake3> <bytes> <name>
-# crate=26.10.21 wasm-abi=1 target=wasm32-wasip1 digest=332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c size=6793617 pin-source=26.10.21
-#   pin-source: digest was minted at the 26.10.21 source state; valid until next artifact rebuild, at which point this header and priv/graphlaw.wasm.blake3 are re-pinned in the same commit as the version bump (W09, 2026-10-20).
+# historical pin 332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c size=6793617 (26.10.21, sql parse returned valid with no dataset id)
+# historical pin 74ec3c8d6cdb3db1ff1869ac8b2454c2cf94d08f2a211b0b7d2af2c36b08a7a5 size=7098370 (26.10.21 workspace bytes, before the 26.10.22 version string)
+# historical pin 117507e06d36fc3c761e7cc0c24bee805ddc93a94a46fab561f95ce1c1539da2 size=7099340 (26.10.22, before the admit:sql law step)
+# historical pin f60521e5f856271b6affbccb8b6ceeaf8e458229f71ad09dbfbac07364ee6931 size=7099340 (26.10.22, before the admit:sql law step)
+# historical pin 380d580e53dd0a165bd97c68dd0a6e68748934131b30fe09addd0b6c0b522036 size=7102174 (26.10.22, wasm capabilities still listed frozen-duckdb)
+# crate=26.10.22 wasm-abi=1 target=wasm32-wasip1 digest=f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e size=7104147 pin-source=26.10.22 (superseded 2026-10-23: DFLSS-GL EH-closure re-pin, SQLRDF-21/24)
+#   pin-source: digest minted 2026-10-22 from `cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` (rustc 1.96.0, wasi-sdk 34). Tag section count 0. Re-pin both this file and priv/graphlaw.wasm.blake3 in the same commit as the next version bump (W09).
 # wasm: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm (rust 1.96.0);
 #   observed 2026-09-30: two builds, each after `cargo clean -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`, same target dir (dependency crates cached, not rebuilt), same machine, produced identical bytes. Not verified across separate target dirs or machines.
 # wasm row: never re-pinned by graphlaw-registry; re-pinned by the wasm rebuild flow.
-wasm 332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c 6793617 graphlaw_wasm.wasm
-registry blake3:e227367e13ce8110d97fe29f252bdb69e22e872a5be4117ccbce4bbc9c6477d7 - capability-registry.json
+# historical pin (pre-EH-closure): wasm f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e 7104147 graphlaw_wasm.wasm
+wasm fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107 57781384 graphlaw_wasm.wasm
+registry blake3:cdead01f74a86a1ed7ded9a7acf2bebd99caa45221f2a0551316e35941bf59ed - capability-registry.json
 surface blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9 - capability-registry.json
-receipt-surface blake3:ba11052d068da19d848c0dd56e81a5a688dd2f3f7b85e9b221f9cf59f3f5a36a - src/duckdb_eval.rs+src/sql_ast.rs
+receipt-surface blake3:c14f6b1d8f12e63e1544dcb093e2b2736237e2e340585f509837a6ba75d4bc90 - src/duckdb_eval.rs+src/sql_ast.rs
 # receipt-surface: blake3 of the canonical graphlaw.receipt-surface/1 document
 #   (per-file blake3+bytes for src/duckdb_eval.rs and src/sql_ast.rs, the receipt-minting
 #   surface); recomputed by graphlaw::registry::receipt_surface_blake3(). Re-pin via

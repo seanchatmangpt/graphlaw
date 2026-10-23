@@ -1,0 +1,10 @@
+# Rehypothecation readback SELECT (bare single-root form). Expected SQL:
+#   SELECT collateral_id, market_value FROM rehy_collateral ORDER BY collateral_id
+@prefix ex: <http://example.org/banking#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+
+ex:stmt1 a sql:SelectStatement ;
+    sql:statementIndex 3 ;
+    sql:fromTable [ sql:tableName "rehy_collateral" ] ;
+    sql:selectList ( [ sql:columnName "collateral_id" ] [ sql:columnName "market_value" ] ) ;
+    sql:orderBy ( [ sql:columnName "collateral_id" ] ) .

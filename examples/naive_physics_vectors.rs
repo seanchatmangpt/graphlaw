@@ -248,7 +248,11 @@ fn check(scene: &Scene) -> Value {
     let (falls, spills) = run_datalog(scene);
     let (ref_falls, ref_spills) = reference_fixpoint(scene);
     assert_eq!(falls, ref_falls, "{}: datalog vs reference falls", scene.id);
-    assert_eq!(spills, ref_spills, "{}: datalog vs reference spills", scene.id);
+    assert_eq!(
+        spills, ref_spills,
+        "{}: datalog vs reference spills",
+        scene.id
+    );
     for o in scene.not_falls {
         assert!(!falls.contains(*o), "{}: {} must not fall", scene.id, o);
     }
@@ -271,7 +275,10 @@ fn check(scene: &Scene) -> Value {
         .args(["-C", env!("CARGO_MANIFEST_DIR"), "rev-parse", "HEAD"])
         .output()
         .expect("git rev-parse");
-    let rev = String::from_utf8(rev.stdout).expect("utf8").trim().to_string();
+    let rev = String::from_utf8(rev.stdout)
+        .expect("utf8")
+        .trim()
+        .to_string();
 
     json!({
         "vector_id": scene.id,
@@ -357,7 +364,8 @@ against an independent reference fixpoint before writing.
 
 All four Hayes axioms are positive Horn clauses; removal is an event fact
 (`np:remove`), never negation.
-"#.to_string()
+"#
+    .to_string()
 }
 
 fn encoders_doc() -> String {
@@ -395,5 +403,6 @@ skips removed objects in its fixpoint. Cascades arise purely through rules 3+4.
 
 Sorted EDB facts, order-independent rules; re-running the generator is
 byte-idempotent.
-"#.to_string()
+"#
+    .to_string()
 }

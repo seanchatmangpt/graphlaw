@@ -1,3 +1,10 @@
+> **SUPERSEDED 2026-10-23**: the EH wall this design worked around is closed —
+> single DuckDB-linked artifact, wasmtime 48 `wasm_exceptions`, archive law
+> `-mllvm -wasm-use-legacy-eh=0` (see `docs/WASM.md`, `docs/wasm-integration.md`,
+> eh-runner-decision-memo.md DECISION block, SQLRDF-21). Sections describing
+> per-call in-memory connections are also superseded by the session surface
+> (mode `open`/`exec-with-session`, `src/duckdb_op.rs`).
+
 # WASM + DuckDB Integration Wave (GWS-1..12)
 
 Standing: OPERATOR-CHARTER — documented from landed artifacts only

@@ -2,9 +2,9 @@
 //! DuckDB, an admitted AST executes on frozen-duckdb, and the section 4/5
 //! typed refusal taxonomy (REFUSAL-01/02/03) refuses before any engine call.
 
-use graphlaw::dialect::{sniff, Dialect, RefusalKind};
+use graphlaw::dialect::{Dialect, RefusalKind, sniff};
 use graphlaw::sql_ast::compile_turtle;
-use graphlaw::tier::{admit_bytes_tiered, Admitted};
+use graphlaw::tier::{Admitted, admit_bytes_tiered};
 
 const SELECT: &str = r#"
 @prefix sql: <http://graphlaw.org/sql#> .
@@ -25,7 +25,10 @@ ex:Q a sql:SelectStatement ;
 #[test]
 fn sniff_routes_sql_select_and_leaves_plain_turtle() {
     assert_eq!(sniff(SELECT.as_bytes(), None).unwrap(), Dialect::SqlRdf);
-    assert_eq!(Dialect::SqlRdf.engine(), graphlaw::dialect::Engine::FrozenDuckdb);
+    assert_eq!(
+        Dialect::SqlRdf.engine(),
+        graphlaw::dialect::Engine::FrozenDuckdb
+    );
     let turtle = b"@prefix ex: <http://example.org/> .\nex:a ex:b ex:c .\n";
     assert_eq!(sniff(turtle, None).unwrap(), Dialect::Turtle);
 }
@@ -51,9 +54,15 @@ ex:Q a sql:SelectStatement ;
 "#;
     let err = compile_turtle(doc).unwrap_err();
     let message = err.to_string();
-    assert!(message.contains("SHACL") || message.contains("violation") || message.contains("Invalid"), "{message}");
+    assert!(
+        message.contains("SHACL") || message.contains("violation") || message.contains("Invalid"),
+        "{message}"
+    );
     let admitted = admit_bytes_tiered(doc.as_bytes(), None, None, None);
-    assert!(admitted.is_err(), "a shape violation must not admit a query");
+    assert!(
+        admitted.is_err(),
+        "a shape violation must not admit a query"
+    );
 }
 
 #[test]
@@ -133,6 +142,32 @@ mod duckdb_courts {
         db
     }
 
+    /// The compiled query's own output values for one column, read back from
+    /// the execution receipt's row projection (real frozen-duckdb rows, not a
+    /// hand-written twin of the query). Mirrors the M07 helper in
+    /// tests/chicago_validation.rs.
+    fn column_values(
+        receipt: &graphlaw::duckdb_eval::ExecutionReceipt,
+        column: &str,
+    ) -> Vec<String> {
+        let suffix = format!("/{column}");
+        let mut values: Vec<String> = receipt
+            .result_triples
+            .iter()
+            .filter(|t| t.predicate.ends_with(&suffix))
+            .filter_map(|t| match &t.object {
+                purrdf::TermValue::Literal { lexical_form, .. } => Some(lexical_form.clone()),
+                _ => None,
+            })
+            .collect();
+        values.sort();
+        values
+    }
+
+    /// Strengthened (lane N7): the admitted SELECT (latency_ms > 400) emits
+    /// EXACTLY rows_emitted == 2 and EXACTLY batch_id values [alpha, gamma].
+    /// A dropped-filter mutation (3 rows incl. beta) or an inverted-filter
+    /// mutation (only beta) now fails loudly — no `>= 1` floor.
     #[test]
     fn admitted_ast_executes_on_frozen_duckdb() {
         let admitted = admit_bytes_tiered(SELECT.as_bytes(), None, None, None).unwrap();
@@ -140,7 +175,11 @@ mod duckdb_courts {
             Admitted::Query(q) => q,
             other => panic!("expected a compiled query, got {other:?}"),
         };
-        assert!(compiled.sql.to_ascii_uppercase().contains("SELECT"), "{}", compiled.sql);
+        assert!(
+            compiled.sql.to_ascii_uppercase().contains("SELECT"),
+            "{}",
+            compiled.sql
+        );
 
         let db = db();
         let receipt = db
@@ -152,12 +191,19 @@ mod duckdb_courts {
             )
             .unwrap();
         assert_ne!(receipt.query_hash, [0u8; 32]);
-        assert!(receipt.rows_emitted >= 1, "rows {}", receipt.rows_emitted);
+        assert_eq!(receipt.rows_emitted, 2, "exact rowcount, not a >= 1 floor");
+        let ids = column_values(&receipt, "batch_id");
+        assert_eq!(ids, vec!["alpha", "gamma"]);
+        assert!(
+            !ids.contains(&"beta".to_string()),
+            "inverted/dropped filter would re-admit beta"
+        );
     }
 
     /// SQLRDF-03 acceptance: grouping + HAVING + ORDER BY compiles from RDF
-    /// and executes on a real frozen-duckdb connection, verified by table
-    /// readback.
+    /// and executes on a real frozen-duckdb connection. Strengthened (lane
+    /// N7): the COMPILED query is executed as-is via eval_ast_query and its
+    /// OWN output rows are read back from the receipt — no twin SQL.
     #[test]
     fn group_having_order_by_select_executes_with_table_readback() {
         let doc = r#"
@@ -185,34 +231,40 @@ ex:Q a sql:SelectStatement ;
 "#;
         let compiled = compile_turtle(doc).unwrap();
         let sql_upper = compiled.sql.to_ascii_uppercase();
-        assert!(sql_upper.contains("GROUP BY"), "{}", compiled.sql);
-        assert!(sql_upper.contains("HAVING"), "{}", compiled.sql);
-        assert!(sql_upper.contains("ORDER BY"), "{}", compiled.sql);
-        assert!(sql_upper.contains("DESC"), "{}", compiled.sql);
+        for token in ["GROUP BY", "HAVING", "ORDER BY", "DESC"] {
+            assert!(
+                sql_upper.contains(token),
+                "missing {token}: {}",
+                compiled.sql
+            );
+        }
+        assert_eq!(compiled.params.len(), 1);
+        assert_eq!(
+            compiled.params[0],
+            graphlaw::sql_ast::SqlLiteral::Integer(100)
+        );
 
         let db = db();
-        // Real execution with the extracted parameter buffer bound.
-        let executed = compiled
-            .sql
-            .replace("$1", "100");
-        db.raw_connection().execute_batch(&executed).unwrap();
-        let (n, first): (i64, String) = db
-            .raw_connection()
-            .query_row(
-                "SELECT count(*), min(batch_id) FROM (
-                    SELECT batch_id, SUM(latency_ms) AS total
-                    FROM telemetry_events GROUP BY batch_id
-                    HAVING SUM(latency_ms) >= 100
-                    ORDER BY batch_id DESC
-                 )",
-                [],
-                |r| Ok((r.get(0)?, r.get(1)?)),
+        let receipt = db
+            .eval_ast_query(
+                "http://example.org/queries#Q",
+                &compiled,
+                "http://example.org/data",
+                "http://example.org/vocab",
             )
             .unwrap();
-        // alpha 480 + gamma 900 pass HAVING; beta (10) is filtered out.
-        assert_eq!(n, 2, "having must filter beta out");
-        assert_eq!(first, "alpha");
-        assert_eq!(compiled.params.len(), 1);
+
+        // Exact rowcount: beta (10) fails HAVING; a HAVING-dropped mutation
+        // would emit 3 rows, a total-inversion mutation 1 row.
+        assert_eq!(receipt.rows_emitted, 2, "HAVING must filter beta out");
+        // The compiled query's own row values (column readback, sorted).
+        let ids = column_values(&receipt, "batch_id");
+        assert_eq!(ids, vec!["alpha", "gamma"]);
+        assert_eq!(column_values(&receipt, "total"), vec!["480", "900"]);
+        assert!(
+            !ids.contains(&"beta".to_string()),
+            "a HAVING that stops filtering would re-admit beta"
+        );
     }
 
     /// SQLRDF-07: an aggregate inside sql:whereClause is REFUSAL-03, before
@@ -241,7 +293,9 @@ ex:Q a sql:SelectStatement ;
         let db = db();
         let rows: i64 = db
             .raw_connection()
-            .query_row("SELECT count(*)::BIGINT FROM telemetry_events", [], |r| r.get(0))
+            .query_row("SELECT count(*)::BIGINT FROM telemetry_events", [], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(rows, 3);
     }
@@ -459,8 +513,16 @@ _:mergeStatement a sql:MergeIntoStatement ;
              ON main.regional_sales.region_id = src.region_id \
              WHEN MATCHED THEN UPDATE SET revenue = (main.regional_sales.revenue + src.total_invoiced);",
         );
-        assert_eq!(norm(&compiled.sql), expected, "\nactual: {}\n", compiled.sql);
-        assert_eq!(compiled.params, vec![graphlaw::sql_ast::SqlLiteral::String("SETTLED".into())]);
+        assert_eq!(
+            norm(&compiled.sql),
+            expected,
+            "\nactual: {}\n",
+            compiled.sql
+        );
+        assert_eq!(
+            compiled.params,
+            vec![graphlaw::sql_ast::SqlLiteral::String("SETTLED".into())]
+        );
 
         // Real execution against real staging.invoices and main.regional_sales.
         let db = GraphLawDuckDB::open_in_memory().unwrap();
@@ -556,7 +618,10 @@ ex:Q a sql:SelectStatement ;
                 predicate_scope,
             )
             .unwrap();
-        assert_eq!(receipt.rows_emitted, 3, "schema-qualified source must resolve all rows");
+        assert_eq!(
+            receipt.rows_emitted, 3,
+            "schema-qualified source must resolve all rows"
+        );
         assert_ne!(receipt.query_hash, [0u8; 32]);
         // The receipt binds the canonical AST graph plus the (empty)
         // parameter buffer, not the SQL text alone.
@@ -572,7 +637,9 @@ ex:Q a sql:SelectStatement ;
         assert!(!receipt.result_triples.is_empty());
         for triple in &receipt.result_triples {
             assert!(
-                triple.subject.starts_with("http://example.org/results/row_"),
+                triple
+                    .subject
+                    .starts_with("http://example.org/results/row_"),
                 "unexpected subject {}",
                 triple.subject
             );
@@ -614,10 +681,12 @@ ex:Q a sql:SelectStatement ;
     sql:selectList ( [ sql:columnName "batch_id" ] ) .
 "#;
         let ghost_compiled = compile_turtle(ghost).unwrap();
-        assert!(ghost_compiled
-            .sql
-            .to_ascii_uppercase()
-            .contains("FROM GHOST_SCHEMA.TELEMETRY_EVENTS"));
+        assert!(
+            ghost_compiled
+                .sql
+                .to_ascii_uppercase()
+                .contains("FROM GHOST_SCHEMA.TELEMETRY_EVENTS")
+        );
         let err = db
             .eval_ast_query(
                 "http://example.org/queries#Q",
@@ -714,8 +783,10 @@ ex:Q a sql:SelectStatement ;
 /// params, i.e. it is independent of the pre-/post-R1 formula plumbing.
 #[cfg(test)]
 mod query_hash_determinism_court {
-    use graphlaw::duckdb_eval::{admitted_statement_hash, canonical_ast_graph_bytes, GraphLawDuckDB};
-    use graphlaw::sql_ast::{compile_turtle, SqlLiteral};
+    use graphlaw::duckdb_eval::{
+        GraphLawDuckDB, admitted_statement_hash, canonical_ast_graph_bytes,
+    };
+    use graphlaw::sql_ast::{SqlLiteral, compile_turtle};
 
     fn base_doc() -> String {
         r#"
@@ -861,7 +932,12 @@ ex:Q a sql:SelectStatement ;
     fn eval_hash(doc: &str) -> [u8; 32] {
         let compiled = compile_turtle(doc).unwrap();
         let receipt = seeded_db()
-            .eval_ast_query("http://example.org/queries#Q", &compiled, "urn:r:", "urn:p:")
+            .eval_ast_query(
+                "http://example.org/queries#Q",
+                &compiled,
+                "urn:r:",
+                "urn:p:",
+            )
             .unwrap();
         receipt.query_hash
     }
@@ -917,14 +993,24 @@ ex:Q a sql:SelectStatement ;
         let doc = base_doc().replace("telemetry_events", "shipments_events");
         let compiled = compile_turtle(&doc).unwrap();
         let receipt = seeded_db()
-            .eval_ast_query("http://example.org/queries#Q", &compiled, "urn:r:", "urn:p:")
+            .eval_ast_query(
+                "http://example.org/queries#Q",
+                &compiled,
+                "urn:r:",
+                "urn:p:",
+            )
             .unwrap();
         assert_ne!(receipt.query_hash, baseline);
     }
 
     #[test]
     fn receipt_equals_recomputed_canon_plus_params_hash() {
-        for doc in [base_doc(), prefix_renamed(), blank_node_labels(), reordered()] {
+        for doc in [
+            base_doc(),
+            prefix_renamed(),
+            blank_node_labels(),
+            reordered(),
+        ] {
             let compiled = compile_turtle(&doc).unwrap();
             let receipt = seeded_db()
                 .eval_ast_query(
@@ -1090,7 +1176,9 @@ fn l163_msg_literal_not_int_is_verbatim_with_truncated_ident() {
     // Truncation pin: a lexical form exceeding REFUSAL_IDENT_BYTES renders as
     // exactly the first REFUSAL_IDENT_BYTES bytes, verbatim.
     let long = "x".repeat(REFUSAL_IDENT_BYTES + 64);
-    let msg = compile_turtle(&lit(&long)).expect_err("must refuse").to_string();
+    let msg = compile_turtle(&lit(&long))
+        .expect_err("must refuse")
+        .to_string();
     let expected_prefix = format!(
         "SHACL AST structural violation: [REFUSAL-01] MalformedAstRefusal:\
          xsd:integer literal '{}' on ",
@@ -1175,8 +1263,8 @@ fn l163_msg_join_type_iri_is_verbatim() {
 
     // Mutation twin: sql:InnerJoin compiles to real SQL — the pinned message
     // is unreachable for the mutated input (the court cannot pass vacuously).
-    let ok = compile_turtle(&doc_fmt("http://graphlaw.org/sql#InnerJoin"))
-        .expect("InnerJoin compiles");
+    let ok =
+        compile_turtle(&doc_fmt("http://graphlaw.org/sql#InnerJoin")).expect("InnerJoin compiles");
     assert!(
         ok.sql.contains(" JOIN "),
         "mutated join type must take the compiled path: {}",
@@ -1231,9 +1319,21 @@ fn l163_msg_no_canonical_graph_is_verbatim() {
     use graphlaw::sql_ast::{SelectStatement, SqlExpr, TableRef};
 
     let stmt = SelectStatement {
-        from: TableRef { name: "t".into(), alias: None, schema: None },
+        // Minimal shared-compile unblock (compile-freeze SLA, window lane,
+        // disclosed): new fields from the WITH/QUALIFY lanes default to empty
+        // in this pre-existing court — semantics unchanged.
+        ctes: Vec::new(),
+        qualify: None,
+        from: TableRef {
+            name: "t".into(),
+            alias: None,
+            schema: None,
+        },
         joins: Vec::new(),
-        select_list: vec![SqlExpr::ColumnRef { column: "a".into(), table_alias: None }],
+        select_list: vec![SqlExpr::ColumnRef {
+            column: "a".into(),
+            table_alias: None,
+        }],
         where_clause: None,
         group_by: Vec::new(),
         having: None,
@@ -1241,7 +1341,9 @@ fn l163_msg_no_canonical_graph_is_verbatim() {
         limit: None,
         offset: None,
     };
-    let q = stmt.compile().expect("hand-built statement compiles sealed");
+    let q = stmt
+        .compile()
+        .expect("hand-built statement compiles sealed");
     let db = GraphLawDuckDB::open_in_memory().expect("db opens");
     let err = db
         .eval_ast_query("http://example.org/handbuilt", &q, "s", "v")
@@ -1281,6 +1383,141 @@ ex:Q a sql:SelectStatement ;
     );
 }
 
+// ---- CTQ-4 / REFUSAL-05 unbounded-mutation courts ---------------------------
+// A WHERE-less UPDATE/DELETE would render SQL that mutates every row of the
+// target table; it refuses at compile time with the stable [REFUSAL-05]
+// marker (UnboundedMutationRefusal, refusal arm 38) before any engine call.
+// Each refusal court carries an anti-vacuity twin: the same statement WITH
+// sql:whereColumn + sql:whereValue compiles to real bounded SQL and executes
+// on a real frozen-duckdb table — the court flips exactly on the refusal path.
+
+fn unbounded_mutation_doc(kind: &str, with_where: bool) -> String {
+    let where_clause = if with_where {
+        " ; sql:whereColumn \"id\" ; sql:whereValue \"1\"^^<http://www.w3.org/2001/XMLSchema#integer>"
+    } else {
+        ""
+    };
+    // UPDATE carries an assignment; DELETE is predicate-only (extra assign
+    // properties would change the shape surface under test).
+    let assignments = if kind == "UpdateStatement" {
+        "\n    sql:assignColumn \"latency_ms\" ;\n    sql:assignValue \"0\"^^<http://www.w3.org/2001/XMLSchema#integer>"
+    } else {
+        ""
+    };
+    format!(
+        concat!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n",
+            "@prefix ex: <http://example.org/queries#> .\n",
+            "ex:Q a sql:{kind} ;\n",
+            "    sql:statementIndex 1 ;\n",
+            "    sql:targetTable \"telemetry_events\" ;{assignments}{where_clause} ."
+        ),
+        kind = kind,
+        assignments = assignments,
+        where_clause = where_clause
+    )
+}
+
+/// Exact-message pin (L163 convention): WHERE-less UPDATE refuses on the
+/// public compile_turtle surface via the dialect-pack SHACL pre-gate. The
+/// [REFUSAL-05] UnboundedMutationRefusal arm in src/sql_ast.rs::compile_command
+/// sits behind this pre-gate (compile_command is private). Shape layer and
+/// compiler are aligned on [REFUSAL-05] UnboundedMutationRefusal: both layers
+/// emit the stable marker; the compiler's stricter law requires BOTH
+/// sql:whereColumn AND sql:whereValue, matching the shape message below.
+#[test]
+fn refusal05_where_less_update_is_verbatim_and_pre_engine() {
+    let doc = unbounded_mutation_doc("UpdateStatement", false);
+    let err = compile_turtle(&doc).expect_err("WHERE-less UPDATE must refuse");
+    let msg = err.to_string();
+    assert!(
+        msg.starts_with("SHACL AST structural violation: Node <<http://example.org/queries#Q>>: "),
+        "prefix: {msg}"
+    );
+    assert!(
+        msg.ends_with(
+            "MUST carry a WHERE clause (requires BOTH sql:whereColumn and sql:whereValue)."
+        ),
+        "suffix: {msg}"
+    );
+    assert!(msg.contains("[REFUSAL-05] UnboundedMutationRefusal:"), "{msg}");
+    assert!(admit_bytes_tiered(doc.as_bytes(), None, None, None).is_err());
+
+    // Anti-vacuity twin: bounding the UPDATE compiles to real SQL and runs on
+    // a real table, touching exactly one row.
+    let twin = compile_turtle(&unbounded_mutation_doc("UpdateStatement", true))
+        .expect("bounded UPDATE compiles");
+    assert!(
+        twin.sql.to_ascii_uppercase().contains(" WHERE ID = "),
+        "twin must be bounded: {}",
+        twin.sql
+    );
+    let db = graphlaw::duckdb_eval::GraphLawDuckDB::open_in_memory().unwrap();
+    db.raw_connection()
+        .execute_batch(
+            "CREATE TABLE telemetry_events (id INTEGER, latency_ms INTEGER);
+             INSERT INTO telemetry_events VALUES (1, 480), (2, 10);",
+        )
+        .unwrap();
+    db.raw_connection().execute_batch(&twin.sql).unwrap();
+    let zeros: i64 = db
+        .raw_connection()
+        .query_row(
+            "SELECT count(*)::BIGINT FROM telemetry_events WHERE latency_ms = 0",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(zeros, 1, "bounded UPDATE mutates exactly the id=1 row");
+}
+
+/// Exact-message pin: WHERE-less DELETE — same pre-gate surface, same twin.
+#[test]
+fn refusal05_where_less_delete_is_verbatim_and_pre_engine() {
+    let doc = unbounded_mutation_doc("DeleteStatement", false);
+    let err = compile_turtle(&doc).expect_err("WHERE-less DELETE must refuse");
+    let msg = err.to_string();
+    assert!(
+        msg.starts_with("SHACL AST structural violation: Node <<http://example.org/queries#Q>>: "),
+        "prefix: {msg}"
+    );
+    assert!(
+        msg.ends_with(
+            "MUST carry a WHERE clause (requires BOTH sql:whereColumn and sql:whereValue)."
+        ),
+        "suffix: {msg}"
+    );
+    assert!(msg.contains("[REFUSAL-05] UnboundedMutationRefusal:"), "{msg}");
+    assert!(admit_bytes_tiered(doc.as_bytes(), None, None, None).is_err());
+
+    // Anti-vacuity twin: the bounded DELETE compiles and removes exactly one
+    // row from a real frozen-duckdb table.
+    let twin = compile_turtle(&unbounded_mutation_doc("DeleteStatement", true))
+        .expect("bounded DELETE compiles");
+    assert!(
+        twin.sql.to_ascii_uppercase().contains(" WHERE ID = "),
+        "twin must be bounded: {}",
+        twin.sql
+    );
+    let db = graphlaw::duckdb_eval::GraphLawDuckDB::open_in_memory().unwrap();
+    db.raw_connection()
+        .execute_batch(
+            "CREATE TABLE telemetry_events (id INTEGER, latency_ms INTEGER);
+             INSERT INTO telemetry_events VALUES (1, 480), (2, 10);",
+        )
+        .unwrap();
+    db.raw_connection().execute_batch(&twin.sql).unwrap();
+    let rows: i64 = db
+        .raw_connection()
+        .query_row(
+            "SELECT count(*)::BIGINT FROM telemetry_events",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(rows, 1, "bounded DELETE removes exactly the id=1 row");
+}
+
 /// SQL-in-RDF is a Turtle dataset on the same ABI path as the other RDF
 /// dialects: parse returns a canonical id, and shacl/law accept the dialect.
 #[test]
@@ -1310,15 +1547,28 @@ fn sql_rdf_joins_the_rdf_dataset_path() {
         "data": {"text": SELECT, "dialect": "sql"},
         "shapes": include_str!("../ontologies/sql-ast.ttl"),
     }));
-    let shacl_msg = shacl.pointer("/error/message").and_then(|m| m.as_str()).unwrap_or("");
-    assert_ne!(shacl_msg, "dialect does not denote an RDF dataset", "{shacl}");
-    assert!(shacl.get("conforms").is_some() || shacl["ok"] == true, "{shacl}");
+    let shacl_msg = shacl
+        .pointer("/error/message")
+        .and_then(|m| m.as_str())
+        .unwrap_or("");
+    assert_ne!(
+        shacl_msg, "dialect does not denote an RDF dataset",
+        "{shacl}"
+    );
+    assert!(
+        shacl.get("conforms").is_some() || shacl["ok"] == true,
+        "{shacl}"
+    );
 
     let law = graphlaw::abi::call_json(&serde_json::json!({
         "op": "law",
         "data": {"text": SELECT, "dialect": "sql"},
-        "steps": [{"step": "admit-shacl", "shapes": include_str!("../ontologies/sql-ast.ttl")}],
+        "steps": [{"step": "shacl", "shapes": include_str!("../ontologies/sql-ast.ttl")}],
     }));
-    let law_msg = law.pointer("/error/message").and_then(|m| m.as_str()).unwrap_or("");
-    assert_ne!(law_msg, "dialect does not denote an RDF dataset", "{law}");
+    assert_eq!(law["ok"], true, "{law}");
+    let nquads = law["nquads"].as_str().unwrap_or("");
+    assert!(
+        nquads.contains("http://graphlaw.org/sql#SelectStatement"),
+        "{law}"
+    );
 }

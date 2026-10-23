@@ -35,6 +35,98 @@ const _: () = {
     assert!(abi_meta::ABI_VERSION == graphlaw::abi::ABI_VERSION);
 };
 
+/// Static registration of the frozen DuckDB extension archives into the
+/// linked-extension registry, before the first database open.
+///
+/// Mechanism (duckdb pin b6013f7): `duckdb_static` never merges
+/// `libcore_functions_extension.a` / `libicu_extension.a` — they are linked
+/// only into the shared `duckdb` target (`src/CMakeLists.txt`), and the
+/// per-program static-extension loader (`extension/loader/`) is generated
+/// outside any archive. At the Rust link, wasm-ld's `--gc-sections` therefore
+/// drops the extension archives' registrar objects: nothing references
+/// `duckdb_extension_core_functions_describe`, so core_functions (SUM, COUNT,
+/// ...) never registers and every aggregate fails with "not in the catalog,
+/// but it exists in the core_functions extension". Referencing the describe
+/// functions from live code here pulls them (and transitively their
+/// extension archives) into the artifact and registers them through
+/// `duckdb_register_static_extension` before any session opens.
+///
+/// Runs from `.init_array` (wasm-ld honors it from `__wasm_call_ctors` /
+/// `_initialize`, which the packet-4 host calls before the first gl_call).
+mod duckdb_static_extensions {
+    use core::ffi::c_void;
+
+    /// `duckdb_extension_describe_t`: `int32_t (*)(duckdb_extension_descriptor *)`.
+    type Describe = unsafe extern "C" fn(*mut c_void) -> i32;
+
+    unsafe extern "C" {
+        fn duckdb_register_static_extension(describe: Describe) -> i32;
+        #[link_name = "duckdb_extension_core_functions_describe"]
+        fn core_functions_describe(desc: *mut c_void) -> i32;
+        #[link_name = "duckdb_extension_icu_describe"]
+        fn icu_describe(desc: *mut c_void) -> i32;
+    }
+
+    /// Register both describes; a failure is fatal (a database opened against
+    /// a half-registered registry throws later in
+    /// `LinkedExtensionRegistry::Get`). Returns 0 on success.
+    #[unsafe(no_mangle)]
+    pub extern "C" fn graphlaw_wasm_register_static_extensions() -> i32 {
+        let mut rc = unsafe { duckdb_register_static_extension(core_functions_describe) };
+        if rc == 0 {
+            rc = unsafe { duckdb_register_static_extension(icu_describe) };
+        }
+        rc
+    }
+
+    // .init_array entry: retained as a GC root by lld even though the static
+    // itself is otherwise unreferenced. wasm-only plumbing (mach-o rejects
+    // the section name); on native hosts the registration export stays
+    // available and the native runtime seeds its own linked extensions.
+    #[cfg(target_arch = "wasm32")]
+    #[used]
+    #[unsafe(link_section = ".init_array")]
+    static REGISTER: unsafe extern "C" fn() -> i32 = {
+        unsafe extern "C" fn run() -> i32 {
+            graphlaw_wasm_register_static_extensions()
+        }
+        run
+    };
+
+    // SQLRDF-24 / W58 fix: rustc wraps every wasip1 cdylib export in a
+    // `<name>.command_export` shim that runs `__wasm_call_dtors` after each
+    // call. With frozen-duckdb linked in, that walk executes DuckDB's C++
+    // static-destructor registrations (`__cxa_atexit` table) between
+    // gl_call frames — destroying engine state and trapping on a poisoned
+    // slot (`uninitialized element` in `__funcs_on_exit`, witnessed
+    // 2026-10-23 with the symbolized artifact). This module is a reactor,
+    // not a one-shot command: destructors must never run mid-session. The
+    // musl atexit family is therefore overridden as no-ops — statics live
+    // for the lifetime of the module, which is exactly the reactor
+    // contract. libc's atexit.c.obj is not pulled once these four symbols
+    // resolve from here (verified: zero undefined refs to them inside
+    // libc.a; crt1-command.o references none).
+    #[unsafe(no_mangle)]
+    pub extern "C" fn __cxa_atexit(
+        _func: unsafe extern "C" fn(*mut c_void),
+        _arg: *mut c_void,
+        _dso: *mut c_void,
+    ) -> i32 {
+        0
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn __cxa_finalize(_d: *mut c_void) {}
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn __funcs_on_exit() {}
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn atexit(_func: unsafe extern "C" fn()) -> i32 {
+        0
+    }
+}
+
 #[cfg(test)]
 mod contract {
     use super::{abi_meta, ffi};
@@ -100,5 +192,24 @@ mod contract {
         let sniffed = graphlaw::tier::admit_bytes_tiered(doc.as_bytes(), Some("sql"), None, None)
             .expect("sniffed sql admits");
         assert!(matches!(sniffed, graphlaw::tier::Admitted::Query(_)));
+    }
+
+    /// The duckdb op is routed inside the wasm crate's graphlaw (not
+    /// feature-gated out): an unimplemented mode yields a duckdb-op mode
+    /// error, never `unknown op \`duckdb\``. In-module proof under wasmtime
+    /// lives in tests/wasm_duckdb_lifecycle_eh.rs.
+    #[test]
+    fn duckdb_op_admits_inside_the_wasm_unit() {
+        let response = graphlaw::abi::call(br#"{"op":"duckdb","mode":"__probe__"}"#);
+        let body = String::from_utf8(response).expect("response is UTF-8");
+        assert!(
+            body.contains(r#""ok":false"#),
+            "expected a failing envelope, got: {body}"
+        );
+        assert!(
+            body.contains("__probe__") || body.to_lowercase().contains("unknown mode"),
+            "expected a duckdb-op mode error, got: {body}"
+        );
+        assert!(!body.contains("unknown op"));
     }
 }

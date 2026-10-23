@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "deab76b0fa52d3b1bad6a9b0b9570e937d2ea0c1f6849dceef5efdde130c8eea",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T054929Z-Write-deab76b0.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/designs/vector-pin-receipt.md",
+  "timestamp_utc": "2026-10-23T054929Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

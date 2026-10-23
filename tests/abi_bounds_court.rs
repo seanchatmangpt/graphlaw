@@ -88,7 +88,12 @@ fn op_law_admits_exactly_1000_steps() {
 #[test]
 fn op_datalog_refuses_over_cap_rules_with_typed_resource_limit() {
     let r = call_json(&datalog_req(MAX_DATALOG_RULES + 1, 1));
-    assert_limit(&r, "datalog_rules", MAX_DATALOG_RULES + 1, MAX_DATALOG_RULES);
+    assert_limit(
+        &r,
+        "datalog_rules",
+        MAX_DATALOG_RULES + 1,
+        MAX_DATALOG_RULES,
+    );
 }
 
 #[test]
@@ -100,7 +105,12 @@ fn op_datalog_admits_exactly_10_000_rules() {
 #[test]
 fn op_datalog_refuses_over_cap_facts_with_typed_resource_limit() {
     let r = call_json(&datalog_req(1, MAX_DATALOG_FACTS + 1));
-    assert_limit(&r, "datalog_facts", MAX_DATALOG_FACTS + 1, MAX_DATALOG_FACTS);
+    assert_limit(
+        &r,
+        "datalog_facts",
+        MAX_DATALOG_FACTS + 1,
+        MAX_DATALOG_FACTS,
+    );
 }
 
 #[test]

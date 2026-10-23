@@ -13,17 +13,20 @@
 //! probe; assertion-backed courts live in tests/sql_rdf_dialect.rs and
 //! tests/chicago_validation.rs).
 
-use graphlaw::duckdb_eval::{canonical_ast_graph_bytes, GraphLawDuckDB};
-use graphlaw::rules::builtins::{builtin_eval_sql, BuiltinContext};
+use graphlaw::duckdb_eval::{GraphLawDuckDB, canonical_ast_graph_bytes};
+use graphlaw::rules::builtins::{BuiltinContext, builtin_eval_sql};
 use graphlaw::sql_ast::{
-    compile_turtle, validate_ast_shacl, CompiledQuery, RdfAstGraphReader, SelectStatement,
-    SqlExpr, TableRef,
+    CompiledQuery, RdfAstGraphReader, SelectStatement, SqlExpr, TableRef, compile_turtle,
+    validate_ast_shacl,
 };
 
 fn main() -> std::process::ExitCode {
     let mut fails: Vec<String> = Vec::new();
     let mut check = |label: &str, got: String, ok: bool| {
-        println!("=== {label} ===\n{got}\n[exit-class {}]\n", if ok { "MATCH" } else { "MISS" });
+        println!(
+            "=== {label} ===\n{got}\n[exit-class {}]\n",
+            if ok { "MATCH" } else { "MISS" }
+        );
         if !ok {
             fails.push(label.to_string());
         }
@@ -140,16 +143,34 @@ ex:Q a sql:SelectStatement ;
         struct NoDocReader;
         impl RdfAstGraphReader for NoDocReader {
             type Node = String;
-            fn get_single_object(&self, _: &String, _: &str) -> Option<String> { None }
-            fn get_datatype_literal(&self, _: &String, _: &str) -> Option<(String, Option<String>)> { None }
-            fn get_iri(&self, _: &String) -> Option<String> { None }
-            fn object_count(&self, _: &String, _: &str) -> usize { 0 }
-            fn iri_object_count(&self, _: &String, _: &str) -> usize { 0 }
+            fn get_single_object(&self, _: &String, _: &str) -> Option<String> {
+                None
+            }
+            fn get_datatype_literal(
+                &self,
+                _: &String,
+                _: &str,
+            ) -> Option<(String, Option<String>)> {
+                None
+            }
+            fn get_iri(&self, _: &String) -> Option<String> {
+                None
+            }
+            fn object_count(&self, _: &String, _: &str) -> usize {
+                0
+            }
+            fn iri_object_count(&self, _: &String, _: &str) -> usize {
+                0
+            }
         }
         let db = GraphLawDuckDB::open_in_memory().expect("db opens");
         let ctx = BuiltinContext { db: &db };
         let got = match builtin_eval_sql::<NoDocReader>(
-            &["http://example.org/q", "http://example.org/data", "http://example.org/vocab"],
+            &[
+                "http://example.org/q",
+                "http://example.org/data",
+                "http://example.org/vocab",
+            ],
             &["receipt", "rowsEmitted", "queryHash"],
             &ctx,
             &NoDocReader,
@@ -165,9 +186,16 @@ ex:Q a sql:SelectStatement ;
     // but graph-free CompiledQuery; eval refuses with NoCanonicalGraph.
     {
         let stmt = SelectStatement {
-            from: TableRef { name: "t".into(), alias: None, schema: None },
+            from: TableRef {
+                name: "t".into(),
+                alias: None,
+                schema: None,
+            },
             joins: Vec::new(),
-            select_list: vec![SqlExpr::ColumnRef { column: "a".into(), table_alias: None }],
+            select_list: vec![SqlExpr::ColumnRef {
+                column: "a".into(),
+                table_alias: None,
+            }],
             where_clause: None,
             group_by: Vec::new(),
             having: None,
@@ -218,7 +246,11 @@ ex:Q a sql:SelectStatement ;
             Ok(_) => "<SUCCEEDED — expected refusal>".into(),
         };
         let ok = got.contains("Receipt generation error") && got.contains("refused");
-        check("ReceiptError canonicalization refused (malformed Turtle)", got, ok);
+        check(
+            "ReceiptError canonicalization refused (malformed Turtle)",
+            got,
+            ok,
+        );
     }
 
     // UnsupportedTerm gap: unrecognized function IRI (no REFUSAL marker).
@@ -250,7 +282,11 @@ ex:Q a sql:SelectStatement ;
             Ok(()) => "<VALIDATED — expected violation>".into(),
         };
         let ok = got.contains("SHACL AST structural violation");
-        check("direct validate_ast_shacl (missing index, no context fix-up)", got, ok);
+        check(
+            "direct validate_ast_shacl (missing index, no context fix-up)",
+            got,
+            ok,
+        );
     }
 
     if fails.is_empty() {

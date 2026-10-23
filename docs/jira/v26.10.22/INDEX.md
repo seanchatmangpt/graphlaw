@@ -39,10 +39,13 @@ Compiler files the tickets point at:
 | SQLRDF-14 | §3.1 letter conformance — re-parent the 35 PEG leaf classes under the six family classes | Open (follow-up, not in v26.10.22 acceptance) | The 35 PEG leaves generate flat under `sql:Statement` with no family ancestor | [SQLRDF-14](SQLRDF-14.md) |
 | SQLRDF-15 | §6.2 tpch setup divergence — retire the sf=0.01 hand-patch into the generator + register | Open (follow-up, not in v26.10.22 acceptance) | Hand-patch in `ggen/sql-dialect/sql_extensions.rs:22-26` disagrees with `extract_statements.py:31`; the 0-row sf=0 witness is contradicted by upstream dbgen.cpp, so the divergence is unadjudicated (frozen pin sources absent) | [SQLRDF-15](SQLRDF-15.md) |
 | SQLRDF-16 | Moonshot backlog — the 1000× ERRC horizon (thesis Part II) | Open (follow-up, BLOCKED-BY: v26.10.22 integration commit) | Eight moonshots (E1/E2/E3/R1/R2/A1/C1/C2) registered with falsifiers + dependency order E1→A1→E2→E3, R1→C1, R2→C2; thesis at [THESIS.md](THESIS.md) (verbatim body pending — dispatch did not carry the prose) | [SQLRDF-16](SQLRDF-16.md) |
-| SQLRDF-17 | ABI duckdb exec accepts raw SQL text (C2 hole P1) | Open (follow-up, BLOCKED-BY: v26.10.22 integration commit) | `src/duckdb_op.rs:198-219` accepts `ast.text` as raw SQL (legacy `(None,None)` hash arm at `src/duckdb_eval.rs:183-188`); dialect sniff misroutes bare SQL to Sparql (`src/dialect.rs:740-758`, no `BareSql` class); `raw_connection()` is `pub` (`src/duckdb_eval.rs:155`) — spin-out of SQLRDF-16 row C2 | [SQLRDF-17](SQLRDF-17.md) |
-| SQLRDF-18 | P28-SIL program — substrate + zero-overhead execution architecture | Open (successor program, BLOCKED-BY: v26.10.22 integration commit except LICENSE.md + TC-LEGAL-01 + baseline measurement, which proceed now) | PRD "GraphLaw Substrate & P28-SIL Zero-Overhead Execution Architecture" v1.0.0 filed verbatim at [PRD-P28-SIL.md](PRD-P28-SIL.md); TC-LEGAL-01/02 courts landed (3/0); TC-MOCK-00 gate landed; Phase 3 residue closed (corpus 14+/0 inline flips + shape_mutation_court.sh); Phase 4 license packaged (LICENSE-P28-SIL.md); Phase 2 skeleton implemented (ring+ledger+join courts green); Phase 1 designed (designs/PHASE1-generated-gate.md), BLOCKED-BY E1→A1→E2; TC-HOT benches landed, budget adjudication pending full-corpus run; §3.1 builds on landed R1 canon-once (`src/sql_ast.rs:1447-1449`) | [SQLRDF-18](SQLRDF-18.md) |
+| SQLRDF-17 | ABI duckdb exec accepts raw SQL text (C2 hole P1) | Open (follow-up, BLOCKED-BY: v26.10.22 integration commit) | `src/duckdb_op.rs:198-219` accepts `ast.text` as raw SQL (legacy `(None,None)` hash arm at `src/duckdb_eval.rs:183-188`); dialect sniff misroutes bare SQL to Sparql (`src/dialect/sniff.rs:128` `sniff`, no `BareSql` class); `raw_connection()` is `pub` (`src/duckdb_eval.rs:155`) — spin-out of SQLRDF-16 row C2 | [SQLRDF-17](SQLRDF-17.md) |
+| SQLRDF-18 | P28-SIL program — substrate + zero-overhead execution architecture | Open (successor program, BLOCKED-BY: v26.10.22 integration commit except LICENSE.md + TC-LEGAL-01 + baseline measurement, which proceed now) | PRD "GraphLaw Substrate & P28-SIL Zero-Overhead Execution Architecture" v1.0.0 filed verbatim at [PRD-P28-SIL.md](PRD-P28-SIL.md); TC-LEGAL-01/02 courts landed (3/0); TC-MOCK-00 gate landed; Phase 3 residue closed (corpus 14+/0 inline flips + shape_mutation_court.sh); Phase 4 license packaged (LICENSE-P28-SIL.md); Phase 2 skeleton implemented (ring+ledger+join courts green); Phase 1 designed (designs/PHASE1-generated-gate.md), BLOCKED-BY E1→A1→E2; TC-HOT benches landed, budget adjudication pending full-corpus run; §3.1 builds on landed R1 canon-once (`src/sql_ast.rs:2141`) | [SQLRDF-18](SQLRDF-18.md) |
 | SQLRDF-19 | CI feature-matrix gaps — untested build cells | Open (follow-up, BLOCKED-BY: v26.10.22 integration commit) | PR CI runs one native combo (`pack-tools,abi,wasi-patched-deps`, ci.yml:29/37); `--all-features` (ring, runner) is release-only (release.yml:85); untested cells: `runner` bin zero coverage, ring-without-duckdb, ring+duckdb seam, `--no-default-features`, pairwise off-default cells | [SQLRDF-19](SQLRDF-19.md) |
 | SQLRDF-20 | BEAM hot-upgrade protocol — artifact swap under the supervisor, with its own court | Open (follow-up, BLOCKED-BY: v26.10.22 integration commit + SQLRDF-19) | Upgrade is a versioned release event (digest re-pin + ARTIFACTS row + changelog before first admission); evidentiary continuity via host-side ring/ledger; required court: `--expect-blake3` pin + admission-table version in first post-upgrade ledger batch + receipt chain across the boundary ([SQLRDF-20.md](SQLRDF-20.md)) | [SQLRDF-20](SQLRDF-20.md) |
+| SQLRDF-21 | Sovereign in-WASM DuckDB execution (EH wall closed) | Open (courts landing this wave) | `duckdb` ABI op is host-side (`src/duckdb_op.rs:74-82` per-call in-memory connections, raw-SQL exec arm `src/duckdb_op.rs:198-219`); required: in-module dispatch with no cfg gate, full-lifecycle court under wasmtime 48 + `wasm_exceptions`, WHERE-less UPDATE/DELETE `REFUSAL-05` pre-engine with DB byte-identical, MERGE mutating + epoch-bump court, artifact re-pin with witnessed receipt, pm4pytest FIBO matrix green ([designs/fibo-pm4py-court-matrix.md](designs/fibo-pm4py-court-matrix.md)) | [SQLRDF-21](SQLRDF-21.md) |
+| SQLRDF-22 | FIBO-matrix compiler gaps — DECIMAL, COPY egress policy, multi-row INSERT, batch vocabulary, ATTACH path validation, egress digests | Open | Six audited gaps: no DECIMAL column type (`src/sql_ast.rs:1723-1735` allowlist; `xsd:decimal` quoted by `lit()` `src/sql_ast.rs:1420-1437`), COPY TO destination hardcoded (`src/sql_ast.rs:1948`, expression form `:1524` but no options/policy), single-row INSERT shapes (`statement_classes.ttl:145-160`), one statement per document (`src/sql_ast.rs:1380-1407`), scalar ATTACH hardcodes `:memory:` (`:2008`, expression form `:1673-1678` no path validation), `ExecutionReceipt` has no artifact-digest field (`src/duckdb_eval.rs:134-156`); each lands typed vocabulary or a documented typed refusal with a court; egress digest receipt-carried ([SQLRDF-22.md](SQLRDF-22.md)) | [SQLRDF-22](SQLRDF-22.md) |
+| SQLRDF-23 | Statement sequences (G5) — multi-statement documents with ordered, receipted batch execution | Open | Verified design at [designs/statement-sequence-design.md](designs/statement-sequence-design.md): closes the silent multi-root pick (`src/sql_ast.rs:1376-1409`) with `sql:StatementSequence`/`sql:statements` vocabulary, `compile_turtle_document` (single-root back-compat bit-for-bit), domain-separated `doc_hash`, `BatchReceipt` with `failed_at` partial-commit semantics, per-member cache law, new `INDEX_SEQUENCE_DISORDER`/`SEQUENCE_EMPTY`/`MIXED_DOCUMENT_ROOTS` MalformedAst arms, court plan (a)-(f) | [SQLRDF-23](SQLRDF-23.md) |
 | PRD-P28-SIL | Operator PRD — GraphLaw Substrate & P28-SIL Zero-Overhead Execution Architecture v1.0.0 (operative PRD for the successor program) | Open | Filed 2026-10-22 verbatim (126 lines, v1.0.0, supersedes the earlier skeleton) at [PRD-P28-SIL.md](PRD-P28-SIL.md); no re-dispatch needed | [PRD-P28-SIL](PRD-P28-SIL.md) |
 | DISSERTATION | Operator dissertation — "Admitted Computation: The Canonical Graph as the Sole Substrate for Relational Execution" (verbatim, chapters 1–10 + abstract) | Open (filed; artifact mapping below) | Filed verbatim at [DISSERTATION.md](DISSERTATION.md). Chapter→program-artifact map: Ch1 introduction → this window's program frame; Ch2 admission calculus → [`ontologies/sql-ast.ttl`](../../../ontologies/sql-ast.ttl) + [`src/sql_ast.rs`](../../../src/sql_ast.rs); Ch3 receipt algebra → SQLRDF-09 (landed: canonical-AST-graph formula hash, [`src/duckdb_eval.rs`](../../../src/duckdb_eval.rs)); Ch4 one-description → designs E1/A1/E2; Ch5 executable conformance → design [E3-conformance.md](designs/E3-conformance.md) (rung skeleton); Ch6 content-addressed + evidentiary → designs [C1-cache.md](designs/C1-cache.md) + [P28-SIL-specs.md](designs/P28-SIL-specs.md); Ch7 single door → SQLRDF-17 / design [C2 hole P1](SQLRDF-17.md); Ch8 courts methodology → this window's court practice (RECEIPTS.md + mutation_court); Ch9 limitations → Σ_PQC / epoch / federation disclosures (SQLRDF-10 conformance note, SQLRDF-13..15 follow-ups); Ch10 conclusion → v26.10.22 acceptance boundary | [DISSERTATION](DISSERTATION.md) |
 
@@ -235,7 +238,7 @@ No-Rust constraint honored: setup is python3-stdlib-only
 Rows verified present on disk via `ls` before filing. Loud skips:
 `wasmi-eh-research` (not landed — no file under `designs/`),
 `g2-repin-prestage`, `p7-final-regen-prestage` (no files found); the
-EH memo amendment is in-file (`eh-runner-decision-memo.md:76`, L126
+EH memo amendment is in-file (`designs/eh-runner-decision-memo.md:76`, L126
 stand-down), not a separate record; the M/N receipt set is covered by
 the `m-wave-verdicts` and N-lane rows below.
 
@@ -501,3 +504,82 @@ re-adjudicated here — see [designs/RECEIPTS.md](designs/RECEIPTS.md) and
 | [wasm-repin-receipt.md](designs/wasm-repin-receipt.md) | Wasm re-pin attempt — receipt (L122) |
 | [wo01-admission-run.md](designs/wo01-admission-run.md) | WO-01 — full-shape-corpus admission run (lane WO-01) |
 | [wo03-rss-probe.md](designs/wo03-rss-probe.md) | WO-03 RSS Expansion Probe |
+
+### Index re-sync — lane R4 (2026-10-22)
+
+Re-synced against disk (D3 discipline: `ls` + `head -1` per file before
+filing). Artifacts landed since the D3 sync that were not named anywhere
+above:
+
+**Archive** ([docs/archive/](../../../docs/archive/README.md)) — moved by the
+coordinator (`git mv`), historical narrative and receipts retired out of the
+live tree:
+
+- [`THESIS.md`](../../../docs/archive/THESIS.md) — moonshot thesis (verbatim body), moved from `docs/THESIS.md`
+- [`UNIFIED_DISSERTATION.md`](../../../docs/archive/UNIFIED_DISSERTATION.md) — earlier unified dissertation draft, moved from `docs/UNIFIED_DISSERTATION.md`
+- [`EXTRACTION.md`](../../../docs/archive/EXTRACTION.md) — GraphLaw extraction receipt
+- [`branch-disposition.md`](../../../docs/archive/branch-disposition.md) — branch disposition record
+- [`receipt-2026-10-09-receipt-chain-and-refuse-hooks.md`](../../../docs/archive/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md) — session receipt: receipt-chain port + refuse hooks (2026-10-09)
+- [`receipt-2026-10-10-publish-dod.md`](../../../docs/archive/receipt-2026-10-10-publish-dod.md) — v26.10.10 publish Definition-of-Done receipt (skeleton)
+- [`README.md`](../../../docs/archive/README.md) — archive readme
+
+**New gate scripts** (`scripts/`, census was 5 at wave 3, now 19):
+
+| Script | Header-verbatim purpose |
+| --- | --- |
+| [chain_flag_court.sh](../../../scripts/chain_flag_court.sh) | non-vacuity court for `scripts/receipt_chain_sync.sh` (lane M14) |
+| [count_gate.sh](../../../scripts/count_gate.sh) | stale "N passed; 0 failed" detector for cheap-allowlist courts |
+| [exit_capture_check.sh](../../../scripts/exit_capture_check.sh) | M11 self-test for the Exit-capture law (`.claude/agents/court-runner.md`) |
+| [fleet_cleanup.sh](../../../scripts/fleet_cleanup.sh) | advisory disk reclaim for lane build roots (target-* dirs by mtime) |
+| [machine_shaped_gate.sh](../../../scripts/machine_shaped_gate.sh) | MACHINE-SHAPED gate (K1 side-arm, lane M09) |
+| [partition_court.sh](../../../scripts/partition_court.sh) | Chicago court over the three-partition code census (`courts/code-partition/manifest.json`) |
+| [receipt_chain_sync.sh](../../../scripts/receipt_chain_sync.sh) | BLAKE3 sidecar chain over `receipts/` (lane L52) |
+| [receipt_replay_court.sh](../../../scripts/receipt_replay_court.sh) | K7-class court: fabricated receipt (never-executed output) must FAIL verification |
+| [shape_mutation_court.sh](../../../scripts/shape_mutation_court.sh) | TC-MUT-01 shape-flip court (anti-vacuity over `ontologies/sql-ast.ttl`) |
+| [wasm_audit.sh](../../../scripts/wasm_audit.sh) | W04 wasm artifact size ceiling + header court |
+| [wasm_unknown_unknown_smoke.sh](../../../scripts/wasm_unknown_unknown_smoke.sh) | W03 falsifier smoke for wasm32-unknown-unknown (G13) |
+| [witness_gate.sh](../../../scripts/witness_gate.sh) | M02: a factual build/run witness in `docs/**/*.md` must cite an existing file |
+| [partition_court_selfcheck_g1.py](../../../scripts/partition_court_selfcheck_g1.py) / [g2.py](../../../scripts/partition_court_selfcheck_g2.py) | G1/G2 self-check courts for `partition_court.sh` |
+| [gen_wasm4pm_graphlaw_vectors.py](../../../scripts/gen_wasm4pm_graphlaw_vectors.py) | wasm4pm vector generator (cross-repo fixtures) |
+
+**New courts in [`tests/`](../../../tests/):**
+
+- [`k5_hostile_sqlrdf.rs`](../../../tests/k5_hostile_sqlrdf.rs) — lane K5 adversarial court: literal/identifier smuggling on the sql-rdf path ("cannot corrupt or leak data")
+- [`k6_hostile_lease.rs`](../../../tests/k6_hostile_lease.rs) — lane K6 adversarial court: authority-model forgery attempts flip to typed refusals
+- [`dl_dualroute_vector_pin.rs`](../../../tests/dl_dualroute_vector_pin.rs) — vector-byte pin for the DL dual-route generator (K10 defect class: silent provenance-field drift)
+- [`ocel_export_court.rs`](../../../tests/ocel_export_court.rs) — OCEL v2 export court (lane PM4): real law session → real SQLite database readback
+- [`law_state.rs`](../../../tests/law_state.rs) — (extended) law-state transitions over the innovation reference pack: Turtle → N3 derivation → SHACL admission → SPARQL CONSTRUCT, every step receipted
+
+**External black-box courts** ([`tests_py/`](../../../tests_py/test_blackbox_ops.py)):
+
+- [`conftest.py`](../../../tests_py/conftest.py) + [`test_blackbox_ops.py`](../../../tests_py/test_blackbox_ops.py) — external black-box court for the graphlaw binaries
+
+**CHANGELOG-era top-level files:**
+
+- [`CHANGELOG.md`](../../../CHANGELOG.md) — Keep a Changelog 1.1.0 entries (per-crate versioning policy stated once)
+- [`GOALS.md`](../../../GOALS.md) — GraphLaw production goals + invariants
+- [`MIGRATION.md`](../../../MIGRATION.md) — migration guide 26.9.28 → 26.10.22
+- [`SECURITY.md`](../../../SECURITY.md) — security policy (supported versions)
+- [`CONTRIBUTING.md`](../../../CONTRIBUTING.md) — contributing guide (Rust 1.96 pinned, merge-only)
+- [`SPLIT-NOTES.md`](../../../SPLIT-NOTES.md) — Lane L46 phase-4 extraction notes (UNWIRED by directive)
+| SQLRDF-25 | Dialect expansion — window functions, QUALIFY, star modifiers, CTEs, PIVOT/UNPIVOT, composite literals, JSON operators | Open | Seven verified gaps, no AST terms/compile targets in [`src/sql_ast.rs`](../../../src/sql_ast.rs) (engine natively supports all; wasm artifact already executes them): window OVER/frames, QUALIFY, `* EXCLUDE/REPLACE` + `COLUMNS('regex')`, WITH/RECURSIVE CTEs, PIVOT/UNPIVOT, struct/map/list literals + slicing, JSON `->`/`->>`. REFUTED (already implemented, not re-asked): EXPLAIN/PRAGMA/SET/INSTALL/LOAD (`src/sql_ast.rs:1854-1932`, renderers :2250-2312, `LOAD icu` witnessed in-wasm), MERGE INTO (§7 shapes, extract_merge_statement, epoch + upsert courts), statement sequences (SQLRDF-23 landed). Per gap: ggen dialect shapes + sql_ast compile targets + SHACL admission + real-readback courts with anti-vacuity twins; engine and admission law untouched ([SQLRDF-25.md](SQLRDF-25.md)) | [SQLRDF-25](SQLRDF-25.md) |
+| SQLRDF-24 | Artifact trap: `uninitialized element` on first `gl_call` (indirect-call vtable) | Open | DuckDB-linked artifact (46,015,267 B; 46,069,809 B new-EH, Tag×1) traps on FIRST `gl_call` with `wasm trap: uninitialized element` — `call_indirect` through a vtable slot read from linear memory inside the `__cxa_thread_atexit` destructor-list runner (old-artifact func 68925, new ~68950), reached from the wasi-libc `gl_*` export epilogue (dtors + stdio flush); `Table[0]` permanently null, op-agnostic; V8 and wasmtime both trap → in-module defect; exonerated: EH-flavor mixing, LTO (false/cgu16/thin), stack size, V8 hosting; in flight: dtor-list memory dump host + gc-sections probe (`-C link-dead-code`, `--no-gc-sections`; gc-sections dropping table entries while the data-segment vtable survives = leading mechanism hypothesis); acceptance (a)-(d) in [SQLRDF-24.md](SQLRDF-24.md); no artifact re-pin until (b) | [SQLRDF-24](SQLRDF-24.md) |
+
+### Status refresh 2026-10-23 (EH-closure wave)
+
+Per-ticket standing as of the EH-closure wave. Receipts:
+[RECEIPTS.md](RECEIPTS.md) lines 1169-1340 and the wave receipt
+[receipts/2026-10-23-eh-closure-wave.md](../../../receipts/2026-10-23-eh-closure-wave.md).
+
+- **SQLRDF-21** — implementation essentially complete: gates removed,
+  wasmtime host, session surface, doc sequences wired. Op courts 16/0.
+  Open: the artifact trap (SQLRDF-24) → re-pin → in-wasm courts A/B.
+- **SQLRDF-22** — G1/G3/G4/G6 LANDED with courts; the G3 egress-digest
+  receipt field landed. G5 designed and filed forward as SQLRDF-23.
+- **SQLRDF-23** — compile + eval + wire LANDED. Court counts:
+  `sql_ast` 32/0, `duckdb_eval` 18/0, `duckdb_op` 16/0. SHACL
+  sequence vocabulary landed.
+- **SQLRDF-24** — trap root-caused to the atexit writer/reader skew.
+  Exoneration matrix: EH flavor, LTO, table encoding, gc-sections,
+  compat archive. libc++abi candidate rebuild + disassembly in
+  flight; re-pin still held.

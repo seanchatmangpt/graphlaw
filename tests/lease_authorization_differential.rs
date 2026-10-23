@@ -578,11 +578,12 @@ fn registry_law_steps_agree_with_kernel_step_names_and_ceilings() {
             .expect("empty plan builds"),
     ));
     let no_trusted = Box::leak(Box::new(TrustedKeys::new()));
-    let empty_ruleset =
-        Box::leak(Box::new(graphlaw::tier::validate_n3_rules(b"", None).expect("empty rules")));
+    let empty_ruleset = Box::leak(Box::new(
+        graphlaw::tier::validate_n3_rules(b"", None).expect("empty rules"),
+    ));
 
     // Registry wire name -> kernel Step variant of the same operation.
-    let kernel_steps: [(&str, &Step<'static>); 8] = [
+    let kernel_steps: [(&str, &Step<'static>); 9] = [
         ("shacl", &Step::AdmitShacl { shapes_ttl: "" }),
         (
             "n3",
@@ -593,6 +594,7 @@ fn registry_law_steps_agree_with_kernel_step_names_and_ceilings() {
         ),
         ("rdfs", &Step::EntailRdfs),
         ("owl-rl", &Step::EntailOwlRl),
+        ("sql", &Step::AdmitSql),
         ("hooks", &Step::Hooks { pack: empty_pack }),
         ("plan", &Step::Plan { plan: empty_plan }),
         ("require-receipt", &Step::RequireReceipt { step: "x" }),
@@ -642,7 +644,11 @@ fn registry_law_steps_agree_with_kernel_step_names_and_ceilings() {
 }
 
 fn prefix_join(reg_name: &str) -> String {
-    let prefix = if reg_name == "shacl" || reg_name.starts_with("require") || reg_name == "plan" {
+    let prefix = if reg_name == "shacl"
+        || reg_name == "sql"
+        || reg_name.starts_with("require")
+        || reg_name == "plan"
+    {
         "admit:"
     } else {
         "derive:"

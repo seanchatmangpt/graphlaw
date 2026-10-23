@@ -70,7 +70,7 @@ impl QueryCache {
         Self {
             entries: Mutex::new(HashMap::new()),
             epoch: AtomicU64::new(0),
-            }
+        }
     }
 
     /// Current epoch witness.
@@ -92,23 +92,24 @@ impl QueryCache {
     /// restamped as a cache hit (`cached = true`, `consult_ms` measured) and
     /// the entry's store epoch. Stale-epoch and divergent-grounding entries
     /// are treated as absent (and evicted).
-    pub fn consult(&self, h_query: [u8; 32], grounding: Option<&[u8]>) -> Option<(ExecutionReceipt, u64)> {
+    pub fn consult(
+        &self,
+        h_query: [u8; 32],
+        grounding: Option<&[u8]>,
+    ) -> Option<(ExecutionReceipt, u64)> {
         let start = Instant::now();
         let mut entries = self.lock_entries();
         let hit = entries
             .get(&h_query)
             .filter(|entry| {
                 entry.epoch == self.epoch()
-                    && grounding
-                        .map(|g| entry.grounding == g)
-                        .unwrap_or(true)
+                    && grounding.map(|g| entry.grounding == g).unwrap_or(true)
             })
             .cloned();
         match hit {
             Some(mut entry) => {
                 entry.receipt.cached = true;
-                entry.receipt.consult_ms =
-                    start.elapsed().as_secs_f64() * 1000.0;
+                entry.receipt.consult_ms = start.elapsed().as_secs_f64() * 1000.0;
                 Some((entry.receipt, entry.epoch))
             }
             None => {
@@ -140,10 +141,7 @@ impl QueryCache {
     /// go through here; a panic inside `f` poisons the mutex but is
     /// recovered by the next `lock_entries`, so the panic loses at most the
     /// in-flight mutation — never the cache itself.
-    pub fn with_entries<R>(
-        &self,
-        f: impl FnOnce(&mut HashMap<[u8; 32], CacheEntry>) -> R,
-    ) -> R {
+    pub fn with_entries<R>(&self, f: impl FnOnce(&mut HashMap<[u8; 32], CacheEntry>) -> R) -> R {
         f(&mut self.lock_entries())
     }
 

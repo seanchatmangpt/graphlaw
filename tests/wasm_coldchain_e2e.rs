@@ -212,13 +212,7 @@ fn host_stub_aggregate() -> (BTreeMap<String, (f64, i64)>, BTreeSet<String>) {
 /// COLD-1's independent partition (receipt
 /// docs/jira/v26.10.21/receipts/cold1-pipeline-court.md).
 const COLD1_QUARANTINED: [&str; 5] = ["BATCH-A1", "BATCH-A2", "BATCH-Q1", "BATCH-Q2", "BATCH-Q3"];
-const COLD1_RELEASED: [&str; 5] = [
-    "BATCH-R1",
-    "BATCH-R2",
-    "BATCH-R3",
-    "BATCH-R4",
-    "BATCH-R5",
-];
+const COLD1_RELEASED: [&str; 5] = ["BATCH-R1", "BATCH-R2", "BATCH-R3", "BATCH-R4", "BATCH-R5"];
 
 // ---------------------------------------------------------------------------
 // The one wasm call sequence: Phases 2 -> 7, same wasm instance.
@@ -238,7 +232,8 @@ fn gws10_full_pipeline_in_one_wasm_sequence() {
         "shapes": shapes_ttl,
     }));
     assert_eq!(
-        preflight["conforms"], Value::Bool(true),
+        preflight["conforms"],
+        Value::Bool(true),
         "Phase 2: conforming cold-chain AST must admit, report: {preflight}"
     );
 
@@ -270,7 +265,10 @@ fn gws10_full_pipeline_in_one_wasm_sequence() {
     let admission_doc = format!("{materialized}\n{RULESET}");
     let req = json!({"op": "n3", "text": admission_doc});
     let resp = ok(&req);
-    let derived = resp["derived"].as_str().expect("reasoner output").to_string();
+    let derived = resp["derived"]
+        .as_str()
+        .expect("reasoner output")
+        .to_string();
 
     // ---- Phase 7: partition assertions. ----
     let released: BTreeSet<String> = derived
@@ -331,8 +329,13 @@ fn gws10_full_pipeline_in_one_wasm_sequence() {
     );
 
     if std::env::var("GWS10_DEBUG").is_ok() {
-        for line in derived.lines().filter(|l| l.contains("BATCH-A1")) { eprintln!("DBG {line}"); }
-        eprintln!("DBG auditProof occurrences: {}", derived.matches("auditProof").count());
+        for line in derived.lines().filter(|l| l.contains("BATCH-A1")) {
+            eprintln!("DBG {line}");
+        }
+        eprintln!(
+            "DBG auditProof occurrences: {}",
+            derived.matches("auditProof").count()
+        );
     }
     // Audit-proof binding is load-bearing: the same corpus with the proof
     // STRIPPED from one release-class batch must derive NOTHING for it

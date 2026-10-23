@@ -27,6 +27,8 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
+use wasmtime::{Config, Engine, Instance, Linker, Memory, Module, Store, TypedFunc};
+use wasmtime_wasi::p1::{WasiP1Ctx, add_to_linker_sync};
 
 // ---------------------------------------------------------------- host plumbing
 
@@ -42,6 +44,20 @@ fn wasm_path() -> Option<PathBuf> {
     let cached = root.join("target/wasm-abi/wasm32-wasip1/wasm/graphlaw_wasm.wasm");
     if cached.is_file() && wasm_fresh(&root, &cached) {
         return Some(cached);
+    }
+    // The DuckDB-linked artifact carries a W3C exception tag section that
+    // wasmi-era caches lack; prefer the canonical wasi-sdk build output when
+    // present (wasmi rejects section id 13, so a tag-less 7 MB cache would
+    // fail Module::new anyway). Stale is loud, not silent.
+    let canonical = root.join("target/wasm32-wasip1/wasm/graphlaw_wasm.wasm");
+    if canonical.is_file() {
+        if !wasm_fresh(&root, &canonical) {
+            eprintln!(
+                "NOTE: {} is stale relative to src/ + wasm/src (rebuild needs WASI_SDK_PATH); testing the existing artifact",
+                canonical.display()
+            );
+        }
+        return Some(canonical);
     }
     let target = root.join("target/wasm-abi");
     let status = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()))
@@ -90,17 +106,23 @@ fn wasm_fresh(root: &Path, artifact: &Path) -> bool {
 }
 
 struct Host {
-    store: wasmi::Store<wasmi_wasi::WasiCtx>,
-    memory: wasmi::Memory,
-    alloc: wasmi::TypedFunc<u32, u32>,
-    free: wasmi::TypedFunc<(u32, u32), ()>,
-    call: wasmi::TypedFunc<(u32, u32), u64>,
+    store: Store<WasiP1Ctx>,
+    memory: Memory,
+    alloc: TypedFunc<u32, u32>,
+    free: TypedFunc<(u32, u32), ()>,
+    call: TypedFunc<(u32, u32), u64>,
 }
 
 impl Host {
+    /// Instantiation under wasmtime 48 with W3C exceptions enabled
+    /// (`wasm_exceptions(true)`, the pattern of
+    /// tests/wasm_duckdb_lifecycle_eh.rs): the DuckDB-linked artifact carries
+    /// a W3C exception tag section (section id 13) that wasmi cannot compile.
     fn new(bytes: &[u8]) -> Self {
-        let engine = wasmi::Engine::default();
-        let module = wasmi::Module::new(&engine, bytes).expect("valid wasm module");
+        let mut cfg = Config::new();
+        cfg.wasm_exceptions(true);
+        let engine = Engine::new(&cfg).expect("wasmtime engine");
+        let module = Module::new(&engine, bytes).expect("valid wasm module");
         for i in module.imports() {
             assert_eq!(
                 i.module(),
@@ -110,22 +132,34 @@ impl Host {
                 i.name()
             );
         }
-        let mut store = wasmi::Store::new(&engine, wasmi_wasi::WasiCtxBuilder::new().build());
-        let mut linker = <wasmi::Linker<wasmi_wasi::WasiCtx>>::new(&engine);
-        wasmi_wasi::add_to_linker(&mut linker, |ctx| ctx).expect("links WASI");
-        let instance: wasmi::Instance = linker
-            .instantiate_and_start(&mut store, &module)
+        let mut store = Store::new(
+            &engine,
+            wasmtime_wasi::WasiCtxBuilder::new()
+                .inherit_stdio()
+                .inherit_env()
+                .build_p1(),
+        );
+        let mut linker = <Linker<WasiP1Ctx>>::new(&engine);
+        add_to_linker_sync(&mut linker, |ctx| ctx).expect("links WASI");
+        let instance: Instance = linker
+            .instantiate(&mut store, &module)
             .expect("instantiates");
-        if let Ok(init) = instance.get_typed_func::<(), ()>(&store, "_initialize") {
+        if let Ok(init) = instance.get_typed_func::<(), ()>(&mut store, "_initialize") {
             init.call(&mut store, ()).expect("_initialize");
         }
         let memory = instance
-            .get_memory(&store, "memory")
+            .get_memory(&mut store, "memory")
             .expect("exports memory");
         Host {
-            alloc: instance.get_typed_func(&store, "gl_alloc").unwrap(),
-            free: instance.get_typed_func(&store, "gl_free").unwrap(),
-            call: instance.get_typed_func(&store, "gl_call").unwrap(),
+            alloc: instance
+                .get_typed_func::<u32, u32>(&mut store, "gl_alloc")
+                .unwrap(),
+            free: instance
+                .get_typed_func::<(u32, u32), ()>(&mut store, "gl_free")
+                .unwrap(),
+            call: instance
+                .get_typed_func::<(u32, u32), u64>(&mut store, "gl_call")
+                .unwrap(),
             store,
             memory,
         }
@@ -159,11 +193,13 @@ impl Host {
                 .expect("gl_free");
             let resp: Value = serde_json::from_slice(&out).expect("response envelope is JSON");
             assert_eq!(
-                resp["ok"], json!(false),
+                resp["ok"],
+                json!(false),
                 "null-alloc call answered ok:true: {resp}"
             );
             assert_eq!(
-                resp["error"]["kind"], json!("Unsupported"),
+                resp["error"]["kind"],
+                json!("Unsupported"),
                 "null-alloc refusal is untyped: {resp}"
             );
             assert!(
@@ -177,7 +213,10 @@ impl Host {
         self.memory
             .write(&mut self.store, ptr as usize, body)
             .expect("memory.write");
-        let packed = self.call.call(&mut self.store, (ptr, body.len() as u32)).expect("gl_call");
+        let packed = self
+            .call
+            .call(&mut self.store, (ptr, body.len() as u32))
+            .expect("gl_call");
         let (out_ptr, out_len) = ((packed >> 32) as u32, (packed & 0xffff_ffff) as u32);
         let mut out = vec![0u8; out_len as usize];
         self.memory
@@ -234,7 +273,10 @@ fn assert_typed(resp: &Value, class: &str, input_desc: &str) {
     let ok = obj
         .get("ok")
         .unwrap_or_else(|| panic!("[{class}] {input_desc}: envelope has no `ok` bool: {resp}"));
-    assert!(ok.is_boolean(), "[{class}] {input_desc}: `ok` is not a bool: {resp}");
+    assert!(
+        ok.is_boolean(),
+        "[{class}] {input_desc}: `ok` is not a bool: {resp}"
+    );
     if ok.as_bool() == Some(false) {
         let err = obj.get("error").unwrap_or_else(|| {
             panic!("[{class}] {input_desc}: `ok:false` without an `error` object: {resp}")
@@ -361,11 +403,13 @@ fn gws9_wasm_boundary_fuzz() {
         // 63/64 must parse (<= MAX_JSON_DEPTH); 65+ must refuse ResourceLimit.
         if d > 64 {
             assert_eq!(
-                resp["ok"], json!(false),
+                resp["ok"],
+                json!(false),
                 "[a-depth] depth {d} passed the guard: {resp}"
             );
             assert_eq!(
-                resp["error"]["kind"], json!("ResourceLimit"),
+                resp["error"]["kind"],
+                json!("ResourceLimit"),
                 "[a-depth] depth {d} refused untyped: {resp}"
             );
         }
@@ -400,7 +444,10 @@ fn gws9_wasm_boundary_fuzz() {
     // ---- (c) malformed UTF-8 in string payloads (focused + fuzzed below)
     for (desc, body) in [
         ("lone continuation byte in op", &b"{\"op\":\"\x80\"}"[..]),
-        ("invalid 0xFF/0xFE in text", &b"{\"op\":\"parse\",\"text\":\"\xFF\xFE\"}"[..]),
+        (
+            "invalid 0xFF/0xFE in text",
+            &b"{\"op\":\"parse\",\"text\":\"\xFF\xFE\"}"[..],
+        ),
         (
             "overlong UTF-8 in dialect",
             &b"{\"op\":\"parse\",\"text\":\"x\",\"dialect\":\"\xC0\xAF\"}"[..],
@@ -451,10 +498,18 @@ ex:NodeShape a sh:NodeShape ;
         );
         let body = json!({"op": "shacl", "shapes": shapes,
                           "data": "@prefix ex: <https://e/> . ex:a a ex:Thing ."});
-        hostile(body.to_string().as_bytes(), "d-sql-injection", "sh:pattern token");
+        hostile(
+            body.to_string().as_bytes(),
+            "d-sql-injection",
+            "sh:pattern token",
+        );
 
         let body = json!({"op": "shacl", "shapes": shapes, "data": tok});
-        hostile(body.to_string().as_bytes(), "d-sql-injection", "sh:pattern token as data");
+        hostile(
+            body.to_string().as_bytes(),
+            "d-sql-injection",
+            "sh:pattern token as data",
+        );
     }
 
     // ---- (f) truncation mid-frame
@@ -471,7 +526,11 @@ ex:NodeShape a sh:NodeShape ;
         }
         for i in 0..40 {
             let cut = rng.below(full.len() as u64) as usize;
-            let _ = hostile(&full[..cut], "f-truncated", &format!("random cut {i} (at {cut})"));
+            let _ = hostile(
+                &full[..cut],
+                "f-truncated",
+                &format!("random cut {i} (at {cut})"),
+            );
         }
     }
 
@@ -577,7 +636,10 @@ fn gws9_sql_injection_ast_gate() {
         let r = r.unwrap_or_else(|p| {
             panic!("validate_ast_shacl PANICKED on injection token {tok:?}: {p:?}")
         });
-        assert!(r.is_err(), "SHACL AST gate accepted injection token {tok:?}");
+        assert!(
+            r.is_err(),
+            "SHACL AST gate accepted injection token {tok:?}"
+        );
     }
 
     // And the honest positive control: a clean table name still validates.
@@ -587,6 +649,7 @@ fn gws9_sql_injection_ast_gate() {
     // (Positive control may fail validation on other shape constraints; the
     //  invariant under court is only that it does not panic. Record verdict.)
     let clean_ok = sql_ast::validate_ast_shacl(&clean, shapes_ttl).is_ok();
-    println!("GWS-9 native SQL gate: 5 tokens refused, positive-control clean AST conforms = {clean_ok}");
+    println!(
+        "GWS-9 native SQL gate: 5 tokens refused, positive-control clean AST conforms = {clean_ok}"
+    );
 }
-

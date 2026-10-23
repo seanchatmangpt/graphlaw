@@ -14,10 +14,25 @@ ART="$ROOT/target/wasm32-unknown-unknown/wasm/graphlaw_wasm.wasm"
 TARGET=wasm32-unknown-unknown
 
 # --- 1. artifact exists + magic header -----------------------------------
+# Unsupported-class gate (2026-10-23, witnessed): frozen-duckdb's build.rs
+# (frozen-duckdb-builder link_kind_for_target) classifies only
+# wasm32-wasip1/wasip2/wasi as StaticArchive; wasm32-unknown-unknown falls to
+# LinkKind::Shared and emits `rustc-link-lib=dylib=duckdb` (host Mach-O), which
+# wasm-ld rejects: "error: linking with `rust-lld` failed ... unable to find
+# library -lduckdb". The StaticArchive branch is wasi-libc-bound too (it
+# compiles wasi_posix.c with --target=wasm32-wasip1), and this script's own W03
+# falsifier demands ZERO wasi_snapshot_preview1 imports. The target cannot host
+# frozen-duckdb in either branch -> typed loud SKIP, never a silent/faked pass.
 if [ ! -f "$ART" ]; then
-  echo "FAIL: artifact missing: $ART" >&2
-  echo "      build with: cargo build -p graphlaw-wasm --target $TARGET --profile wasm" >&2
-  exit 1
+  echo "[SKIP-typed: UNSUPPORTED_TARGET] wasm32-unknown-unknown cannot host frozen-duckdb" >&2
+  echo "  reason: frozen-duckdb-sys build.rs LinkKind::Shared emits dylib=duckdb (host" >&2
+  echo "  Mach-O); wasm-ld fails 'unable to find library -lduckdb'. wasip1 static" >&2
+  echo "  archive is wasi-libc-bound and violates the W03 zero-WASI-import falsifier." >&2
+  echo "  close condition: frozen-duckdb-builder link_kind_for_target gains an" >&2
+  echo "  unknown-unknown static-archive path (wasi-free) — then build with:" >&2
+  echo "  cargo build -p graphlaw-wasm --target $TARGET --profile wasm" >&2
+  echo "  witness: artifact missing: $ART" >&2
+  exit 3
 fi
 
 MAGIC="$(xxd -p -l4 "$ART")"

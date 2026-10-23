@@ -48,8 +48,10 @@ else
     echo "== wasm_audit: subject = wasm v${VERSION} artifact =="
 fi
 
-# --- 64 MiB sandbox wall (docs/WASM.md). The old 25 MiB ceiling assumed the
-# engine was absent from the module. ---
+# --- 64 MiB sandbox wall (docs/WASM.md). Historical note: pre-DuckDB-pin
+# artifacts were the 7.1 MB engine-free class; the DuckDB-linked artifact is
+# the M4 witness class (~45 MB). A tag-count-0 artifact at that size class
+# means the engine did not link. ---
 MAX_BYTES=67108864
 
 if [[ ! -f "$SUBJECT" ]]; then
@@ -87,6 +89,46 @@ if (( measured_size > MAX_BYTES )); then
     exit 1
 fi
 echo "[PASS] wasm size within ceiling"
+
+# --- (3) Tag-section count (section id 13). The DuckDB-linked artifact MUST
+# carry Tag sections (wasm exception handling emitted by the linked engine);
+# count 0 means the engine did not link. Loud warning; the ceiling gate stays
+# exit 0 on this check alone.
+tag_count="$(python3 - "$SUBJECT" <<'PYEOF'
+import sys
+b = open(sys.argv[1], 'rb').read()
+if b[:4] != b'\x00asm':
+    print('ERR'); sys.exit(0)
+i, tags = 8, 0
+n = len(b)
+try:
+    while i < n:
+        sid = b[i]; i += 1
+        size, shift = 0, 0
+        while True:
+            x = b[i]; i += 1
+            size |= (x & 0x7f) << shift
+            shift += 7
+            if not (x & 0x80):
+                break
+        i += size
+        if i > n:
+            print('ERR'); sys.exit(0)
+        if sid == 13:
+            tags += 1
+    print(tags)
+except IndexError:
+    print('ERR')
+PYEOF
+)"
+if [[ "$tag_count" == "ERR" ]]; then
+    echo "[INFO] tag sections: section walk failed (malformed section framing)"
+elif (( tag_count == 0 )); then
+    echo "[WARN] tag sections: 0 Tag(13) sections — the DuckDB engine did NOT link \
+into this artifact (engine-linked modules emit exception tag sections)" >&2
+else
+    echo "[INFO] tag sections: ${tag_count} Tag(13) section(s) — engine link present"
+fi
 
 echo "== wasm_audit: PASS =="
 exit 0

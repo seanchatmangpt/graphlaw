@@ -1,0 +1,15 @@
+# FIBO court-matrix fixture tc08_copy
+# CopyStatement, expression form. Compile arm: compile_expression_form
+# "CopyStatement" (sql:copyOperation -> tableName/filePath/fileFormat;
+# format must be CSV|PARQUET|JSON). Expected SQL:
+#   COPY fibo_accounts TO '/tmp/fibo_accounts.csv' (FORMAT CSV)
+@prefix ex: <http://example.org/fibo#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+
+ex:stmt1 a sql:CopyStatement ;
+    sql:statementIndex 8 ;
+    sql:copyOperation [
+        sql:tableName "fibo_accounts" ;
+        sql:filePath "/tmp/fibo_accounts.csv" ;
+        sql:fileFormat "CSV" ;
+    ] .

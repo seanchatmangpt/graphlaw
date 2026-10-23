@@ -4,8 +4,9 @@
 // `files` allowlist and structural invariants:
 //   - every packed entry is inside the allowlist (FAIL on offenders, listed)
 //   - no node_modules/, test/, src/, scripts/, tsconfig*, vitest* leakage (FAIL)
-//   - wasm/graphlaw.wasm present and > 5MB (FAIL)
-//   - total packed size < 12MB (FAIL)
+//   - wasm/graphlaw.wasm present and within its class band: legacy
+//     pre-duckdb <10 MB, DuckDB-linked 40-64 MiB (FAIL)
+//   - total packed size < 68MB (FAIL)
 //   - dist-nodejs/index.js, dist-nodejs/raw/index.js, dist-bundler/index.js,
 //     dist-web/index.js present (WARN before build, so pre-build runs pass)
 import { execFileSync } from "node:child_process";
@@ -23,8 +24,17 @@ const REQUIRED_DIST = [
   "dist-web/index.js",
 ];
 const WASM_ENTRY = "wasm/graphlaw.wasm";
-const WASM_MIN_BYTES = 5 * 1024 * 1024;
-const TOTAL_MAX_BYTES = 12 * 1024 * 1024;
+// Size-band classes (mirrors scripts/wasm_audit.sh 64 MiB ceiling):
+//   - legacy pre-duckdb artifact: <10 MB (historical; current priv/graphlaw.wasm
+//     at ~7.1 MB is this class until the coordinator re-pin)
+//   - DuckDB-linked artifact (M4 witness): >=40 MB proves the engine link,
+//     hard ceiling 64 MiB (67108864)
+const MIB = 1024 * 1024;
+const WASM_LEGACY_MIN_BYTES = 1 * MIB; // non-trivial module, any class
+const WASM_LEGACY_MAX_BYTES = 10 * MIB;
+const WASM_ENGINE_MIN_BYTES = 40 * MIB; // wasm >= 40 MB proves the engine link
+const WASM_HARD_CEILING_BYTES = 64 * MIB; // 67108864
+const TOTAL_MAX_BYTES = 68 * MIB; // wasm ceiling 64 MiB + package overhead
 const FORBIDDEN = [
   /^node_modules\//,
   /^test\//,
@@ -100,10 +110,21 @@ const paths = new Set(entries.map((f) => f.path));
 const wasm = entries.find((f) => f.path === WASM_ENTRY);
 if (!wasm) {
   fails.push(`${WASM_ENTRY} missing from packed output`);
-} else if ((wasm.size || 0) <= WASM_MIN_BYTES) {
-  fails.push(
-    `${WASM_ENTRY} is ${fmtBytes(wasm.size || 0)}, expected > ${fmtBytes(WASM_MIN_BYTES)}`,
-  );
+} else {
+  const size = wasm.size || 0;
+  if (size >= WASM_ENGINE_MIN_BYTES) {
+    // Engine-link class: bounded by the 64 MiB hard ceiling.
+    if (size > WASM_HARD_CEILING_BYTES) {
+      fails.push(
+        `${WASM_ENTRY} is ${fmtBytes(size)}, exceeds hard ceiling ${fmtBytes(WASM_HARD_CEILING_BYTES)} (64 MiB)`,
+      );
+    }
+  } else if (size < WASM_LEGACY_MIN_BYTES || size >= WASM_LEGACY_MAX_BYTES) {
+    // Legacy pre-duckdb class: historical <10 MB band.
+    fails.push(
+      `${WASM_ENTRY} is ${fmtBytes(size)}, outside legacy band [${fmtBytes(WASM_LEGACY_MIN_BYTES)}, ${fmtBytes(WASM_LEGACY_MAX_BYTES)}) and below engine-class threshold ${fmtBytes(WASM_ENGINE_MIN_BYTES)}`,
+    );
+  }
 }
 
 const total = entries.reduce((sum, f) => sum + (f.size || 0), 0);

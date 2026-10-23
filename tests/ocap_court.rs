@@ -110,7 +110,10 @@ fn select_graph(scope_predicate: &str, with_index: bool) -> String {
 
 fn seed_invoices(db: &GraphLawDuckDB) {
     db.raw_connection()
-        .execute("CREATE TABLE invoices (amount DECIMAL(10,2), status VARCHAR)", [])
+        .execute(
+            "CREATE TABLE invoices (amount DECIMAL(10,2), status VARCHAR)",
+            [],
+        )
         .expect("seed: create invoices");
     db.raw_connection()
         .execute("INSERT INTO invoices VALUES (42.00, 'SETTLED')", [])
@@ -158,15 +161,24 @@ fn row1_shape_violation_refused_01_with_zero_engine_allocation() {
         compiled.sql
     );
     let receipt = db2
-        .eval_ast_query("http://example.org/ocap-row1", &compiled, "urn:r:", "urn:p:")
+        .eval_ast_query(
+            "http://example.org/ocap-row1",
+            &compiled,
+            "urn:r:",
+            "urn:p:",
+        )
         .expect("lawful graph must execute");
-    assert_eq!(receipt.rows_emitted, 1, "benign twin must emit exactly one row");
+    assert_eq!(
+        receipt.rows_emitted, 1,
+        "benign twin must emit exactly one row"
+    );
     // Real receipt identity: the execution receipt hash is the admitted
     // statement hash BLAKE3(Canon(G_AST) || P_params) (rec §1.4).
     let canon = graphlaw::duckdb_eval::canonical_ast_graph_bytes(&lawful)
         .expect("lawful graph must canonicalize");
     assert_eq!(
-        receipt.query_hash, admitted_statement_hash(&canon, &compiled.params),
+        receipt.query_hash,
+        admitted_statement_hash(&canon, &compiled.params),
         "execution receipt hash must equal BLAKE3(Canon(G_AST) || P_params)"
     );
 }
@@ -216,9 +228,17 @@ fn row2_viewscope_predicate_leak_refused_03_before_execution() {
     let lawful = select_graph("ProcessScope", /* with_index = */ true);
     let compiled = compile_turtle(&lawful).expect("lawful predicate scope must compile");
     let receipt = db
-        .eval_ast_query("http://example.org/ocap-row2", &compiled, "urn:r:", "urn:p:")
+        .eval_ast_query(
+            "http://example.org/ocap-row2",
+            &compiled,
+            "urn:r:",
+            "urn:p:",
+        )
         .expect("lawful predicate scope must execute");
-    assert_eq!(receipt.rows_emitted, 1, "benign twin must emit exactly one row");
+    assert_eq!(
+        receipt.rows_emitted, 1,
+        "benign twin must emit exactly one row"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -233,124 +253,152 @@ fn row2_viewscope_predicate_leak_refused_03_before_execution() {
 /// ledger gap persistence, and the capabilities-keys assertion.
 #[cfg(all(feature = "evidentiary-ring", not(target_arch = "wasm32")))]
 mod row3 {
-    use super::{poll_until, select_graph, seed_invoices, tmp_dir};
+    use super::{poll_until, seed_invoices, select_graph, tmp_dir};
     use graphlaw::abi;
     use graphlaw::duckdb_eval::GraphLawDuckDB;
     use graphlaw::evidence_ring::{
-        EvidenceRing, PushOutcome, RingDescriptor, RING_CAPACITY, now_ms,
+        EvidenceRing, PushOutcome, RING_CAPACITY, RingDescriptor, now_ms,
     };
     use graphlaw::sql_ast::compile_turtle;
     use serde_json::json;
     use std::time::{Duration, Instant};
 
-#[test]
-fn row3_ring_saturation_transaction_completes_gaps_persisted_capabilities_surface() {
-    let dir = tmp_dir("row3-ring");
-    let ldir = tmp_dir("row3-ledger");
-    // Explicit global init (no lazy default); joint ring -> query-ledger
-    // pipeline so gap markers persist under <ledger>/gaps/.
-    EvidenceRing::init_global_with_ledger(&dir, &ldir).expect("global ring init");
+    #[test]
+    fn row3_ring_saturation_transaction_completes_gaps_persisted_capabilities_surface() {
+        let dir = tmp_dir("row3-ring");
+        let ldir = tmp_dir("row3-ledger");
+        // Explicit global init (no lazy default); joint ring -> query-ledger
+        // pipeline so gap markers persist under <ledger>/gaps/.
+        EvidenceRing::init_global_with_ledger(&dir, &ldir).expect("global ring init");
 
-    let ring = EvidenceRing::global().expect("global ring installed").clone();
+        let ring = EvidenceRing::global()
+            .expect("global ring installed")
+            .clone();
 
-    // Saturate for real: stall the drainer (the courted valve), fill all
-    // 4096 slots, then keep pushing — drop-newest must refuse and count.
-    ring.set_drainer_paused(true);
-    let mut buffered = 0u64;
-    let mut dropped = 0u64;
-    let mut torn = 0u64;
-    for i in 0..(RING_CAPACITY as u64 + 512) {
-        let mut h = [0u8; 32];
-        h[..8].copy_from_slice(&i.to_be_bytes());
-        let d = RingDescriptor::new(h, i, 1, 0, now_ms());
-        match ring.push(d) {
-            PushOutcome::Buffered => buffered += 1,
-            PushOutcome::DroppedNewest => dropped += 1,
-            PushOutcome::RefusedTornPad => torn += 1,
+        // Saturate for real: stall the drainer (the courted valve), fill all
+        // 4096 slots, then keep pushing — drop-newest must refuse and count.
+        ring.set_drainer_paused(true);
+        let mut buffered = 0u64;
+        let mut dropped = 0u64;
+        let mut torn = 0u64;
+        for i in 0..(RING_CAPACITY as u64 + 512) {
+            let mut h = [0u8; 32];
+            h[..8].copy_from_slice(&i.to_be_bytes());
+            let d = RingDescriptor::new(h, i, 1, 0, now_ms());
+            match ring.push(d) {
+                PushOutcome::Buffered => buffered += 1,
+                PushOutcome::DroppedNewest => dropped += 1,
+                PushOutcome::RefusedTornPad => torn += 1,
+            }
         }
+        assert_eq!(
+            torn, 0,
+            "pad-free descriptors must never be refused as torn"
+        );
+        assert_eq!(buffered + dropped + torn, RING_CAPACITY as u64 + 512);
+        assert_eq!(
+            buffered, RING_CAPACITY as u64,
+            "exactly the 4096 slots buffer"
+        );
+        assert!(
+            dropped >= 512,
+            "saturated ring must drop; got dropped={dropped}"
+        );
+        assert_eq!(ring.dropped_total(), dropped);
+
+        // TRANSACTION COMPLETES under saturation: a real frozen-duckdb
+        // transaction compiles, executes, and reads back while the ring is full
+        // and the drainer is stalled. Evidence telemetry may drop; the lawful
+        // transaction may not. NOTE: this eval also exercises the real
+        // evidentiary seam (duckdb_eval.rs pushes this query's own
+        // RingDescriptor into the global ring) — under saturation it drops too,
+        // so dropped_total rises by exactly 1 above the loop-local count. The
+        // conservation asserts below therefore bind to the ring's counter, never
+        // to the loop-local tally.
+        let db = GraphLawDuckDB::open_in_memory().expect("real frozen-duckdb connection");
+        seed_invoices(&db);
+        let lawful = select_graph("ProcessScope", /* with_index = */ true);
+        let compiled = compile_turtle(&lawful).expect("transaction graph must compile");
+        let receipt = db
+            .eval_ast_query(
+                "http://example.org/ocap-row3",
+                &compiled,
+                "urn:r:",
+                "urn:p:",
+            )
+            .expect("transaction must complete while the ring is saturated");
+        assert_eq!(
+            receipt.rows_emitted, 1,
+            "transaction emits its row under saturation"
+        );
+        let back: (String, i64) = db
+            .raw_connection()
+            .query_row(
+                "SELECT status, count(*)::BIGINT FROM invoices GROUP BY status",
+                [],
+                |r| {
+                    Ok((
+                        r.get::<_, String>(0).expect("status col"),
+                        r.get::<_, i64>(1).expect("count col"),
+                    ))
+                },
+            )
+            .expect("real table readback after the saturated transaction");
+        assert_eq!(
+            back,
+            ("SETTLED".into(), 1),
+            "readback must match the seeded state"
+        );
+
+        // Resume + close: drain-to-empty, then the drainer records the drops as
+        // ledger gap markers (real disk readback, bounded poll on the observable).
+        ring.set_drainer_paused(false);
+        ring.close();
+        let ledger = graphlaw::query_ledger::QueryLedger::open(&ldir).expect("ledger re-open");
+        let ok = poll_until(Instant::now() + Duration::from_secs(30), || {
+            ledger.gaps().ok().filter(|g| !g.is_empty())
+        });
+        let gaps = ok.expect("drop-newest losses must persist as ledger gap markers");
+        let gap_covered: u64 = gaps.iter().map(|(f, l)| l - f + 1).sum();
+        assert_eq!(
+            gap_covered,
+            ring.dropped_total(),
+            "gap markers must cover exactly the drops the ring counter reports (including the eval-seam drop)"
+        );
+        assert_eq!(
+            ring.last_ledger_error(),
+            None,
+            "drainer must record into the ledger without error"
+        );
+
+        // CAPABILITIES SURFACING: the abi `capabilities` op must carry the
+        // runtime counters, matching the surfacing lane's keys exactly
+        // (src/abi.rs: evidentiary_ring_dropped / evidentiary_ledger_gaps).
+        let caps = abi::call_json(&json!({"op": "capabilities"}));
+        assert_eq!(
+            caps["evidentiary_ring_dropped"],
+            json!(ring.dropped_total()),
+            "capabilities must surface evidentiary_ring_dropped == the ring counter"
+        );
+        let gap_files: u64 = std::fs::read_dir(ldir.join("gaps"))
+            .expect("gaps dir readable")
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                let n = e.file_name().to_string_lossy().into_owned();
+                n.starts_with("gap-") && n.ends_with(".json")
+            })
+            .count() as u64;
+        assert!(
+            gap_files >= 1,
+            "at least one gap marker file must be on disk"
+        );
+        assert_eq!(
+            caps["evidentiary_ledger_gaps"],
+            json!(gap_files),
+            "capabilities must surface evidentiary_ledger_gaps == the gap marker files"
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
+        std::fs::remove_dir_all(&ldir).ok();
     }
-    assert_eq!(torn, 0, "pad-free descriptors must never be refused as torn");
-    assert_eq!(buffered + dropped + torn, RING_CAPACITY as u64 + 512);
-    assert_eq!(buffered, RING_CAPACITY as u64, "exactly the 4096 slots buffer");
-    assert!(dropped >= 512, "saturated ring must drop; got dropped={dropped}");
-    assert_eq!(ring.dropped_total(), dropped);
-
-    // TRANSACTION COMPLETES under saturation: a real frozen-duckdb
-    // transaction compiles, executes, and reads back while the ring is full
-    // and the drainer is stalled. Evidence telemetry may drop; the lawful
-    // transaction may not. NOTE: this eval also exercises the real
-    // evidentiary seam (duckdb_eval.rs pushes this query's own
-    // RingDescriptor into the global ring) — under saturation it drops too,
-    // so dropped_total rises by exactly 1 above the loop-local count. The
-    // conservation asserts below therefore bind to the ring's counter, never
-    // to the loop-local tally.
-    let db = GraphLawDuckDB::open_in_memory().expect("real frozen-duckdb connection");
-    seed_invoices(&db);
-    let lawful = select_graph("ProcessScope", /* with_index = */ true);
-    let compiled = compile_turtle(&lawful).expect("transaction graph must compile");
-    let receipt = db
-        .eval_ast_query("http://example.org/ocap-row3", &compiled, "urn:r:", "urn:p:")
-        .expect("transaction must complete while the ring is saturated");
-    assert_eq!(receipt.rows_emitted, 1, "transaction emits its row under saturation");
-    let back: (String, i64) = db
-        .raw_connection()
-        .query_row(
-            "SELECT status, count(*)::BIGINT FROM invoices GROUP BY status",
-            [],
-            |r| {
-                Ok((
-                    r.get::<_, String>(0).expect("status col"),
-                    r.get::<_, i64>(1).expect("count col"),
-                ))
-            },
-        )
-        .expect("real table readback after the saturated transaction");
-    assert_eq!(back, ("SETTLED".into(), 1), "readback must match the seeded state");
-
-    // Resume + close: drain-to-empty, then the drainer records the drops as
-    // ledger gap markers (real disk readback, bounded poll on the observable).
-    ring.set_drainer_paused(false);
-    ring.close();
-    let ledger = graphlaw::query_ledger::QueryLedger::open(&ldir).expect("ledger re-open");
-    let ok = poll_until(Instant::now() + Duration::from_secs(30), || {
-        ledger.gaps().ok().filter(|g| !g.is_empty())
-    });
-    let gaps = ok.expect("drop-newest losses must persist as ledger gap markers");
-    let gap_covered: u64 = gaps.iter().map(|(f, l)| l - f + 1).sum();
-    assert_eq!(
-        gap_covered,
-        ring.dropped_total(),
-        "gap markers must cover exactly the drops the ring counter reports (including the eval-seam drop)"
-    );
-    assert_eq!(
-        ring.last_ledger_error(),
-        None,
-        "drainer must record into the ledger without error"
-    );
-
-    // CAPABILITIES SURFACING: the abi `capabilities` op must carry the
-    // runtime counters, matching the surfacing lane's keys exactly
-    // (src/abi.rs: evidentiary_ring_dropped / evidentiary_ledger_gaps).
-    let caps = abi::call_json(&json!({"op": "capabilities"}));
-    assert_eq!(
-        caps["evidentiary_ring_dropped"], json!(ring.dropped_total()),
-        "capabilities must surface evidentiary_ring_dropped == the ring counter"
-    );
-    let gap_files: u64 = std::fs::read_dir(ldir.join("gaps"))
-        .expect("gaps dir readable")
-        .filter_map(|e| e.ok())
-        .filter(|e| {
-            let n = e.file_name().to_string_lossy().into_owned();
-            n.starts_with("gap-") && n.ends_with(".json")
-        })
-        .count() as u64;
-    assert!(gap_files >= 1, "at least one gap marker file must be on disk");
-    assert_eq!(
-        caps["evidentiary_ledger_gaps"], json!(gap_files),
-        "capabilities must surface evidentiary_ledger_gaps == the gap marker files"
-    );
-
-    std::fs::remove_dir_all(&dir).ok();
-    std::fs::remove_dir_all(&ldir).ok();
-}
 }

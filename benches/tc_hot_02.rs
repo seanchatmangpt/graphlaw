@@ -96,8 +96,14 @@ fn main() {
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("temp corpus dir");
     // L159 lane-local patch (disclosed): persist deterministic corpus to TC_HOT_CORPUS_PATH when set.
-    let corpus_dir: PathBuf = std::env::var("TC_HOT_CORPUS_PATH").ok().filter(|s| !s.is_empty())
-        .map(|s| { let p = PathBuf::from(s); fs::create_dir_all(&p).expect("corpus dir"); p })
+    let corpus_dir: PathBuf = std::env::var("TC_HOT_CORPUS_PATH")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .map(|s| {
+            let p = PathBuf::from(s);
+            fs::create_dir_all(&p).expect("corpus dir");
+            p
+        })
         .unwrap_or_else(|| dir.join("telemetry"));
 
     let db = GraphLawDuckDB::open_in_memory().expect("duckdb open");
@@ -145,7 +151,10 @@ fn main() {
     println!("{}", machine_disclosure());
     println!("duckdb={version}");
     println!("threads={threads}");
-    println!("rows={rows} corpus_ms={:.1}", setup_elapsed.as_secs_f64() * 1000.0);
+    println!(
+        "rows={rows} corpus_ms={:.1}",
+        setup_elapsed.as_secs_f64() * 1000.0
+    );
     println!("warm_cache=true (corpus generated and COPY-flushed before timing)");
     println!("sql={}", compiled.sql);
     println!("{ISOLATION_DISCLOSURE}");
@@ -176,10 +185,7 @@ fn main() {
             let _ = fs::remove_dir_all(&scratch);
             fs::create_dir_all(&scratch).expect("per-rep scratch dir");
             db.raw_connection()
-                .execute_batch(&format!(
-                    "SET temp_directory='{}';",
-                    scratch.display()
-                ))
+                .execute_batch(&format!("SET temp_directory='{}';", scratch.display()))
                 .expect("set per-rep temp_directory");
             let t0 = Instant::now();
             let receipt = db
@@ -213,36 +219,35 @@ fn main() {
     println!(
         "RESULT eval_ast_query_us: p50={p50} p95={p95} p99={p99} mean={mean_us:.1} reps={total_evals} (batches={BATCHES} x REPS={REPS})"
     );
-    println!(
-        "group_rows_emitted={last_rows} group_rows_per_sec={group_rows_per_sec:.0}",
-    );
+    println!("group_rows_emitted={last_rows} group_rows_per_sec={group_rows_per_sec:.0}",);
     println!("scanned_rows_per_sec={scanned_rows_per_sec:.0} (scan input = {rows} rows/query)");
-    println!(
-        "query_hash={:02x?}",
-        last_hash
-    );
+    println!("query_hash={:02x?}", last_hash);
 
     // Variance-stability self-check (charter invariant < 5%): PASS /
     // VARIANCE-EXCEEDED, emitted honestly either way.
-    let batch_mean =
-        batch_stats.iter().map(|v| *v as f64).sum::<f64>() / BATCHES as f64;
+    let batch_mean = batch_stats.iter().map(|v| *v as f64).sum::<f64>() / BATCHES as f64;
     let spread = (batch_stats.iter().max().unwrap() - batch_stats.iter().min().unwrap()) as f64;
-    let spread_pct = if batch_mean > 0.0 { spread / batch_mean * 100.0 } else { f64::INFINITY };
+    let spread_pct = if batch_mean > 0.0 {
+        spread / batch_mean * 100.0
+    } else {
+        f64::INFINITY
+    };
     let variance_ok = spread_pct < VARIANCE_BUDGET_PCT;
     println!(
         "VARIANCE_SELF_CHECK batches={BATCHES} reps_per_batch={REPS} batch_p50s_us={:?} spread_pct={spread_pct:.2}% budget={VARIANCE_BUDGET_PCT}% : {}",
         batch_stats,
-        if variance_ok { "PASS" } else { "VARIANCE-EXCEEDED" }
+        if variance_ok {
+            "PASS"
+        } else {
+            "VARIANCE-EXCEEDED"
+        }
     );
 
     // 5. Raw prepared-path delta: the same statement shape straight through
     //    the raw frozen-duckdb connection (no triple projection, no receipt),
     //    PREPARED ONCE and re-executed with typed binds — the raw floor the
     //    compiled path must be compared against, not a per-rep re-parse.
-    let raw_sql = format!(
-        "SELECT COUNT(*) FROM ({}) AS raw_delta_subq",
-        compiled.sql
-    );
+    let raw_sql = format!("SELECT COUNT(*) FROM ({}) AS raw_delta_subq", compiled.sql);
     let mut raw_stmt = db
         .raw_connection()
         .prepare(&raw_sql)
@@ -271,12 +276,9 @@ fn main() {
     //      total pipeline time     = compiled eval_ast_query min
     //      substrate overhead      = (total - value-add) / value-add.
     let compiled_min_us = hist.min();
-    let overhead_pct =
-        ((compiled_min_us as f64 - raw_min_us as f64) / raw_min_us as f64) * 100.0;
+    let overhead_pct = ((compiled_min_us as f64 - raw_min_us as f64) / raw_min_us as f64) * 100.0;
     let pce_pct = (raw_min_us as f64 / compiled_min_us as f64) * 100.0;
-    println!(
-        "RAW_PREPARED_PATH us: p50={raw_p50} p95={raw_p95} min={raw_min_us} rows={raw_rows}"
-    );
+    println!("RAW_PREPARED_PATH us: p50={raw_p50} p95={raw_p95} min={raw_min_us} rows={raw_rows}");
     println!(
         "PCE min_of_{REPS}: value_add_engine_us={raw_min_us} total_pipeline_us={compiled_min_us} pce={pce_pct:.2}% substrate_overhead={overhead_pct:.2}%"
     );

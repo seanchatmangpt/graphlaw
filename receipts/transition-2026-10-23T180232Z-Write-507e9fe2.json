@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "507e9fe2911e4010de3e6395db0150cf9d53de99f6e45049af572f7d6ac5d798",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T180232Z-Write-507e9fe2.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/how-to/egress-and-attach-policy.md",
+  "timestamp_utc": "2026-10-23T180232Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

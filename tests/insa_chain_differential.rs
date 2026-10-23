@@ -19,7 +19,7 @@
 
 use blake3::Hasher;
 use graphlaw::receipt_chain::frame::DenialPolarity;
-use graphlaw::receipt_chain::{build_admission_frame, chain_from_frame, Andon, ReceiptMeta};
+use graphlaw::receipt_chain::{Andon, ReceiptMeta, build_admission_frame, chain_from_frame};
 
 // ---------------------------------------------------------------------------
 // Shared fixture (provenance: insa-proof/tests/sync_as_replay.rs `fixture()`)
@@ -146,7 +146,11 @@ fn both_folds_are_deterministic() {
     let g_a = graphlaw_fold(&FIXTURE);
     let g_b = graphlaw_fold(&FIXTURE);
     assert_eq!(g_a, g_b, "graphlaw fold non-deterministic");
-    assert_eq!(hex(&g_a), GRAPHLAW_HEAD_HEX, "graphlaw head drifted from pin");
+    assert_eq!(
+        hex(&g_a),
+        GRAPHLAW_HEAD_HEX,
+        "graphlaw head drifted from pin"
+    );
 }
 
 #[test]

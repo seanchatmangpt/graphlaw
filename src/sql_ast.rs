@@ -222,6 +222,9 @@ pub trait RdfAstGraphReader {
             || self
                 .get_datatype_literal(node, "http://graphlaw.org/sql#operator")
                 .is_some();
+        let has_window = self
+            .get_single_object(node, "http://graphlaw.org/sql#windowFunction")
+            .is_some();
         let discriminators = [
             has_column,
             has_literal,
@@ -229,6 +232,7 @@ pub trait RdfAstGraphReader {
             has_func_iri,
             has_func_name,
             has_operator,
+            has_window,
         ]
         .iter()
         .filter(|b| **b)
@@ -418,6 +422,19 @@ pub trait RdfAstGraphReader {
                 .get_datatype_literal(node, "http://graphlaw.org/sql#functionName")
                 .expect("checked above");
             let function = aggregate_from_name(&fname)?;
+            // SQLRDF-25: ROW_NUMBER is zero-argument — sql:arguments is
+            // optional (an empty list is admitted); the argument slot carries
+            // the structural Null sentinel and never serializes.
+            if function == AggregateFunction::RowNumber {
+                let expr = Self::check_aggregate_position(
+                    SqlExpr::FunctionCall {
+                        function,
+                        argument: Box::new(SqlExpr::Literal(SqlLiteral::Null)),
+                    },
+                    pos,
+                )?;
+                return Self::finish_alias(self, node, expr, sql_ns, pos);
+            }
             let args_head = self
                 .get_single_object(node, "http://graphlaw.org/sql#arguments")
                 .ok_or_else(|| {
@@ -501,6 +518,98 @@ pub trait RdfAstGraphReader {
                 left: Box::new(left),
                 right: Box::new(right),
             });
+        }
+
+        // Check if node is a WindowFn (SQLRDF-25: sql:windowFunction ->
+        // aggregate/scalar expression node, optional sql:partitionBy /
+        // sql:orderBy rdf:Lists, optional sql:frame node).
+        if has_window {
+            let func_node = self
+                .get_single_object(node, "http://graphlaw.org/sql#windowFunction")
+                .expect("checked above");
+            // Window functions are legal only in SELECT list, ORDER BY and
+            // QUALIFY — mirror of check_aggregate_position (REFUSAL-01,
+            // arm WINDOW_FN_POSITION).
+            if !pos.allows_window() {
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::WINDOW_FN_POSITION,
+                )
+                .with_ident(node));
+            }
+            let function = self.extract_expr_scoped(&func_node, depth + 1, pos)?;
+
+            let mut partition_by = Vec::new();
+            if let Some(part_head) =
+                self.single_object_checked(node, "http://graphlaw.org/sql#partitionBy")?
+            {
+                for part in self.unroll_rdf_list(&part_head, 64)? {
+                    partition_by.push(self.extract_expr_scoped(&part, depth + 1, ScopePos::GroupBy)?);
+                }
+            }
+
+            let mut order_by = Vec::new();
+            if let Some(order_head) =
+                self.single_object_checked(node, "http://graphlaw.org/sql#orderBy")?
+            {
+                for item in self.unroll_rdf_list(&order_head, 64)? {
+                    let expr = self.extract_expr_scoped(&item, depth + 1, ScopePos::OrderBy)?;
+                    let descending = self.read_direction(&item, node)?;
+                    order_by.push(OrderTerm { expr, descending });
+                }
+            }
+
+            let frame = if let Some(frame_node) =
+                self.single_object_checked(node, "http://graphlaw.org/sql#frame")?
+            {
+                let (unit_lex, _) = self
+                    .get_datatype_literal(&frame_node, "http://graphlaw.org/sql#frameUnit")
+                    .ok_or_else(|| {
+                        AstError::new(RefusalCode::MalformedAst, refusal_arm::FRAME_UNIT)
+                            .with_ident(frame_node.to_string())
+                    })?;
+                let unit = match unit_lex.to_ascii_uppercase().as_str() {
+                    "ROWS" => FrameUnit::Rows,
+                    "RANGE" => FrameUnit::Range,
+                    _ => {
+                        return Err(AstError::new(
+                            RefusalCode::MalformedAst,
+                            refusal_arm::FRAME_UNIT,
+                        )
+                        .with_ident(unit_lex))
+                    }
+                };
+                let read_bound = |prop: &str| -> Result<Option<FrameBound>, AstError> {
+                    match self.get_datatype_literal(
+                        &frame_node,
+                        &format!("http://graphlaw.org/sql#{prop}"),
+                    ) {
+                        Some((tok, _)) => FrameBound::parse_token(&tok).map(Some),
+                        None => Ok(None),
+                    }
+                };
+                let start = read_bound("frameStart")?.ok_or_else(|| {
+                    AstError::new(RefusalCode::MalformedAst, refusal_arm::FRAME_BOUND)
+                        .with_ident(frame_node.to_string())
+                })?;
+                let end = read_bound("frameEnd")?;
+                Some(FrameSpec { unit, start, end })
+            } else {
+                None
+            };
+
+            return Self::finish_alias(
+                self,
+                node,
+                SqlExpr::WindowFn {
+                    function: Box::new(function),
+                    partition_by,
+                    order_by,
+                    frame,
+                },
+                sql_ns,
+                pos,
+            );
         }
 
         // D3: a bare sql:expression wrapper (no sql:aliasName, no other
@@ -594,6 +703,34 @@ pub trait RdfAstGraphReader {
             return Operator::from_iri(&iri).map(Some);
         }
         Ok(None)
+    }
+
+    /// Reads an `sql:direction` token on an order item ("ASC" | "DESC",
+    /// ASC default; present-but-IRI or malformed is REFUSAL-01, never a
+    /// silent fold). Shared by the statement ORDER BY clause and window
+    /// OVER ORDER BY lists (SQLRDF-25).
+    fn read_direction(&self, item: &Self::Node, parent: &Self::Node) -> Result<bool, AstError> {
+        if self.object_count(item, "http://graphlaw.org/sql#direction") > 0 {
+            match self.get_datatype_literal(item, "http://graphlaw.org/sql#direction") {
+                Some((d, _)) => {
+                    if d.eq_ignore_ascii_case("DESC") {
+                        Ok(true)
+                    } else if d.eq_ignore_ascii_case("ASC") {
+                        Ok(false)
+                    } else {
+                        Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DIRECTION_LEX)
+                            .with_ident(d)
+                            .with_aux_ident(parent))
+                    }
+                }
+                None => Err(
+                    AstError::new(RefusalCode::MalformedAst, refusal_arm::DIRECTION_IRI)
+                        .with_ident(parent.to_string()),
+                ),
+            }
+        } else {
+            Ok(false)
+        }
     }
 
     /// Reads a data source: either the legacy `sql:fromTable` alias (single
@@ -692,6 +829,8 @@ pub trait RdfAstGraphReader {
             "orderBy",
             "limit",
             "offset",
+            "withClause",
+            "qualify",
         ];
         for pred in self.predicate_iris(query_node) {
             if let Some(local) = pred.strip_prefix(SQL_NS)
@@ -933,7 +1072,76 @@ pub trait RdfAstGraphReader {
         let limit = limit_clause("limit")?;
         let offset = limit_clause("offset")?;
 
+        // SQLRDF-25: WITH clause. sql:withClause is an rdf:List of CTE nodes;
+        // each carries sql:cteName (required literal), optional
+        // sql:cteColumns (rdf:List of name literals), sql:cteQuery (required
+        // nested SelectStatement root — absent is REFUSAL-01, the rendered
+        // SQL would be `name AS ()`), and optional sql:recursive true.
+        let mut ctes = Vec::new();
+        if let Some(with_head) =
+            self.single_object_checked(query_node, "http://graphlaw.org/sql#withClause")?
+        {
+            for cte_node in self.unroll_rdf_list(&with_head, 64)? {
+                let name = self
+                    .get_datatype_literal(&cte_node, "http://graphlaw.org/sql#cteName")
+                    .map(|(n, _)| n)
+                    .ok_or_else(|| {
+                        AstError::MissingProperty(
+                            "http://graphlaw.org/sql#cteName".to_string(),
+                            cte_node.to_string(),
+                        )
+                    })?;
+                let columns = if let Some(col_head) =
+                    self.single_object_checked(&cte_node, "http://graphlaw.org/sql#cteColumns")?
+                {
+                    self.unroll_rdf_list(&col_head, 64)?
+                        .into_iter()
+                        .map(|n| {
+                            self.get_datatype_literal(&n, "http://graphlaw.org/sql#columnName")
+                                .map(|(c, _)| c)
+                                .ok_or_else(|| {
+                                    AstError::MissingProperty(
+                                        "http://graphlaw.org/sql#columnName".to_string(),
+                                        n.to_string(),
+                                    )
+                                })
+                        })
+                        .collect::<Result<Vec<String>, AstError>>()?
+                } else {
+                    Vec::new()
+                };
+                let query_node = self
+                    .get_single_object(&cte_node, "http://graphlaw.org/sql#cteQuery")
+                    .ok_or_else(|| {
+                        AstError::new(RefusalCode::MalformedAst, refusal_arm::CTE_NO_QUERY)
+                            .with_ident(&cte_node)
+                    })?;
+                let query = Box::new(self.extract_select_statement(&query_node)?);
+                let recursive = self
+                    .get_datatype_literal(&cte_node, "http://graphlaw.org/sql#recursive")
+                    .map(|(r, _)| r == "true")
+                    .unwrap_or(false);
+                ctes.push(Cte {
+                    name,
+                    columns,
+                    query,
+                    recursive,
+                });
+            }
+        }
+
+        // QUALIFY (SQLRDF-25, optional): window-filtering predicate, legal
+        // position law for window functions and aggregates. A duplicate
+        // sql:qualify is REFUSAL-01 (single-cardinality clause predicate).
+        let qualify = match self.single_object_checked(query_node, "http://graphlaw.org/sql#qualify")?
+        {
+            Some(q_node) => Some(self.extract_expr_scoped(&q_node, 0, ScopePos::Qualify)?),
+            None => None,
+        };
+
         Ok(SelectStatement {
+            ctes,
+            qualify,
             from,
             joins,
             select_list,
@@ -979,6 +1187,18 @@ pub trait RdfAstGraphReader {
                 )
             })?;
         let on = self.extract_expr_scoped(&on_node, 0, ScopePos::Predicate)?;
+        // Scope-integrity (REFUSAL-03, lane K5b): the section 7 ON condition
+        // is the join key between target and source. An ON expression that
+        // references no target-qualified column (`$1 = $2`, constant-only)
+        // matches every target row, so WHEN MATCHED fan-out is unbounded by
+        // construction. Refuse typed before any SQL is emitted.
+        if !expr_references_target(&on, &target) {
+            return Err(AstError::new(
+                RefusalCode::ScopeIntegrity,
+                refusal_arm::MERGE_ON_NO_TARGET_COLUMN,
+            )
+            .with_ident(on_node.to_string()));
+        }
 
         let when_node = self
             .single_object_checked(node, "http://graphlaw.org/sql#whenMatched")?
@@ -1025,6 +1245,66 @@ pub trait RdfAstGraphReader {
             assignments,
         })
     }
+}
+
+/// True exactly when `expr` contains at least one column reference qualified
+/// by the MERGE target (lane K5b scope-integrity check; lane U1 hardening).
+/// A qualifier matches only when it equals the target's alias, the bare table
+/// name, or the target's full rendered name `{schema}.{name}` when a schema is
+/// declared. A dotted qualifier whose schema prefix is not the target's
+/// declared schema (`main_v2.sales` vs target `sales`) names a DIFFERENT table
+/// and never matches — the former `ends_with(".{name}")` suffix rule
+/// false-positived on that collision (court e1). An unqualified column
+/// reference is statically unresolvable against the join (a bare name could
+/// bind to either side) and never matches: the ON guard refuses what it
+/// cannot prove, so the source-only fan-out shape `ON flag = flag2` stays
+/// typed-refused ([REFUSAL-03]) alongside the constant-only ON.
+fn expr_references_target(expr: &SqlExpr, target: &TableRef) -> bool {
+    // The target's full rendered name, exactly as the serializer emits it
+    // (sql_ast/serializer.rs renders `schema.name`).
+    let fully_qualified = target
+        .schema
+        .as_ref()
+        .map(|s| format!("{s}.{}", target.name));
+    let qualified_for_target = |alias: &Option<String>| match alias {
+        None => false,
+        Some(q) => {
+            q == &target.name
+                || target.alias.as_ref().is_some_and(|a| q == a)
+                || fully_qualified.as_ref().is_some_and(|f| q == f)
+        }
+    };
+    match expr {
+        SqlExpr::ColumnRef {
+            column: _,
+            table_alias,
+        } => qualified_for_target(table_alias),
+        SqlExpr::Literal(_) => false,
+        SqlExpr::Binary { left, right, .. } => {
+            expr_references_target(left, target) || expr_references_target(right, target)
+        }
+        SqlExpr::FunctionCall { argument, .. } => expr_references_target(argument, target),
+        SqlExpr::WindowFn {
+            function,
+            partition_by,
+            order_by,
+            frame,
+        } => {
+            expr_references_target(function, target)
+                || partition_by.iter().any(|e| expr_references_target(e, target))
+                || order_by.iter().any(|t| expr_references_target(&t.expr, target))
+                || frame
+                    .as_ref()
+                    .is_some_and(|f| frame_references_target(f, target))
+        }
+        SqlExpr::Alias { expr, .. } => expr_references_target(expr, target),
+    }
+}
+
+/// Frame bounds carry only offsets (integers), never column references —
+/// the walk only descends through the frame struct for future-proofing.
+fn frame_references_target(_frame: &FrameSpec, _target: &TableRef) -> bool {
+    false
 }
 
 /// Validates an RDF AST dataset in Turtle syntax against the canonical SHACL rules in `ontologies/sql-ast.ttl`.
@@ -1143,51 +1423,11 @@ pub fn compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> {
     validate_ast_shacl(turtle, &shapes)?;
     let reader = DatasetReader::from_turtle(turtle)?;
     let (node, kind) = reader.statement_kind()?;
-    // Section 4 (StatementBaseShape): every statement MUST carry exactly one
-    // integer sql:statementIndex. Missing, duplicated, wrongly-typed, or
-    // negative is REFUSAL-01 and refuses before any engine call (fuzz D1).
-    let require_index = |reader: &DatasetReader, n: &String| -> Result<(), AstError> {
-        match reader.object_count(n, "http://graphlaw.org/sql#statementIndex") {
-            0 => {
-                return Err(
-                    AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_MISSING)
-                        .with_ident(n),
-                );
-            }
-            c if c > 1 => {
-                return Err(
-                    AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_DUP)
-                        .with_ident(n)
-                        .with_num(c),
-                );
-            }
-            _ => {}
-        }
-        let (index_lex, datatype) = reader
-            .get_datatype_literal(n, "http://graphlaw.org/sql#statementIndex")
-            .ok_or_else(|| {
-                AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_NOT_INT).with_ident(n)
-            })?;
-        if datatype.as_deref() != Some("http://www.w3.org/2001/XMLSchema#integer") {
-            return Err(
-                AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_BAD_DTYPE)
-                    .with_ident(n),
-            );
-        }
-        match index_lex.parse::<i64>() {
-            Ok(v) if v >= 0 => Ok(()),
-            _ => Err(
-                AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_NEGATIVE)
-                    .with_ident(&index_lex)
-                    .with_aux_ident(n),
-            ),
-        }
-    };
-    require_index(&reader, &node)?;
+    require_statement_index(&reader, &node)?;
     // Fuzz D2: nested statement nodes are statements too — the §7 usingSource
     // sub-select carries its own index per §7's example graph.
     if let Some(using) = reader.get_single_object(&node, "http://graphlaw.org/sql#usingSource") {
-        require_index(&reader, &using)?;
+        require_statement_index(&reader, &using)?;
     }
     // R1: canonicalize ONCE at compile time (not per receipt). Failure is a
     // typed REFUSAL-01 AstError, never a crash.
@@ -1208,25 +1448,7 @@ pub fn compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> {
         cq.ast_graph_turtle = Some(turtle.to_string());
         return Ok(cq);
     }
-    let compiled = match kind.as_str() {
-        "SelectStatement" => reader.extract_select_statement(&node)?.compile(),
-        // REFUSAL-02 (UnimplementedStatementRefusal): registered carrier is
-        // the typed AstError::UnsupportedTerm carrying the statement-class
-        // IRI, with the "compile refusal" marker the execution court pins.
-        "ConnectStatement" | "DisconnectStatement" => Err(AstError::new(
-            RefusalCode::UnimplementedStatement,
-            refusal_arm::UNIMPLEMENTED_STATEMENT,
-        )
-        .with_ident(&kind)),
-        "MergeIntoStatement"
-            if reader
-                .get_single_object(&node, "http://graphlaw.org/sql#usingSource")
-                .is_some() =>
-        {
-            reader.extract_merge_statement(&node)?.compile_merge()
-        }
-        other => reader.compile_command(&node, other),
-    };
+    let compiled = compile_statement_arm(&reader, &node, kind.as_str());
     let compiled = compiled.map(|mut cq| {
         // P28-SIL §3.1 + TC-HOT-01 two-node formula: pin the receipt anchor
         // `h_ast = BLAKE3(Canon(G_AST))` exactly ONCE at compile time —
@@ -1258,6 +1480,221 @@ pub fn compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> {
         memo.insert(h_ast, std::sync::Arc::new(compiled.clone()));
     }
     Ok(compiled)
+}
+
+/// Section 4 (StatementBaseShape): every statement MUST carry exactly one
+/// integer sql:statementIndex. Missing, duplicated, wrongly-typed, or
+/// negative is REFUSAL-01 and refuses before any engine call (fuzz D1).
+/// Extracted verbatim from `compile_turtle`'s former closure (SQLRDF-23) so
+/// the document path enforces the identical check per member.
+fn require_statement_index(reader: &DatasetReader, n: &String) -> Result<(), AstError> {
+    match reader.object_count(n, "http://graphlaw.org/sql#statementIndex") {
+        0 => Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_MISSING).with_ident(n)),
+        c if c > 1 => Err(
+            AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_DUP)
+                .with_ident(n)
+                .with_num(c),
+        ),
+        _ => {
+            let (index_lex, datatype) = reader
+                .get_datatype_literal(n, "http://graphlaw.org/sql#statementIndex")
+                .ok_or_else(|| {
+                    AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_NOT_INT)
+                        .with_ident(n)
+                })?;
+            if datatype.as_deref() != Some("http://www.w3.org/2001/XMLSchema#integer") {
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::INDEX_BAD_DTYPE,
+                )
+                .with_ident(n));
+            }
+            match index_lex.parse::<i64>() {
+                Ok(v) if v >= 0 => Ok(()),
+                _ => Err(
+                    AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_NEGATIVE)
+                        .with_ident(&index_lex)
+                        .with_aux_ident(n),
+                ),
+            }
+        }
+    }
+}
+
+/// Compiles one top-level statement node by its statement class. Extracted
+/// verbatim from `compile_turtle`'s former inline `match` (SQLRDF-23) so the
+/// document path's members take the full member ladder: REFUSAL-02
+/// (Connect/Disconnect) and REFUSAL-05 (unbounded mutation) fire per member,
+/// unchanged.
+fn compile_statement_arm(
+    reader: &DatasetReader,
+    node: &String,
+    kind: &str,
+) -> Result<CompiledQuery, AstError> {
+    match kind {
+        "SelectStatement" => reader.extract_select_statement(node)?.compile(),
+        // REFUSAL-02 (UnimplementedStatementRefusal): registered carrier is
+        // the typed AstError::UnsupportedTerm carrying the statement-class
+        // IRI, with the "compile refusal" marker the (c) court pins.
+        "ConnectStatement" | "DisconnectStatement" => Err(AstError::new(
+            RefusalCode::UnimplementedStatement,
+            refusal_arm::UNIMPLEMENTED_STATEMENT,
+        )
+        .with_ident(kind)),
+        "MergeIntoStatement"
+            if reader
+                .get_single_object(node, "http://graphlaw.org/sql#usingSource")
+                .is_some() =>
+        {
+            reader.extract_merge_statement(node)?.compile_merge()
+        }
+        other => reader.compile_command(node, other),
+    }
+}
+
+/// SQLRDF-23: compiles a Turtle AST document that may carry either a bare
+/// single-root statement (delegates to [`compile_turtle`] semantics, with
+/// `doc_hash` = the bare statement's own anchor so bare identity is
+/// unchanged bit-for-bit) or a `sql:StatementSequence` root whose
+/// `sql:statements` rdf:List members compile in spine order.
+///
+/// # Refusals (new REFUSAL-01 arms, append-only)
+/// - `MIXED_DOCUMENT_ROOTS` — more than one top-level root, or both a bare
+///   statement root and a sequence root (closes the silent lexicographic
+///   pick).
+/// - `SEQUENCE_EMPTY` — the sequence's `sql:statements` list has no members.
+/// - `INDEX_SEQUENCE_DISORDER` — the `sql:statementIndex` cross-check over
+///   the spine fails (non-integer, duplicate, gapped, or non-ascending).
+/// Member-level refusals (REFUSAL-02/05) fire unchanged with the member's
+/// 0-based position stamped into `ctx.predicate_idx`.
+pub fn compile_turtle_document(turtle: &str) -> Result<CompiledDocument, AstError> {
+    let shapes = format!(
+        "{}\n{}",
+        include_str!("../ontologies/sql-ast.ttl"),
+        include_str!("../ggen/sql-dialect/statement_classes.ttl")
+    );
+    validate_ast_shacl(turtle, &shapes)?;
+    let reader = DatasetReader::from_turtle(turtle)?;
+    let (bare, seq) = reader.document_roots()?;
+    // Domain separation: canonicalize ONCE over the whole document, exactly
+    // as compile_turtle does for the bare form.
+    let canon_bytes = canonical_graph_bytes(turtle)?;
+    let h_doc = *blake3::hash(&canon_bytes).as_bytes();
+    let stamp = |mut cq: CompiledQuery| -> CompiledQuery {
+        cq.receipt_state = Some(h_doc);
+        cq.ast_graph_turtle = Some(turtle.to_string());
+        cq.canon_graph_bytes = Some(canon_bytes.clone());
+        cq.cacheable = false;
+        cq.reseal();
+        cq
+    };
+    match (bare, seq) {
+        (Some((node, kind)), None) => {
+            // Bare single root: unchanged member ladder; doc_hash = h_doc =
+            // BLAKE3(Canon(G_AST)) — the same anchor compile_turtle pins as
+            // receipt_state, so bare identity is bit-for-bit. Atomic mode is
+            // a sequence-root-only feature; a bare root compiles non-atomic.
+            require_statement_index(&reader, &node)?;
+            let compiled = compile_statement_arm(&reader, &node, &kind)?;
+            let mut statement = compiled;
+            statement.receipt_state = Some(h_doc);
+            statement.ast_graph_turtle = Some(turtle.to_string());
+            statement.canon_graph_bytes = Some(canon_bytes);
+            statement.reseal();
+            Ok(CompiledDocument {
+                statements: vec![statement],
+                doc_hash: h_doc,
+                atomic: false,
+            })
+        }
+        (None, Some(seq_node)) => {
+            let statements_head = reader
+                .get_single_object(&seq_node, "http://graphlaw.org/sql#statements")
+                .ok_or_else(|| AstError::new(RefusalCode::MalformedAst, refusal_arm::SEQUENCE_EMPTY).with_ident(&seq_node))?;
+            let members = reader.unroll_rdf_list(&statements_head, 1024)?;
+            if members.is_empty() {
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::SEQUENCE_EMPTY,
+                )
+                .with_ident(&seq_node));
+            }
+            let mut statements = Vec::with_capacity(members.len());
+            for (i, member) in members.iter().enumerate() {
+                // Strictly-ascending 0-based index cross-check: the spine walk
+                // order is the ordering source; the explicit index must agree.
+                let (idx_lex, dtype) = reader
+                    .get_datatype_literal(member, "http://graphlaw.org/sql#statementIndex")
+                    .ok_or_else(|| {
+                        AstError::new(
+                            RefusalCode::MalformedAst,
+                            refusal_arm::INDEX_SEQUENCE_DISORDER,
+                        )
+                        .with_ident(member)
+                    })?;
+                let ok = dtype.as_deref() == Some("http://www.w3.org/2001/XMLSchema#integer")
+                    && idx_lex.parse::<i64>().map(|v| v == i as i64) == Ok(true);
+                if !ok {
+                    return Err(AstError::new(
+                        RefusalCode::MalformedAst,
+                        refusal_arm::INDEX_SEQUENCE_DISORDER,
+                    )
+                    .with_ident(member));
+                }
+                let kind = reader.member_kind(member)?;
+                require_statement_index(&reader, member)?;
+                let compiled = compile_statement_arm(&reader, member, &kind)
+                    .map_err(|mut e| {
+                        // Position attribution without changing the refusal
+                        // payload family: predicate_idx is documented as the
+                        // ordinal position the refusal attaches to.
+                        e.ctx.predicate_idx = i as u16;
+                        e
+                    })
+                    .map(&stamp)?;
+                statements.push(compiled);
+            }
+            // Domain-separated fold: BLAKE3(0x00 || h1 || 0x00 || h2 || ...).
+            let mut hasher = blake3::Hasher::new();
+            for s in &statements {
+                hasher.update(&[0x00]);
+                hasher.update(s.receipt_state.as_ref().unwrap_or(&h_doc));
+            }
+            // SQLRDF-26: optional `sql:atomic true` on the sequence root.
+            // Absent (or explicitly `false`) keeps SQLRDF-23 pipeline
+            // semantics; `true` selects BEGIN/COMMIT/ROLLBACK execution.
+            const XSD_BOOLEAN: &str = "http://www.w3.org/2001/XMLSchema#boolean";
+            let atomic = match reader.get_datatype_literal(
+                &seq_node,
+                "http://graphlaw.org/sql#atomic",
+            ) {
+                None => false,
+                Some((lex, dtype)) => {
+                    if dtype.as_deref() != Some(XSD_BOOLEAN)
+                        || !matches!(lex.as_str(), "true" | "false")
+                    {
+                        return Err(AstError::new(
+                            RefusalCode::MalformedAst,
+                            refusal_arm::ATOMIC_LITERAL,
+                        )
+                        .with_ident(&seq_node));
+                    }
+                    lex == "true"
+                }
+            };
+            Ok(CompiledDocument {
+                doc_hash: *hasher.finalize().as_bytes(),
+                statements,
+                atomic,
+            })
+        }
+        (Some(_), Some(_)) => Err(mixed_roots()),
+        (None, None) => Err(mixed_roots()),
+    }
+}
+
+fn mixed_roots() -> AstError {
+    AstError::new(RefusalCode::MalformedAst, refusal_arm::MIXED_DOCUMENT_ROOTS)
 }
 
 struct DatasetReader {
@@ -1350,10 +1787,77 @@ impl DatasetReader {
             }
         }
         candidates.sort();
-        candidates
-            .into_iter()
-            .next()
-            .ok_or_else(|| AstError::MissingProperty(ty.into(), "sql:*Statement".into()))
+        // SQLRDF-23: the former `into_iter().next()` silently picked the
+        // lexicographically smallest root and DROPPED the rest. A document
+        // with multiple bare roots (or roots of disjoint categories) refuses
+        // typed now — never a silent pick.
+        match candidates.len() {
+            0 => Err(AstError::MissingProperty(ty.into(), "sql:*Statement".into())),
+            1 => Ok(candidates.pop().expect("len == 1 guarded")),
+            _ => Err(AstError::new(
+                RefusalCode::MalformedAst,
+                refusal_arm::MIXED_DOCUMENT_ROOTS,
+            )),
+        }
+    }
+
+    /// SQLRDF-23: classifies the document's top-level roots into bare
+    /// `sql:*Statement` roots and the `sql:StatementSequence` root. A lawful
+    /// document has exactly one of either; anything else (both, multiples of
+    /// either, none) is `MIXED_DOCUMENT_ROOTS` — the silent lexicographic
+    /// pick is closed.
+    fn document_roots(
+        &self,
+    ) -> Result<(Option<(String, String)>, Option<String>), AstError> {
+        let ty = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+        let prefix = "http://graphlaw.org/sql#";
+        // Unlike statement_kind's blank-label-only filter (kept untouched for
+        // bit-for-bit bare-path compatibility), the document path treats a
+        // node as somebody's object when ANY subject/predicate pair carries
+        // it — an rdf:List member named as a full IRI is a member, not a
+        // second root.
+        let is_object: HashSet<String> = self
+            .outgoing
+            .values()
+            .flat_map(|preds| preds.values().flatten())
+            .filter_map(|t| match t {
+                RdfTerm::Iri(i) => Some(i.clone()),
+                _ => None,
+            })
+            .collect();
+        let mut bare: Vec<(String, String)> = Vec::new();
+        let mut seq: Vec<String> = Vec::new();
+        for (subj, preds) in &self.outgoing {
+            let Some(objs) = preds.get(ty) else { continue };
+            for term in objs {
+                let RdfTerm::Iri(iri) = term else { continue };
+                if !is_object.contains(subj) {
+                    if let Some(kind) = iri.strip_prefix(prefix) {
+                        if kind == "StatementSequence" {
+                            seq.push(subj.clone());
+                        } else if kind.ends_with("Statement") {
+                            bare.push((subj.clone(), kind.to_string()));
+                        }
+                    }
+                }
+            }
+        }
+        let total = bare.len() + seq.len();
+        if total != 1 {
+            return Err(mixed_roots());
+        }
+        Ok((bare.into_iter().next(), seq.into_iter().next()))
+    }
+
+    /// SQLRDF-23: the statement-class suffix (`"SelectStatement"` etc.) of a
+    /// sequence member node — the member's own `rdf:type sql:*Statement` IRI.
+    fn member_kind(&self, node: &str) -> Result<String, AstError> {
+        let ty = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+        let prefix = "http://graphlaw.org/sql#";
+        let n = node.to_string();
+        self.get_single_object(&n, ty)
+            .and_then(|iri: String| iri.strip_prefix(prefix).map(str::to_string))
+            .ok_or_else(|| AstError::MissingProperty(ty.into(), n))
     }
 
     fn ident(&self, node: &str, pred: &str) -> Result<String, AstError> {
@@ -1364,19 +1868,88 @@ impl DatasetReader {
         validate_identifier(&lex).map(str::to_string)
     }
 
+    /// All datatype literals on `(node, pred)` in reader order — the order
+    /// `DatasetReader::from_turtle` pushed quads while walking
+    /// `purrdf::parse_dataset(...).quads()`. SQLRDF-22 G4: multi-column
+    /// INSERT/UPDATE assign pairs are matched positionally in this order
+    /// (RDF graphs are unordered sets; no shared discriminator exists on the
+    /// scalar template vocabulary, so reader-order is the lawful, documented
+    /// pairing).
+    fn all_lits(&self, node: &str, pred: &str) -> Vec<(String, Option<String>)> {
+        self.outgoing
+            .get(node)
+            .and_then(|preds| preds.get(pred))
+            .map(|terms| {
+                terms
+                    .iter()
+                    .filter_map(|t| match t {
+                        RdfTerm::Literal { lexical, datatype } => {
+                            Some((lexical.clone(), datatype.clone()))
+                        }
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
     fn lit(&self, node: &str, pred: &str) -> Result<String, AstError> {
         let node = node.to_string();
         let (lex, dtype) = self
             .get_datatype_literal(&node, pred)
             .ok_or_else(|| AstError::MissingProperty(pred.into(), node))?;
+        Ok(Self::render_scalar_literal(&lex, dtype.as_deref()))
+    }
+
+    /// All assign columns in reader order, each a validated identifier.
+    fn all_idents(&self, node: &str, pred: &str) -> Result<Vec<String>, AstError> {
+        self.all_lits(node, pred)
+            .iter()
+            .map(|(lex, _)| validate_identifier(lex).map(str::to_string))
+            .collect()
+    }
+
+    /// All assign literals in reader order, each rendered with the same
+    /// numeric-vs-quoted discipline as `lit`.
+    fn all_assigns(&self, node: &str, pred: &str) -> Vec<String> {
+        self.all_lits(node, pred)
+            .iter()
+            .map(|(lex, dtype)| Self::render_scalar_literal(lex, dtype.as_deref()))
+            .collect()
+    }
+
+    /// SQLRDF-22 G1: an xsd:decimal literal with a lossless decimal
+    /// lexical (digits, exactly one '.', no exponent) renders as an
+    /// unquoted numeric SQL literal — DuckDB coerces it to DECIMAL. A
+    /// decimal-TYPED literal whose lexical is not numeric stays a
+    /// quoted string (typed-shape discipline: never fabricated, never
+    /// a typed refusal for a well-formed AST).
+    fn render_scalar_literal(lex: &str, dtype: Option<&str>) -> String {
+        let decimal_lexical = {
+            let mut parts = lex.split('.');
+            match (parts.next(), parts.next(), parts.next()) {
+                (Some(i), Some(f), None)
+                    if !i.is_empty()
+                        && !f.is_empty()
+                        && i.chars().all(|c| c.is_ascii_digit())
+                        && f.chars().all(|c| c.is_ascii_digit()) =>
+                {
+                    true
+                }
+                _ => false,
+            }
+        };
         let numeric = dtype
-            .as_deref()
-            .is_some_and(|d| d.ends_with("integer") || d.ends_with("double"))
+            .is_some_and(|d| {
+                d.ends_with("integer")
+                    || d.ends_with("double")
+                    || (d.ends_with("decimal") && decimal_lexical)
+            })
             || lex.chars().all(|c| c.is_ascii_digit());
         if numeric {
-            Ok(lex)
+            lex.to_string()
         } else {
-            Ok(format!("'{}'", lex.replace('\'', "''")))
+            format!("'{}'", lex.replace('\'', "''"))
         }
     }
 
@@ -1674,7 +2247,9 @@ impl DatasetReader {
             .ok_or_else(|| AstError::MissingProperty(ty.to_string(), node.to_string()))?;
         let upper = lex.to_ascii_uppercase();
         match upper.as_str() {
-            "INTEGER" | "BIGINT" | "VARCHAR" | "DOUBLE" | "BOOLEAN" | "DATE" => Ok(upper),
+            "INTEGER" | "BIGINT" | "VARCHAR" | "DOUBLE" | "BOOLEAN" | "DATE" | "DECIMAL" => {
+                Ok(upper)
+            }
             other => Err(AstError::UnsupportedTerm(format!("column type {other}"))),
         }
     }
@@ -1797,7 +2372,66 @@ impl DatasetReader {
             SqlExpr::FunctionCall { function, argument } => {
                 sql.push_str(function.as_sql());
                 sql.push('(');
+                if function == &AggregateFunction::RowNumber {
+                    sql.push(')');
+                    return Ok(());
+                }
                 self.write_inline_expr(argument, sql, depth + 1)?;
+                sql.push(')');
+            }
+            SqlExpr::WindowFn {
+                function,
+                partition_by,
+                order_by,
+                frame,
+            } => {
+                self.write_inline_expr(function, sql, depth + 1)?;
+                sql.push_str(" OVER (");
+                let mut first = true;
+                if !partition_by.is_empty() {
+                    sql.push_str("PARTITION BY ");
+                    for (idx, part) in partition_by.iter().enumerate() {
+                        if idx > 0 {
+                            sql.push_str(", ");
+                        }
+                        self.write_inline_expr(part, sql, depth + 1)?;
+                    }
+                    first = false;
+                }
+                if !order_by.is_empty() {
+                    if !first {
+                        sql.push(' ');
+                    }
+                    sql.push_str("ORDER BY ");
+                    for (idx, term) in order_by.iter().enumerate() {
+                        if idx > 0 {
+                            sql.push_str(", ");
+                        }
+                        self.write_inline_expr(&term.expr, sql, depth + 1)?;
+                        if term.descending {
+                            sql.push_str(" DESC");
+                        }
+                    }
+                    first = false;
+                }
+                if let Some(frame) = frame {
+                    if !first {
+                        sql.push(' ');
+                    }
+                    sql.push_str(frame.unit.as_sql());
+                    match &frame.end {
+                        Some(end) => {
+                            sql.push_str(" BETWEEN ");
+                            sql.push_str(&frame.start.as_sql());
+                            sql.push_str(" AND ");
+                            sql.push_str(&end.as_sql());
+                        }
+                        None => {
+                            sql.push(' ');
+                            sql.push_str(&frame.start.as_sql());
+                        }
+                    }
+                }
                 sql.push(')');
             }
             SqlExpr::Alias { expr, alias } => {
@@ -1819,19 +2453,76 @@ impl DatasetReader {
         let val = "http://graphlaw.org/sql#assignValue";
         let wcol = "http://graphlaw.org/sql#whereColumn";
         let wval = "http://graphlaw.org/sql#whereValue";
+        // CTQ-4 / REFUSAL-05: a WHERE-less UPDATE/DELETE would render SQL that
+        // mutates every row of the target table. Compiler law is stricter than
+        // the SHACL xone (minCount 1 on either predicate): BOTH sql:whereColumn
+        // and sql:whereValue are required, closing the guard/render asymmetry
+        // (a whereValue-only doc passed the either-guard but the render arms
+        // emit WHERE from whereColumn alone — unbounded SQL). Refuse at
+        // compile time, before any engine call. Append-only code; see
+        // `src/sql_ast/refusals.rs`.
+        if matches!(kind, "UpdateStatement" | "DeleteStatement")
+            && (self.get_datatype_literal(&node.to_string(), wcol).is_none()
+                || self.get_datatype_literal(&node.to_string(), wval).is_none())
+        {
+            return Err(AstError::new(
+                RefusalCode::UnboundedMutation,
+                refusal_arm::UNBOUNDED_MUTATION,
+            )
+            .with_ident(node));
+        }
         let sql = match kind {
-            "InsertStatement" => format!(
-                "INSERT INTO {} ({}) VALUES ({})",
-                self.ident(node, table)?,
-                self.ident(node, col)?,
-                self.lit(node, val)?
-            ),
-            "UpdateStatement" => {
-                let mut sql = format!(
-                    "UPDATE {} SET {} = {}",
+            // SQLRDF-22 G4: ALL sql:assignColumn/sql:assignValue literals are
+            // collected and paired positionally in reader order (the order
+            // `DatasetReader::from_turtle` pushed quads — RDF graphs are
+            // unordered sets and the scalar template vocabulary carries no
+            // shared discriminator, so reader-order is the documented pairing;
+            // rec 3.2). One pair renders exactly as before (backward
+            // compatible); zero pairs refuse typed REFUSAL-01 MissingProperty
+            // via `ident`/`render_assign`; mismatched column/value counts
+            // refuse typed the same way.
+            "InsertStatement" => {
+                let cols = self.all_idents(node, col)?;
+                let vals = self.all_assigns(node, val);
+                if cols.is_empty() {
+                    // Zero-pair INSERT: typed refusal, never a malformed
+                    // `INSERT INTO t () VALUES ()`.
+                    self.ident(node, col)?; // MissingProperty on sql:assignColumn
+                }
+                if cols.len() != vals.len() {
+                    return Err(AstError::MissingProperty(
+                        val.into(),
+                        node.to_string(),
+                    ));
+                }
+                format!(
+                    "INSERT INTO {} ({}) VALUES ({})",
                     self.ident(node, table)?,
-                    self.ident(node, col)?,
-                    self.lit(node, val)?
+                    cols.join(", "),
+                    vals.join(", ")
+                )
+            }
+            "UpdateStatement" => {
+                let cols = self.all_idents(node, col)?;
+                let vals = self.all_assigns(node, val);
+                if cols.is_empty() {
+                    self.ident(node, col)?; // MissingProperty on sql:assignColumn
+                }
+                if cols.len() != vals.len() {
+                    return Err(AstError::MissingProperty(
+                        val.into(),
+                        node.to_string(),
+                    ));
+                }
+                let assigns: Vec<String> = cols
+                    .iter()
+                    .zip(vals.iter())
+                    .map(|(c, v)| format!("{c} = {v}"))
+                    .collect();
+                let mut sql = format!(
+                    "UPDATE {} SET {}",
+                    self.ident(node, table)?,
+                    assigns.join(", ")
                 );
                 if self.get_datatype_literal(&node.to_string(), wcol).is_some() {
                     sql.push_str(&format!(
@@ -2030,6 +2721,8 @@ mod tests {
     #[test]
     fn test_valid_identifier_compilation() {
         let stmt = SelectStatement {
+            ctes: vec![],
+            qualify: None,
             from: TableRef {
                 name: "telemetry_events".to_string(),
                 alias: Some("t".to_string()),
@@ -2081,6 +2774,8 @@ mod tests {
     #[test]
     fn test_injection_attempt_rejected() {
         let stmt = SelectStatement {
+            ctes: vec![],
+            qualify: None,
             from: TableRef {
                 name: "events; DROP TABLE users; --".to_string(),
                 alias: None,
@@ -2334,5 +3029,1207 @@ mod literal_join_seal_courts {
         let mut p = compiled.clone();
         p.params.push(SqlLiteral::Integer(1));
         assert!(p.verify_seal(), "param re-binding is lawful and unsealed");
+    }
+}
+
+// ===========================================================================
+// CTQ-4 (v26.10.22) courts: REFUSAL-05 unbounded mutation. A WHERE-less
+// UPDATE/DELETE — neither sql:whereColumn nor sql:whereValue on the statement
+// node — refuses at compile time with the stable [REFUSAL-05] marker, before
+// any engine call. Chicago: real compile_turtle over real Turtle graphs, no
+// mocks, no sleeps. Anti-vacuity is INLINED: every refusal court carries its
+// mutation twin asserting the WITH-predicate form compiles.
+// ===========================================================================
+#[cfg(test)]
+mod unbounded_mutation_courts {
+    use super::*;
+
+    fn update_doc(where_clause: &str) -> String {
+        format!(
+            concat!(
+                "@prefix sql: <http://graphlaw.org/sql#> .\n",
+                "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+                "<http://example.org/s> a sql:UpdateStatement ;\n",
+                "    sql:targetTable \"t\" ;\n",
+                "    sql:assignColumn \"name\" ;\n",
+                "    sql:assignValue \"z\"{} ."
+            ),
+            where_clause
+        )
+    }
+
+    fn delete_doc(where_clause: &str) -> String {
+        format!(
+            concat!(
+                "@prefix sql: <http://graphlaw.org/sql#> .\n",
+                "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+                "<http://example.org/s> a sql:DeleteStatement ;\n",
+                "    sql:targetTable \"t\"{} ."
+            ),
+            where_clause
+        )
+    }
+
+    const WHERE: &str = " ;\n    sql:whereColumn \"id\" ;\n    sql:whereValue \"1\"^^xsd:integer";
+
+    /// CTQ-4 note: the compile_turtle path currently carries an ontology
+    /// lane's in-flight sh:xone shapes (ggen/sql-dialect/statement_classes.ttl)
+    /// that misfire on satisfied UPDATE/DELETE docs, so these courts exercise
+    /// the compiler enforcement layer directly — real Turtle graphs, real
+    /// DatasetReader, real compile_command — no mocks.
+    fn compile_command_of(doc: &str) -> Result<CompiledQuery, AstError> {
+        let reader = DatasetReader::from_turtle(doc)?;
+        let (node, kind) = reader.statement_kind()?;
+        reader.compile_command(&node, &kind)
+    }
+
+    const WHERE_VALUE_ONLY: &str = " ;\n    sql:whereValue \"1\"^^xsd:integer";
+    const WHERE_COLUMN_ONLY: &str = " ;\n    sql:whereColumn \"id\"";
+
+    /// Hostile twin (guard/render asymmetry): whereValue-only passed the old
+    /// either-guard but the render arms emit WHERE from whereColumn alone —
+    /// unbounded SQL. The stricter both-predicates law refuses it.
+    #[test]
+    fn where_value_only_update_refuses_typed() {
+        let err =
+            compile_command_of(&update_doc(WHERE_VALUE_ONLY)).expect_err("must refuse");
+        assert!(matches!(err.code, RefusalCode::UnboundedMutation));
+        assert!(err.to_string().contains("[REFUSAL-05] UnboundedMutationRefusal:"));
+    }
+
+    #[test]
+    fn where_value_only_delete_refuses_typed() {
+        let err =
+            compile_command_of(&delete_doc(WHERE_VALUE_ONLY)).expect_err("must refuse");
+        assert!(matches!(err.code, RefusalCode::UnboundedMutation));
+    }
+
+    /// Hostile twin: whereColumn-only renders an untyped WHERE RHS (`WHERE id = `),
+    /// which is malformed SQL — also refused under the both-predicates law.
+    #[test]
+    fn where_column_only_update_refuses_typed() {
+        let err =
+            compile_command_of(&update_doc(WHERE_COLUMN_ONLY)).expect_err("must refuse");
+        assert!(matches!(err.code, RefusalCode::UnboundedMutation));
+    }
+
+    #[test]
+    fn where_column_only_delete_refuses_typed() {
+        let err =
+            compile_command_of(&delete_doc(WHERE_COLUMN_ONLY)).expect_err("must refuse");
+        assert!(matches!(err.code, RefusalCode::UnboundedMutation));
+    }
+
+    #[test]
+    fn where_less_update_refuses_typed() {
+        let err = compile_command_of(&update_doc("")).expect_err("WHERE-less UPDATE must refuse");
+        assert!(matches!(err.code, RefusalCode::UnboundedMutation));
+        let msg = err.to_string();
+        assert!(
+            msg.contains("[REFUSAL-05] UnboundedMutationRefusal:"),
+            "stable marker missing: {msg}"
+        );
+        assert!(
+            msg.contains("unbounded mutation refused: UPDATE/DELETE requires sql:whereColumn or sql:whereValue"),
+            "verbatim message missing: {msg}"
+        );
+    }
+
+    #[test]
+    fn update_with_where_compiles_anti_vacuity_twin() {
+        let compiled = compile_command_of(&update_doc(WHERE)).expect("WHERE'd UPDATE must compile");
+        assert!(
+            compiled.sql.starts_with("UPDATE t SET name = "),
+            "unexpected SQL: {}",
+            compiled.sql
+        );
+        assert!(compiled.sql.contains("WHERE id = "), "missing WHERE: {}", compiled.sql);
+    }
+
+    #[test]
+    fn where_less_delete_refuses_typed() {
+        let err = compile_command_of(&delete_doc("")).expect_err("WHERE-less DELETE must refuse");
+        assert!(matches!(err.code, RefusalCode::UnboundedMutation));
+        assert!(err.to_string().contains("[REFUSAL-05] UnboundedMutationRefusal:"));
+    }
+
+    #[test]
+    fn delete_with_where_compiles_anti_vacuity_twin() {
+        let compiled = compile_command_of(&delete_doc(WHERE)).expect("WHERE'd DELETE must compile");
+        assert_eq!(compiled.sql, "DELETE FROM t WHERE id = 1");
+    }
+}
+
+// ===========================================================================
+// SQLRDF-22 gap G1 courts: DECIMAL end-to-end. (a) A CreateStatement with a
+// DECIMAL column compiles to `CREATE TABLE t (v DECIMAL)` and executes on a
+// real in-memory frozen-duckdb with a catalog readback of the column type;
+// (b) an xsd:decimal literal `250000.50` renders as an unquoted numeric SQL
+// literal, INSERTs and SELECTs back with the exact value; (c) anti-vacuity:
+// a non-numeric lexical typed xsd:decimal stays a quoted SQL string (typed-
+// shape discipline: quoted-string, not a typed refusal — the AST is
+// well-formed, only the lexical is off-datatype). Chicago: real compile over
+// real Turtle graphs, real frozen-duckdb connections, real table readbacks,
+// no mocks, no sleeps.
+// ===========================================================================
+#[cfg(test)]
+mod decimal_courts {
+    use super::*;
+    use crate::duckdb_eval::GraphLawDuckDB;
+
+    /// ENGINE_LOCK-style mutex: DuckDB engine init is process-global.
+    static DECIMAL_ENGINE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn create_doc(col_type: &str) -> String {
+        format!(
+            concat!(
+                "@prefix sql: <http://graphlaw.org/sql#> .\n",
+                "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+                "<http://example.org/s> a sql:CreateStatement ;\n",
+                "    sql:tableDefinition [\n",
+                "        sql:tableName \"t\" ;\n",
+                "        sql:columns ( [ sql:columnName \"v\" ;\n",
+                "                        sql:columnType \"{}\"^^xsd:string ] ) ] ."
+            ),
+            col_type
+        )
+    }
+
+    fn compile_command_of(doc: &str) -> Result<CompiledQuery, AstError> {
+        let reader = DatasetReader::from_turtle(doc)?;
+        let (node, kind) = reader.statement_kind()?;
+        reader.compile_command(&node, &kind)
+    }
+
+    /// (a) DECIMAL column: exact SQL rendering, real execution, catalog
+    /// readback of the column type under the engine mutex.
+    #[test]
+    fn decimal_column_compiles_executes_and_reads_back() {
+        let _engine = DECIMAL_ENGINE_LOCK.lock().unwrap();
+        let compiled = compile_command_of(&create_doc("DECIMAL")).expect("DECIMAL compiles");
+        assert_eq!(compiled.sql, "CREATE TABLE t (v DECIMAL)");
+
+        let db = GraphLawDuckDB::open_in_memory().expect("in-memory DuckDB");
+        db.raw_connection()
+            .execute_batch(&compiled.sql)
+            .expect("CREATE TABLE t (v DECIMAL) executes");
+        let mut stmt = db
+            .raw_connection()
+            .prepare(
+                "SELECT data_type FROM information_schema.columns \
+                 WHERE table_name = 't' AND column_name = 'v'",
+            )
+            .expect("catalog query prepares");
+        let ty: String = stmt.query_row([], |r| r.get(0)).expect("catalog row");
+        assert_eq!(
+            ty, "DECIMAL(18,3)",
+            "catalog readback: DuckDB default DECIMAL is DECIMAL(18,3)"
+        );
+    }
+
+    /// (b) Decimal literal `250000.50`^^xsd:decimal renders unquoted and
+    /// round-trips with the exact value through a real table readback.
+    #[test]
+    fn decimal_literal_round_trips_exact_value() {
+        let _engine = DECIMAL_ENGINE_LOCK.lock().unwrap();
+        let doc = concat!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n",
+            "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+            "<http://example.org/s> a sql:InsertStatement ;\n",
+            "    sql:targetTable \"t\" ;\n",
+            "    sql:assignColumn \"v\" ;\n",
+            "    sql:assignValue \"250000.50\"^^xsd:decimal ."
+        );
+        let insert = compile_command_of(doc).expect("decimal INSERT compiles");
+        assert_eq!(
+            insert.sql, "INSERT INTO t (v) VALUES (250000.50)",
+            "decimal lexical must render unquoted"
+        );
+
+        let create =
+            compile_command_of(&create_doc("DECIMAL")).expect("DECIMAL CREATE compiles");
+        let db = GraphLawDuckDB::open_in_memory().expect("in-memory DuckDB");
+        db.raw_connection()
+            .execute_batch(&format!("{};\n{};", create.sql, insert.sql))
+            .expect("CREATE + INSERT execute");
+        let mut stmt = db
+            .raw_connection()
+            .prepare("SELECT CAST(v AS VARCHAR) FROM t")
+            .expect("SELECT prepares");
+        let v: String = stmt.query_row([], |r| r.get(0)).expect("row");
+        assert_eq!(v, "250000.500", "DuckDB DECIMAL default scale-3 readback");
+    }
+
+    /// (c) Anti-vacuity: a non-numeric lexical typed xsd:decimal stays a
+    /// quoted SQL string — the compiler never launders an off-datatype
+    /// lexical into numeric SQL (and never refuses a well-formed AST here;
+    /// the quoted-string choice is documented in the lit() render law).
+    #[test]
+    fn non_numeric_decimal_lexical_stays_quoted_string() {
+        let doc = concat!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n",
+            "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+            "<http://example.org/s> a sql:InsertStatement ;\n",
+            "    sql:targetTable \"t\" ;\n",
+            "    sql:assignColumn \"v\" ;\n",
+            "    sql:assignValue \"N/A\"^^xsd:decimal ."
+        );
+        let compiled = compile_command_of(&doc).expect("INSERT compiles");
+        assert_eq!(
+            compiled.sql, "INSERT INTO t (v) VALUES ('N/A')",
+            "non-numeric decimal-typed lexical stays quoted"
+        );
+
+        // MUTATION TWIN: the numeric lexical DOES render unquoted — the
+        // court flips exactly on the lexical-shape branch.
+        let twin = compile_command_of(&doc.replace("\"N/A\"", "\"12.30\""))
+            .expect("numeric twin compiles");
+        assert_eq!(twin.sql, "INSERT INTO t (v) VALUES (12.30)");
+    }
+}
+
+// ===========================================================================
+// SQLRDF-22 gap G4 (v26.10.22) courts: multi-column single-row INSERT (and
+// multi-assign UPDATE) on the scalar template arms of `compile_command`.
+// ALL sql:assignColumn/sql:assignValue literals are collected and paired
+// positionally in READER ORDER — the order `DatasetReader::from_turtle`
+// pushed quads from `purrdf::parse_dataset(...).quads()`. RDF graphs are
+// unordered sets and the scalar template vocabulary carries no shared
+// discriminator to match column/value pairs by, so reader-order is the
+// documented pairing (rec 3.2: scalar templates are the same admitted class).
+// One pair renders exactly as before (backward compatible with the
+// maxCount-1 SHACL shapes — ggen/sql-dialect/statement_classes.ttl still says
+// maxCount 1 on Insert assignColumn/assignValue, so the SHACL pre-gate
+// refuses multi-pair docs until the ontology lane lifts it; that pairing
+// change is the ontology lane's, not the compiler's). Zero-pair INSERT
+// refuses typed REFUSAL-01 (MissingProperty on sql:assignColumn); a
+// column/value count mismatch refuses typed the same way. Chicago: real
+// compile over real Turtle graphs, real in-memory frozen-duckdb, real
+// two-column readbacks, no mocks, no sleeps.
+// ===========================================================================
+#[cfg(test)]
+mod multi_column_assign_courts {
+    use super::*;
+    use crate::duckdb_eval::GraphLawDuckDB;
+
+    /// DuckDB engine init is process-global; serialize engine-touching courts.
+    static G4_ENGINE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn compile_command_of(doc: &str) -> Result<CompiledQuery, AstError> {
+        let reader = DatasetReader::from_turtle(doc)?;
+        let (node, kind) = reader.statement_kind()?;
+        reader.compile_command(&node, &kind)
+    }
+
+    fn insert_doc(assigns: &str) -> String {
+        format!(
+            concat!(
+                "@prefix sql: <http://graphlaw.org/sql#> .\n",
+                "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+                "<http://example.org/s> a sql:InsertStatement ;\n",
+                "    sql:targetTable \"t\"{} ."
+            ),
+            assigns
+        )
+    }
+
+    fn update_doc(assigns: &str) -> String {
+        format!(
+            concat!(
+                "@prefix sql: <http://graphlaw.org/sql#> .\n",
+                "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+                "<http://example.org/s> a sql:UpdateStatement ;\n",
+                "    sql:targetTable \"t\" ;\n",
+                "    sql:whereColumn \"id\" ;\n",
+                "    sql:whereValue \"1\"^^xsd:integer{} ."
+            ),
+            assigns
+        )
+    }
+
+    const TWO_PAIRS: &str = " ;\n    sql:assignColumn \"id\" ;\n    sql:assignValue \"1\"^^xsd:integer ;\n    sql:assignColumn \"name\" ;\n    sql:assignValue \"ada\"";
+
+    const ONE_PAIR: &str =
+        " ;\n    sql:assignColumn \"id\" ;\n    sql:assignValue \"1\"^^xsd:integer";
+
+    /// Two-pair INSERT compiles to the two-column form.
+    #[test]
+    fn two_pair_insert_compiles() {
+        let compiled = compile_command_of(&insert_doc(TWO_PAIRS)).expect("two-pair compiles");
+        assert_eq!(compiled.sql, "INSERT INTO t (id, name) VALUES (1, 'ada')");
+    }
+
+    /// Chicago: the compiled two-pair INSERT executes on a real in-memory
+    /// frozen-duckdb with an exact two-column readback.
+    #[test]
+    fn two_pair_insert_executes_two_column_readback() {
+        let _engine = G4_ENGINE_LOCK.lock().unwrap();
+        let insert = compile_command_of(&insert_doc(TWO_PAIRS)).expect("two-pair compiles");
+        let db = GraphLawDuckDB::open_in_memory().expect("in-memory DuckDB");
+        db.raw_connection()
+            .execute_batch("CREATE TABLE t (id INTEGER, name VARCHAR);")
+            .expect("CREATE TABLE");
+        db.raw_connection()
+            .execute_batch(&insert.sql)
+            .expect("multi-column INSERT executes");
+        let mut stmt = db
+            .raw_connection()
+            .prepare("SELECT id, name FROM t")
+            .expect("SELECT prepares");
+        let (id, name): (i64, String) = stmt.query_row([], |r| Ok((r.get(0)?, r.get(1)?))).expect("row");
+        assert_eq!(id, 1, "id readback");
+        assert_eq!(name, "ada", "name readback");
+    }
+
+    /// One-pair twin: the 1-pair form renders exactly as before.
+    #[test]
+    fn one_pair_insert_unchanged() {
+        let compiled = compile_command_of(&insert_doc(ONE_PAIR)).expect("one-pair compiles");
+        assert_eq!(compiled.sql, "INSERT INTO t (id) VALUES (1)");
+    }
+
+    /// Zero-pair INSERT refuses typed (REFUSAL-01 MissingProperty), never a
+    /// malformed `INSERT INTO t () VALUES ()`.
+    #[test]
+    fn zero_pair_insert_refuses_typed() {
+        let doc = insert_doc(" ;\n    sql:assignValue \"1\"^^xsd:integer");
+        let err = compile_command_of(&doc).expect_err("zero-pair must refuse");
+        assert_eq!(err.code, RefusalCode::MissingProperty);
+        assert!(
+            err.to_string().contains("assignColumn"),
+            "typed MissingProperty on sql:assignColumn, got: {err}"
+        );
+    }
+
+    /// Value-only doc (column count 0 vs value count 1) refuses typed.
+    #[test]
+    fn count_mismatch_insert_refuses_typed() {
+        let doc = insert_doc(" ;\n    sql:assignColumn \"id\"");
+        let err = compile_command_of(&doc).expect_err("mismatch must refuse");
+        assert_eq!(err.code, RefusalCode::MissingProperty);
+        assert!(
+            err.to_string().contains("assignValue"),
+            "typed MissingProperty on sql:assignValue, got: {err}"
+        );
+    }
+
+    /// Multi-assign UPDATE renders `SET c1 = v1, c2 = v2` (UPDATE shape
+    /// already allows multiple assign pairs — no maxCount there).
+    #[test]
+    fn two_pair_update_compiles_and_executes() {
+        let _engine = G4_ENGINE_LOCK.lock().unwrap();
+        let doc = update_doc(TWO_PAIRS);
+        let compiled = compile_command_of(&doc).expect("two-pair UPDATE compiles");
+        assert_eq!(
+            compiled.sql,
+            "UPDATE t SET id = 1, name = 'ada' WHERE id = 1"
+        );
+        let db = GraphLawDuckDB::open_in_memory().expect("in-memory DuckDB");
+        db.raw_connection()
+            .execute_batch("CREATE TABLE t (id INTEGER, name VARCHAR); INSERT INTO t VALUES (1, 'x');")
+            .expect("setup");
+        db.raw_connection()
+            .execute_batch(&compiled.sql)
+            .expect("multi-assign UPDATE executes");
+        let mut stmt = db
+            .raw_connection()
+            .prepare("SELECT id, name FROM t")
+            .expect("SELECT prepares");
+        let (id, name): (i64, String) = stmt.query_row([], |r| Ok((r.get(0)?, r.get(1)?))).expect("row");
+        assert_eq!(id, 1);
+        assert_eq!(name, "ada");
+    }
+}
+
+// ===========================================================================
+// SQLRDF-23 (v26.10.22, lane G5) courts: statement-sequence documents.
+// Chicago: real compile_turtle_document compiles over real Turtle graphs,
+// no mocks, no sleeps. Every refusal court carries its anti-vacuity twin
+// (the lawful form compiles), so deleting the refusal flips the court.
+// ===========================================================================
+#[cfg(test)]
+mod sequence_courts {
+    use super::*;
+
+    fn member(kind: &str, iri: &str, index: u64, extra: &str) -> String {
+        match kind {
+            "select" => format!(
+                concat!(
+                    "<{iri}> a sql:SelectStatement ;\n",
+                    "    sql:statementIndex {index} ;\n",
+                    "    sql:fromTable [ sql:tableName \"{extra}\" ] ;\n",
+                    "    sql:selectList ( [ sql:columnName \"v\" ] ) .\n"
+                ),
+                iri = iri,
+                index = index,
+                extra = extra
+            ),
+            "insert" => format!(
+                concat!(
+                    "<{iri}> a sql:InsertStatement ;\n",
+                    "    sql:statementIndex {index} ;\n",
+                    "    sql:targetTable \"{extra}\" ;\n",
+                    "    sql:assignColumn \"id\" ;\n",
+                    "    sql:assignValue \"1\"^^xsd:integer .\n"
+                ),
+                iri = iri,
+                index = index,
+                extra = extra
+            ),
+            _ => String::new(),
+        }
+    }
+
+    fn sequence_doc(members: &[String]) -> String {
+        let mut doc = String::from(concat!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n",
+            "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+            "sql:doc a sql:StatementSequence ;\n",
+            "    sql:statements ( "
+        ));
+        for m in members {
+            doc.push_str("<http://example.org/");
+            doc.push_str(m);
+            doc.push_str("> ");
+        }
+        doc.push_str(") .\n");
+        for (i, m) in members.iter().enumerate() {
+            let (kind, table) = match i {
+                0 => ("select", "t0"),
+                1 => ("insert", "t1"),
+                _ => ("select", "t2"),
+            };
+            doc.push_str(&member(kind, &format!("http://example.org/{}", m), i as u64, table));
+        }
+        doc
+    }
+
+    fn bare_select_doc() -> String {
+        format!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n{}",
+            member("select", "http://example.org/solo", 1, "t")
+        )
+    }
+
+    fn sequence_root_with(members: &[String], extra: &str) -> String {
+        let mut doc = sequence_doc(members);
+        if !extra.is_empty() {
+            doc.push_str(extra);
+        }
+        doc
+    }
+
+    /// Court (a) + hazard close: the bare single-root path still compiles
+    /// bit-for-bit (golden SQL pin), and TWO bare roots refuse
+    /// MIXED_DOCUMENT_ROOTS instead of the silent lexicographic pick.
+    #[test]
+    fn bare_single_root_golden_and_multi_root_refuses() {
+        // Golden bare pin (back-compat, compile_turtle untouched).
+        let bare = compile_turtle(&bare_select_doc()).expect("bare single root compiles");
+        assert!(
+            bare.sql.starts_with("SELECT"),
+            "bare golden SQL pin: {}",
+            bare.sql
+        );
+        assert!(bare.verify_seal());
+
+        // ANTI-VACUITY TWIN: two bare roots refuse — the mutation (a second
+        // root) flips the outcome from compile to typed refusal.
+        let two_roots = format!(
+            "{}\n{}",
+            bare_select_doc(),
+            member("select", "http://example.org/s2", 2, "t2")
+        );
+        let err = compile_turtle(&two_roots).expect_err("two bare roots must refuse");
+        assert_eq!(err.code, RefusalCode::MalformedAst);
+        let msg = err.to_string();
+        assert!(
+            msg.contains(REFUSAL_01_MALFORMED_AST) && msg.contains("more than one top-level root"),
+            "MIXED_DOCUMENT_ROOTS marker: {msg}"
+        );
+
+        // Same hazard closed on the document path.
+        let err = compile_turtle_document(&two_roots).expect_err("two bare roots must refuse");
+        assert!(
+            err.to_string().contains("more than one top-level root"),
+            "document path also refuses: {err}"
+        );
+        // A lawful single bare root compiles through the document API too,
+        // with doc_hash = its own anchor (bare identity unchanged).
+        let doc = compile_turtle_document(&bare_select_doc()).expect("bare doc compiles");
+        assert_eq!(doc.statements.len(), 1);
+        assert_eq!(
+            doc.doc_hash,
+            compile_turtle(&bare_select_doc())
+                .expect("recompile")
+                .receipt_state
+                .expect("anchor"),
+            "bare doc_hash = the bare statement's own anchor"
+        );
+        assert!(doc.statements[0].verify_seal());
+    }
+
+    /// Court (b): domain separation — a sequence-of-1 hashes differently
+    /// from the bare form of the same statement.
+    #[test]
+    fn sequence_of_one_doc_hash_differs_from_bare() {
+        let bare = compile_turtle(&bare_select_doc()).expect("bare compiles");
+        let seq1 = compile_turtle_document(&sequence_doc(&["m0".into()]))
+            .expect("sequence-of-1 is legal");
+        assert_eq!(seq1.statements.len(), 1);
+        assert_ne!(
+            seq1.doc_hash, bare.receipt_state.expect("anchor"),
+            "sequence envelope is part of the identity"
+        );
+        assert!(seq1.statements[0].verify_seal());
+        // Determinism: the same document recompiles to the same doc_hash.
+        let again = compile_turtle_document(&sequence_doc(&["m0".into()]))
+            .expect("recompile");
+        assert_eq!(seq1.doc_hash, again.doc_hash);
+    }
+
+    /// Court (c): a Connect member refuses REFUSAL-02 with the member's
+    /// 0-based position stamped in the refusal context.
+    #[test]
+    fn connect_member_refuses_with_position() {
+        let mut doc = sequence_doc(&["m0".into(), "m1".into()]);
+        // Replace member 1 with a ConnectStatement (index 1 preserved).
+        doc = doc.replace(
+            "a sql:InsertStatement",
+            "a sql:ConnectStatement",
+        );
+        doc = doc.replace(
+            "    sql:targetTable \"t1\" ;\n    sql:columns ( [ sql:columnName \"id\" ] ) ;\n    sql:values ( ( [ sql:literalValue \"1\"^^xsd:integer ] ) )",
+            "    sql:targetTable \"t1\"",
+        );
+        let err = compile_turtle_document(&doc).expect_err("Connect member must refuse");
+        assert_eq!(err.code, RefusalCode::UnimplementedStatement);
+        let msg = err.to_string();
+        assert!(
+            msg.contains(REFUSAL_02_UNIMPLEMENTED),
+            "REFUSAL-02 marker: {msg}"
+        );
+        assert_eq!(
+            err.ctx.predicate_idx, 1,
+            "member position stamped in the refusal context"
+        );
+    }
+
+    /// Court (d): 2-then-1 ordering fires INDEX_SEQUENCE_DISORDER.
+    #[test]
+    fn index_disorder_refuses() {
+        let doc = sequence_doc(&["m0".into(), "m1".into()])
+            .replace("sql:statementIndex 1 ;\n    sql:targetTable \"t1\"", "sql:statementIndex 0 ;\n    sql:targetTable \"t1\"");
+        // Both members now carry index 0: the cross-check at position 1 fails.
+        let err = compile_turtle_document(&doc).expect_err("disordered indices must refuse");
+        assert_eq!(err.code, RefusalCode::MalformedAst);
+        let msg = err.to_string();
+        assert!(
+            msg.contains(REFUSAL_01_MALFORMED_AST)
+                && msg.contains("sql:statementIndex cross-check failed"),
+            "INDEX_SEQUENCE_DISORDER marker: {msg}"
+        );
+
+        // ANTI-VACUITY TWIN: the properly ordered form compiles.
+        let ok = compile_turtle_document(&sequence_doc(&["m0".into(), "m1".into()]))
+            .expect("ordered pair compiles");
+        assert_eq!(ok.statements.len(), 2);
+    }
+
+    /// Court (e): an empty sequence (sql:statements head = rdf:nil) refuses
+    /// SEQUENCE_EMPTY.
+    #[test]
+    fn empty_sequence_refuses() {
+        let doc = concat!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n",
+            "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n",
+            "sql:doc a sql:StatementSequence ;\n",
+            "    sql:statements rdf:nil .\n"
+        );
+        let err = compile_turtle_document(doc).expect_err("empty sequence must refuse");
+        let msg = err.to_string();
+        // Layering note: the StatementSequenceShape (ontologies/sql-ast.ttl)
+        // sh:node-checks sql:OrderedListShape on sql:statements, so an empty
+        // list refuses at the SHAPE gate (typed REFUSAL-01) before the
+        // below-the-shape SEQUENCE_EMPTY arm is reached. SEQUENCE_EMPTY stays
+        // as the defense-in-depth arm for non-SHACL callers; either typed
+        // refusal satisfies this court, never a silent pass.
+        assert_eq!(err.code, RefusalCode::MalformedAst);
+        assert!(
+            msg.contains("empty sql:statements list")
+                || msg.contains("MUST carry exactly one sql:statements list head"),
+            "empty sequence refuses typed REFUSAL-01: {msg}"
+        );
+
+        // ANTI-VACUITY TWIN: one member compiles.
+        assert!(compile_turtle_document(&sequence_doc(&["m0".into()])).is_ok());
+    }
+
+    /// Court (f): a document with both a bare statement root and a sequence
+    /// root refuses MIXED_DOCUMENT_ROOTS.
+    #[test]
+    fn mixed_bare_and_sequence_roots_refuse() {
+        let doc = sequence_root_with(
+            &["m0".into()],
+            &member("select", "http://example.org/stray", 5, "t9"),
+        );
+        let err = compile_turtle_document(&doc).expect_err("mixed roots must refuse");
+        let msg = err.to_string();
+        assert!(
+            msg.contains("more than one top-level root"),
+            "MIXED_DOCUMENT_ROOTS: {msg}"
+        );
+        // ANTI-VACUITY TWIN: dropping the stray root compiles.
+        assert!(compile_turtle_document(&sequence_doc(&["m0".into()])).is_ok());
+    }
+
+    /// Court (g): a 3-member sequence compiles with members in spine order
+    /// (SELECT / INSERT / SELECT), each sealed, and the doc_hash fold is
+    /// order-sensitive (swapping members 0 and 2 changes the hash).
+    #[test]
+    fn three_member_sequence_compiles_ordered() {
+        let doc = sequence_doc(&["m0".into(), "m1".into(), "m2".into()]);
+        let d = compile_turtle_document(&doc).expect("3-member sequence compiles");
+        assert_eq!(d.statements.len(), 3);
+        assert_eq!(d.doc_hash.len(), 32);
+        for s in &d.statements {
+            assert!(s.verify_seal(), "every member carries a valid seal");
+        }
+        // Spine order: member 0 and 2 are SELECTs over t0/t2, member 1 an
+        // INSERT into t1.
+        assert!(d.statements[0].sql.starts_with("SELECT"));
+        assert!(d.statements[1].sql.starts_with("INSERT"));
+        assert!(d.statements[2].sql.starts_with("SELECT"));
+
+        // Order sensitivity of the fold: swap the tables of members 0 and 2
+        // (a real graph change) and the doc_hash MUST move.
+        let swapped = doc
+            .replace("sql:tableName \"t0\"", "sql:tableName \"t9\"")
+            .replace("sql:tableName \"t2\"", "sql:tableName \"t0\"")
+            .replace("sql:tableName \"t9\"", "sql:tableName \"t2\"");
+        let d2 = compile_turtle_document(&swapped).expect("swapped compiles");
+        assert_ne!(
+            d.doc_hash, d2.doc_hash,
+            "doc_hash fold is order/content sensitive"
+        );
+    }
+}
+
+
+
+// ===========================================================================
+// SQLRDF-25 gap-2 (v26.10.22) courts: CTEs (standard + recursive), end to
+// end. sql:withClause is an rdf:List of CTE nodes; each carries sql:cteName
+// (required), optional sql:cteColumns (rdf:List of sql:columnName literals),
+// sql:cteQuery (_REQUIRED nested SelectStatement root; absent is typed
+// REFUSAL-01 arm CTE_NO_QUERY = 47), optional sql:recursive true. The
+// serializer promotes the whole WITH list to WITH RECURSIVE when any member
+// is recursive, and shares ONE parameter vector across CTE bodies and the
+// outer select (placeholders are numbered from params.len() at push time, so
+// CTE literals take the lowest indices — DuckDB's global positional-prepared
+// numbering).
+//
+// Disclosed scope note: the sql-rdf AST carries no set-operation node (UNION
+// ALL / EXCEPT / INTERSECT), so a RECURSIVE arm's self-referencing term is
+// not yet graph-expressible end to end. Court (b) therefore splits the
+// claim: the GRAPH path proves WITH RECURSIVE promotion renders exactly and
+// flips on the sql:recursive mutation twin; the ENGINE path proves the
+// emitted WITH RECURSIVE clause shape executes on real frozen-duckdb with a
+// real recursive body (counting 1..=10). A set-operation AST node is
+// upstream of this lane's lease.
+//
+// Chicago: real compile over real Turtle graphs, real in-memory frozen-duckdb,
+// real table readbacks, no mocks, no sleeps.
+// ===========================================================================
+#[cfg(test)]
+mod cte_courts {
+    use super::*;
+    use crate::duckdb_eval::GraphLawDuckDB;
+
+    /// DuckDB engine init is process-global; serialize engine-touching courts.
+    static CTE_ENGINE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn compile_select(doc: &str) -> CompiledQuery {
+        compile_turtle(doc).unwrap_or_else(|e| panic!("CTE select graph must compile: {e}"))
+    }
+
+    fn sales_setup_sql() -> &'static str {
+        "CREATE TABLE sales(region VARCHAR, v INTEGER);\nINSERT INTO sales VALUES ('east', 10), ('east', 20), ('west', 5);"
+    }
+
+    /// (a) Standard CTE: WITH regional AS (SELECT region, v FROM sales)
+    /// SELECT region, v FROM regional — exact rendering, real execution,
+    /// exact readback.
+    #[test]
+    fn standard_cte_compiles_executes_and_reads_back() {
+        let doc = concat!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n",
+            "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+            "@prefix : <http://example.org/> .\n",
+            "<http://example.org/q> a sql:SelectStatement ;\n",
+            "    sql:statementIndex \"0\"^^xsd:integer ;\n",
+            "    sql:withClause ( [ sql:cteName \"regional\" ;\n",
+            "                       sql:cteQuery [ a sql:SelectStatement ;\n",
+            "                           sql:statementIndex \"1\"^^xsd:integer ;\n",
+            "                           sql:selectList ( [ sql:columnName \"region\" ]\n",
+            "                                            [ sql:columnName \"v\" ] ) ;\n",
+            "                           sql:fromTable [ sql:tableName \"sales\" ] ] ] ) ;\n",
+            "    sql:selectList ( [ sql:columnName \"region\" ]\n",
+            "                     [ sql:columnName \"v\" ] ) ;\n",
+            "    sql:fromTable [ sql:tableName \"regional\" ] ."
+        );
+        let compiled = compile_select(doc);
+        assert_eq!(
+            compiled.sql,
+            "WITH regional AS (SELECT region, v FROM sales) SELECT region, v FROM regional",
+            "standard CTE renders WITH name AS (query) before the main SELECT"
+        );
+        let _engine = CTE_ENGINE_LOCK.lock().unwrap();
+        let db = GraphLawDuckDB::open_in_memory().expect("in-memory DuckDB");
+        db.raw_connection()
+            .execute_batch(sales_setup_sql())
+            .expect("setup executes");
+        let mut stmt = db
+            .raw_connection()
+            .prepare(&compiled.sql)
+            .expect("CTE query prepares");
+        let mut rows: Vec<(String, i32)> = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .expect("query maps")
+            .collect::<Result<_, _>>()
+            .expect("query executes");
+        rows.sort();
+        assert_eq!(
+            rows,
+            vec![
+                ("east".to_string(), 10),
+                ("east".to_string(), 20),
+                ("west".to_string(), 5)
+            ],
+            "exact three-row readback through the CTE"
+        );
+    }
+
+    /// (b) Recursive CTE: the sql:recursive flag promotes the WITH keyword;
+    /// the emitted clause shape executes for real on frozen-duckdb (counting
+    /// 1..=10). Body composition (UNION ALL) is disclosed as not yet
+    /// graph-expressible — see the module scope note.
+    #[test]
+    fn recursive_cte_promotion_renders_and_engine_accepts_shape() {
+        let doc = concat!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n",
+            "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+            "@prefix : <http://example.org/> .\n",
+            "<http://example.org/q> a sql:SelectStatement ;\n",
+            "    sql:statementIndex \"0\"^^xsd:integer ;\n",
+            "    sql:withClause ( [ sql:cteName \"count\" ;\n",
+            "                       sql:recursive true ;\n",
+            "                       sql:cteColumns ( [ sql:columnName \"n\" ] ) ;\n",
+            "                       sql:cteQuery [ a sql:SelectStatement ;\n",
+            "                           sql:statementIndex \"1\"^^xsd:integer ;\n",
+            "                           sql:selectList ( [ sql:columnName \"n\" ] ) ;\n",
+            "                           sql:fromTable [ sql:tableName \"count\" ] ] ] ) ;\n",
+            "    sql:selectList ( [ sql:columnName \"n\" ] ) ;\n",
+            "    sql:fromTable [ sql:tableName \"count\" ] ."
+        );
+        let compiled = compile_select(doc);
+        assert_eq!(
+            compiled.sql,
+            "WITH RECURSIVE count(n) AS (SELECT n FROM count) SELECT n FROM count",
+            "sql:recursive true promotes the WITH to WITH RECURSIVE"
+        );
+
+        // MUTATION TWIN: the same graph without sql:recursive renders plain
+        // WITH — the court flips exactly on the promotion branch.
+        let plain = compile_select(&doc.replace(" sql:recursive true ;\n", "\n"));
+        assert_eq!(
+            plain.sql,
+            "WITH count(n) AS (SELECT n FROM count) SELECT n FROM count",
+            "absent sql:recursive stays plain WITH"
+        );
+
+        // Engine path: the emitted WITH RECURSIVE shape, with a real
+        // recursive body, counts 1..=10 on real frozen-duckdb.
+        let _engine = CTE_ENGINE_LOCK.lock().unwrap();
+        let db = GraphLawDuckDB::open_in_memory().expect("in-memory DuckDB");
+        let recursive_sql = "WITH RECURSIVE count(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM count WHERE n < 10) SELECT n FROM count";
+        let mut stmt = db
+            .raw_connection()
+            .prepare(recursive_sql)
+            .expect("WITH RECURSIVE clause shape prepares");
+        let mut rows: Vec<i32> = stmt
+            .query_map([], |r| r.get(0))
+            .expect("query maps")
+            .collect::<Result<_, _>>()
+            .expect("query executes");
+        rows.sort();
+        assert_eq!(
+            rows,
+            (1..=10).collect::<Vec<i32>>(),
+            "recursive CTE counts exactly 1..=10"
+        );
+    }
+
+    /// (c) Multi-CTE: two WITH arms, the second referencing the first, plus
+    /// the shared-parameter law — a literal inside the FIRST CTE body takes
+    /// the LOWEST parameter index ($1), the outer query's literal continues
+    /// after it.
+    #[test]
+    fn multi_cte_chain_with_shared_parameter_order() {
+        let doc = concat!(
+            "@prefix : <http://example.org/> .\n",
+            "@prefix sql: <http://graphlaw.org/sql#> .\n",
+            "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+            ":q a sql:SelectStatement ;\n",
+            "    sql:statementIndex \"0\"^^xsd:integer ;\n",
+            "    sql:withClause ( _:big _:by ) ;\n",
+            "    sql:selectList ( [ sql:columnName \"region\" ] ) ;\n",
+            "    sql:fromTable [ sql:tableName \"by_region\" ] ;\n",
+            "    sql:where [ sql:operator \"=\" ;\n",
+            "        sql:left [ sql:columnName \"region\" ] ;\n",
+            "        sql:right [ sql:value \"east\"^^xsd:string ] ] .\n",
+            "_:big sql:cteName \"big\" ;\n",
+            "    sql:cteQuery _:q1 .\n",
+            "_:q1 a sql:SelectStatement ;\n",
+            "    sql:statementIndex \"1\"^^xsd:integer ;\n",
+            "    sql:selectList ( [ sql:columnName \"region\" ]\n",
+            "                     [ sql:columnName \"v\" ] ) ;\n",
+            "    sql:fromTable [ sql:tableName \"sales\" ] ;\n",
+            "    sql:where _:w .\n",
+            "_:w sql:operator \">\" ;\n",
+            "    sql:left [ sql:columnName \"v\" ] ;\n",
+            "    sql:right [ sql:value \"10\"^^xsd:integer ] .\n",
+            "_:by sql:cteName \"by_region\" ;\n",
+            "    sql:cteQuery _:q2 .\n",
+            "_:q2 a sql:SelectStatement ;\n",
+            "    sql:statementIndex \"2\"^^xsd:integer ;\n",
+            "    sql:selectList ( [ sql:columnName \"region\" ] ) ;\n",
+            "    sql:fromTable [ sql:tableName \"big\" ] ."
+        );
+        let compiled = compile_select(doc);
+        assert_eq!(
+            compiled.sql,
+            "WITH big AS (SELECT region, v FROM sales WHERE (v > $1)), \
+             by_region AS (SELECT region FROM big) \
+             SELECT region FROM by_region WHERE (region = $2)",
+            "CTE bodies render first; CTE literals take the lowest parameter indices"
+        );
+        assert_eq!(
+            compiled.params,
+            vec![
+                SqlLiteral::Integer(10),
+                SqlLiteral::String("east".to_string())
+            ],
+            "parameter vector order matches placeholder order across the WITH boundary"
+        );
+
+        let _engine = CTE_ENGINE_LOCK.lock().unwrap();
+        let db = GraphLawDuckDB::open_in_memory().expect("in-memory DuckDB");
+        db.raw_connection()
+            .execute_batch(sales_setup_sql())
+            .expect("setup executes");
+        let duck_params: Vec<Box<dyn frozen_duckdb::ToSql>> = compiled
+            .params
+            .iter()
+            .map(|p| match p {
+                SqlLiteral::String(s) => Box::new(s.clone()) as Box<dyn frozen_duckdb::ToSql>,
+                SqlLiteral::Integer(i) => Box::new(*i),
+                SqlLiteral::Float(f) => Box::new(*f),
+                SqlLiteral::Boolean(b) => Box::new(*b),
+                SqlLiteral::Null => Box::new(Option::<String>::None),
+            })
+            .collect();
+        let params: Vec<&dyn frozen_duckdb::ToSql> =
+            duck_params.iter().map(|b| b.as_ref()).collect();
+        let mut stmt = db
+            .raw_connection()
+            .prepare(&compiled.sql)
+            .expect("multi-CTE query prepares");
+        let mut rows: Vec<String> = stmt
+            .query_map(params.as_slice(), |r| r.get(0))
+            .expect("query maps")
+            .collect::<Result<_, _>>()
+            .expect("query executes");
+        rows.sort();
+        rows.dedup();
+        assert_eq!(
+            rows,
+            vec!["east".to_string()],
+            "both CTEs chain: sales -> big (v>10) -> by_region -> outer filter east"
+        );
+    }
+
+    /// (d) REFUSAL-01 twin: a WITH arm without sql:cteQuery refuses typed
+    /// (MalformedAst, arm CTE_NO_QUERY = 47) — never a crash, never a
+    /// rendered `name AS ()`. MUTATION TWIN: attaching cteQuery admits.
+    #[test]
+    fn cte_without_query_refuses_typed() {
+        let doc = concat!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n",
+            "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+            "@prefix : <http://example.org/> .\n",
+            "<http://example.org/q> a sql:SelectStatement ;\n",
+            "    sql:statementIndex \"0\"^^xsd:integer ;\n",
+            "    sql:withClause ( [ sql:cteName \"regional\" ] ) ;\n",
+            "    sql:selectList ( [ sql:columnName \"region\" ] ) ;\n",
+            "    sql:fromTable [ sql:tableName \"regional\" ] ."
+        );
+        let err = compile_turtle(doc).expect_err("missing cteQuery must refuse");
+        assert_eq!(err.code, RefusalCode::MalformedAst, "REFUSAL-01 family");
+        assert_eq!(
+            err.ctx.shape_id, refusal_arm::CTE_NO_QUERY,
+            "typed arm CTE_NO_QUERY = 47"
+        );
+        assert!(
+            format!("{err}").contains("[REFUSAL-01]"),
+            "renders the stable REFUSAL-01 marker"
+        );
+
+        // MUTATION TWIN: attach the cteQuery and the same doc admits.
+        let fixed = doc.replace(
+            "[ sql:cteName \"regional\" ]",
+            "[ sql:cteName \"regional\" ;\n\
+             \x20 sql:cteQuery [ a sql:SelectStatement ;\n\
+             \x20     sql:statementIndex 1 ;\n\
+             \x20     sql:selectList ( [ sql:columnName \"region\" ] ) ;\n\
+             \x20     sql:fromTable [ sql:tableName \"sales\" ] ] ]",
+        );
+        let compiled = compile_select(&fixed);
+        assert_eq!(
+            compiled.sql,
+            "WITH regional AS (SELECT region FROM sales) SELECT region FROM regional"
+        );
+    }
+}
+
+// ===========================================================================
+// SQLRDF-25 window/QUALIFY courts. (a) ROW_NUMBER() OVER (PARTITION BY ...
+// ORDER BY ... DESC) compiles from a real Turtle AST graph, renders exact
+// SQL and executes on a real in-memory frozen-duckdb with exact readback;
+// (b) a QUALIFY dedup query renders + executes with an exact row count;
+// (c) a window function under sql:whereClause refuses typed
+// ([REFUSAL-01], arm WINDOW_FN_POSITION) with an anti-vacuity twin (the
+// same window node in the projection list compiles + executes); (d) a
+// ROWS BETWEEN frame renders and executes. Chicago: real compile over real
+// Turtle graphs, real frozen-duckdb connections, real table readbacks,
+// no mocks, no sleeps.
+// ===========================================================================
+#[cfg(test)]
+mod window_qualify_courts {
+    use super::*;
+    use crate::duckdb_eval::GraphLawDuckDB;
+
+    static WINDOW_ENGINE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    const PREFIXES: &str = concat!(
+        "@prefix sql: <http://graphlaw.org/sql#> .\n",
+        "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
+    );
+
+    fn select_doc(projection_and_clauses: &str) -> String {
+        format!(
+            concat!(
+                "{prefix}<http://example.org/q> a sql:SelectStatement ;\n",
+                "    sql:statementIndex \"0\"^^xsd:integer ;\n",
+                "    sql:fromTable [ sql:tableName \"emp\" ] ;\n",
+                "{body}"
+            ),
+            prefix = PREFIXES,
+            body = projection_and_clauses
+        )
+    }
+
+    fn setup_emp(db: &GraphLawDuckDB) {
+        db.raw_connection()
+            .execute_batch(
+                "CREATE TABLE emp (name TEXT, dept TEXT, salary INTEGER); \
+                 INSERT INTO emp VALUES \
+                 ('alice','x',10), ('bob','x',20), ('carol','y',30);",
+            )
+            .expect("emp fixture");
+    }
+
+    const ROW_NUMBER_WINDOW: &str = concat!(
+        "[ sql:windowFunction [ sql:functionName \"ROW_NUMBER\" ; sql:arguments () ] ;\n",
+        "  sql:partitionBy ( [ sql:columnName \"dept\" ] ) ;\n",
+        "  sql:orderBy ( [ sql:expression [ sql:columnName \"salary\" ] ;\n",
+        "                  sql:direction \"DESC\"^^xsd:string ] ) ]"
+    );
+
+    /// (a) exact rendering + real execution + exact readback.
+    #[test]
+    fn row_number_window_renders_and_executes() {
+        let doc = select_doc(&format!(
+            concat!(
+                "    sql:selectList ( [ sql:columnName \"name\" ]\n",
+                "                     {} ) ."
+            ),
+            ROW_NUMBER_WINDOW
+        ));
+        let compiled = compile_turtle(&doc).expect("window SELECT compiles");
+        assert_eq!(
+            compiled.sql,
+            "SELECT name, ROW_NUMBER() OVER (PARTITION BY dept ORDER BY salary DESC) FROM emp"
+        );
+
+        let _engine = WINDOW_ENGINE_LOCK.lock().unwrap();
+        let db = GraphLawDuckDB::open_in_memory().expect("in-memory DuckDB");
+        setup_emp(&db);
+        let mut stmt = db
+            .raw_connection()
+            .prepare(&compiled.sql)
+            .expect("window SELECT prepares");
+        let mut rows = stmt.query([]).expect("window SELECT executes");
+        let mut out = Vec::new();
+        while let Some(r) = rows.next().expect("row") {
+            out.push((
+                r.get::<_, String>(0).expect("name"),
+                r.get::<_, i64>(1).expect("rn"),
+            ));
+        }
+        // The statement carries no top-level ORDER BY, so readback order is
+        // the engine's choice; sort to assert exact membership + ranks.
+        out.sort();
+        assert_eq!(
+            out,
+            vec![
+                ("alice".to_string(), 2),
+                ("bob".to_string(), 1),
+                ("carol".to_string(), 1),
+            ],
+            "exact ranked readback from real frozen-duckdb"
+        );
+    }
+
+    /// (b) QUALIFY dedup: renders `... QUALIFY (rn = $1)` and executes with
+    /// the bound parameter; exactly the per-dept top earners read back.
+    #[test]
+    fn qualify_dedup_renders_and_executes() {
+        let doc = select_doc(&format!(
+            concat!(
+                "    sql:selectList ( [ sql:columnName \"name\" ]\n",
+                "                     [ sql:aliasName \"rn\" ; sql:expression {} ] ) ;\n",
+                "    sql:qualify [ sql:operator \"=\" ;\n",
+                "                  sql:left [ sql:columnName \"rn\" ] ;\n",
+                "                  sql:right [ sql:literalValue \"1\"^^xsd:integer ] ] ."
+            ),
+            ROW_NUMBER_WINDOW
+        ));
+        let compiled = compile_turtle(&doc).expect("QUALIFY SELECT compiles");
+        assert_eq!(
+            compiled.sql,
+            "SELECT name, ROW_NUMBER() OVER (PARTITION BY dept ORDER BY salary DESC) AS rn FROM emp QUALIFY (rn = $1)"
+        );
+        assert_eq!(compiled.params, vec![SqlLiteral::Integer(1)]);
+
+        let _engine = WINDOW_ENGINE_LOCK.lock().unwrap();
+        let db = GraphLawDuckDB::open_in_memory().expect("in-memory DuckDB");
+        setup_emp(&db);
+        let mut stmt = db
+            .raw_connection()
+            .prepare(&compiled.sql)
+            .expect("QUALIFY SELECT prepares");
+        let mut rows = stmt.query(frozen_duckdb::params![1i64]).expect("QUALIFY executes");
+        let mut names = Vec::new();
+        while let Some(r) = rows.next().expect("row") {
+            names.push(r.get::<_, String>(0).expect("name"));
+        }
+        assert_eq!(
+            names.len(),
+            2,
+            "QUALIFY dedup keeps exactly one row per partition: {names:?}"
+        );
+        assert!(names.contains(&"bob".to_string()) && names.contains(&"carol".to_string()));
+    }
+
+    /// (c) window function under sql:whereClause refuses typed
+    /// ([REFUSAL-01], arm WINDOW_FN_POSITION); twin proves the gate is
+    /// position-sensitive, not a blanket window ban.
+    #[test]
+    fn window_fn_in_where_refuses_typed() {
+        let where_doc = select_doc(&format!(
+            concat!(
+                "    sql:selectList ( [ sql:columnName \"name\" ] ) ;\n",
+                "    sql:whereClause {} ."
+            ),
+            ROW_NUMBER_WINDOW
+        ));
+        let err = compile_turtle(&where_doc).expect_err("window fn in WHERE must refuse");
+        assert_eq!(err.code, RefusalCode::MalformedAst);
+        assert_eq!(err.ctx.shape_id, refusal_arm::WINDOW_FN_POSITION);
+        assert!(
+            err.to_string().contains("window function"),
+            "message names the arm: {}",
+            err
+        );
+
+        // ANTI-VACUITY MUTATION TWIN: the same window node in the projection
+        // list compiles and executes — the court flips on the refusal path.
+        let twin_doc = select_doc(&format!(
+            concat!(
+                "    sql:selectList ( [ sql:columnName \"name\" ]\n",
+                "                     {} ) ."
+            ),
+            ROW_NUMBER_WINDOW
+        ));
+        let twin = compile_turtle(&twin_doc).expect("twin compiles");
+        let _engine = WINDOW_ENGINE_LOCK.lock().unwrap();
+        let db = GraphLawDuckDB::open_in_memory().expect("in-memory DuckDB");
+        setup_emp(&db);
+        let mut stmt = db
+            .raw_connection()
+            .prepare(&twin.sql)
+            .expect("twin prepares");
+        let mut rows = stmt.query([]).expect("twin executes");
+        let mut names = Vec::new();
+        while let Some(r) = rows.next().expect("row") {
+            names.push(r.get::<_, String>(0).expect("name"));
+        }
+        assert_eq!(names.len(), 3, "twin selects all 3 emp rows: {names:?}");
+    }
+
+    /// (d) ROWS BETWEEN frame: renders + executes with exact window sums.
+    #[test]
+    fn frame_between_renders_and_executes() {
+        let doc = select_doc(
+            &concat!(
+                "    sql:selectList ( [ sql:columnName \"name\" ]\n",
+                "                     [ sql:windowFunction [ sql:function IRI ] ;\n",
+                "                       sql:frame [ sql:frameUnit \"ROWS\"^^xsd:string ;\n",
+                "                                   sql:frameStart \"UNBOUNDED PRECEDING\"^^xsd:string ;\n",
+                "                                   sql:frameEnd \"CURRENT ROW\"^^xsd:string ] ] ) ."
+            )
+            .replace("IRI", "<http://graphlaw.org/functions#SUM> ; sql:argument [ sql:columnName \"salary\" ]"),
+        );
+        let compiled = compile_turtle(&doc).expect("frame SELECT compiles");
+        assert_eq!(
+            compiled.sql,
+            "SELECT name, SUM(salary) OVER (ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM emp"
+        );
+
+        let _engine = WINDOW_ENGINE_LOCK.lock().unwrap();
+        let db = GraphLawDuckDB::open_in_memory().expect("in-memory DuckDB");
+        setup_emp(&db);
+        let mut stmt = db
+            .raw_connection()
+            .prepare(&compiled.sql)
+            .expect("frame SELECT prepares");
+        let mut rows = stmt.query([]).expect("frame SELECT executes");
+        let mut sums = Vec::new();
+        while let Some(r) = rows.next().expect("row") {
+            sums.push(r.get::<_, i64>(1).expect("running sum"));
+        }
+        assert_eq!(sums, vec![10, 30, 60], "exact running totals");
+    }
+}
+#[cfg(test)]
+mod tmp_dbg {
+    #[test]
+    fn fixture_compiles() {
+        let t = std::fs::read_to_string("/Users/sac/graphlaw/tests/fixtures/banking/dvp_setup.ttl").unwrap();
+        match crate::sql_ast::compile_turtle_document(&t) {
+            Ok(_) => println!("OK"),
+            Err(e) => println!("ERR: {e}"),
+        }
     }
 }

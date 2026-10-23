@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "f0c96befbd1903ac7b0583d5a22957691628f40dd4ae86203a3aabc595508a0e",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T091628Z-Edit-f0c96bef.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/designs/fibo-pm4py-court-matrix.md",
+  "timestamp_utc": "2026-10-23T091628Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

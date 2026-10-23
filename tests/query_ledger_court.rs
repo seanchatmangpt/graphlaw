@@ -5,7 +5,7 @@
 //! directory and asserts on real readbacks — no mocks, no sleeps.
 
 use graphlaw::query_ledger::{
-    content_digest, Aggregate, BatchAgg, Descriptor, LedgerError, QueryLedger, GENESIS,
+    Aggregate, BatchAgg, Descriptor, GENESIS, LedgerError, QueryLedger, content_digest,
 };
 use std::collections::BTreeMap;
 
@@ -136,9 +136,7 @@ fn f3_fork_refused() {
 fn f4_double_genesis_refused() {
     let (d, _digests) = three_batch_chain("f4");
     let ledger = QueryLedger::open(&d).unwrap();
-    let body = format!(
-        "{{\"parent\":\"{GENESIS}\",\"first_seq\":100,\"count\":0,\"records\":[]}}"
-    );
+    let body = format!("{{\"parent\":\"{GENESIS}\",\"first_seq\":100,\"count\":0,\"records\":[]}}");
     write_batch_file(&d, &body);
     match ledger.verify().unwrap_err() {
         LedgerError::DoubleGenesis { digest } => {
@@ -239,12 +237,15 @@ fn f7_aggregation_correct_with_spot_refold() {
     let mut want = BTreeMap::new();
     want.insert(1u64, 10u64);
     want.insert(2u64, 20u64);
-    assert_eq!(agg, Aggregate {
-        rows_emitted_sum: want,
-        saturated: false,
-        complete: true,
-        batches: 1,
-    });
+    assert_eq!(
+        agg,
+        Aggregate {
+            rows_emitted_sum: want,
+            saturated: false,
+            complete: true,
+            batches: 1,
+        }
+    );
     // Full-period fold.
     let agg = ledger.aggregate(0, u64::MAX).unwrap();
     assert_eq!(agg.rows_emitted_sum[&1], 20);
@@ -257,9 +258,7 @@ fn f7_aggregation_correct_with_spot_refold() {
     let tail = st.tail;
     std::fs::write(
         d.join(format!("{tail}.agg")),
-        format!(
-            "{{\"batch\":\"{tail}\",\"rows_emitted_sum\":{{\"1\":999}},\"saturated\":false}}"
-        ),
+        format!("{{\"batch\":\"{tail}\",\"rows_emitted_sum\":{{\"1\":999}},\"saturated\":false}}"),
     )
     .unwrap();
     match ledger.aggregate(0, u64::MAX).unwrap_err() {
@@ -319,13 +318,7 @@ fn parse_records(body: &[u8]) -> Vec<Descriptor> {
         let nums: Vec<u64> = r
             .split("\":")
             .skip(1)
-            .filter_map(|p| {
-                p.split([',', '}'])
-                    .next()
-                    .unwrap()
-                    .parse()
-                    .ok()
-            })
+            .filter_map(|p| p.split([',', '}']).next().unwrap().parse().ok())
             .collect();
         let mut h = [0u8; 32];
         for (i, byte) in h.iter_mut().enumerate() {
@@ -344,10 +337,7 @@ fn parse_records(body: &[u8]) -> Vec<Descriptor> {
 }
 
 fn encode_agg_for_court(a: &BatchAgg) -> String {
-    let mut s = format!(
-        "{{\"batch\":\"{}\",\"rows_emitted_sum\":{{",
-        a.batch
-    );
+    let mut s = format!("{{\"batch\":\"{}\",\"rows_emitted_sum\":{{", a.batch);
     for (i, (e, v)) in a.rows_emitted_sum.iter().enumerate() {
         if i > 0 {
             s.push(',');
@@ -402,7 +392,10 @@ fn f8_tampered_agg_sidecar_evident_via_chain() {
     let err = ledger.verify().unwrap_err();
     match err {
         LedgerError::DigestMismatch {
-            file, expected, actual, ..
+            file,
+            expected,
+            actual,
+            ..
         } => {
             assert_eq!(file, format!("{head}.agg"));
             assert_eq!(Some(&expected), st.aggs.get(&head));

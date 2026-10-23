@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "f838e9550d2e3ed2a94376ca6ab0c79dd4104d7989de4a223a9aa7e34a7e44a9",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T060949Z-Edit-f838e955.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/designs/cold-path-ledger.md",
+  "timestamp_utc": "2026-10-23T060949Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

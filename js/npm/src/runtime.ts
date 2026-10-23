@@ -1,9 +1,11 @@
 // runtime.ts — host detection, byte loading, and WASI preview1 import
-// assembly. Zero-dependency: the module imports only 7 trivial preview1
-// functions, all stubbed here, so the same assembly works on Node and
-// browsers (phase 2 swaps loadWasmBytes for fetch/URL loading).
+// assembly. Zero-dependency: all 28 preview1 imports of the DuckDB-linked
+// artifact are served by the shared stub builder in wasi-stubs.ts, so the
+// same assembly works on Node and browsers (phase 2 swaps loadWasmBytes for
+// fetch/URL loading).
 import { GraphlawInitError } from './errors.js';
 import { callInitialize, hasInitialize, WasmAbi } from './wire.js';
+import { buildWasiImports } from './wasi-stubs.js';
 
 function isNode(): boolean {
   return (
@@ -20,15 +22,14 @@ export async function loadWasmBytes(): Promise<Uint8Array> {
   return new Uint8Array(await readFile(path));
 }
 
-const ERRNO_SUCCESS = 0;
-
 /**
  * Instantiates the wasip1 module and returns the wire.
  *
  * The artifact is a cdylib: no `_start`/`_initialize`, so `wasi.start()` /
  * `wasi.initialize()` can never run — and Node refuses to serve some preview1
- * imports until one of them has. The module needs only 7 trivial imports;
- * serve all of them ourselves so the assembly is host-independent.
+ * imports until one of them has. All 28 preview1 imports (including the
+ * DuckDB-linked artifact's fd/path surface) are served by wasi-stubs.ts so
+ * the assembly is host-independent.
  */
 export async function instantiateFromBytes(bytes: Uint8Array): Promise<WasmAbi> {
   if (!isNode()) {
@@ -51,45 +52,15 @@ export async function instantiateFromBytes(bytes: Uint8Array): Promise<WasmAbi> 
     return memory;
   };
 
-  const wasiSnapshotPreview1: Record<string, unknown> = {
-    // Empty environment: sizes_get writes (0, 0); environ_get is a no-op.
-    environ_sizes_get: (envCountPtr: number, envBufSizePtr: number): number => {
-      const view = new DataView(mem().buffer);
-      view.setUint32(envCountPtr, 0, true);
-      view.setUint32(envBufSizePtr, 0, true);
-      return ERRNO_SUCCESS;
+  const wasiSnapshotPreview1 = buildWasiImports(
+    mem,
+    (buf) => {
+      randomFillSync(buf);
     },
-    environ_get: (): number => ERRNO_SUCCESS,
-    sched_yield: (): number => ERRNO_SUCCESS,
-    // entropy_seed path — real randomness, not zeros.
-    random_get: (bufPtr: number, bufLen: number): number => {
-      randomFillSync(new Uint8Array(mem().buffer, bufPtr, bufLen));
-      return ERRNO_SUCCESS;
-    },
-    // stdout/stderr from panic paths: accept and discard.
-    fd_write: (fd: number, iovecsPtr: number, iovecsLen: number, nwrittenPtr: number): number => {
-      void fd;
-      const view = new DataView(mem().buffer);
-      let written = 0;
-      for (let i = 0; i < iovecsLen; i++) {
-        written += view.getUint32(iovecsPtr + i * 8 + 4, true);
-      }
-      view.setUint32(nwrittenPtr, written, true);
-      return ERRNO_SUCCESS;
-    },
-    // Monotonic nanoseconds; performance.now() is monotonic per spec.
-    clock_time_get: (clockId: number, precision: bigint, timePtr: number): number => {
-      void clockId;
-      void precision;
-      const view = new DataView(mem().buffer);
-      const nanos = BigInt(Math.round(performance.now() * 1e6));
-      view.setBigUint64(timePtr, nanos, true);
-      return ERRNO_SUCCESS;
-    },
-    proc_exit: (code: number): never => {
+    (code: number): never => {
       throw new GraphlawInitError(`graphlaw: module called proc_exit(${code})`);
     },
-  };
+  );
 
   const imports = { wasi_snapshot_preview1: wasiSnapshotPreview1 };
 

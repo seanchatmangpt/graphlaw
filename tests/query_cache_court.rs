@@ -6,7 +6,7 @@
 
 use graphlaw::duckdb_eval::{ExecutionReceipt, GraphLawDuckDB};
 use graphlaw::query_cache::{CacheEntry, QueryCache};
-use graphlaw::sql_ast::{compile_turtle, CompiledQuery, SqlLiteral};
+use graphlaw::sql_ast::{CompiledQuery, SqlLiteral, compile_turtle};
 
 /// Real seeded table, per court (no shared state across courts).
 fn seeded_db() -> GraphLawDuckDB {
@@ -59,7 +59,10 @@ fn compile_select(threshold: i64) -> CompiledQuery {
 fn dml_compiled(doc: &str) -> CompiledQuery {
     let compiled = compile_turtle(doc).expect("command arm must compile");
     assert!(!compiled.cacheable, "command arms are never cacheable");
-    assert!(compiled.canon_graph_bytes.is_some(), "command arms carry canon bytes");
+    assert!(
+        compiled.canon_graph_bytes.is_some(),
+        "command arms carry canon bytes"
+    );
     compiled
 }
 
@@ -95,8 +98,13 @@ ex:A a sql:AttachStatement ;
 /// Evals the threshold select; None if it failed.
 fn eval_select(db: &GraphLawDuckDB, threshold: i64) -> ExecutionReceipt {
     let compiled = compile_select(threshold);
-    db.eval_ast_query("http://example.org/queries#Q", &compiled, "urn:r:", "urn:p:")
-        .expect("select must evaluate")
+    db.eval_ast_query(
+        "http://example.org/queries#Q",
+        &compiled,
+        "urn:r:",
+        "urn:p:",
+    )
+    .expect("select must evaluate")
 }
 
 #[test]
@@ -123,10 +131,22 @@ fn f1_two_connections_one_entry() {
     assert_eq!(cache.epoch(), 0, "selects never bump the epoch");
 
     let hit = eval_select(&db_b, 400);
-    assert!(hit.cached, "connection B must be served from the shared entry");
-    assert!(hit.consult_ms <= miss.execution_ms, "consult must not cost more than the stored exec");
-    assert_eq!(miss.result_triples, hit.result_triples, "hit rows must equal stored rows");
-    assert_eq!(miss.query_hash, hit.query_hash, "hash identity survives the cache roundtrip");
+    assert!(
+        hit.cached,
+        "connection B must be served from the shared entry"
+    );
+    assert!(
+        hit.consult_ms <= miss.execution_ms,
+        "consult must not cost more than the stored exec"
+    );
+    assert_eq!(
+        miss.result_triples, hit.result_triples,
+        "hit rows must equal stored rows"
+    );
+    assert_eq!(
+        miss.query_hash, hit.query_hash,
+        "hash identity survives the cache roundtrip"
+    );
     assert_eq!(cache.len(), 1, "hit must not add entries");
 }
 
@@ -140,7 +160,10 @@ fn f2_flipped_literal_forks() {
     let r400 = eval_select(&db, 400);
     let r401 = eval_select(&db, 401);
     assert_ne!(r400.query_hash, r401.query_hash, "P_params is in the key");
-    assert!(!r400.cached && !r401.cached, "two distinct keys, both misses");
+    assert!(
+        !r400.cached && !r401.cached,
+        "two distinct keys, both misses"
+    );
     assert_eq!(cache_len(&db), 2, "two entries after two distinct misses");
 
     let again400 = eval_select(&db, 400);
@@ -172,13 +195,19 @@ fn f3_dml_never_stored() {
     let mut rows = stmt.query([]).unwrap();
     let row = rows.next().unwrap().unwrap();
     let landed: i64 = row.get(0).unwrap();
-    assert_eq!(landed, 1, "INSERT must really land, not be skipped by the cache");
+    assert_eq!(
+        landed, 1,
+        "INSERT must really land, not be skipped by the cache"
+    );
 
     assert_eq!(cache_len(&db), 0, "DML must never be stored");
     assert_eq!(cache_epoch(&db), 1, "successful DML bumps the epoch once");
 
     let sel = eval_select(&db, 400);
-    assert!(!sel.cached, "post-DML select is a fresh miss at the new epoch");
+    assert!(
+        !sel.cached,
+        "post-DML select is a fresh miss at the new epoch"
+    );
     assert_eq!(cache_len(&db), 1);
 }
 
@@ -202,12 +231,18 @@ fn f4_raw_sql_never_cached() {
     assert_eq!(cache_epoch(&db), 0, "raw use does not auto-bump");
 
     let hit = eval_select(&db, 400);
-    assert!(hit.cached, "cache still serves the pre-raw entry (caller must bump)");
+    assert!(
+        hit.cached,
+        "cache still serves the pre-raw entry (caller must bump)"
+    );
 
     // The contract: caller-side bump invalidates.
     db.shared_cache().bump();
     let miss = eval_select(&db, 400);
-    assert!(!miss.cached, "after an explicit bump the entry must be gone");
+    assert!(
+        !miss.cached,
+        "after an explicit bump the entry must be gone"
+    );
 }
 
 #[test]
@@ -227,7 +262,10 @@ fn f5_attach_bump_forces_miss() {
     assert_eq!(cache_len(&db), 0, "bump drops all entries");
 
     let post = eval_select(&db, 400);
-    assert!(!post.cached, "identical query+params must miss after ATTACH");
+    assert!(
+        !post.cached,
+        "identical query+params must miss after ATTACH"
+    );
     assert_eq!(cache_epoch(&db), 1, "selects never bump");
 }
 
@@ -256,7 +294,11 @@ fn parquet_view_registration_bumps() {
         .unwrap();
     db.register_parquet_view("telemetry_v", &file.display().to_string(), false)
         .expect("real parquet view registers");
-    assert_eq!(cache_epoch(&db), before + 1, "successful view registration bumps once");
+    assert_eq!(
+        cache_epoch(&db),
+        before + 1,
+        "successful view registration bumps once"
+    );
     let miss = eval_select(&db, 400);
     assert!(!miss.cached, "post-view-registration eval misses");
     std::fs::remove_dir_all(&dir).ok();
@@ -277,6 +319,9 @@ fn cache_unit_epoch_and_grounding() {
         result_triples: vec![],
         cached: false,
         consult_ms: 0.0,
+        artifact_digest_hex: None,
+        artifact_bytes: None,
+        artifact_warning: None,
     };
     let make_entry = |grounding: Vec<u8>, epoch: u64| CacheEntry {
         h_query: h,
@@ -286,14 +331,26 @@ fn cache_unit_epoch_and_grounding() {
         stored_at: graphlaw::query_cache::now_ms(),
     };
     cache.store(make_entry(b"canon-a".to_vec(), 0));
-    assert!(cache.consult(h, Some(b"canon-a")).is_some(), "matching grounding hits");
+    assert!(
+        cache.consult(h, Some(b"canon-a")).is_some(),
+        "matching grounding hits"
+    );
 
     cache.bump();
-    assert!(cache.consult(h, Some(b"canon-a")).is_none(), "post-bump is a miss");
+    assert!(
+        cache.consult(h, Some(b"canon-a")).is_none(),
+        "post-bump is a miss"
+    );
 
     cache.store(make_entry(b"canon-a".to_vec(), cache.epoch()));
-    assert!(cache.consult(h, Some(b"canon-b")).is_none(), "divergent grounding is a miss");
-    assert!(cache.consult(h, Some(b"canon-a")).is_some(), "matching grounding still hits");
+    assert!(
+        cache.consult(h, Some(b"canon-b")).is_none(),
+        "divergent grounding is a miss"
+    );
+    assert!(
+        cache.consult(h, Some(b"canon-a")).is_some(),
+        "matching grounding still hits"
+    );
 }
 
 #[test]
@@ -303,7 +360,7 @@ fn cache_unit_epoch_and_grounding() {
 /// afterwards. The benign twin (`f1`) asserts normal unpoisoned behavior;
 /// this court must flip if poison recovery is removed.
 fn poisoned_mutex_recovers() {
-    use std::panic::{catch_unwind, AssertUnwindSafe};
+    use std::panic::{AssertUnwindSafe, catch_unwind};
 
     let cache = QueryCache::new();
     let h = [11u8; 32];
@@ -316,6 +373,9 @@ fn poisoned_mutex_recovers() {
         result_triples: vec![],
         cached: false,
         consult_ms: 0.0,
+        artifact_digest_hex: None,
+        artifact_bytes: None,
+        artifact_warning: None,
     };
     cache.store(CacheEntry {
         h_query: h,
@@ -332,7 +392,10 @@ fn poisoned_mutex_recovers() {
             panic!("holder panic while the cache mutex is locked");
         })
     }));
-    assert!(panicked.is_err(), "the panic must really happen (anti-vacuity)");
+    assert!(
+        panicked.is_err(),
+        "the panic must really happen (anti-vacuity)"
+    );
 
     // Recovery: the pre-panic entry is intact and every surface works.
     assert_eq!(cache.len(), 1, "pre-panic entry survives the poison");
@@ -352,6 +415,34 @@ fn poisoned_mutex_recovers() {
     let bumped = cache.bump();
     assert_eq!(bumped, 1);
     assert_eq!(cache.len(), 0, "bump clears after recovery");
+}
+
+#[test]
+/// SQLRDF-22 G3 positive court: a receipt WITH the artifact fields set
+/// round-trips through the manual Serialize/Deserialize path — the keys are
+/// emitted when Some and restored on read.
+fn receipt_artifact_fields_roundtrip_serde() {
+    let receipt = ExecutionReceipt {
+        query_iri: "urn:q".into(),
+        query_hash: [9u8; 32],
+        sql_statement: "COPY ... TO 'out.bin'".into(),
+        rows_emitted: 3,
+        execution_ms: 2.5,
+        result_triples: vec![],
+        cached: false,
+        consult_ms: 0.0,
+        artifact_digest_hex: Some("deadbeef".into()),
+        artifact_bytes: Some(42),
+        artifact_warning: None,
+    };
+    let json = serde_json::to_string(&receipt).expect("serialize");
+    assert!(
+        json.contains("\"artifact_digest_hex\":\"deadbeef\"")
+            && json.contains("\"artifact_bytes\":42"),
+        "Some artifact fields must be emitted on the wire"
+    );
+    let back: ExecutionReceipt = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(back, receipt, "artifact fields must survive the roundtrip");
 }
 
 // -- cache witnesses through the public surface -----------------------------

@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "961828da08ae24174f29d2fbdf1070167b3fddeabcd8d9cf9f86b39d7c3a0102",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T162340Z-Write-961828da.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/egress-demo/drive.py",
+  "timestamp_utc": "2026-10-23T162340Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

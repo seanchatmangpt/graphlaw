@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "6fe472460c79b23b2979f4935d8f740b6185b63bb0d3661921cad97af4a6a1f1",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T060602Z-Write-6fe47246.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/designs/callsite-mutation-receipt.md",
+  "timestamp_utc": "2026-10-23T060602Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

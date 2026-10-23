@@ -246,11 +246,8 @@ mod vecgen {
     /// Fresh output dir for generator `name`, stable across calls within one
     /// test process so generate -> --verify sees the same vectors.
     fn gen_dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "graphlaw-vecgen-{}-{}",
-            name,
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("graphlaw-vecgen-{}-{}", name, std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).expect("create temp vecdir");
         dir
@@ -304,9 +301,8 @@ mod vecgen {
                 }
                 Some("n3") => {
                     let bytes = fs::read(&path).unwrap();
-                    let d = super::sniff(&bytes, Some("n3")).unwrap_or_else(|e| {
-                        panic!("{}: routing refused: {e}", path.display())
-                    });
+                    let d = super::sniff(&bytes, Some("n3"))
+                        .unwrap_or_else(|e| panic!("{}: routing refused: {e}", path.display()));
                     assert!(
                         matches!(
                             d,
@@ -364,7 +360,10 @@ mod vecgen {
     fn vecgen_allen_committed_comp_table_is_byte_current() {
         use std::sync::atomic::{AtomicU32, Ordering};
         static LOCK: AtomicU32 = AtomicU32::new(0);
-        while LOCK.compare_exchange(0, 1, Ordering::SeqCst, Ordering::SeqCst).is_err() {
+        while LOCK
+            .compare_exchange(0, 1, Ordering::SeqCst, Ordering::SeqCst)
+            .is_err()
+        {
             std::thread::yield_now();
         }
         let committed = fs::read_to_string("examples/allen_comp_table.n3").unwrap();

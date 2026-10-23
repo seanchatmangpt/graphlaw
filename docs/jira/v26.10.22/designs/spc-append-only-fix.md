@@ -36,6 +36,18 @@ Measurement logic untouched; only filename + stamp variable lines changed.
 drift is permanent history: the overwrite already happened and cannot be
 un-happened. The chain refusing to verify is the chain working correctly.
 
+## Real interface of receipt_chain_sync.sh (pinned 2026-10-22, lane M14)
+
+The script has exactly two modes — `sync` (default) and `--check` — plus an
+optional second argument naming an alternate repo root
+(`scripts/receipt_chain_sync.sh [--check] [repo-root]`). There is **no
+`--force` mode**; any unknown first argument hits the usage path with exit 2.
+Re-baseline is NOT a flag: it is the coordinator procedure
+`rm receipts/CHAIN.blake3 && bash scripts/receipt_chain_sync.sh sync`
+(delete-and-resync over the current receipt set), exactly as documented below.
+Guard: `scripts/chain_flag_court.sh` asserts unknown-flag exit 2 and
+`--check` exit 0 on the live chain.
+
 ## Re-baseline DECISION (coordinator-owned, not lane-executed)
 
 The chain goes green only via an explicit coordinator decision to re-baseline:

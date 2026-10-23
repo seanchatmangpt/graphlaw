@@ -1,0 +1,50 @@
+# Banking DvP setup — sql:StatementSequence document (SQLRDF-23 vocabulary,
+# docs/jira/v26.10.22/designs/statement-sequence-design.md section 2).
+# Two expression-form CREATE members (sql:tableDefinition, the admitted
+# CreateStatement arm — tests/fixtures/fibo/tc01_create.ttl shape) + scalar
+# INSERT seed members (tc01_insert shape) so the DvP legs have rows to bind.
+# The rdf:List spine is the ordering source; sql:statementIndex 0..3 is the
+# strictly-ascending cross-check (sql_ast.rs compile_turtle_document).
+# Expected members:
+#   CREATE TABLE dvp_cash_ledger (account VARCHAR, balance DECIMAL)
+#   CREATE TABLE dvp_asset_ledger (asset VARCHAR, holder VARCHAR)
+#   INSERT INTO dvp_cash_ledger (account, balance) VALUES ('BOOK-A', 100000.00)
+#   INSERT INTO dvp_asset_ledger (asset, holder) VALUES ('ISIN-XX-0001', 'BOOK-A')
+@prefix ex: <http://example.org/banking#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:doc a sql:StatementSequence ;
+    sql:statements ( ex:cash_ddl ex:asset_ddl ex:cash_seed ex:asset_seed ) .
+
+ex:cash_seed a sql:InsertStatement ;
+    sql:statementIndex 2 ;
+    sql:targetTable "dvp_cash_ledger" ;
+    sql:assignColumn "account" ; sql:assignValue "BOOK-A" ;
+    sql:assignColumn "balance" ; sql:assignValue "100000.00"^^xsd:decimal .
+
+ex:asset_seed a sql:InsertStatement ;
+    sql:statementIndex 3 ;
+    sql:targetTable "dvp_asset_ledger" ;
+    sql:assignColumn "asset" ; sql:assignValue "ISIN-XX-0001" ;
+    sql:assignColumn "holder" ; sql:assignValue "BOOK-A" .
+
+ex:cash_ddl a sql:CreateStatement ;
+    sql:statementIndex 0 ;
+    sql:tableDefinition [
+        sql:tableName "dvp_cash_ledger" ;
+        sql:columns (
+            [ sql:columnName "account" ; sql:columnType "VARCHAR" ]
+            [ sql:columnName "balance" ; sql:columnType "DECIMAL" ]
+        ) ;
+    ] .
+
+ex:asset_ddl a sql:CreateStatement ;
+    sql:statementIndex 1 ;
+    sql:tableDefinition [
+        sql:tableName "dvp_asset_ledger" ;
+        sql:columns (
+            [ sql:columnName "asset" ; sql:columnType "VARCHAR" ]
+            [ sql:columnName "holder" ; sql:columnType "VARCHAR" ]
+        ) ;
+    ] .

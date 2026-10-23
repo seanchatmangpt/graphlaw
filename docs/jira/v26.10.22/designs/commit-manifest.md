@@ -164,3 +164,127 @@ out of scope.
   eyeron switchover, 02/03/08 updated for facade+dir pairs, 07 body rewritten
   to the designs/*-except-commit-manifest.md form at L177; 04–06 unchanged
   from L146), verified below.
+
+---
+
+## Wave-2 integration addendum (2026-10-22/23) — delta since snapshot dab6a73
+
+Scope: `git diff --stat dab6a73 | tail -1` → **"61 files changed, 2181
+insertions(+), 256 deletions(-)"** (measured 2026-10-22, this lane). These
+are the wave-2 working-tree changes grouped into the same 8-bucket order
+above; bucket numbers below reference the table at L34.
+
+### (1) Behavior — bucket 2/8 rides (sql surface + registry/ABI)
+
+- `src/law.rs` (+15): `Step::TestCapabilityProbe(&'static str)` — doc-hidden
+  test-only probe step with authority callsite coverage, `Ceiling::Observe`,
+  so courts can drive `LawState::transition` with a capability absent from
+  `BACKEND_AUTHORITIES` and assert typed `REFUSAL_UNKNOWN_STEP_CAPABILITY`
+  through the public transition path. Rides bucket 2 (law surface).
+- `src/sql_ast.rs` (+36) + `src/sql_ast/refusals.rs` (+9):
+  `expr_references_target()` + MERGE scope-integrity gate (lane K5b,
+  REFUSAL-03 class): an ON condition referencing no target-qualified column
+  is refused typed (`ScopeIntegrity` /
+  `refusal_arm::MERGE_ON_NO_TARGET_COLUMN`) before any SQL is emitted.
+  Rides bucket 2.
+- `src/abi.rs` (+4), `src/lib.rs` (+13): `#[cfg(not(target_arch = "wasm32"))]`
+  gates on the frozen-duckdb staticlib surface (`duckdb_eval`,
+  `query_cache`, `sql builtins`, ABI op `duckdb`) — host-only because
+  frozen-duckdb's wasm staticlib emits the exception-handling proposal,
+  rejected by wasmi 2.0.0; SQL-in-RDF admission stays on the wasm dialect
+  path. lib.rs diff is cfg-gates + doc comments + BACKEND_AUTHORITIES
+  2.0.0→2.0.2 (no mod wiring in the diff — pre-existing at HEAD per the
+  L177 RESOLVED note above). Ride bucket 8 (registry/ABI switchover) with
+  `src/abi.rs`; the lib.rs half stays bucket 2 as resolved at L177.
+- Bins: `src/bin/{graphlaw_run,dl_dualroute,sa2a_portability_verify,
+  sa2a_run14_verify}.rs` — typed error exits + debug-harness removal
+  (+52/+17/+10/+13). Ride bucket 2 with the dl/vector-emission surface
+  (dl_dualroute already assigned there at L41).
+
+### (2) Courts (bucket 2/3 riders, `tests/`)
+
+New files (untracked): `tests/k5_hostile_sqlrdf.rs`,
+`tests/k6_hostile_lease.rs`, `tests/ocel_export_court.rs`,
+`tests/dl_dualroute_vector_pin.rs`. Strengthened:
+`tests/trust_attest.rs` (+72 — K2 sig-tamper guard, all 64 Ed25519
+signature bytes proven load-bearing, `assert_eq!(refused, 64)`);
+`tests/chicago_validation.rs` (+164 — exact-rowcount + exact-value readbacks,
+group/having/order-by reads back its own rows); `tests/law_state.rs` (+49 —
+end-to-end probe → typed refusal through `LawState::transition`);
+`tests/gws4_ipc_injection_court.rs` (+82), `tests/sql_rdf_dialect.rs`
+(+96), `tests/sql_rdf_conformance.rs` (+157), `tests/insa_law_order.rs`,
+`tests/refusal_crosswalk_differential.rs`, `tests/no_mock_markers.rs`
+(+335 — anti-mock gate), `tests/duckdb_statement_kinds.rs`,
+`tests/gws12_coldchain_cross_engine.rs` (+7). 4 files new,
+11 files strengthened, +941/−61.
+
+### (3) Gates — bucket 4 riders (`scripts/`)
+
+As re-read on disk 2026-10-22: **7 new** untracked gate scripts —
+`scripts/{chain_flag_court,count_gate,exit_capture_check,fleet_cleanup,
+machine_shaped_gate,receipt_replay_court,witness_gate}.sh` — plus **2
+hardened**: `scripts/mutation_court.sh` (+117, EXCLUDED-HOT-PATH per the
+L60 note — coordinator re-includes after the hot-path lane lands) and
+`scripts/doc_staleness_gate.sh` (+56). This is a count correction against
+the dispatch figure of "14 new + 4 hardened"; on-disk census is 16 total
+`scripts/*.sh` (7 new + 2 changed in this delta; the remainder pre-exist at
+dab6a73). Per-commit gates ride bucket 4 (mega setup + partition/staleness
+courts); mutation_court.sh stays typed-EXCLUDED-HOT-PATH.
+
+### (4) Docs truth pass — bucket 6/7
+
+`docs/{THESIS,UNIFIED_DISSERTATION}.md` → `docs/archive/` (rename, zero
+content delta), `docs/archive/README.md` new; truth passes on
+`docs/{ARCHITECTURE,WASM,api-stability,index,wasm-integration,DIALECTS}.md`,
+README/CHANGELOG/SECURITY; residual-unknowns record
+(`docs/jira/v26.10.22/designs/residual-unknowns.md`); 16 new designs/*
+decision records + RECEIPTS.md +239, INDEX.md +64, _LANES.md +47.
+Ride buckets 6 and 7 as assigned at L43/L44.
+
+### (5) External suite pointer — bucket 5 rider (`.github/workflows/ci.yml`, +40)
+
+`external-oracle` job checks out `seanchatmangpt/ggen-marketplace` pinned
+`ref: fc2e7f7dbda8a95d625bdb5aa3ff58aa36698534` (ggen-marketplace main @
+2026-10-22; comment in-file records the pin replacing a moving `ref: main`
+lease) and runs the pm4pytest/graphlaw pytest suite — **the suite itself
+lives in ggen-marketplace, not this repo**; ci.yml carries only the pinned
+checkout + invocation. Rides bucket 5 (CI).
+
+### (6) Re-pins — bucket 8, LAST (generated, as-regenerated)
+
+`ASSETS.blake3`, `registry/{ARTIFACTS.blake3, capability-registry.json,
+capability-registry.ttl}`, `receipts/CHAIN.blake3` (+260), `priv/graphlaw.wasm`
+(6793617 → 7098370 bytes) + `priv/graphlaw.wasm.blake3`, plus js/npm
+generated projections (`js/npm/src/generated/{artifact-meta,types}.ts`) —
+all regenerated, never patched; none may ride an earlier bucket (registry
+LAST law, L51). These carry bucket 8's OPERATOR-DECISION-PENDING status via
+the dual-artifact pin design (bucket 7 record).
+
+### Standing decision
+
+**C15 operator gate remains (OD-1).** The wave-2 tree does not change the
+L47 OPERATOR-DECISION-PENDING status of bucket 8; the dual-artifact pin
+decision is still the operator's, and the re-pins in (6) commit only after
+it.
+
+### Laws restated
+
+- **Registry LAST**: bucket 8 commits after all others; no earlier bucket
+  carries `src/{registry,abi}.rs`, `src/{registry,abi}/`, `registry/`,
+  `ASSETS.blake3`, `receipts/CHAIN.blake3`, or `priv/graphlaw.wasm*`.
+- **Facades-with-dirs**: each facade + its wired dir travel in the same
+  commit (L12 broken-tree rule); wave-2 behavior edits inside facades
+  (`sql_ast.rs`, `abi.rs`, `lib.rs`) do not change the pairing.
+- **Generated-as-regen**: the (6) re-pins are projections of their
+  generators; hand-patching them is a lithography violation.
+
+### Receipt (this addendum)
+
+- `git diff --stat dab6a73 | tail -1` → "61 files changed, 2181
+  insertions(+), 256 deletions(-)" — real output, exit 0, measured this
+  lane 2026-10-22.
+- Untracked census: `git status --porcelain | grep -c '^??'` → **292**.
+- Court file census: 4 new `tests/` files + 11 strengthened (+941/−61) from
+  `git diff --stat dab6a73 -- tests/`.
+- Script census: `ls scripts/*.sh` → 16 total; 7 untracked-new, 2 changed
+  (git status on scripts/, real output above).

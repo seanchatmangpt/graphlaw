@@ -17,7 +17,7 @@ npm i @seanchatmangpt/graphlaw
 Node >= 20.
 
 **Publish state**: the latest published version on npm is `26.10.14`. The sources in
-this directory are version `26.10.21` and are **not yet published**; `npm i` today
+this directory are version `26.10.22` and are **not yet published**; `npm i` today
 gets the older `26.10.14` artifact.
 
 ## Quickstart
@@ -129,12 +129,25 @@ you; if you drive them yourself, the discipline is:
 ## WASM artifact state
 
 The shipped `wasm/graphlaw.wasm` is pinned by BLAKE3
-`332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`
+`fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`
+(57,781,384 B; the DuckDB-linked new-EH artifact)
 (`src/generated/artifact-meta.ts`; the digest is re-pinned on every
-`npm run build`). This pin reflects the **last linked** cdylib — it is **not**
-a claim that the Rust workspace is currently link-green. The artifact is
-re-synced from a link-green `cargo build -p graphlaw-wasm --target
-wasm32-wasip1` of the workspace on the next link-green sync.
+`npm run build`). wasmi 2.0.0 loads these bytes. A SQL-in-RDF document
+parsed as `sql` returns the same dataset id as the same bytes parsed as
+Turtle.
+
+Historical pins:
+
+- `f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e`
+  (7,104,147 B)
+- `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`
+  (6,793,617 B) — did not return the same dataset id across `sql` and
+  Turtle parses.
+
+`test/artifact.test.ts` classifies the artifact by size: the legacy band
+(< 10 MB) covers the historical thin builds; the engine band (40–64 MiB)
+covers the DuckDB-linked builds. A pin outside either band fails the
+court.
 
 ## Resources
 

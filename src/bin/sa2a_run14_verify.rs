@@ -47,10 +47,17 @@ fn court_props(text: &str, ns: &str) -> Result<Option<BTreeMap<String, Vec<Strin
     let mut subjects = std::collections::BTreeSet::new();
     let mut props: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for r in rows {
-        let s = r[0]["value"].as_str().unwrap_or_default().to_string();
-        subjects.insert(s);
-        let p = r[1]["value"].as_str().unwrap_or_default();
-        let o = r[2]["value"].as_str().unwrap_or_default().to_string();
+        let s = r[0]["value"]
+            .as_str()
+            .ok_or_else(|| format!("row 0: non-string value in {r}"))?;
+        subjects.insert(s.to_string());
+        let p = r[1]["value"]
+            .as_str()
+            .ok_or_else(|| format!("row 1: non-string predicate in {r}"))?;
+        let o = r[2]["value"]
+            .as_str()
+            .ok_or_else(|| format!("row 2: non-string value in {r}"))?
+            .to_string();
         if let Some(local) = p.strip_prefix(ns) {
             props.entry(local.to_string()).or_default().push(o);
         }
@@ -152,12 +159,16 @@ fn judge(stem: &str, text: &str) -> Result<(&'static str, String), (&'static str
         }
     } else {
         disposition = one(&props, "expectedDecision").map_err(bad)?.to_string();
-        let num = stem.split('_').next().filter(|s| !s.is_empty()).ok_or_else(|| {
-            (
-                "MALFORMED_FILENAME",
-                format!("no run-number prefix before '_' in stem {stem:?}"),
-            )
-        })?;
+        let num = stem
+            .split('_')
+            .next()
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| {
+                (
+                    "MALFORMED_FILENAME",
+                    format!("no run-number prefix before '_' in stem {stem:?}"),
+                )
+            })?;
         let rk = one(&props, "replayKey").map_err(bad)?;
         if rk != format!("run14:{num}:{name}") {
             return Err((
@@ -207,7 +218,10 @@ fn main() -> ExitCode {
     let (mut fixtures, mut failures) = (vec![], vec![]);
     for path in &files {
         let (file, stem) = match (path.file_name(), path.file_stem()) {
-            (Some(f), Some(s)) => (f.to_string_lossy().to_string(), s.to_string_lossy().to_string()),
+            (Some(f), Some(s)) => (
+                f.to_string_lossy().to_string(),
+                s.to_string_lossy().to_string(),
+            ),
             _ => {
                 eprintln!(
                     "SKIP: unreadable fixture name (no file_name/file_stem) at {}",

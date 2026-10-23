@@ -26,6 +26,16 @@ Laws:
   the failure — report it as a finding, not a success.
 - Report honest failures: a court you could not run is BLOCKED with the exact
   error, never silently omitted.
+- Exit capture: NEVER trust `$?` after a pipe. This shell is zsh — there is no
+  `PIPESTATUS`; `$?` after `cmd | tail` is tail's exit, which reads as false
+  green when the head failed (witnessed 4x: W01, W04, AA4, W01-retry). Lawful
+  patterns, in order of preference:
+  1. `set -o pipefail` then read `${pipestatus[1]}` (zsh array, 1-indexed,
+     leftmost = head of pipe) for the per-stage code.
+  2. Run cargo bare (no pipe) and let its own result line + exit code stand.
+  A receipt whose exit code came from a pipe tail is not a receipt. Self-test:
+  `bash scripts/exit_capture_check.sh` must PASS (it runs `false | true` and
+  proves the wrapper detects exit 1).
 - Lithography: the repo path is `/Users/sac/graphlaw`.
 - Lithography: edit only the files this agent owns.
 - Lithography: a typed refusal stops the turn. Do not rephrase the refused tool into a second attempt.

@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "72391594eb57ef008b2b5092b9e86d74409bf1eb566175ad4fdd5bb1bb28e663",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T054539Z-Write-72391594.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/designs/sig-tamper-receipt.md",
+  "timestamp_utc": "2026-10-23T054539Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

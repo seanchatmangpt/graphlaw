@@ -32,7 +32,10 @@ fn canonical_returns_rdfc_id_and_canonical_nquads() {
     assert!(id.starts_with("blake3:"), "id is blake3:-prefixed: {id}");
     assert_eq!(id.len(), 7 + 64, "id is a full blake3 hex digest");
     let nq = r["nquads"].as_str().expect("nquads is a string");
-    assert!(nq.contains("<http://example.org/alice>"), "canonical form present: {nq}");
+    assert!(
+        nq.contains("<http://example.org/alice>"),
+        "canonical form present: {nq}"
+    );
     assert_eq!(r["quads"], json!(2));
 }
 
@@ -55,10 +58,15 @@ fn canonical_identity_moves_when_a_statement_changes() {
 
 #[test]
 fn canonical_refuses_invalid_rdf_with_typed_error() {
-    let r = call(json!({"op": "canonical", "data": {"text": "not rdf at all <<<", "dialect": "turtle"}}));
+    let r = call(
+        json!({"op": "canonical", "data": {"text": "not rdf at all <<<", "dialect": "turtle"}}),
+    );
     assert_eq!(r["ok"], json!(false));
     let err = &r["error"];
-    assert!(err["message"].as_str().is_some(), "error carries a message: {r}");
+    assert!(
+        err["message"].as_str().is_some(),
+        "error carries a message: {r}"
+    );
 }
 
 #[test]
@@ -67,5 +75,8 @@ fn canonical_handles_blank_node_isomorphism() {
                       "data": {"text": "_:x <http://example.org/knows> _:y .\n_:y <http://example.org/knows> _:x .\n", "dialect": "nquads"}}));
     let b = ok(json!({"op": "canonical",
                       "data": {"text": "_:p <http://example.org/knows> _:q .\n_:q <http://example.org/knows> _:p .\n"}}));
-    assert_eq!(a["id"], b["id"], "blank-node relabeling must not move identity");
+    assert_eq!(
+        a["id"], b["id"],
+        "blank-node relabeling must not move identity"
+    );
 }

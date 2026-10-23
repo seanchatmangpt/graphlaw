@@ -1,0 +1,23 @@
+# FIBO court-matrix fixture tc01_create
+# CreateStatement, expression form (sql:tableDefinition).
+# Compile arm: src/sql_ast.rs compile_expression_form "CreateStatement"
+# (tableDefinition -> tableName + columns rdf:List of
+# {columnName, columnType}; column_type allowlist includes DECIMAL,
+# sql_ast.rs:1799). Expected SQL:
+#   CREATE TABLE fibo_accounts (id INTEGER, balance DECIMAL, facility_id VARCHAR)
+# The facility_id column is shared court capital: tc02_update_bounded's
+# bounded WHERE (facility_id = 'FAC-CORP-9882') and tc08's exported table
+# both name it — the fixture set is one coherent schema.
+@prefix ex: <http://example.org/fibo#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+
+ex:stmt1 a sql:CreateStatement ;
+    sql:statementIndex 0 ;
+    sql:tableDefinition [
+        sql:tableName "fibo_accounts" ;
+        sql:columns (
+            [ sql:columnName "id" ; sql:columnType "INTEGER" ]
+            [ sql:columnName "balance" ; sql:columnType "DECIMAL" ]
+            [ sql:columnName "facility_id" ; sql:columnType "VARCHAR" ]
+        ) ;
+    ] .

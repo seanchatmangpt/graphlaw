@@ -1,0 +1,26 @@
+# FIBO court-matrix fixture tc01_insert
+# InsertStatement, scalar vocabulary, single assign pair.
+# Compile arm: src/sql_ast.rs compile_command "InsertStatement"
+# (all_idents/all_assigns positional pairing). assignValue is an
+# xsd:decimal with a lossless decimal lexical, so render_scalar_literal
+# emits it unquoted (SQLRDF-22 G1). Multi-pair scalar form (G4): all
+# sql:assignColumn/sql:assignValue literals are paired positionally in
+# reader order (src/sql_ast.rs compile_command InsertStatement); the shape
+# carries minCount 1 and no maxCount on the pairs. The single seeded row
+# carries facility_id='FAC-CORP-9882' so tc02's bounded UPDATE matches it.
+# Expected SQL:
+#   INSERT INTO fibo_accounts (id, balance, facility_id)
+#     VALUES (1, 1250.50, 'FAC-CORP-9882')
+@prefix ex: <http://example.org/fibo#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:stmt1 a sql:InsertStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "fibo_accounts" ;
+    sql:assignColumn "id" ;
+    sql:assignValue "1"^^xsd:integer ;
+    sql:assignColumn "balance" ;
+    sql:assignValue "1250.50"^^xsd:decimal ;
+    sql:assignColumn "facility_id" ;
+    sql:assignValue "FAC-CORP-9882" .

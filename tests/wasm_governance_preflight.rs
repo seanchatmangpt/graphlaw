@@ -35,7 +35,8 @@ fn shacl_req(data: &str, shapes: &str) -> Value {
 /// Violations must name the violated shape IRI and the constraint component.
 fn violations(r: &Value) -> Vec<(String, String)> {
     assert_eq!(
-        r["conforms"], Value::Bool(false),
+        r["conforms"],
+        Value::Bool(false),
         "hostile AST must not conform: {r}"
     );
     r["results"]
@@ -74,9 +75,10 @@ fn governance_preflight_refuses_whereless_scan_naming_select_statement_shape() {
     let r = wasm(&shacl_req(&ast, &shapes));
     let vs = violations(&r);
     assert!(
-        vs.iter()
-            .any(|(shape, component)| shape == "<http://graphlaw.org/sql#HasWhereClause>"
-                && component == "<http://www.w3.org/ns/shacl#MinCountConstraintComponent>"),
+        vs.iter().any(
+            |(shape, component)| shape == "<http://graphlaw.org/sql#HasWhereClause>"
+                && component == "<http://www.w3.org/ns/shacl#MinCountConstraintComponent>"
+        ),
         "expected sql:HasWhereClause (sql:SelectStatementShape) / MinCount violation, got {vs:?}"
     );
 }
@@ -92,9 +94,9 @@ fn governance_preflight_refuses_injection_token_naming_table_ref_shape() {
     let r = wasm(&shacl_req(&ast, &shapes));
     let vs = violations(&r);
     assert!(
-        vs.iter()
-            .any(|(shape, component)| shape == "<http://graphlaw.org/sql#FromTableNamePattern>"
-                && component == "<http://www.w3.org/ns/shacl#PatternConstraintComponent>"),
+        vs.iter().any(|(shape, component)| shape
+            == "<http://graphlaw.org/sql#FromTableNamePattern>"
+            && component == "<http://www.w3.org/ns/shacl#PatternConstraintComponent>"),
         "expected sql:FromTableNamePattern (sql:TableRefShape) / Pattern violation, got {vs:?}"
     );
 }

@@ -1,3 +1,10 @@
+> **SUPERSEDED 2026-10-23**: the EH wall this design worked around is closed —
+> single DuckDB-linked artifact, wasmtime 48 `wasm_exceptions`, archive law
+> `-mllvm -wasm-use-legacy-eh=0` (see `docs/WASM.md`, `docs/wasm-integration.md`,
+> eh-runner-decision-memo.md DECISION block, SQLRDF-21). Sections describing
+> per-call in-memory connections are also superseded by the session surface
+> (mode `open`/`exec-with-session`, `src/duckdb_op.rs`).
+
 # WASM ABI Op-15 Design: `duckdb` (cursor-streamed analytical eval)
 
 Standing: DESIGN (GWS-3 audit, 2026-10-21) · **Landed since (2026-10-22): the op dispatches (`src/abi.rs` → `src/duckdb_op.rs`, exec/stream/close with cursors, `DuckDb`/`ResourceLimit` typed refusals, 16 MiB outstanding cap per GAP-1)**; still pending: registry-table/manifest digest bump and the design's qualification courts · Target: wasm crate, additive tail op · ABI_VERSION: unchanged (op-superset precedent) · Date: 2026-10-21

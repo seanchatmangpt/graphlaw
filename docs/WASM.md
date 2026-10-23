@@ -17,19 +17,24 @@ Build command (root of the repository):
 
 ```sh
 # WASI_SDK_PATH is a wasi-sdk root: `bin/clang` and
-# `share/cmake/wasi-sdk-p1.cmake`. CI installs wasi-sdk 34 at `/opt/wasi-sdk`.
-# `~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1` is the engine archive, not that SDK.
-WASI_SDK_PATH=/opt/wasi-sdk \
+# `share/cmake/wasi-sdk-p1.cmake`. Locally the unpacked engine cache
+# `~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1` doubles as the SDK root;
+# CI installs wasi-sdk at `/opt/wasi-sdk`. The EH target feature is required:
+# the frozen-duckdb archive is built new-EH and wasmtime validates it only
+# with `wasm_exceptions` enabled in the guest.
+WASI_SDK_PATH="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1" \
+  CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling" \
   cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 ```
 
 Build prerequisite: `WASI_SDK_PATH` must point at a wasi-sdk root (`bin/clang`
-and `share/cmake/wasi-sdk-p1.cmake`). CI installs wasi-sdk 34 at
-`/opt/wasi-sdk`. The engine cache
-`~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1` holds `libduckdb.a`; it is
-not a wasi-sdk. With the variable set the link is green (exits 0, full DuckDB
-in the module); without it the build fails typed at frozen-duckdb-sys
-`build.rs` (`WASI_SDK_PATH required`).
+and `share/cmake/wasi-sdk-p1.cmake`) — locally the unpacked
+`~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1` tree, in CI
+`/opt/wasi-sdk`. `CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS` must carry
+`-C target-feature=+exception-handling` so the module validates under
+wasmtime's `wasm_exceptions` host; without it the module instantiates only in
+runners that tolerate the legacy semantics (none current). The link fails
+typed at frozen-duckdb-sys `build.rs` (`WASI_SDK_PATH required`).
 
 Output: `target/wasm32-wasip1/wasm/graphlaw_wasm.wasm` under the `wasm`
 profile (`opt-level = "s"`, LTO, `panic = "abort"`, stripped). The unit is ONE
@@ -39,26 +44,57 @@ module itself, so it is compiled into the same module — there is no separate
 `graphlaw_duckdb.wasm` target (the name is historical — pre-module-dispatch
 era) and no "embedded frozen-duckdb" aside.
 
-**Current build state: the wasm profile links when `WASI_SDK_PATH` is a wasi-sdk root.**
-A `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` exits 0
-(witnessed 2026-10-22, lane target dir `target-lane114`): `graphlaw_wasm.wasm`
-at 45,162,366 bytes, BLAKE3
-(historical lane-build witness, 2026-10-22 — not a registry pin, not
-re-pinned here) `9d299ed81795f3011321b268de1ccc008da74b4fcbbcfa4b3020e61c2d2a51f0`, under
-the 64 MiB ceiling. frozen-duckdb 2.0.2 emits `static=duckdb` and links
-`libduckdb_wasi_posix` plus wasi-sdk libc++. Without `WASI_SDK_PATH` the
-build fails typed at frozen-duckdb-sys `build.rs` (`WASI_SDK_PATH
-required`). This lane-built artifact is a link witness, not the
-reproducible-SDK rebuild: the recorded pin `332ea218…` (6,793,617 B) is the
-26.10.21 artifact and remains the current pin — a pin change belongs with a
-graphlaw version bump. The smalt sandbox's
-64 MiB linear-memory wall
-(`/Users/sac/smalt/docs/jira/v26.10.21/WASM-SANDBOX-SPEC.md`) is the ceiling
-this module was measured against.
+**Current build state: the one module links frozen-duckdb on every target.**
+The frozen-duckdb wasm static archive was rebuilt uniformly new-EH
+(`-fwasm-exceptions -mllvm -wasm-use-legacy-eh=0`; clang 24's legacy `try`
+emission was the blocker — wasmtime 48 dropped legacy EH and node 26 rejects
+mixed-EH modules), so the Tag section that once forced columnar execution
+onto the host is gone. `src/lib.rs` / `src/abi.rs` target gates are removed;
+the module dispatches `duckdb` itself. The `duckdb` op is module-owned and
+unadvertised: it stays off the hashed 14-op table in
+`contracts/abi-manifest.json`. The hosting runtime is wasmtime 48
+(`graphlaw-run-eh`, feature `runner-eh`) with `wasm_exceptions` enabled;
+wasmi 2.0.0 remains only for legacy pre-duckdb artifact courts and rejects
+the DuckDB-linked artifact (`exceptions proposal not enabled`).
+
+### Sandbox qualification: what the EH host does and does not contain
+
+`graphlaw-run-eh` (wasmtime 48) fail-closes imports to
+`wasi_snapshot_preview1` (`src/bin/graphlaw_run_eh.rs:222-231`) and
+preopens no directories. That is the whole containment. It does NOT
+provide: fuel or epoch metering (a wasm-infinite loop pins the thread);
+a linear-memory ceiling (the 64 MiB `WALL_BYTES` caps the request frame
+only, `src/bin/graphlaw_run_eh.rs:28`); environment isolation
+(`inherit_env()` hands the guest the full host env,
+`src/bin/graphlaw_run_eh.rs:236`). `GRAPHLAW_ATTACH_ROOTS` is a host
+library control and is not enforced inside the sandbox — preopening a
+directory for the runner bypasses the attach allowlist entirely
+(SECURITY.md "EH host sandbox";
+[how-to/egress-and-attach-policy.md](how-to/egress-and-attach-policy.md)
+"ATTACH policy vs the wasm sandbox").
+
+The next pin will be minted from this tree once the integration receipt
+lands (pending):
+
+```sh
+WASI_SDK_PATH="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1" \
+  CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling" \
+  cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+```
+
+The DuckDB-linked artifact grows to roughly 45 MB (from the 7.1 MB
+tag-section-0 pin). Size and digest values are witnessed at the integration
+receipt (pending) — this document carries no invented numbers. The prior
+tag-section-0 pin `f149433c…` (7,104,147 B) and the DuckDB-linked lane link
+witness `9d299ed8…` (45,162,366 B, 2026-10-22) are historical. The smalt
+sandbox's 64 MiB linear-memory wall
+(`/Users/sac/smalt/docs/jira/v26.10.21/WASM-SANDBOX-SPEC.md`) is the
+ceiling this module was measured against.
 
 Refusal surface unchanged by this: `REFUSAL-04` is the non-document-backed
-builtin SQL-eval refusal (`docs/refusals.md`); SQL-in-RDF still admits and
-compiles through the same `compile_turtle` path inside the wasm module.
+builtin SQL-eval refusal (`docs/refusals.md`); SQL-in-RDF admits and compiles
+through the same `compile_turtle` path inside the wasm module, and columnar
+`duckdb` evaluation now runs there too.
 
 ## Verify the bytes
 
@@ -86,43 +122,28 @@ after `cargo clean -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`,
 same target dir and machine, produced identical bytes. Not verified across
 separate target dirs or machines.
 
-### Pin currency (on-disk pins, header `pin-source=26.10.21`)
+### Pin currency (on-disk pins, header `pin-source=26.10.22`)
 
-The on-disk pins are `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`,
-6,793,617 B (`registry/ARTIFACTS.blake3` wasm row, re-read 2026-10-22;
-matches the tracked `priv/graphlaw.wasm` byte size). These describe the last
-artifact that built and pinned — **not** the current tree: the wasm32-wasip1
-link itself is green as of 2026-10-22 **when `WASI_SDK_PATH` is a wasi-sdk
-root** (`bin/clang`, `share/cmake/wasi-sdk-p1.cmake`; CI uses `/opt/wasi-sdk`).
-The lane witness is 45,162,366 B, BLAKE3
-(historical lane-build witness, 2026-10-22 — not a registry pin, not
-re-pinned here) `9d299ed81795f3011321b268de1ccc008da74b4fcbbcfa4b3020e61c2d2a51f0`. The build
-exits 0 with full DuckDB linked, and fails typed at frozen-duckdb-sys
-`build.rs` without the variable. But the link succeeding is not a re-pin: the
-on-disk pins still describe the 26.10.21 artifact, which is the current pin.
-The coordinator MUST NOT re-pin outside a lawful pin transition,
-and when it does, it MUST re-pin both `registry/ARTIFACTS.blake3` and
-`priv/graphlaw.wasm.blake3` in the same commit as any version bump. Do not
-fabricate a digest.
-
-**Re-pin blocker (witnessed 2026-10-22, L122):** every freshly built artifact
-carries a wasm Tag section (id 13) — both the clang-24 local-toolchain link and
-a fully wasi-sdk-34-built link (DuckDB archives rebuilt with SDK-34 clang
-`-fwasm-exceptions` plus header-gap shims). Wasm C++ exception handling uses
-tags, and DuckDB throws, so the section is intrinsic to any EH link. wasmi
-2.0.0 rejects it (`exceptions proposal not enabled`; no config toggle exists),
-and the `wasm_native_differential` court fails on both candidate artifacts
-(offsets 80783 / 77181 witnessed). The re-pin is therefore fail-closed BLOCKED
-until either the host courts move to a runtime that enables the exceptions
-proposal (wasmtime) or a no-EH DuckDB link is designed. Full evidence:
-`docs/jira/v26.10.22/designs/wasm-repin-receipt.md`.
+The on-disk pins still read `f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e`,
+7,104,147 B (`registry/ARTIFACTS.blake3` wasm row; matches
+`priv/graphlaw.wasm`) — the last tag-section-0 mint, now stale relative to
+the DuckDB-linked build described above. The new-EH re-pin (digest, byte
+size, `pin-source=` header on both pin files) is witnessed at the
+integration receipt (pending); this section is refreshed by the re-pin
+procedure in the upgrade checklist, never hand-written from a guess. The
+previous workspace pin
+`74ec3c8d6cdb3db1ff1869ac8b2454c2cf94d08f2a211b0b7d2af2c36b08a7a5`
+(7,098,370 B) was minted before the version string became 26.10.22.
+`332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`
+(6,793,617 B) is historical.
 
 ## Unknown-unknown status (G13, v26.10.20)
 
 Besides `wasm32-wasip1`, the `graphlaw-wasm` lib facade builds clean under
 `wasm32-unknown-unknown` with **zero `wasi_snapshot_preview1` imports** — the
-W03 falsifier. (Receipted before the frozen-duckdb dependency change; re-run
-the smoke after the wasm link is green.) The fail-closed smoke is
+W03 falsifier. (First receipted before the frozen-duckdb dependency change;
+re-run the smoke against the new-EH artifact at the integration receipt —
+pending.) The fail-closed smoke is
 `scripts/wasm_unknown_unknown_smoke.sh`: it asserts the wasm magic header,
 counts WASI imports (any hit exits 1), and loud-skips (exit 3) when no wasm
 runtime tooling is on PATH — never a silent pass.
@@ -156,7 +177,9 @@ write_manifest -- --exact`.
 keyless/clockless inputs (every law request carries an explicit `now_unix`)
 run natively via `graphlaw::abi::call` and through the compiled wasm module
 in a real wasmi runtime, with a raw-byte `assert_eq` per case — the two
-execution paths must produce **byte-identical** responses. Skips are loud
+execution paths must produce **byte-identical** responses. (wasmi-hosted as
+of writing; the DuckDB-linked new-EH artifact is hosted by wasmtime instead
+— same byte-identity law, different runner.) Skips are loud
 and counted, never silent. If it does not pass byte-identical, the artifact
 does not ship.
 
@@ -198,7 +221,9 @@ Run in order; each step gates the next:
    regenerate `contracts/abi-manifest.json` in the same change
    (`cargo test -p graphlaw --test abi_manifest_court write_manifest --
    --exact`); the court must pass byte-identical.
-2. `cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`
+2. Build with the full env (both variables, as shown in the build command
+   above — `WASI_SDK_PATH` plus
+   `CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling"`).
 3. Re-pin the dual digests from the real build: update the `wasm` row in
    `registry/ARTIFACTS.blake3` (header line too: `digest=`, `size=`,
    `pin-source=`) and rewrite `priv/graphlaw.wasm.blake3` (plus refresh
@@ -207,7 +232,10 @@ Run in order; each step gates the next:
    native vs wasm; the upgrade witness (W08). Skips must be zero or loud.
 5. `cargo test --test wasm_abi` — drives every op and dialect through the
    compiled module in wasmi exactly as a host would (`GRAPHLAW_WASM=<path>`
-   to test the prebuilt artifact instead of a fresh build).
+   to test the prebuilt artifact instead of a fresh build). wasmi 2.0.0
+   caveat: it rejects the DuckDB-linked new-EH artifact; wasmi courts are
+   for the legacy pre-duckdb pin only — the current artifact's host is
+   `graphlaw-run-eh` (wasmtime 48).
 6. `cargo test --test abi_manifest_court` — manifest regenerates
    byte-identical (or additive-only) against the new version.
 7. Update the pin section of [wasm-integration.md](wasm-integration.md).

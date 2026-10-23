@@ -21,15 +21,24 @@
 //! The blake3 of the pack ontology is pinned in-header; any drift in the pack
 //! fails loudly here before any consumer trusts the chain.
 
-
 use graphlaw::dialect::Dialect;
 use graphlaw::law::{LawState, Step};
-use graphlaw::tier::validate_n3_rules;
 use graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult};
 use graphlaw::sparql::NativeSparqlEngine;
+use graphlaw::tier::validate_n3_rules;
 
 /// Path to the pack ontology (canonical checkout; override for other workspaces).
-const ONTOLOGY_PATH: &str = "/Users/sac/ggen-marketplace/packs/insa-law-pack/ontology.ttl";
+/// Env-derived: $INSA_LAW_PACK/ontology.ttl, else $HOME-relative sibling pack.
+fn ontology_path() -> String {
+    std::env::var("INSA_LAW_PACK")
+        .map(|p| format!("{p}/ontology.ttl"))
+        .unwrap_or_else(|_| {
+            format!(
+                "{}/ggen-marketplace/packs/insa-law-pack/ontology.ttl",
+                std::env::var("HOME").expect("HOME set")
+            )
+        })
+}
 
 /// blake3 of packs/insa-law-pack/ontology.ttl (raw file bytes), computed at
 /// pin time from the canonical file.
@@ -51,14 +60,13 @@ const LAWFUL_EDGES: [&str; 8] = [
 /// CI machines without the sibling marketplace checkout must skip loudly
 /// rather than panic (same pattern as refusal_crosswalk_differential.rs).
 fn ontology_available() -> bool {
-    let path = std::env::var("INSA_LAW_PACK_ONTOLOGY").unwrap_or_else(|_| ONTOLOGY_PATH.to_string());
+    let path = std::env::var("INSA_LAW_PACK_ONTOLOGY").unwrap_or_else(|_| ontology_path());
     std::path::Path::new(&path).is_file()
 }
 
 fn ontology_bytes() -> Vec<u8> {
-    let path = std::env::var("INSA_LAW_PACK_ONTOLOGY").unwrap_or_else(|_| ONTOLOGY_PATH.to_string());
-    std::fs::read(&path)
-        .unwrap_or_else(|e| panic!("read {path}: {e}"))
+    let path = std::env::var("INSA_LAW_PACK_ONTOLOGY").unwrap_or_else(|_| ontology_path());
+    std::fs::read(&path).unwrap_or_else(|e| panic!("read {path}: {e}"))
 }
 
 /// Loud typed skip: name the missing pack path so CI logs show why, never a
@@ -67,7 +75,7 @@ fn require_ontology() -> bool {
     if ontology_available() {
         return true;
     }
-    let path = std::env::var("INSA_LAW_PACK_ONTOLOGY").unwrap_or_else(|_| ONTOLOGY_PATH.to_string());
+    let path = std::env::var("INSA_LAW_PACK_ONTOLOGY").unwrap_or_else(|_| ontology_path());
     eprintln!(
         "BLOCKED: insa-law-pack ontology absent at {path} \
          (set INSA_LAW_PACK_ONTOLOGY to override); courts skipped"
@@ -90,15 +98,16 @@ fn pinned_ontology() -> LawState {
 
 /// Run a SPARQL SELECT; return rows as term strings (RDF label form).
 fn rows(state: &LawState, query: &str) -> Vec<String> {
-    match NativeSparqlEngine::new().query(
-        state.dataset(),
-        SparqlRequest {
-            query,
-            base_iri: None,
-            substitutions: &[],
-        },
-    )
-    .expect("SPARQL executes")
+    match NativeSparqlEngine::new()
+        .query(
+            state.dataset(),
+            SparqlRequest {
+                query,
+                base_iri: None,
+                substitutions: &[],
+            },
+        )
+        .expect("SPARQL executes")
     {
         SparqlResult::Solutions { rows, .. } => rows
             .iter()
@@ -162,7 +171,10 @@ const LINK_RULES: &str = "\
 
 fn derive_link_ok(state: &LawState) -> LawState {
     let ruleset = validate_n3_rules(LINK_RULES.as_bytes(), None).expect("LINK_RULES validate");
-    match state.transition(&Step::DeriveN3 { rules: LINK_RULES, ruleset: &ruleset }) {
+    match state.transition(&Step::DeriveN3 {
+        rules: LINK_RULES,
+        ruleset: &ruleset,
+    }) {
         Ok((child, _receipt)) => child,
         Err(e) => panic!("DeriveN3 refused: {e}"),
     }
@@ -247,14 +259,7 @@ fn exactly_8_transitions_form_the_linear_chain() {
 /// Vow state stem for chain index 0..8 (Source..Rest).
 fn state_stem(i: usize) -> &'static str {
     [
-        "source",
-        "pattern",
-        "field",
-        "motion",
-        "receiver",
-        "fruit",
-        "receipt",
-        "rest",
+        "source", "pattern", "field", "motion", "receiver", "fruit", "receipt", "rest",
     ][i]
 }
 
@@ -290,10 +295,7 @@ fn lawful_trace_passes_n3_and_sparql_legs() {
 
     // Leg 1: law machinery (bounded N3 derivation) derives all 7 linkOk facts.
     let derived = derive_link_ok(&state);
-    let ok_count = scalar(
-        &derived,
-        "SELECT ?a WHERE { ?a <urn:insa-law:linkOk> ?o }",
-    );
+    let ok_count = scalar(&derived, "SELECT ?a WHERE { ?a <urn:insa-law:linkOk> ?o }");
     assert_eq!(ok_count, 7, "all 7 adjacent pairs lawful");
 
     // Leg 2: SPARQL over the combined graph — no violation row exists.
@@ -317,17 +319,18 @@ fn transposed_pair_is_flagged_by_both_legs() {
     // Leg 1: law machinery — swapping adjacent edges 4,5 breaks the 3
     // adjacencies touching those steps (3-4, 4-5, 5-6): 7 total, 3 broken.
     let derived = derive_link_ok(&state);
-    let ok_count = scalar(
-        &derived,
-        "SELECT ?a WHERE { ?a <urn:insa-law:linkOk> ?o }",
+    let ok_count = scalar(&derived, "SELECT ?a WHERE { ?a <urn:insa-law:linkOk> ?o }");
+    assert_eq!(
+        ok_count, 4,
+        "swapping adjacent edges 4,5 breaks 3 adjacencies"
     );
-    assert_eq!(ok_count, 4, "swapping adjacent edges 4,5 breaks 3 adjacencies");
 
     // Leg 2: SPARQL violation rows EXIST exactly at the three broken
     // adjacencies (step3,step4), (step4,step5), (step5,step6).
     let violations = rows(&state, VIOLATION_QUERY);
     assert_eq!(
-        violations.len(), 3,
+        violations.len(),
+        3,
         "three adjacent pairs violate the chain: {violations:?}"
     );
     let mut broken: Vec<String> = violations

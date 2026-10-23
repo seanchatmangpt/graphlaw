@@ -100,8 +100,8 @@ fn benign_skeleton_compiles() {
     let doc = format!(
         "{HEAD}\nex:Q a sql:SelectStatement ;\n    sql:statementIndex 1 ;\n    sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n    sql:selectList ( [ sql:columnName \"batch_id\" ] ) .\n"
     );
-    let compiled = compile_turtle(&doc)
-        .unwrap_or_else(|e| panic!("benign skeleton must compile, got: {e}"));
+    let compiled =
+        compile_turtle(&doc).unwrap_or_else(|e| panic!("benign skeleton must compile, got: {e}"));
     assert!(compiled.sql.contains("SELECT"));
 }
 
@@ -117,7 +117,10 @@ fn e1_mixed_projection_select_item() {
     // FLIP: drop the hostile second discriminator — the twin must compile.
     assert_flip_compiles(
         &doc,
-        (" sql:columnName \"batch_id\" ; sql:literalValue \"secret\"", " sql:columnName \"batch_id\""),
+        (
+            " sql:columnName \"batch_id\" ; sql:literalValue \"secret\"",
+            " sql:columnName \"batch_id\"",
+        ),
         "e1 flip",
     );
 }
@@ -134,7 +137,10 @@ fn e2_hostile_from_under_benign_fromtable() {
     // FLIP: drop the laundered sql:from list — the twin must compile.
     assert_flip_compiles(
         &doc,
-        (" sql:from ( [ sql:tableName \"events; drop table x\" ] ) ;", ""),
+        (
+            " sql:from ( [ sql:tableName \"events; drop table x\" ] ) ;",
+            "",
+        ),
         "e2 flip",
     );
 }
@@ -185,7 +191,11 @@ fn e3_unknown_where_predicate_refuses_typed() {
         }
     }
     // FLIP: the same clause under the KNOWN predicate sql:where compiles.
-    assert_flip_compiles(&doc, ("sql:whereX [", "sql:where ["), "e3-unknown-predicate flip");
+    assert_flip_compiles(
+        &doc,
+        ("sql:whereX [", "sql:where ["),
+        "e3-unknown-predicate flip",
+    );
 }
 
 /// E4 — malformed limit: a non-integer sql:limit must refuse, never silently
@@ -197,7 +207,11 @@ fn e4_malformed_limit() {
     );
     assert_refusal_01(&doc, "sql:limit 'ten'");
     // FLIP: well-formed limit — the twin must compile with the clause present.
-    assert_flip_compiles(&doc, ("\"ten\"^^xsd:integer", "\"10\"^^xsd:integer"), "e4-limit flip");
+    assert_flip_compiles(
+        &doc,
+        ("\"ten\"^^xsd:integer", "\"10\"^^xsd:integer"),
+        "e4-limit flip",
+    );
 }
 
 /// E4 — malformed offset: same law, negative integer.
@@ -208,7 +222,11 @@ fn e4_malformed_offset() {
     );
     assert_refusal_01(&doc, "sql:offset '-1'");
     // FLIP: well-formed offset — the twin must compile with the clause present.
-    assert_flip_compiles(&doc, ("\"-1\"^^xsd:integer", "\"5\"^^xsd:integer"), "e4-offset flip");
+    assert_flip_compiles(
+        &doc,
+        ("\"-1\"^^xsd:integer", "\"5\"^^xsd:integer"),
+        "e4-offset flip",
+    );
 }
 
 /// E5 — dual operand key: a binary expression carrying both sql:leftOperand
@@ -236,7 +254,11 @@ fn scope_on_operator_node_refuses() {
     );
     assert_refusal_01(&doc, "only defined on column or output-expression nodes");
     // FLIP: remove the misplaced scope — the twin must compile.
-    assert_flip_compiles(&doc, ("        sql:scope sql:ViewScope ;\n", ""), "scope-op flip");
+    assert_flip_compiles(
+        &doc,
+        ("        sql:scope sql:ViewScope ;\n", ""),
+        "scope-op flip",
+    );
 }
 
 /// Scope fuzz finding — dual scope: sql:scope is single-cardinality; two
@@ -251,7 +273,10 @@ fn dual_scope_on_column_refuses() {
     // refuse (REFUSAL-03), so the lawful twin carries none.
     assert_flip_compiles(
         &doc,
-        (" sql:columnName \"latency_ms\" ; sql:scope sql:ViewScope , sql:ProcessScope", " sql:columnName \"latency_ms\""),
+        (
+            " sql:columnName \"latency_ms\" ; sql:scope sql:ViewScope , sql:ProcessScope",
+            " sql:columnName \"latency_ms\"",
+        ),
         "dual-scope flip",
     );
 }
@@ -267,7 +292,10 @@ fn view_scope_column_in_where_refuses_03() {
     // FLIP: drop the scope from the predicate column — the twin must compile.
     assert_flip_compiles(
         &doc,
-        (" sql:columnName \"latency_ms\" ; sql:scope sql:ViewScope", " sql:columnName \"latency_ms\""),
+        (
+            " sql:columnName \"latency_ms\" ; sql:scope sql:ViewScope",
+            " sql:columnName \"latency_ms\"",
+        ),
         "view-scope flip",
     );
 }
@@ -386,7 +414,10 @@ fn tcb_process_scope_argument_in_legal_having_aggregate_refuses_03() {
     // twin (legal HAVING aggregate, unscoped argument) must compile.
     assert_flip_compiles(
         &doc,
-        (" sql:columnName \"latency_ms\" ; sql:scope sql:ProcessScope ] ]", " sql:columnName \"latency_ms\" ] ]"),
+        (
+            " sql:columnName \"latency_ms\" ; sql:scope sql:ProcessScope ] ]",
+            " sql:columnName \"latency_ms\" ] ]",
+        ),
         "tcb having-argument flip",
     );
 }
@@ -463,11 +494,7 @@ fn deep_nested_expression_refuses_recursion_limit() {
 
 /// Panic-message helper: keep a leaking compile's SQL bounded in court output.
 fn truncate_for_panic(sql: &str) -> &str {
-    if sql.len() > 200 {
-        &sql[..200]
-    } else {
-        sql
-    }
+    if sql.len() > 200 { &sql[..200] } else { sql }
 }
 
 /// Shape-layer channel witness (TC-MUT-01 M2 flip court): a from-less
@@ -527,7 +554,10 @@ fn d1_scope_on_join_table_refuses() {
     // alone and not to the join shape.
     assert_flip_compiles(
         &doc,
-        (" sql:tableName \"batches\" ; sql:scope sql:ViewScope", " sql:tableName \"batches\""),
+        (
+            " sql:tableName \"batches\" ; sql:scope sql:ViewScope",
+            " sql:tableName \"batches\"",
+        ),
         "d1 flip",
     );
 }
@@ -542,7 +572,10 @@ fn d1_scope_on_from_table_refuses() {
     // FLIP: drop the scope marker — the twin must compile.
     assert_flip_compiles(
         &doc,
-        ("\"telemetry_events\" ; sql:scope sql:ProcessScope", "\"telemetry_events\""),
+        (
+            "\"telemetry_events\" ; sql:scope sql:ProcessScope",
+            "\"telemetry_events\"",
+        ),
         "d1-from flip",
     );
 }
@@ -559,8 +592,9 @@ fn d3_order_by_aggregate_expression_wrapper_compiles() {
     let doc = format!(
         "{HEAD}\nex:Q a sql:SelectStatement ;\n    sql:statementIndex 1 ;\n    sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n    sql:selectList ( [ sql:columnName \"batch_id\" ] ) ;\n    sql:orderBy ( [ sql:expression [ sql:function <http://graphlaw.org/functions#COUNT> ; sql:argument [ sql:columnName \"latency_ms\" ] ] ; sql:direction \"DESC\"^^xsd:string ] ) .\n"
     );
-    let compiled = compile_turtle(&doc)
-        .unwrap_or_else(|e| panic!("d3: order-by aggregate via sql:expression must compile, got: {e}"));
+    let compiled = compile_turtle(&doc).unwrap_or_else(|e| {
+        panic!("d3: order-by aggregate via sql:expression must compile, got: {e}")
+    });
     assert!(
         compiled.sql.contains("COUNT") && compiled.sql.contains("ORDER BY"),
         "d3: expected ORDER BY ... COUNT(...) in compiled SQL, got: {}",
@@ -577,7 +611,10 @@ fn d3_expression_wrapper_plus_discriminator_refuses() {
     // FLIP: drop the laundered sql:expression — the twin must compile.
     assert_flip_compiles(
         &doc,
-        (" sql:columnName \"batch_id\" ; sql:expression [ sql:columnName \"secret\" ]", " sql:columnName \"batch_id\""),
+        (
+            " sql:columnName \"batch_id\" ; sql:expression [ sql:columnName \"secret\" ]",
+            " sql:columnName \"batch_id\"",
+        ),
         "d3-laundering flip",
     );
 }

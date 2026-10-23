@@ -476,6 +476,7 @@ pub(in crate::abi) fn op_law(v: &Value) -> Res<Value> {
             }
             "rdfs" => Step::EntailRdfs,
             "owl-rl" => Step::EntailOwlRl,
+            "sql" => Step::AdmitSql,
             "require-receipt" => {
                 step_name = str_field(step, "step_name")?.to_string();
                 Step::RequireReceipt { step: &step_name }

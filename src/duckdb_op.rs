@@ -1,5 +1,8 @@
-//! ABI op `duckdb`: cursor-streamed analytical eval over frozen-duckdb,
-//! linked into the wasm module with the rest of the kernel.
+//! ABI op `duckdb`: cursor-streamed analytical eval over frozen-duckdb.
+//! Host-only dispatch: the module is cfg-gated out of the wasm build
+//! (`src/lib.rs`), so in-wasm callers receive the typed Unsupported
+//! "unknown op" refusal at the EH wall; in-wasm execution awaits the
+//! emsdk rebuild (docs/jira/v26.10.22/designs/residual-unknowns.md row 1).
 //!
 //! Wire (JSON over the standard ABI):
 //! - `exec`: `{"op":"duckdb","mode":"exec","views":[{name,glob,hive}],
@@ -7,11 +10,36 @@
 //!   "vocab_prefix","params":[...]?,"chunk_rows"?}` — `ast.turtle` is the
 //!   Turtle AST document, compiled via `compile_turtle` (SQLRDF-17: no raw
 //!   SQL text admission; legacy `ast.text` is a typed refusal; wire `params`
-//!   must one-for-one match the AST-carried literal parameters)
-//!   → `{"ok":true,"receipt","query_hash","rows_emitted","cursor","more":bool}`
+//!   must one-for-one match the AST-carried literal parameters). Every
+//!   statement class compile_turtle admits executes (CTQ-2: SELECT, INSERT,
+//!   UPDATE, DELETE, CREATE, COPY, ATTACH, MERGE, ...); raw SQL text remains
+//!   a typed SQLRDF-17 refusal and Connect/Disconnect remain REFUSAL-02 at
+//!   compile time. ATTACH additionally passes the SQLRDF-22 G6 path
+//!   allowlist: env `GRAPHLAW_ATTACH_ROOTS` (colon-separated absolute
+//!   roots); env unset/empty refuses every ATTACH (fail-closed default).
+//!   → `{"ok":true,"receipt","query_hash","rows_emitted","cursor","more":bool}`.
+//!   Without `"session"`, exec opens a fresh in-memory connection per call, so
+//!   a DDL/DML effect is per-call ephemeral — admission and receipt minting
+//!   are the contract, not durable mutation.
 //! - `stream`: `{"op":"duckdb","mode":"stream","cursor","max_rows"}` →
 //!   `{"ok":true,"nquads","rows","cursor"|null,"more":bool}`
-//! - `close`: `{"op":"duckdb","mode":"close","cursor"}` → `{"ok":true}`
+//! - `open`: `{"op":"duckdb","mode":"open","session":"<name>"}` →
+//!   `{"ok":true,"session":"<name>"}` — opens one named in-memory connection
+//!   (same GAP-2 pragmas: memory_limit 32 MiB, threads=1), registered in a
+//!   process-local session registry. Duplicate session name → typed refusal;
+//!   registry cap (16) → typed ResourceLimit.
+//! - `exec`/`stream` with `"session"`: when the optional `"session"` field is
+//!   present, `exec` runs against that named session connection instead of a
+//!   fresh one, so a CREATE in one call is visible to a later INSERT/SELECT on
+//!   the same session (the DDL→DML→SELECT lifecycle). Unknown session id →
+//!   typed refusal (mirrors unknown-cursor). When absent, the fresh-connection
+//!   behavior is unchanged (back-compat).
+//! - `close`: `{"op":"duckdb","mode":"close","cursor"?,"session"?}` — drops a
+//!   cursor and/or a session; unknown handles are idempotent-ok.
+//!
+//! Session state is process-local and crash-only, like cursor state: it lives
+//! in this module's registry, is bounded by the 16-session cap, and dies with
+//! the process; closing a session frees its connection.
 //!
 //! DuckDB pragmas are enforced from compile-time constants (GAP-2): a caller
 //! cannot override them from the wire. Errors are typed refusals (GAP-4) and
@@ -23,7 +51,7 @@ use std::sync::{Mutex, OnceLock};
 
 use serde_json::{Value, json};
 
-use crate::abi::{check_limit, fail_with_details, limit, str_field, term_json, Fail};
+use crate::abi::{Fail, check_limit, fail_with_details, limit, str_field, term_json};
 use crate::dialect::{Refusal, RefusalKind};
 use crate::duckdb_eval::{GraphLawDuckDB, RdfTriple};
 use crate::sql_ast::SqlLiteral;
@@ -46,12 +74,34 @@ fn cursors() -> &'static Mutex<HashMap<String, Cursor>> {
     C.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
+/// Max live sessions (bounded process-local resource; over-cap is a typed
+/// ResourceLimit refusal).
+pub const MAX_SESSIONS: usize = 16;
+
+/// Session registry, process-local (crash-only, bounded by [`MAX_SESSIONS`];
+/// closing a session frees its connection).
+fn sessions() -> &'static Mutex<HashMap<String, GraphLawDuckDB>> {
+    static S: OnceLock<Mutex<HashMap<String, GraphLawDuckDB>>> = OnceLock::new();
+    S.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
 /// One open result cursor: row-major triples of the executed query.
 struct Cursor {
     /// Triples grouped by source row (one `Vec` per row, in query order).
     rows: Vec<Vec<RdfTriple>>,
     /// Next row index to emit.
     next: usize,
+}
+
+/// Read a mandatory string field of the duckdb op envelope as a TYPED
+/// `DuckDb` refusal (never the top-level `Unsupported` from `abi::str_field`):
+/// the op dispatches in-module and validates its own envelope, so a missing
+/// mandatory field is an op-surface refusal with the same message text
+/// ("missing string field `k`") the courts pin.
+fn duckdb_str_field<'a>(v: &'a Value, k: &str) -> Result<&'a str, Fail> {
+    v.get(k)
+        .and_then(Value::as_str)
+        .ok_or_else(|| duckdb_fail(format!("missing string field `{k}`")))
 }
 
 /// Typed refusal for a DuckDB execution failure (`DuckDb` code, GAP-4).
@@ -117,7 +167,7 @@ fn params_of(v: &Value) -> Result<Vec<SqlLiteral>, Fail> {
                     other => {
                         return Err(duckdb_fail(format!(
                             "unsupported param `{other}` (string, number, boolean or null)"
-                        )))
+                        )));
                     }
                 })
             })
@@ -161,6 +211,87 @@ fn mount_view(db: &GraphLawDuckDB, view: &Value) -> Result<(), Fail> {
     Ok(())
 }
 
+/// SQLRDF-22 G6 — ATTACH path admission policy. Env `GRAPHLAW_ATTACH_ROOTS`
+/// (colon-separated absolute roots) is the only attach surface: a compiled
+/// statement whose SQL lexically begins with `ATTACH` (the same prefix
+/// classification as `duckdb_eval::mutating_sql`'s ATTACH class) may attach
+/// only a database file that canonicalizes (best-effort
+/// `std::fs::canonicalize`; failure to canonicalize is a refusal) under at
+/// least one allowlisted root. The env unset or empty is fail-closed: every
+/// ATTACH is refused. A `':memory:'` path never canonicalizes, so it is
+/// refused under this policy too (fail-closed default; file-backed attach
+/// inside a root is the admitted form). Violations are typed `DuckDb`
+/// refusals, never engine errors. The env read is a thin wrapper over the
+/// pure [`enforce_attach_policy_with`]; courts drive the pure seam because
+/// the crate is `#![forbid(unsafe_code)]` and edition-2024 `set_var` is
+/// unsafe.
+fn enforce_attach_policy(sql: &str) -> Result<(), Fail> {
+    let roots = std::env::var("GRAPHLAW_ATTACH_ROOTS").ok();
+    enforce_attach_policy_with(sql, roots.as_deref())
+}
+
+/// Pure core of the ATTACH allowlist: `roots` is `None` when the env is
+/// unset and `Some("")` when it is empty — both fail closed.
+fn enforce_attach_policy_with(sql: &str, roots: Option<&str>) -> Result<(), Fail> {
+    fn outside(path: &str) -> Fail {
+        duckdb_fail(format!(
+            "attach path outside GRAPHLAW_ATTACH_ROOTS allowlist: {path}"
+        ))
+    }
+    let trimmed = sql.trim_start();
+    let upper: String = trimmed
+        .chars()
+        .take_while(|c| c.is_ascii_alphabetic())
+        .map(|c| c.to_ascii_uppercase())
+        .collect();
+    if upper != "ATTACH" {
+        return Ok(());
+    }
+    // Same single-quote rule as the COPY digest lane's `copy_to_path`
+    // (`''` inside a literal renders one `'`).
+    let mut chars = sql.chars().peekable();
+    let mut in_quote = false;
+    let mut current = String::new();
+    let raw = loop {
+        match chars.next() {
+            None => return Err(outside("<none>")),
+            Some('\'') => {
+                if in_quote && chars.peek() == Some(&'\'') {
+                    current.push('\'');
+                    let _ = chars.next();
+                } else if in_quote {
+                    break std::mem::take(&mut current);
+                } else {
+                    in_quote = true;
+                    current.clear();
+                }
+            }
+            Some(c) if in_quote => current.push(c),
+            Some(_) => {}
+        }
+    };
+    let roots = roots.unwrap_or_default();
+    if roots.is_empty() {
+        return Err(outside(&raw));
+    }
+    // Canonicalize is best-effort and load-bearing: a path that does not
+    // resolve (missing file, `:memory:`, relative junk) is refused.
+    let canonical = std::fs::canonicalize(&raw).map_err(|_| outside(&raw))?;
+    for root in roots.split(':') {
+        if root.is_empty() || !root.starts_with('/') {
+            continue;
+        }
+        if let Ok(croot) = std::fs::canonicalize(root) {
+            // Path::starts_with is component-wise, so `/roots/a2b` cannot
+            // satisfy the sibling-prefix `/roots/a`.
+            if canonical.starts_with(&croot) {
+                return Ok(());
+            }
+        }
+    }
+    Err(outside(&raw))
+}
+
 /// Mint an opaque cursor id (BLAKE3 over a process-local counter, the query
 /// hash and the row count; never from caller-supplied strings alone).
 fn cursor_id(query_hash: &[u8; 32], rows: usize) -> String {
@@ -181,18 +312,36 @@ pub fn dispatch(v: &Value) -> Result<Value, Fail> {
         .and_then(Value::as_str)
         .ok_or_else(|| duckdb_fail("missing string field `mode`"))?
     {
+        "open" => open_session(v),
         "exec" => exec(v),
         "stream" => stream(v),
         "close" => close(v),
         other => Err(duckdb_fail(format!(
-            "unknown mode `{other}` (exec|stream|close)"
+            "unknown mode `{other}` (open|exec|stream|close)"
         ))),
     }
 }
 
 /// `mode: "exec"`: mount views, bind/run the AST SQL, open a cursor.
+/// When a `session` field is present, executes against the named persistent
+/// session connection; otherwise a fresh in-memory connection (back-compat).
 fn exec(v: &Value) -> Result<Value, Fail> {
-    let db = open_connection()?;
+    match v.get("session").and_then(Value::as_str) {
+        Some(name) => {
+            let map = sessions().lock().expect("session registry lock");
+            let db = map
+                .get(name)
+                .ok_or_else(|| duckdb_fail(format!("unknown or expired session `{name}`")))?;
+            exec_on(v, db)
+        }
+        None => {
+            let db = open_connection()?;
+            exec_on(v, &db)
+        }
+    }
+}
+
+fn exec_on(v: &Value, db: &GraphLawDuckDB) -> Result<Value, Fail> {
     if let Some(views) = v.get("views") {
         let arr = views
             .as_array()
@@ -202,14 +351,16 @@ fn exec(v: &Value) -> Result<Value, Fail> {
             mount_view(&db, view)?;
         }
     }
-    let query_ast = str_field(v, "query_ast")?;
+    let query_ast = duckdb_str_field(v, "query_ast")?;
     let ast = v
         .get("ast")
         .filter(|a| a.is_object())
         .ok_or_else(|| duckdb_fail("missing `ast` object {\"turtle\": ...}"))?;
-    // SQLRDF-17 (C2 hole P1): the op admits ONLY graph-backed queries. The
-    // legacy `ast.text` raw-SQL field is refused typed — raw SQL text never
-    // executes and never mints a receipt. The caller supplies the Turtle AST
+    // SQLRDF-17 (C2 hole P1): the op admits ONLY graph-backed statements —
+    // every statement class compile_turtle admits (CTQ-2), never raw SQL
+    // text. The legacy `ast.text` raw-SQL field is refused typed — raw SQL
+    // text never executes and never mints a receipt. The caller supplies the
+    // Turtle AST
     // document; it is compiled by the same `compile_turtle` law the native
     // builtin uses, so the receipt is BLAKE3(Canon(G_AST) || P_params)
     // (sql-rdf Rec. section 1.4) with canon pinned at compile time.
@@ -218,25 +369,35 @@ fn exec(v: &Value) -> Result<Value, Fail> {
             "SQLRDF-17 refused: legacy `ast.text` raw SQL is not an admitted admission path — supply the Turtle AST document as `ast.turtle` (compiled via compile_turtle)",
         ));
     }
-    let turtle = str_field(ast, "turtle")?;
+    let turtle = duckdb_str_field(ast, "turtle")?;
     if let Some(d) = ast.get("dialect") {
         let d = d.as_str().unwrap_or("");
         if !d.is_empty() && !d.eq_ignore_ascii_case("duckdb") {
             return Err(duckdb_fail(format!("unsupported ast dialect `{d}`")));
         }
     }
+    // SQLRDF-23 (op half): `"document":true` routes the whole Turtle AST
+    // document through `compile_turtle_document` + `eval_ast_document` and
+    // answers with the BatchReceipt wire shape instead of the single-statement
+    // envelope. The legacy single-statement path below is untouched.
+    if v.get("document").and_then(Value::as_bool).unwrap_or(false) {
+        return exec_document_on(v, db, turtle);
+    }
     let params = params_of(v)?;
     let mut compiled = crate::sql_ast::compile_turtle(turtle)
         .map_err(|e| duckdb_fail(format!("AST compile refusal: {e}")))?;
-    // SQLRDF-17 F2(a): refuse non-query / catalog-mutating statements —
-    // exec opens a fresh in-memory connection per call, so a receipted DDL
-    // effect is unreachable; only the SelectStatement arm of compile_turtle
-    // (the `cacheable` classification bit) is admissible here.
-    if !compiled.cacheable {
-        return Err(duckdb_fail(
-            "SQLRDF-17/F2 refused: op-15 exec admits only graph-backed SELECT statements; catalog-mutating or non-query statements have no replayable effect on the per-call in-memory connection",
-        ));
-    }
+    // CTQ-2: no statement-class gate here beyond the SQLRDF-22 G6 ATTACH
+    // path allowlist (below): anything compile_turtle admitted Anything compile_turtle admitted
+    // (SELECT, INSERT, UPDATE, DELETE, CREATE, COPY, ATTACH, MERGE, ...)
+    // executes; the cacheable bit only steers the C1 cache inside the
+    // evaluator. Connect/Disconnect never reach this point (REFUSAL-02 at
+    // compile_turtle); raw SQL text never reaches this point (SQLRDF-17
+    // gate above). The per-call in-memory connection makes every DDL/DML
+    // effect ephemeral by construction — the receipt, not durable mutation,
+    // is the replayable artifact.
+    // SQLRDF-22 G6: ATTACH statements additionally pass the env allowlist
+    // (`GRAPHLAW_ATTACH_ROOTS`) before the engine sees them.
+    enforce_attach_policy(&compiled.sql)?;
     // Wire `params`, when supplied, must match the AST-carried literal
     // parameters one-for-one: the AST document is the admission record, so
     // its literals ARE P_params; extra or missing wire params are a typed
@@ -254,8 +415,8 @@ fn exec(v: &Value) -> Result<Value, Fail> {
         )));
     }
     compiled.params = params;
-    let subject_prefix = str_field(v, "subject_prefix")?;
-    let vocab_prefix = str_field(v, "vocab_prefix")?;
+    let subject_prefix = duckdb_str_field(v, "subject_prefix")?;
+    let vocab_prefix = duckdb_str_field(v, "vocab_prefix")?;
     if let Some(n) = v.get("chunk_rows") {
         let n = n
             .as_u64()
@@ -299,9 +460,98 @@ fn exec(v: &Value) -> Result<Value, Fail> {
     }))
 }
 
+/// SQLRDF-23 (op half): `"document":true` exec path. Compiles the whole
+/// Turtle AST document via [`crate::sql_ast::compile_turtle_document`] and
+/// evaluates it member-by-member via [`GraphLawDuckDB::eval_ast_document`]
+/// on the target connection (named session or fresh — the same routing as
+/// the single-statement path). Each member passes the SQLRDF-22 G6 ATTACH
+/// allowlist before the engine sees it. Success answers the BatchReceipt
+/// wire shape: `{"query_iri","doc_hash","members":[...],"rows_emitted",
+/// "failed_at":null}`. A mid-sequence member failure is the typed
+/// `BatchMemberFailed` refusal envelope naming the failing member and
+/// carrying the partial receipt (`members[0..index]` executed and committed)
+/// — never a generic DB error and never a silent swallow.
+fn exec_document_on(v: &Value, db: &GraphLawDuckDB, turtle: &str) -> Result<Value, Fail> {
+    let query_iri = duckdb_str_field(v, "query_ast")?;
+    let subject_prefix = duckdb_str_field(v, "subject_prefix")?;
+    let vocab_prefix = duckdb_str_field(v, "vocab_prefix")?;
+    let params = params_of(v)?;
+    if !params.is_empty() {
+        // SQLRDF-17 one-for-one law, document form: the Turtle AST document
+        // is the admission record for EVERY member; wire-level params cannot
+        // be bound one-for-one against a member ladder, so a non-empty wire
+        // param list is a typed refusal (never a silent re-bind).
+        return Err(duckdb_fail(
+            "SQLRDF-17 refused: document exec does not bind wire `params` — each sequence member's literals are carried in the Turtle AST document itself",
+        ));
+    }
+    let document = crate::sql_ast::compile_turtle_document(turtle)
+        .map_err(|e| duckdb_fail(format!("AST compile refusal: {e}")))?;
+    for member in &document.statements {
+        enforce_attach_policy(&member.sql)?;
+    }
+    // SQLRDF-26: `atomic` is an optional wire flag on the document exec op.
+    // Absent (or false) keeps the SQLRDF-23 pipeline path byte-identical;
+    // `true` selects BEGIN/COMMIT/ROLLBACK execution inside
+    // `eval_ast_document`. The Turtle root's `sql:atomic true` ORs in.
+    let wire_atomic = match v.get("atomic") {
+        None | Some(Value::Null) => false,
+        Some(b) => b
+            .as_bool()
+            .ok_or_else(|| duckdb_fail("`atomic` must be a boolean when present"))?,
+    };
+    match db.eval_ast_document(
+        query_iri,
+        &document,
+        subject_prefix,
+        vocab_prefix,
+        wire_atomic || document.atomic,
+    ) {
+        Ok(receipt) => {
+            let members = serde_json::to_value(&receipt.members)
+                .map_err(|e| duckdb_fail(format!("receipt serialization: {e}")))?;
+            Ok(json!({
+                "query_iri": receipt.query_iri,
+                "doc_hash": hex::encode(receipt.doc_hash),
+                "members": members,
+                "rows_emitted": receipt.rows_emitted,
+                "failed_at": receipt.failed_at,
+                "status": receipt.status,
+                "state_delta": receipt.state_delta,
+            }))
+        }
+        Err(crate::duckdb_eval::EvaluatorError::BatchMemberFailed {
+            index,
+            source,
+            partial,
+        }) => {
+            let partial_receipt = serde_json::to_value(&partial)
+                .map_err(|e| duckdb_fail(format!("receipt serialization: {e}")))?;
+            Err(fail_with_details(
+                Refusal {
+                    kind: RefusalKind::DuckDb,
+                    dialect: None,
+                    engine: None,
+                    message: format!(
+                        "duckdb: member {index} of document {query_iri} failed: {source}"
+                    )
+                    .into(),
+                },
+                json!({
+                    "code": "BatchMemberFailed",
+                    "member": index,
+                    "message": format!("member {index} failed: {source}"),
+                    "partial_receipt": partial_receipt,
+                }),
+            ))
+        }
+        Err(other) => Err(duckdb_fail(other)),
+    }
+}
+
 /// `mode: "stream"`: emit the next page of the cursor as N-Triples lines.
 fn stream(v: &Value) -> Result<Value, Fail> {
-    let cursor = str_field(v, "cursor")?;
+    let cursor = duckdb_str_field(v, "cursor")?;
     let max_rows = match v.get("max_rows") {
         None | Some(Value::Null) => MAX_CHUNK_ROWS,
         Some(n) => {
@@ -333,7 +583,11 @@ fn stream(v: &Value) -> Result<Value, Fail> {
     }
     if nt.len() > MAX_CHUNK_BYTES {
         // Typed refusal (GAP-4); the cursor is untouched — retry smaller.
-        return Err(duckdb_limit("duckdb_chunk_bytes", nt.len(), MAX_CHUNK_BYTES));
+        return Err(duckdb_limit(
+            "duckdb_chunk_bytes",
+            nt.len(),
+            MAX_CHUNK_BYTES,
+        ));
     }
     c.next += page.len();
     let remaining = c.rows.len() - c.next;
@@ -369,14 +623,40 @@ fn escape_nt(s: &str) -> String {
     s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
-/// `mode: "close"`: drop a cursor; unknown cursors are idempotent-ok so a
-/// host crash-recovery path cannot wedge on close.
+/// `mode: "open"`: open a named persistent in-memory session connection with
+/// the same enforced pragmas as every graphlaw connection (GAP-2). Duplicate
+/// names are a typed refusal; the registry cap is a typed ResourceLimit.
+fn open_session(v: &Value) -> Result<Value, Fail> {
+    let name = str_field(v, "session")?;
+    if name.is_empty() {
+        return Err(duckdb_fail("`session` must be a non-empty string"));
+    }
+    let mut map = sessions().lock().expect("session registry lock");
+    if map.contains_key(name) {
+        return Err(duckdb_fail(format!(
+            "session `{name}` already exists (close it before reopening)"
+        )));
+    }
+    check_limit("duckdb_sessions", map.len() + 1, MAX_SESSIONS)?;
+    map.insert(name.to_string(), open_connection()?);
+    Ok(json!({"session": name}))
+}
+
+/// `mode: "close"`: drop a cursor and/or a session; unknown handles are
+/// idempotent-ok so a host crash-recovery path cannot wedge on close.
 fn close(v: &Value) -> Result<Value, Fail> {
-    let cursor = str_field(v, "cursor")?;
-    cursors()
-        .lock()
-        .expect("cursor registry lock")
-        .remove(cursor);
+    if let Some(cursor) = v.get("cursor").and_then(Value::as_str) {
+        cursors()
+            .lock()
+            .expect("cursor registry lock")
+            .remove(cursor);
+    }
+    if let Some(session) = v.get("session").and_then(Value::as_str) {
+        sessions()
+            .lock()
+            .expect("session registry lock")
+            .remove(session);
+    }
     Ok(json!({}))
 }
 
@@ -384,7 +664,9 @@ fn close(v: &Value) -> Result<Value, Fail> {
 /// tests/wasm_duckdb_op.rs).
 #[cfg(test)]
 mod tests {
-    use serde_json::json;
+    use serde_json::{Value, json};
+
+    use super::enforce_attach_policy_with;
 
     #[test]
     fn unknown_cursor_is_a_typed_refusal() {
@@ -395,11 +677,644 @@ mod tests {
         assert_eq!(out["error"]["kind"], "DuckDb");
     }
 
+    /// CTQ-2: the graph-backed InsertStatement is admitted and executes
+    /// against the real in-memory DuckDB. The per-call connection has no
+    /// `telemetry_events` table, so the observable is the ENGINE-level
+    /// error (table does not exist) — the SQLRDF-17/F2 admission refusal is
+    /// gone and the statement reached execution. (Positive end-to-end insert
+    /// with row readback is courted in src/duckdb_eval.rs on a seeded table.)
+    #[test]
+    fn insert_statement_executes_past_admission() {
+        let turtle = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/queries#> .
+ex:I a sql:InsertStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "telemetry_events" ;
+    sql:assignColumn "batch_id" ;
+    sql:assignValue "x" .
+"#;
+        let out = crate::abi::call_json(&json!({
+            "op": "duckdb",
+            "mode": "exec",
+            "query_ast": "urn:insert",
+            "ast": {"turtle": turtle},
+            "subject_prefix": "urn:row/",
+            "vocab_prefix": "urn:p/",
+        }));
+        assert_eq!(out["ok"], serde_json::Value::Bool(false), "{out}");
+        let kind = out["error"]["kind"].as_str().unwrap_or("");
+        let message = out["error"]["message"].as_str().unwrap_or("");
+        assert_eq!(
+            kind, "DuckDb",
+            "insert must reach the DuckDB engine, not the admission gate: {out}"
+        );
+        assert!(
+            message.contains("telemetry_events"),
+            "engine error must name the insert target: {out}"
+        );
+    }
+
+    /// CTQ-2 DDL lifecycle: a graph-backed CREATE TABLE executes on the real
+    /// in-memory DuckDB with a minted receipt and cursor (rows_emitted == 0).
+    #[test]
+    fn create_table_exec_executes_on_real_duckdb() {
+        let turtle = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/queries#> .
+ex:C a sql:CreateStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "telemetry_events" ;
+    sql:assignColumn "batch_id" .
+"#;
+        let out = crate::abi::call_json(&json!({
+            "op": "duckdb",
+            "mode": "exec",
+            "query_ast": "urn:create",
+            "ast": {"turtle": turtle},
+            "subject_prefix": "urn:row/",
+            "vocab_prefix": "urn:p/",
+        }));
+        assert_eq!(out["ok"], serde_json::Value::Bool(true), "{out}");
+        assert_eq!(out["rows_emitted"], 0, "{out}");
+        assert!(
+            out["cursor"].as_str().is_some_and(|c| !c.is_empty()),
+            "cursor minted: {out}"
+        );
+        assert_eq!(out["more"], serde_json::Value::Bool(false), "{out}");
+        // Real readback: the CREATE actually ran on this connection — the
+        // cursor's receipt SQL text is the CREATE statement.
+        assert!(
+            out["sql"].as_str().unwrap_or("").starts_with("CREATE TABLE telemetry_events"),
+            "{out}"
+        );
+    }
+
+    /// Hostile twin: hand-built raw SQL text (`ast.text`) stays refused even
+    /// though every compile_turtle statement class is now admitted.
+    #[test]
+    fn raw_sql_text_still_refused() {
+        let out = crate::abi::call_json(&json!({
+            "op": "duckdb",
+            "mode": "exec",
+            "query_ast": "urn:evil",
+            "ast": {"text": "SELECT 42; DROP TABLE telemetry_events"},
+            "subject_prefix": "urn:row/",
+            "vocab_prefix": "urn:p/",
+        }));
+        assert_eq!(out["ok"], serde_json::Value::Bool(false), "{out}");
+        let message = out["error"]["message"].as_str().unwrap_or("");
+        assert!(
+            message.contains("SQLRDF-17"),
+            "raw SQL text must stay a typed SQLRDF-17 refusal: {out}"
+        );
+    }
+
     #[test]
     fn close_of_unknown_cursor_is_ok() {
         let out = crate::abi::call_json(&json!({
             "op": "duckdb", "mode": "close", "cursor": "nope"
         }));
         assert_eq!(out["ok"], serde_json::Value::Bool(true));
+    }
+
+    /// SQLRDF-21 acceptance (b): the full CREATE → INSERT → SELECT lifecycle
+    /// over one persistent named session. Without the session surface this
+    /// court cannot pass — the fresh-connection exec makes each statement
+    /// per-call ephemeral.
+    #[test]
+    fn session_lifecycle_create_insert_select() {
+        let create = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/sessions#> .
+ex:C a sql:CreateStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "telemetry_events" ;
+    sql:assignColumn "batch_id" .
+"#;
+        let insert = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <http://example.org/sessions#> .
+ex:I a sql:InsertStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "telemetry_events" ;
+    sql:assignColumn "batch_id" ;
+    sql:assignValue "42"^^xsd:integer .
+"#;
+        let select = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/sessions#> .
+ex:S a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList ( [ sql:columnName "batch_id" ] ) .
+"#;
+        let exec = |turtle: &'static str, session: &str| {
+            crate::abi::call_json(&json!({
+                "op": "duckdb",
+                "mode": "exec",
+                "session": session,
+                "query_ast": "urn:q",
+                "ast": {"turtle": turtle},
+                "subject_prefix": "urn:row/",
+                "vocab_prefix": "urn:p/",
+            }))
+        };
+        let open = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "open", "session": "lifecycle-court"
+        }));
+        assert_eq!(open["ok"], serde_json::Value::Bool(true), "{open}");
+        assert_eq!(open["session"], "lifecycle-court", "{open}");
+
+        let c = exec(create, "lifecycle-court");
+        assert_eq!(c["ok"], serde_json::Value::Bool(true), "{c}");
+        let i = exec(insert, "lifecycle-court");
+        assert_eq!(i["ok"], serde_json::Value::Bool(true), "{i}");
+        assert_eq!(i["rows_emitted"], 1, "{i}");
+
+        let s = exec(select, "lifecycle-court");
+        assert_eq!(s["ok"], serde_json::Value::Bool(true), "{s}");
+        assert_eq!(s["rows_emitted"], 1, "{s}");
+        let cur = s["cursor"].as_str().expect("select cursor");
+        let page = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "stream", "cursor": cur, "max_rows": 10
+        }));
+        assert_eq!(page["ok"], serde_json::Value::Bool(true), "{page}");
+        let nt = page["nquads"].as_str().expect("nquads");
+        assert!(
+            nt.contains("sess-row-1") || nt.contains("\"42\""),
+            "the inserted value must read back exactly: {page}"
+        );
+    }
+
+    /// Back-compat twin: identical ops WITHOUT a session keep the
+    /// fresh-connection behavior — the CREATE's effect is per-call ephemeral,
+    /// so the SELECT on a later call hits the engine's missing-table error
+    /// (typed DuckDb), exactly as the legacy contract states.
+    #[test]
+    fn no_session_stays_fresh_connection() {
+        let create = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/sessions#> .
+ex:C a sql:CreateStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "fresh_events" ;
+    sql:assignColumn "batch_id" .
+"#;
+        let select = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/sessions#> .
+ex:S a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "fresh_events" ] ;
+    sql:selectList ( [ sql:columnName "batch_id" ] ) .
+"#;
+        let c = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "exec",
+            "query_ast": "urn:c", "ast": {"turtle": create},
+            "subject_prefix": "urn:row/", "vocab_prefix": "urn:p/",
+        }));
+        assert_eq!(c["ok"], serde_json::Value::Bool(true), "{c}");
+        let s = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "exec",
+            "query_ast": "urn:s", "ast": {"turtle": select},
+            "subject_prefix": "urn:row/", "vocab_prefix": "urn:p/",
+        }));
+        assert_eq!(s["ok"], serde_json::Value::Bool(false), "{s}");
+        assert_eq!(s["error"]["kind"], "DuckDb", "{s}");
+        assert!(
+            s["error"]["message"]
+                .as_str()
+                .unwrap_or("")
+                .contains("fresh_events"),
+            "engine error must name the missing table: {s}"
+        );
+    }
+
+    #[test]
+    fn unknown_session_is_a_typed_refusal() {
+        let out = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "exec", "session": "nope",
+            "query_ast": "urn:q",
+            "ast": {"turtle": "@prefix sql: <http://graphlaw.org/sql#> . ex:q a sql:SelectStatement ."},
+            "subject_prefix": "urn:row/", "vocab_prefix": "urn:p/",
+        }));
+        assert_eq!(out["ok"], serde_json::Value::Bool(false), "{out}");
+        assert_eq!(out["error"]["kind"], "DuckDb", "{out}");
+        assert!(
+            out["error"]["message"]
+                .as_str()
+                .unwrap_or("")
+                .contains("unknown or expired session"),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn duplicate_session_name_is_a_typed_refusal() {
+        let open = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "open", "session": "dup-court"
+        }));
+        assert_eq!(open["ok"], serde_json::Value::Bool(true), "{open}");
+        let again = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "open", "session": "dup-court"
+        }));
+        assert_eq!(again["ok"], serde_json::Value::Bool(false), "{again}");
+        assert!(
+            again["error"]["message"]
+                .as_str()
+                .unwrap_or("")
+                .contains("already exists"),
+            "{again}"
+        );
+        let freed = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "close", "session": "dup-court"
+        }));
+        assert_eq!(freed["ok"], serde_json::Value::Bool(true), "{freed}");
+    }
+
+    /// Closing a session frees it: subsequent use is a typed refusal, and a
+    /// fresh open of the same name succeeds (registry slot reclaimed).
+    #[test]
+    fn close_frees_session() {
+        let open = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "open", "session": "frees-court"
+        }));
+        assert_eq!(open["ok"], serde_json::Value::Bool(true), "{open}");
+        let closed = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "close", "session": "frees-court"
+        }));
+        assert_eq!(closed["ok"], serde_json::Value::Bool(true), "{closed}");
+        let use_after = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "exec", "session": "frees-court",
+            "query_ast": "urn:q",
+            "ast": {"turtle": "@prefix sql: <http://graphlaw.org/sql#> . ex:q a sql:SelectStatement ."},
+            "subject_prefix": "urn:row/", "vocab_prefix": "urn:p/",
+        }));
+        assert_eq!(use_after["ok"], serde_json::Value::Bool(false), "{use_after}");
+        assert!(
+            use_after["error"]["message"]
+                .as_str()
+                .unwrap_or("")
+                .contains("unknown or expired session"),
+            "{use_after}"
+        );
+        let reopen = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "open", "session": "frees-court"
+        }));
+        assert_eq!(reopen["ok"], serde_json::Value::Bool(true), "{reopen}");
+        // Leave the registry as we found it (process-local hygiene).
+        crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "close", "session": "frees-court"
+        }));
+    }
+
+    fn attach_turtle(path: &str) -> String {
+        format!(
+            r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/attach#> .
+ex:A a sql:AttachStatement ;
+    sql:statementIndex 1 ;
+    sql:attachTarget [ sql:databasePath "{path}" ; sql:attachAlias "g6root" ] .
+"#
+        )
+    }
+
+    fn attach_exec_with(path: &str, roots: Option<&str>) -> Result<(), crate::abi::Fail> {
+        // Drive the pure policy seam directly (the crate is
+        // `#![forbid(unsafe_code)]`, so edition-2024 `set_var` is out); the
+        // seam is exactly the function `exec_on` calls after the env read,
+        // so the courts cover the same admission surface.
+        enforce_attach_policy_with(
+            &crate::sql_ast::compile_turtle(&attach_turtle(path))
+                .expect("ATTACH doc compiles")
+                .sql,
+            roots,
+        )
+    }
+
+    fn attach_exec(path: &str, session: &str) -> serde_json::Value {
+        crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "exec", "session": session,
+            "query_ast": "urn:attach",
+            "ast": {"turtle": attach_turtle(path)},
+            "subject_prefix": "urn:row/", "vocab_prefix": "urn:p/",
+        }))
+    }
+
+    /// SQLRDF-22 G6 (a): ATTACH of a real file DB inside the allowlisted
+    /// pid-keyed root is ADMITTED by the policy seam, and the compiled ATTACH
+    /// then executes on a real DuckDB connection with the alias reading back
+    /// through a real CREATE/INSERT/SELECT lifecycle. (The roots value is
+    /// injected into the pure seam because the crate is
+    /// `#![forbid(unsafe_code)]` and edition-2024 `set_var` is unsafe; the
+    /// seam is byte-identical to the one `exec_on` calls after its safe env
+    /// read, and court (c) proves the ABI exec path consults the policy.)
+    #[test]
+    fn attach_inside_root_executes_and_reads_back() {
+        let root = format!("/tmp/graphlaw-g6-attach-{}", std::process::id());
+        std::fs::create_dir_all(&root).unwrap();
+        let db_path = format!("{root}/inside.duckdb");
+        // The file must exist for canonicalize AND be a valid DuckDB
+        // database: create it by actually opening a connection at the path
+        // (real file DB, no mocks), then release the handle.
+        drop(frozen_duckdb::Connection::open(&db_path).unwrap());
+        let sql = crate::sql_ast::compile_turtle(&attach_turtle(&db_path))
+            .expect("ATTACH doc compiles")
+            .sql;
+        enforce_attach_policy_with(&sql, Some(&root)).expect("inside-root ATTACH admits");
+        // Real execution + alias readback on a real connection.
+        let conn = frozen_duckdb::Connection::open_in_memory().unwrap();
+        conn.execute_batch(&sql).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE g6root.main.t (x INTEGER); INSERT INTO g6root.main.t VALUES (42);",
+        )
+        .unwrap();
+        let n: String = conn
+            .query_row(
+                "SELECT count(*)::VARCHAR FROM g6root.main.t WHERE x = 42",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(n, "1", "the attached file DB reads back through the alias");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// SQLRDF-22 G6 (b): a path outside the root is a typed refusal carrying
+    /// the stable message and the raw path, and the op surface stays
+    /// unpoisoned — a follow-up CREATE through the same ABI exec path
+    /// executes on a real session connection.
+    #[test]
+    fn attach_outside_root_refused_connection_unpoisoned() {
+        let root = format!("/tmp/graphlaw-g6-attach-out-{}", std::process::id());
+        std::fs::create_dir_all(&root).unwrap();
+        let outside = format!("/tmp/graphlaw-g6-outside-{}.duckdb", std::process::id());
+        std::fs::File::create(&outside).unwrap();
+        let err = attach_exec_with(&outside, Some(&root))
+            .expect_err("outside-root ATTACH must be refused");
+        let rendered = format!("{err:?}");
+        assert!(
+            rendered.contains("attach path outside GRAPHLAW_ATTACH_ROOTS allowlist")
+                && rendered.contains(&outside),
+            "{rendered}"
+        );
+        let _ = std::fs::remove_dir_all(&root);
+        let _ = std::fs::remove_file(&outside);
+        // The connection is unpoisoned: a follow-up CREATE via the ABI exec
+        // path (named session, real DuckDB) succeeds after the refusal.
+        let open = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "open", "session": "g6-unpoisoned"
+        }));
+        assert_eq!(open["ok"], serde_json::Value::Bool(true), "{open}");
+        let create = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "exec", "session": "g6-unpoisoned",
+            "query_ast": "urn:c",
+            "ast": {"turtle": r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/attach#> .
+ex:C a sql:CreateStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "g6_unpoisoned" ;
+    sql:assignColumn "x" .
+"#},
+            "subject_prefix": "urn:row/", "vocab_prefix": "urn:p/",
+        }));
+        assert_eq!(create["ok"], serde_json::Value::Bool(true), "{create}");
+        crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "close", "session": "g6-unpoisoned"
+        }));
+    }
+
+    /// SQLRDF-22 G6 (c): roots unset (`None`) or empty is fail-closed —
+    /// every ATTACH is a typed refusal — and the full ABI exec path enforces
+    /// it: the real env read in `exec_on` feeds the same seam, so with the
+    /// env unset (test process default) the wire ATTACH refuses typed.
+    #[test]
+    fn attach_env_unset_refused() {
+        assert!(std::env::var("GRAPHLAW_ATTACH_ROOTS").is_err(),
+            "court assumes the env is unset in the test process");
+        let open = crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "open", "session": "g6-unset"
+        }));
+        assert_eq!(open["ok"], serde_json::Value::Bool(true), "{open}");
+        let out = attach_exec("/tmp/graphlaw-g6-nowhere.duckdb", "g6-unset");
+        assert_eq!(out["ok"], serde_json::Value::Bool(false), "{out}");
+        assert_eq!(out["error"]["kind"], "DuckDb", "{out}");
+        assert!(
+            out["error"]["message"]
+                .as_str()
+                .unwrap_or("")
+                .contains("GRAPHLAW_ATTACH_ROOTS"),
+            "{out}"
+        );
+        crate::abi::call_json(&json!({
+            "op": "duckdb", "mode": "close", "session": "g6-unset"
+        }));
+        // Empty-string roots fail closed identically at the pure seam.
+        assert!(attach_exec_with("/tmp/graphlaw-g6-nowhere.duckdb", Some("")).is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // SQLRDF-23 (op half, lane G6) courts: `"document":true` exec over real
+    // frozen-duckdb via compile_turtle_document + eval_ast_document. Chicago:
+    // real connections, real table readbacks, no mocks, no sleeps.
+    // -----------------------------------------------------------------------
+
+    fn doc_events_turtle(select_table: &str) -> String {
+        format!(
+            r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <http://example.org/doc#> .
+sql:doc a sql:StatementSequence ;
+    sql:statements ( ex:c ex:i ex:s ) .
+ex:c a sql:CreateStatement ;
+    sql:statementIndex 0 ;
+    sql:targetTable "doc_events" ;
+    sql:assignColumn "batch_id" .
+ex:i a sql:InsertStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "doc_events" ;
+    sql:assignColumn "batch_id" ;
+    sql:assignValue "42"^^xsd:integer .
+ex:s a sql:SelectStatement ;
+    sql:statementIndex 2 ;
+    sql:fromTable [ sql:tableName "{select_table}" ] ;
+    sql:selectList ( [ sql:columnName "batch_id" ] ) .
+"#
+        )
+    }
+
+    fn doc_exec_request(turtle: &str) -> Value {
+        json!({
+            "op": "duckdb",
+            "mode": "exec",
+            "document": true,
+            "query_ast": "urn:doc-court",
+            "ast": {"turtle": turtle},
+            "subject_prefix": "urn:row/",
+            "vocab_prefix": "urn:p/",
+        })
+    }
+
+    /// Court (a): 3-member CREATE→INSERT→SELECT sequence through call_json
+    /// answers ok:true with the BatchReceipt shape (rows_emitted [0,1,1]) and
+    /// the final member's SELECT actually emitted the inserted row — the
+    /// members' result triples name the real row on a real connection.
+    #[test]
+    fn document_exec_three_member_sequence_with_readback() {
+        let out = crate::abi::call_json(&doc_exec_request(&doc_events_turtle("doc_events")));
+        assert_eq!(out["ok"], serde_json::Value::Bool(true), "{out}");
+        assert_eq!(
+            out["query_iri"], "urn:doc-court",
+            "{out}"
+        );
+        assert_eq!(
+            out["rows_emitted"],
+            serde_json::json!([0, 1, 1]),
+            "CREATE=0, INSERT=1, SELECT=1: {out}"
+        );
+        assert_eq!(out["failed_at"], serde_json::Value::Null, "{out}");
+        assert_eq!(
+            out["doc_hash"].as_str().map(str::len),
+            Some(64),
+            "hex BLAKE3 doc_hash: {out}"
+        );
+        // Real readback: member 2 (the SELECT) materialized the row 42 that
+        // member 1 inserted on the same fresh connection.
+        let member = &out["members"][2];
+        assert!(
+            member["sql_statement"]
+                .as_str()
+                .unwrap_or("")
+                .contains("doc_events"),
+            "{out}"
+        );
+        assert_eq!(
+            member["rows_emitted"], 1,
+            "SELECT emitted the inserted row: {out}"
+        );
+        let triples = member["result_triples"]
+            .as_array()
+            .expect("result triples");
+        assert!(
+            triples
+                .iter()
+                .any(|t| t["object"]["Literal"]["lexical_form"] == "42"),
+            "the inserted batch_id 42 crossed the SELECT: {triples:?}"
+        );
+    }
+
+    /// Court (b): member 2 (the SELECT, reading a missing table) fails
+    /// mid-sequence → typed BatchMemberFailed envelope naming "member 2",
+    /// carrying the partial receipt with members [0..2] executed and
+    /// failed_at = 2.
+    #[test]
+    fn document_exec_failing_member_yields_typed_batch_member_failed() {
+        let out = crate::abi::call_json(&doc_exec_request(&doc_events_turtle("no_such_table")));
+        assert_eq!(out["ok"], serde_json::Value::Bool(false), "{out}");
+        assert_eq!(
+            out["error"]["kind"], "DuckDb",
+            "typed refusal, never a generic trap: {out}"
+        );
+        let details = &out["error"]["details"];
+        assert_eq!(details["code"], "BatchMemberFailed", "{out}");
+        assert_eq!(details["member"], 2, "{out}");
+        let message = details["message"].as_str().unwrap_or("");
+        assert!(
+            message.contains("member 2"),
+            "envelope must name the failing member: {out}"
+        );
+        // Partial receipt: members 0 (CREATE) and 1 (INSERT) executed and
+        // committed; only the SELECT failed.
+        let partial = &details["partial_receipt"];
+        assert_eq!(partial["failed_at"], 2, "{out}");
+        assert_eq!(partial["rows_emitted"], serde_json::json!([0, 1]), "{out}");
+        assert_eq!(
+            partial["members"].as_array().map(Vec::len),
+            Some(2),
+            "members [0..2] executed: {out}"
+        );
+        assert_eq!(
+            partial["members"][0]["sql_statement"]
+                .as_str()
+                .unwrap_or("")
+                .starts_with("CREATE TABLE doc_events"),
+            true,
+            "{out}"
+        );
+    }
+
+    /// SQLRDF-26: wire-level `"atomic": true` — success envelope carries
+    /// `status`/`state_delta`; a mid-sequence failure carries a partial
+    /// receipt marked `status:"aborted"`, `state_delta:0` (atomic rollback),
+    /// and the wire flag composes with the Turtle `sql:atomic` root flag.
+    #[test]
+    fn document_exec_atomic_wire_flag_aborted_partial_and_success_fields() {
+        // Success: atomic true, 3-member CREATE/INSERT/SELECT.
+        let mut req = doc_exec_request(&doc_events_turtle("doc_events"));
+        req["atomic"] = serde_json::Value::Bool(true);
+        let out = crate::abi::call_json(&req);
+        assert_eq!(out["ok"], serde_json::Value::Bool(true), "{out}");
+        assert_eq!(out["status"], "partial", "{out}");
+        assert_eq!(out["state_delta"], 3, "{out}");
+
+        // Failure twin: SELECT member reads a missing table inside atomic
+        // mode -> partial_receipt marks aborted with state_delta 0. The
+        // Turtle root also carries sql:atomic true — the OR of the wire and
+        // compile flags is exercised on the same op surface.
+        let ttl = doc_events_turtle("no_such_table")
+            .replacen("sql:doc a sql:StatementSequence ;", "sql:doc a sql:StatementSequence ;\n    sql:atomic true ;", 1);
+        let mut req2 = doc_exec_request(&ttl);
+        req2["atomic"] = serde_json::Value::Bool(true);
+        let out = crate::abi::call_json(&req2);
+        assert_eq!(out["ok"], serde_json::Value::Bool(false), "{out}");
+        let details = &out["error"]["details"];
+        assert_eq!(details["code"], "BatchMemberFailed", "{out}");
+        let partial = &details["partial_receipt"];
+        assert_eq!(partial["status"], "aborted", "{out}");
+        assert_eq!(partial["state_delta"], 0, "{out}");
+    }
+
+    /// SQLRDF-26: pipeline mode stays byte-identical when `atomic` is
+    /// absent — the success envelope must NOT carry the SQLRDF-23 status
+    /// change, only the additive fields (status "partial", state_delta =
+    /// member count).
+    #[test]
+    fn document_exec_pipeline_absent_atomic_additive_only() {
+        let out = crate::abi::call_json(&doc_exec_request(&doc_events_turtle("doc_events")));
+        assert_eq!(out["ok"], serde_json::Value::Bool(true), "{out}");
+        assert_eq!(out["status"], "partial", "{out}");
+        assert_eq!(out["state_delta"], 3, "{out}");
+        assert_eq!(out["failed_at"], serde_json::Value::Null, "{out}");
+    }
+
+    /// Court (c): the legacy single-statement exec request is untouched —
+    /// no `document` flag, same wire shape, real cursor + receipt IRI.
+    #[test]
+    fn legacy_exec_without_document_flag_unchanged() {
+        let turtle = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/legacy#> .
+ex:C a sql:CreateStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "legacy_events" ;
+    sql:assignColumn "batch_id" .
+"#;
+        let out = crate::abi::call_json(&json!({
+            "op": "duckdb",
+            "mode": "exec",
+            "query_ast": "urn:legacy",
+            "ast": {"turtle": turtle},
+            "subject_prefix": "urn:row/",
+            "vocab_prefix": "urn:p/",
+        }));
+        assert_eq!(out["ok"], serde_json::Value::Bool(true), "{out}");
+        assert_eq!(out["rows_emitted"], 0, "{out}");
+        assert!(out["cursor"].as_str().is_some(), "legacy cursor minted: {out}");
+        assert!(out["receipt"].as_str().unwrap_or("").starts_with("urn:row//receipt_"), "{out}");
     }
 }

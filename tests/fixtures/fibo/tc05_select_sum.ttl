@@ -1,0 +1,19 @@
+# FIBO court-matrix fixture tc05_select_sum
+# SelectStatement with a SUM aggregate projection, in the admitted bare-aggregate
+# shape (section 7): sql:function <http://graphlaw.org/functions#SUM> +
+# sql:argument column node — the same shape the lifecycle court inlines
+# (tests/wasm_duckdb_lifecycle_eh.rs sum_select_doc) and chicago_validation's
+# aggregate courts admit. The prior sql:functionName+sql:aliasName form carried
+# two expression discriminators (REFUSAL-01) and compiled to a scalar call the
+# frozen wasm catalog does not carry.
+# fromTable legacy alias branch of SelectStatementShape (sql-ast.ttl:323).
+# Expected SQL: SELECT SUM(balance) FROM fibo_accounts
+@prefix ex: <http://example.org/fibo#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+
+ex:stmt1 a sql:SelectStatement ;
+    sql:statementIndex 5 ;
+    sql:fromTable [ sql:tableName "fibo_accounts" ] ;
+    sql:selectList ( [ sql:expression [
+        sql:function <http://graphlaw.org/functions#SUM> ;
+        sql:argument [ sql:columnName "balance" ] ] ] ) .

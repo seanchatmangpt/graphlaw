@@ -18,8 +18,6 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use purrdf::{RdfDataset, TermId, TermValue};
 
-
-
 /// Maximum SHACL shape-nesting depth admitted through
 /// [`crate::law::Step::AdmitShacl`] (`sh:node` / `sh:property` / `sh:not` /
 /// `sh:qualifiedValueShape` chains, plus `sh:and`/`sh:or`/`sh:xone` list

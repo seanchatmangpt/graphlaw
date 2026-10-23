@@ -41,7 +41,11 @@ fn turtle(kind: &str) -> String {
         "ExecuteStatement" => r#"<http://example.org/s> a sql:ExecuteStatement ; sql:targetTable "q" ; sql:assignValue "1"^^xsd:integer ."#.into(),
         "DeallocateStatement" => r#"<http://example.org/s> a sql:DeallocateStatement ; sql:targetTable "q" ."#.into(),
         "LoadStatement" => r#"<http://example.org/s> a sql:LoadStatement ; sql:targetTable "icu" ."#.into(),
-        "InstallStatement" => r#"<http://example.org/s> a sql:InstallStatement ; sql:targetTable "tpch" ; sql:assignValue "/Users/sac/.duckdb/extensions" ."#.into(),
+        // Env-derived extensions dir: machine-independent fixture (lane M09).
+        "InstallStatement" => format!(
+            r#"<http://example.org/s> a sql:InstallStatement ; sql:targetTable "tpch" ; sql:assignValue "{}" ."#,
+            std::env::temp_dir().join("graphlaw-duckdb-extensions").display()
+        ),
         "AttachStatement" => r#"<http://example.org/s> a sql:AttachStatement ; sql:targetTable "mem" ."#.into(),
         "UseStatement" => r#"<http://example.org/s> a sql:UseStatement ; sql:targetTable "memu" ."#.into(),
         "DetachStatement" => r#"<http://example.org/s> a sql:DetachStatement ; sql:targetTable "memd" ."#.into(),
@@ -76,13 +80,19 @@ fn every_peg_statement_compiles_and_runs_or_refuses() {
         };
         let db = GraphLawDuckDB::open_in_memory_allowing_unsigned_extensions().unwrap();
         db.raw_connection()
-            .execute_batch("CREATE TABLE t(id INTEGER, name VARCHAR); INSERT INTO t VALUES (1, 'a');")
+            .execute_batch(
+                "CREATE TABLE t(id INTEGER, name VARCHAR); INSERT INTO t VALUES (1, 'a');",
+            )
             .unwrap();
         if let Err(e) = db.raw_connection().execute_batch(&sql) {
             failures.push(format!("{kind}: run: {e}\n  sql: {sql}"));
         }
     }
-    assert!(failures.is_empty(), "unfinished statement classes:\n{}", failures.join("\n"));
+    assert!(
+        failures.is_empty(),
+        "unfinished statement classes:\n{}",
+        failures.join("\n")
+    );
 }
 
 #[test]
@@ -234,7 +244,9 @@ fn section7_merge_graph(status_literal: &str) -> String {
         )
     ] ."#
     );
-    format!("@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n{body}")
+    format!(
+        "@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n{body}"
+    )
 }
 
 /// BLAKE3 over the RDFC-1.0 canonical form of the AST graph (rec §1.4 Canon(G_AST)).
@@ -285,7 +297,11 @@ fn h_query(turtle: &str, params: &[SqlLiteral]) -> [u8; 32] {
 
 /// Seeds the two real tables the §7 MERGE reads and writes.
 fn seed_section7(db: &GraphLawDuckDB, third_invoice_settled: bool) {
-    let third = if third_invoice_settled { "SETTLED" } else { "PENDING" };
+    let third = if third_invoice_settled {
+        "SETTLED"
+    } else {
+        "PENDING"
+    };
     db.raw_connection()
         .execute_batch(&format!(
             "CREATE SCHEMA staging;
@@ -322,7 +338,10 @@ fn run_section7_merge(
             compiled.sql
         );
     }
-    assert_eq!(compiled.params, vec![SqlLiteral::String(status_literal.into())]);
+    assert_eq!(
+        compiled.params,
+        vec![SqlLiteral::String(status_literal.into())]
+    );
 
     let db = GraphLawDuckDB::open_in_memory().unwrap();
     seed_section7(&db, third_invoice_settled);
@@ -366,7 +385,10 @@ fn merge_receipt_is_blake3_of_canonical_graph_and_params_not_sql_text() {
     let (replayed, _) = run_section7_merge("SETTLED", true);
     let graph = section7_merge_graph("SETTLED");
     let expected = h_query(&graph, &[SqlLiteral::String("SETTLED".into())]);
-    assert_eq!(receipt.query_hash, expected, "receipt must be BLAKE3(Canon(G_AST) || P_params)");
+    assert_eq!(
+        receipt.query_hash, expected,
+        "receipt must be BLAKE3(Canon(G_AST) || P_params)"
+    );
     assert_eq!(receipt.query_hash, replayed.query_hash, "replay must match");
 
     // Mutation: changing the literal changes the receipt.
@@ -404,14 +426,12 @@ fn scoped_select_graph(select_scope: &str, where_expr: Option<&str>) -> String {
     )
 }
 
-const AGGREGATE_WHERE: &str =
-    "[ a sql:BinaryExpression ; sql:operator \"=\" ; \
+const AGGREGATE_WHERE: &str = "[ a sql:BinaryExpression ; sql:operator \"=\" ; \
      sql:left [ a sql:FunctionExpression ; sql:functionName \"sum\" ; \
        sql:arguments ( [ a sql:ColumnIdentifier ; sql:columnName \"amount\" ; sql:scope sql:ProcessScope ] ) ] ; \
      sql:right [ a sql:LiteralExpression ; sql:value \"1\" ; sql:datatype xsd:integer ] ]";
 
-const PLAIN_WHERE: &str =
-    "[ a sql:BinaryExpression ; sql:operator \"=\" ; \
+const PLAIN_WHERE: &str = "[ a sql:BinaryExpression ; sql:operator \"=\" ; \
      sql:left [ a sql:ColumnIdentifier ; sql:columnName \"id\" ; sql:scope sql:ProcessScope ] ; \
      sql:right [ a sql:LiteralExpression ; sql:value \"1\" ; sql:datatype xsd:integer ] ]";
 
@@ -562,4 +582,228 @@ fn ocel_trace_seals_every_statement_and_the_hostile_refusal() {
         .query_row("SELECT count(*)::BIGINT FROM t", [], |r| r.get(0))
         .unwrap();
     assert_eq!(rows, 1);
+}
+
+// ---------------------------------------------------------------------------
+// Lane M07 (GUARD BUILDER) — K1 H2 rowcount-receipt strengthening.
+// K1's named defect class: a `rows_emitted >= 1` floor cannot detect a
+// dropped filter (WHERE removed -> 3 rows) or an inverted predicate
+// (> 400 -> < 400 leaves only beta). These courts assert the EXACT row
+// count AND the exact values read back from the COMPILED query's own
+// output rows, projected by eval_ast_query into ExecutionReceipt
+// .result_triples — no twin SQL, no hand-written second statement.
+// ---------------------------------------------------------------------------
+mod rowcount_receipt_courts {
+    use graphlaw::duckdb_eval::ExecutionReceipt;
+    use graphlaw::tier::{Admitted, admit_bytes_tiered};
+
+    use super::*;
+
+    fn telemetry_db() -> GraphLawDuckDB {
+        let db = GraphLawDuckDB::open_in_memory().unwrap();
+        db.raw_connection()
+            .execute_batch(
+                "CREATE TABLE telemetry_events (batch_id VARCHAR, latency_ms INTEGER);
+                 INSERT INTO telemetry_events VALUES ('alpha', 480), ('beta', 10), ('gamma', 900);",
+            )
+            .unwrap();
+        db
+    }
+
+    /// The compiled query's own output values for one column, read back from
+    /// the execution receipt's row projection (real frozen-duckdb rows, not a
+    /// hand-written twin of the query).
+    fn column_values(receipt: &ExecutionReceipt, column: &str) -> Vec<String> {
+        let suffix = format!("/{column}");
+        let mut values: Vec<String> = receipt
+            .result_triples
+            .iter()
+            .filter(|t| t.predicate.ends_with(&suffix))
+            .filter_map(|t| match &t.object {
+                purrdf::TermValue::Literal { lexical_form, .. } => Some(lexical_form.clone()),
+                // Non-literal objects carry no column value; skip (compile-freeze
+                // unblock, lane M08 disclosure: K-lane in-flight file, minimal fix).
+                _ => None,
+            })
+            .collect();
+        values.sort();
+        values
+    }
+
+    /// (a) Strengthened `admitted_ast_executes_on_frozen_duckdb`: the admitted
+    /// SELECT (latency_ms > 400) emits EXACTLY rows_emitted == 2 and EXACTLY
+    /// batch_id values [alpha, gamma]. The dropped-filter mutation (no WHERE)
+    /// would give 3 values including beta; the inverted-filter mutation
+    /// (latency_ms < 400) would give only beta — both now fail loudly.
+    #[test]
+    fn admitted_select_exact_rowcount_and_exact_values_readback() {
+        let doc = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:  <http://example.org/queries#> .
+
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList ( [ sql:columnName "batch_id" ] ) ;
+    sql:whereClause [
+        sql:operator sql:GreaterThan ;
+        sql:leftOperand [ sql:columnName "latency_ms" ] ;
+        sql:rightOperand [ sql:literalValue "400"^^xsd:integer ]
+    ] .
+"#;
+        let compiled = match admit_bytes_tiered(doc.as_bytes(), None, None, None).unwrap() {
+            Admitted::Query(q) => q,
+            other => panic!("expected a compiled query, got {other:?}"),
+        };
+        assert_eq!(compiled.params, vec![SqlLiteral::Integer(400)]);
+
+        let db = telemetry_db();
+        let receipt = db
+            .eval_ast_query(
+                "http://example.org/queries#Q",
+                &compiled,
+                "http://example.org/data",
+                "http://example.org/vocab",
+            )
+            .unwrap();
+        assert_ne!(receipt.query_hash, [0u8; 32]);
+        // Exact rowcount floor: dropped WHERE -> 3, inverted predicate -> 1.
+        assert_eq!(receipt.rows_emitted, 2, "exact rowcount, not a >= 1 floor");
+        // Exact values: beta (10) must be filtered OUT by the compiled WHERE.
+        let ids = column_values(&receipt, "batch_id");
+        assert_eq!(ids, vec!["alpha", "gamma"]);
+        assert!(
+            !ids.contains(&"beta".to_string()),
+            "inverted/dropped filter would re-admit beta"
+        );
+    }
+
+    /// (b) Strengthened `group_having_order_by_select_executes_with_table_
+    /// readback`: the COMPILED query (GROUP BY + HAVING SUM >= $1 + ORDER BY
+    /// batch_id DESC) is executed as-is via eval_ast_query, and its OWN output
+    /// rows are read back from the receipt — the previous twin-SQL readback
+    /// could pass while the compiled statement diverged from the hand-written
+    /// copy. Expected output rows: (alpha, 480) and (gamma, 900); beta (10)
+    /// fails HAVING.
+    #[test]
+    fn compiled_group_having_order_by_reads_back_its_own_rows() {
+        let doc = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <http://example.org/queries#> .
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList (
+        [ sql:columnName "batch_id" ]
+        [ sql:aliasName "total" ; sql:expression [
+            sql:function <http://graphlaw.org/functions#SUM> ;
+            sql:argument [ sql:columnName "latency_ms" ] ] ]
+    ) ;
+    sql:groupBy ( [ sql:columnName "batch_id" ] ) ;
+    sql:having [
+        sql:operator sql:GreaterThanOrEq ;
+        sql:leftOperand [
+            sql:function <http://graphlaw.org/functions#SUM> ;
+            sql:argument [ sql:columnName "latency_ms" ] ] ;
+        sql:rightOperand [ sql:literalValue "100"^^xsd:integer ]
+    ] ;
+    sql:orderBy ( [ sql:columnName "batch_id" ; sql:direction "DESC" ] ) .
+"#;
+        let compiled = compile_turtle(doc).unwrap();
+        let sql_upper = compiled.sql.to_ascii_uppercase();
+        for token in ["GROUP BY", "HAVING", "ORDER BY", "DESC"] {
+            assert!(
+                sql_upper.contains(token),
+                "missing {token}: {}",
+                compiled.sql
+            );
+        }
+        assert_eq!(compiled.params, vec![SqlLiteral::Integer(100)]);
+
+        let db = telemetry_db();
+        let receipt = db
+            .eval_ast_query(
+                "http://example.org/queries#Q",
+                &compiled,
+                "http://example.org/data",
+                "http://example.org/vocab",
+            )
+            .unwrap();
+
+        // Exact rowcount: beta (10) fails HAVING; a HAVING-dropped mutation
+        // would emit 3 rows, a total-inversion mutation 1 row.
+        assert_eq!(receipt.rows_emitted, 2, "HAVING must filter beta out");
+        // The compiled query's own row values (column readback, sorted).
+        let ids = column_values(&receipt, "batch_id");
+        assert_eq!(ids, vec!["alpha", "gamma"]);
+        assert_eq!(column_values(&receipt, "total"), vec!["480", "900"]);
+        assert!(
+            !ids.contains(&"beta".to_string()),
+            "a HAVING that stops filtering would re-admit beta"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// CTQ-4 / REFUSAL-05 end-to-end: a WHERE-less DELETE refuses at compile time
+// (pre-engine) and the real in-memory database is byte-identical afterwards;
+// the predicate-bound twin mutates exactly one row.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn where_less_delete_refuses_pre_engine_and_database_is_byte_identical() {
+    let refused = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+<http://example.org/s> a sql:DeleteStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "t" .
+"#;
+    let bounded = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+<http://example.org/s> a sql:DeleteStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "t" ;
+    sql:whereColumn "id" ;
+    sql:whereValue "1"^^xsd:integer .
+"#;
+    let readback = |db: &GraphLawDuckDB| -> Vec<(i64, String)> {
+        let mut stmt = db
+            .raw_connection()
+            .prepare("SELECT id, COALESCE(name, '') FROM t ORDER BY id, name")
+            .unwrap();
+        stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .map(|r| r.unwrap())
+            .collect()
+    };
+
+    // Refusal path: compile refuses typed, before any engine contact, and the
+    // seeded database readback is byte-identical after the attempt.
+    let db = GraphLawDuckDB::open_in_memory().unwrap();
+    seed(&db);
+    let before = readback(&db);
+    let err = compile_turtle(refused).expect_err("WHERE-less DELETE must refuse");
+    assert!(
+        err.to_string().contains("MUST carry a WHERE clause"),
+        "{err}"
+    );
+    assert_eq!(
+        readback(&db),
+        before,
+        "a pre-engine refusal must leave the real database byte-identical"
+    );
+
+    // Twin: the bounded DELETE mutates exactly one row (3 -> 2, id=1 gone).
+    let q = compile_turtle(bounded).expect("bounded DELETE compiles");
+    db.raw_connection().execute_batch(&q.sql).unwrap();
+    let after = readback(&db);
+    assert_eq!(after.len(), before.len() - 1, "{after:?}");
+    assert!(
+        !after.iter().any(|(id, _)| *id == 1),
+        "bounded DELETE must remove exactly the id=1 row: {after:?}"
+    );
 }

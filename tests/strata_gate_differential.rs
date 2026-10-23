@@ -31,12 +31,12 @@ const FIXTURE_ROOT: &str = "tests/fixtures/strata_gate_differential";
 
 /// (pack, gate file) pairs pinned for the court.
 const GATES: &[(&str, &str)] = &[
-    ("hash", "010_digest_length.rq"),         // FILTER-heavy violation rows
-    ("hash", "020_algorithm_closure.rq"),     // UNION + subselect COUNT
+    ("hash", "010_digest_length.rq"),     // FILTER-heavy violation rows
+    ("hash", "020_algorithm_closure.rq"), // UNION + subselect COUNT
     ("valve", "010_refusal_atom_closure.rq"), // UNION + VALUES + FILTER NOT EXISTS
-    ("valve", "020_wire_class_present.rq"),   // OPTIONAL + BOUND
-    ("ledger", "010_ledger_layout.rq"),       // V7-style datatype arms
-    ("tx", "020_tx_closure.rq"),              // closure / NOT EXISTS arms
+    ("valve", "020_wire_class_present.rq"), // OPTIONAL + BOUND
+    ("ledger", "010_ledger_layout.rq"),   // V7-style datatype arms
+    ("tx", "020_tx_closure.rq"),          // closure / NOT EXISTS arms
     ("governance", "020_commitment_closure.rq"), // V7-family fail-closed presence
 ];
 
@@ -74,7 +74,10 @@ fn pinned_fixtures_match_manifest() {
         assert_eq!(blake3_hex(&bytes), hash, "pin drift on {rel}");
         pinned += 1;
     }
-    assert!(pinned >= 12, "manifest should pin >= 12 files, got {pinned}");
+    assert!(
+        pinned >= 12,
+        "manifest should pin >= 12 files, got {pinned}"
+    );
     for (pack, gate) in GATES {
         let marker = format!("./{pack}/gates/{gate}");
         assert!(
@@ -132,8 +135,8 @@ except Exception as err:
             String::from_utf8_lossy(&out.stderr)
         ));
     }
-    let verdict: Value =
-        serde_json::from_str(String::from_utf8_lossy(&out.stdout).trim()).map_err(|e| {
+    let verdict: Value = serde_json::from_str(String::from_utf8_lossy(&out.stdout).trim())
+        .map_err(|e| {
             format!(
                 "verdict parse: {e}; stdout={:?}",
                 String::from_utf8_lossy(&out.stdout)
@@ -149,7 +152,12 @@ except Exception as err:
 fn differential_gate_agreement() {
     pinned_fixtures_match_manifest();
 
-    type GateVerdict = (&'static str, &'static str, Result<usize, String>, Result<usize, String>);
+    type GateVerdict = (
+        &'static str,
+        &'static str,
+        Result<usize, String>,
+        Result<usize, String>,
+    );
     let mut results: Vec<GateVerdict> = Vec::new();
     for (pack, gate) in GATES {
         let ont = fixture(pack, "ontology.ttl");
@@ -197,7 +205,10 @@ fn negative_firing_agreement_on_mutated_ontology() {
     let ont = fixture("ledger", "ontology.ttl");
     let rq = fixture("ledger", "gates/010_ledger_layout.rq");
     let marker = "lg:maxAccounts \"65536\"^^xsd:integer";
-    assert!(ont.contains(marker), "pinned ontology lost the mutation target");
+    assert!(
+        ont.contains(marker),
+        "pinned ontology lost the mutation target"
+    );
     let mutated = ont.replacen(marker, "", 1);
 
     // Scratch copy lives only for the duration of the court and is deleted on
@@ -215,7 +226,13 @@ fn negative_firing_agreement_on_mutated_ontology() {
 
     let en = e.expect("engine evaluates mutated ontology");
     let rn = r.expect("rdflib evaluates mutated ontology");
-    assert!(en >= 1, "engine must FIRE on the mutated ontology, got {en}");
-    assert!(rn >= 1, "rdflib must FIRE on the mutated ontology, got {rn}");
+    assert!(
+        en >= 1,
+        "engine must FIRE on the mutated ontology, got {en}"
+    );
+    assert!(
+        rn >= 1,
+        "rdflib must FIRE on the mutated ontology, got {rn}"
+    );
     assert_eq!(en, rn, "firing agreement: engine={en} rdflib={rn}");
 }

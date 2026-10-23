@@ -130,3 +130,31 @@ The witness table: wasmi 2.0.0 rejects Tag sections (N28/L116/M4/S5);
 wasmtime 48 accepts try_table, rejects legacy (L144/N22); V8 rejects the
 mix (N22/L125); the noeh archive traps (L130). OD-1 decision input is
 complete.
+
+## DECISION (operator, 2026-10-23) — OD-1 closed
+
+Decision: **wasmtime 48 with `wasm_exceptions(true)` (new W3C EH) hosts
+the single DuckDB-linked artifact.** Route A1' + A2 merged on the
+try_table rebuild; Route C (dual-artifact) is STOOD DOWN as the EH
+remedy. wasmi 2.0.0 is retained only for legacy pre-duckdb artifact
+courts, never as the engine host.
+
+Basis:
+- frozen-duckdb archive law is now `-fwasm-exceptions
+  -mllvm -wasm-use-legacy-eh=0` — uniform new-EH emission. clang 24's
+  legacy `try` from the staged libunwind was the mixed-EH blocker
+  (AMENDMENT above); wasmtime 48 removed legacy EH (W6/AMENDMENT) and
+  node 26 rejects the mixed form, so legacy was unsalvageable on every
+  available runtime.
+- Witnessed evidence for the rebuilt artifact: 46,015,267 B, exactly
+  1 Tag section; wasmtime CLI validation exit 0; Court C instantiation
+  PASS.
+
+OPEN (do not claim resolved): execution trap on `gl_call` during duckdb
+open — the module instantiates and validates, but the first engine call
+traps; under diagnosis. Until this closes, the engine tier is
+instantiate-PASS / execute-OPEN, and no receipt may claim in-wasm SQL
+execution.
+
+Registry pin stays single (one artifact). If the execution trap is
+diagnosed to a noeh/ABI-class defect, reopen per FINAL AMENDMENT (a).

@@ -7,7 +7,7 @@
 //! Chicago discipline: real parser, real bytes, assertions on the returned
 //! dataset state. No mocks.
 
-use graphlaw::dialect::{parse_rdf, Dialect, Refusal, RefusalKind};
+use graphlaw::dialect::{Dialect, Refusal, RefusalKind, parse_rdf};
 use graphlaw::purrdf::flat_rdf_quads_from_dataset;
 
 fn count_quads(dataset: &std::sync::Arc<graphlaw::purrdf::RdfDataset>) -> usize {
@@ -15,7 +15,6 @@ fn count_quads(dataset: &std::sync::Arc<graphlaw::purrdf::RdfDataset>) -> usize 
 }
 
 fn named_graph_count(dataset: &std::sync::Arc<graphlaw::purrdf::RdfDataset>) -> usize {
-    
     flat_rdf_quads_from_dataset(dataset)
         .into_iter()
         .filter(|q| q.graph_name.is_some())

@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "01798805db98504230864febe1639dc414144fc04368627a201c60d708badccd",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T170632Z-Write-01798805.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/tests/fixtures/banking/ubo_ownership.ttl",
+  "timestamp_utc": "2026-10-23T170632Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

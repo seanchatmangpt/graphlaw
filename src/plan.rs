@@ -16,9 +16,9 @@
 
 use std::collections::BTreeSet;
 
+use crate::BackendAuthority;
 use crate::dialect::{Dialect, Refusal, RefusalKind, RefusalMessage, parse_rdf};
 use crate::law::{LawError, LawState, Receipt};
-use crate::BackendAuthority;
 
 /// Capability the replay is executed under: RDF parsing/serialization/identity.
 const CAPABILITY: &str = "RDF 1.2 / codecs / storage IR";
@@ -564,7 +564,10 @@ impl Plan {
         let d = blake3::hash(self.canonical_json().as_bytes());
         format!(
             "blake3:{}",
-            d.as_bytes().iter().map(|b| format!("{b:02x}")).collect::<String>()
+            d.as_bytes()
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<String>()
         )
     }
 

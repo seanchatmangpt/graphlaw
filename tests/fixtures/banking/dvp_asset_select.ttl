@@ -1,0 +1,10 @@
+# Banking DvP asset-leg readback SELECT (bare single-root form). Expected SQL:
+#   SELECT asset, holder FROM dvp_asset_ledger ORDER BY asset
+@prefix ex: <http://example.org/banking#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+
+ex:stmt1 a sql:SelectStatement ;
+    sql:statementIndex 5 ;
+    sql:fromTable [ sql:tableName "dvp_asset_ledger" ] ;
+    sql:selectList ( [ sql:columnName "asset" ] [ sql:columnName "holder" ] ) ;
+    sql:orderBy ( [ sql:columnName "asset" ] ) .

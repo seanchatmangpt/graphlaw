@@ -4,7 +4,7 @@
 #
 # Facts are restated from the verified in-tree sources (read, not inferred):
 #   - src/abi.rs      : ABI_VERSION 1, MAX_REQUEST_BYTES 16 MiB, MAX_JSON_DEPTH 64,
-#                       MAX_OUTSTANDING_ALLOC_BYTES 256 MiB, hooks call /
+#                       MAX_OUTSTANDING_ALLOC_BYTES 16 MiB, hooks call /
 #                       missing_buffer_response / limit_response.
 #   - wasm/src/lib.rs : the verified hand-written shell (gl_ prefix, vec buffer style,
 #                       packed-u64 return, call-consumes input release, no abi-version
@@ -29,7 +29,7 @@ glw:module a wja:WasmModule ;
     wja:abiVersion 1 ;
     wja:maxRequestBytes 16777216 ;
     wja:maxJsonDepth 64 ;
-    wja:maxOutstandingBytes 268435456 ;
+    wja:maxOutstandingBytes 16777216 ;
     wja:hasAbiVersionExport false ;
     wja:abiModulePath "graphlaw::abi" ;
     wja:callHook "call" ;

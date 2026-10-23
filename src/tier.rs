@@ -138,7 +138,8 @@ fn tier_mismatch(dialect: Dialect, message: String) -> Refusal {
 fn admit_sql_rdf(bytes: &[u8]) -> Result<crate::sql_ast::CompiledQuery, Refusal> {
     let text = std::str::from_utf8(bytes)
         .map_err(|e| Refusal::engine(Dialect::SqlRdf, format!("input is not UTF-8: {e}")))?;
-    crate::sql_ast::compile_turtle(text).map_err(|e| Refusal::engine(Dialect::SqlRdf, e.to_string()))
+    crate::sql_ast::compile_turtle(text)
+        .map_err(|e| Refusal::engine(Dialect::SqlRdf, e.to_string()))
 }
 
 /// Validate `bytes` as an N3 logic document via Eyeron's parse entry point.
@@ -153,7 +154,11 @@ pub fn validate_n3_rules(bytes: &[u8], base: Option<&str>) -> Result<RuleSet, Re
 
 /// Parse `bytes` as RDF, upgrading the refusal to [`RefusalKind::TierMismatch`]
 /// when the failure is really a tier mismatch (the document is N3 logic).
-fn parse_rdf_tier_checked(bytes: &[u8], dialect: Dialect, base: Option<&str>) -> Result<Arc<purrdf::RdfDataset>, Refusal> {
+fn parse_rdf_tier_checked(
+    bytes: &[u8],
+    dialect: Dialect,
+    base: Option<&str>,
+) -> Result<Arc<purrdf::RdfDataset>, Refusal> {
     parse_rdf(bytes, dialect, base).map_err(|e| {
         if validate_n3_rules(bytes, base).is_ok() {
             tier_mismatch(
@@ -176,7 +181,11 @@ fn parse_rdf_tier_checked(bytes: &[u8], dialect: Dialect, base: Option<&str>) ->
 /// `Tier::Rdf` parses into a dataset; `Tier::N3Logic` validates via Eyeron and
 /// returns a [`RuleSet`]. A declaration whose `dialect` disagrees with its
 /// `tier` is refused as `TierMismatch`.
-pub fn admit_declared(bytes: &[u8], decl: DialectDecl, base: Option<&str>) -> Result<Admitted, Refusal> {
+pub fn admit_declared(
+    bytes: &[u8],
+    decl: DialectDecl,
+    base: Option<&str>,
+) -> Result<Admitted, Refusal> {
     if decl.dialect.tier() != decl.tier {
         return Err(tier_mismatch(
             decl.dialect,
@@ -256,7 +265,10 @@ mod tests {
     fn sql_document_admitted() {
         let admitted = admit_declared(
             SQL_DOC.as_bytes(),
-            DialectDecl { tier: Tier::Relational, dialect: Dialect::SqlRdf },
+            DialectDecl {
+                tier: Tier::Relational,
+                dialect: Dialect::SqlRdf,
+            },
             None,
         )
         .unwrap();

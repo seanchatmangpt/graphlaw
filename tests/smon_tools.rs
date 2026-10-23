@@ -88,7 +88,9 @@ mod pack_tools {
     fn transcript_capture_feeds_the_hook() {
         let mut raw = String::new();
         let human = |t: &str| {
-            line(serde_json::json!({"type":"user","origin":{"kind":"human"},"message":{"content":t}}))
+            line(
+                serde_json::json!({"type":"user","origin":{"kind":"human"},"message":{"content":t}}),
+            )
         };
         let assistant = |id: &str, t: &str| {
             line(
@@ -105,7 +107,9 @@ mod pack_tools {
         raw += &line(
             serde_json::json!({"type":"user","origin":{"kind":"task-notification"},"message":{"content":"ignored"}}),
         );
-        raw += &line(serde_json::json!({"type":"user","message":{"content":[{"type":"tool_result"}]}}));
+        raw += &line(
+            serde_json::json!({"type":"user","message":{"content":[{"type":"tool_result"}]}}),
+        );
         raw += &human("does the CLI reach the swarm end-to-end, really?");
         raw += &assistant("m2", "test result: ok. 3 passed; 0 failed");
 

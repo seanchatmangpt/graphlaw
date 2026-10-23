@@ -40,7 +40,10 @@ fn timed_ns_m<F: FnMut()>(warmup: usize, batch: u64, batches: u64, mut f: F) -> 
 
 #[test]
 fn p28_hot_path_baseline() {
-    let doc = format!("@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n{}\n<http://example.org/s> sql:statementIndex 1 .", SELECT_T);
+    let doc = format!(
+        "@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n{}\n<http://example.org/s> sql:statementIndex 1 .",
+        SELECT_T
+    );
     let compiled = compile_turtle(&doc).expect("select compiles");
     let canon = compiled
         .canon_graph_bytes
@@ -55,33 +58,55 @@ fn p28_hot_path_baseline() {
 
     // (1) H_query per-op cost
     let h_ns = timed_ns_m(1_000, 20_000, 10, || {
-        black_box(admitted_statement_hash(black_box(&canon), black_box(&params)));
+        black_box(admitted_statement_hash(
+            black_box(&canon),
+            black_box(&params),
+        ));
     });
     let h_ns_empty = timed_ns_m(1_000, 20_000, 10, || {
         black_box(admitted_statement_hash(black_box(&canon), black_box(&[])));
     });
-    println!("[1] H_query ({} canon bytes + 4 params): {:.1} ns/op (budget <= 150 ns)", canon.len(), h_ns);
-    println!("[1] H_query ({} canon bytes, 0 params): {:.1} ns/op", canon.len(), h_ns_empty);
+    println!(
+        "[1] H_query ({} canon bytes + 4 params): {:.1} ns/op (budget <= 150 ns)",
+        canon.len(),
+        h_ns
+    );
+    println!(
+        "[1] H_query ({} canon bytes, 0 params): {:.1} ns/op",
+        canon.len(),
+        h_ns_empty
+    );
 
     // (2) compile_turtle = admission (once per compile, NOT hot path)
     let c_ns = timed_ns_m(20, 100, 5, || {
         black_box(compile_turtle(black_box(&doc)).unwrap());
     });
-    println!("[2] compile_turtle (admission, once per compile): {:.0} ns/compile", c_ns);
+    println!(
+        "[2] compile_turtle (admission, once per compile): {:.0} ns/compile",
+        c_ns
+    );
 
     // Shipped fold: one stack-buffer update of h_ast || P_params.
     let state = compiled.receipt_state.unwrap();
     let fold_ns = timed_ns_m(1_000, 20_000, 10, || {
         black_box(fold_params_anchored(black_box(&state), black_box(&params)));
     });
-    println!("[1b] fold_params_anchored (h_ast + 4 params): {:.1} ns/op", fold_ns);
+    println!(
+        "[1b] fold_params_anchored (h_ast + 4 params): {:.1} ns/op",
+        fold_ns
+    );
 
     // Verdict, not a hard gate: this is a Measure-lane baseline. The budget
     // miss is the finding; enforcement is a later court's job.
     if h_ns <= 150.0 {
         println!("[VERDICT] H_query within 150 ns budget");
     } else {
-        println!("[VERDICT] BUDGET-MISS: full H_query {:.0} ns vs 150 ns budget ({:.1}x over); incremental fold {:.0} ns vs 150 ns budget", h_ns, h_ns / 150.0, fold_ns);
+        println!(
+            "[VERDICT] BUDGET-MISS: full H_query {:.0} ns vs 150 ns budget ({:.1}x over); incremental fold {:.0} ns vs 150 ns budget",
+            h_ns,
+            h_ns / 150.0,
+            fold_ns
+        );
     }
 }
 
@@ -97,7 +122,10 @@ fn p28_hot_path_capability() {
     const N: usize = 1_000_000; // samples (>= 1e6 per charter)
     const USL_NS: f64 = 250.0;
 
-    let doc = format!("@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n{}\n<http://example.org/s> sql:statementIndex 1 .", SELECT_T);
+    let doc = format!(
+        "@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n{}\n<http://example.org/s> sql:statementIndex 1 .",
+        SELECT_T
+    );
     let compiled = compile_turtle(&doc).expect("select compiles");
     let state = compiled
         .receipt_state
@@ -135,24 +163,60 @@ fn p28_hot_path_capability() {
     let pct_below = samples.iter().filter(|x| **x <= USL_NS).count() as f64 / n * 100.0;
 
     println!("\n=== P28 hot-path capability analysis (M3 fold path) ===");
-    println!("[MACHINE] {} / macOS {} / {} cores / rustc {}",
+    println!(
+        "[MACHINE] {} / macOS {} / {} cores / rustc {}",
         std::env::consts::ARCH,
-        { #[cfg(target_os = "macos")] { std::process::Command::new("sw_vers").args(["-productVersion"]).output().map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).unwrap_or_else(|_| "?".into()) } #[cfg(not(target_os = "macos"))] { "?".to_string() } },
-        std::thread::available_parallelism().map(|p| p.get()).unwrap_or(0),
-        {  rustc_version() });
-    println!("[MACHINE] release profile, per-sample Instant::now overhead (~20-25 ns) included symmetrically");
-    println!("[CMD] CARGO_TARGET_DIR=target-dflss3 cargo test --release --test p28_hot_path_bench -- p28_hot_path_capability --nocapture");
+        {
+            #[cfg(target_os = "macos")]
+            {
+                std::process::Command::new("sw_vers")
+                    .args(["-productVersion"])
+                    .output()
+                    .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+                    .unwrap_or_else(|_| "?".into())
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                "?".to_string()
+            }
+        },
+        std::thread::available_parallelism()
+            .map(|p| p.get())
+            .unwrap_or(0),
+        { rustc_version() }
+    );
+    println!(
+        "[MACHINE] release profile, per-sample Instant::now overhead (~20-25 ns) included symmetrically"
+    );
+    println!(
+        "[CMD] CARGO_TARGET_DIR=target-dflss3 cargo test --release --test p28_hot_path_bench -- p28_hot_path_capability --nocapture"
+    );
     println!("[PATH] fold_params_anchored: one stack-buffer update of h_ast || P_params");
     println!("[N] {} samples, USL = {:.0} ns", N, USL_NS);
-    println!("mu = {:.3} ns | sigma = {:.3} ns | Cpk(Cpu) = {:.2} | P(X > USL) = {:.4}%",
-        mean, sigma, cpk, 100.0 - pct_below);
+    println!(
+        "mu = {:.3} ns | sigma = {:.3} ns | Cpk(Cpu) = {:.2} | P(X > USL) = {:.4}%",
+        mean,
+        sigma,
+        cpk,
+        100.0 - pct_below
+    );
     println!("quantile table (ns):");
-    println!("  p50={:.1} p90={:.1} p99={:.1} p99.9={:.1} p99.99={:.1} max={:.1}",
-        q(0.50), q(0.90), q(0.99), q(0.999), q(0.9999), q(1.0));
+    println!(
+        "  p50={:.1} p90={:.1} p99={:.1} p99.9={:.1} p99.99={:.1} max={:.1}",
+        q(0.50),
+        q(0.90),
+        q(0.99),
+        q(0.999),
+        q(0.9999),
+        q(1.0)
+    );
     if mean <= USL_NS && cpk >= 1.33 {
         println!("[VERDICT] CAPABLE: mu <= USL and Cpk >= 1.33");
     } else {
-        println!("[VERDICT] NOT-CAPABLE: charter mu=0.198us/sigma=0.012us/Cpk=1.44 NOT witnessed; measured Cpk={:.2}, mu={:.3}ns, sigma={:.3}ns", cpk, mean, sigma);
+        println!(
+            "[VERDICT] NOT-CAPABLE: charter mu=0.198us/sigma=0.012us/Cpk=1.44 NOT witnessed; measured Cpk={:.2}, mu={:.3}ns, sigma={:.3}ns",
+            cpk, mean, sigma
+        );
     }
 
     // Contention-clean reference: min-of-batches over 100-op batches (the
@@ -170,7 +234,10 @@ fn p28_hot_path_capability() {
             best = per;
         }
     }
-    println!("[REF] min-of-50x100-op batches: {:.1} ns/op (intrinsic cost, no per-op clock overhead, least-contended)", best);
+    println!(
+        "[REF] min-of-50x100-op batches: {:.1} ns/op (intrinsic cost, no per-op clock overhead, least-contended)",
+        best
+    );
 }
 
 fn rustc_version() -> String {

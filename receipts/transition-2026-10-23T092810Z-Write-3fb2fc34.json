@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "3fb2fc341af6815ab25ebc046accb3fa94c581b4ef349fb646e45d8ac02a355c",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T092810Z-Write-3fb2fc34.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/designs/artifact-build-flags.md",
+  "timestamp_utc": "2026-10-23T092810Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

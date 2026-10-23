@@ -5,6 +5,15 @@
 L108, canonical checkout `/Users/sac/graphlaw`. Ownership:
 `receipts/CHAIN.blake3` (via `scripts/receipt_chain_sync.sh` only) and this file.
 
+## Interface note (pinned 2026-10-22, lane M14)
+
+`scripts/receipt_chain_sync.sh` has exactly two modes: `sync` (default) and
+`--check`, plus an optional second argument naming an alternate repo root.
+There is no `--force` mode; re-baseline is always the explicit coordinator
+procedure `rm receipts/CHAIN.blake3 && bash scripts/receipt_chain_sync.sh sync`.
+Any unknown first argument exits 2 (usage). Guard:
+`scripts/chain_flag_court.sh`.
+
 ## Commands + real output
 
 ```

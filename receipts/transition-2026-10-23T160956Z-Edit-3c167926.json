@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "3c167926d1e3bbf55a58e95ad2a05acb737b222ff2cb9f83a3b1460cbcae1c87",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T160956Z-Edit-3c167926.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/reference/runner-exit-codes.md",
+  "timestamp_utc": "2026-10-23T160956Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

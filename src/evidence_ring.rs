@@ -166,7 +166,9 @@ impl fmt::Display for RingError {
             RingError::TornSlot { line } => {
                 write!(f, "evidence ledger line {line}: torn slot (nonzero pad)")
             }
-            RingError::SequenceGap { detail } => write!(f, "evidence ledger sequence gap: {detail}"),
+            RingError::SequenceGap { detail } => {
+                write!(f, "evidence ledger sequence gap: {detail}")
+            }
             RingError::AlreadyInitialized => {
                 write!(f, "global evidentiary ring already initialized")
             }
@@ -330,8 +332,15 @@ impl EvidenceRing {
                 .name("evidence-drainer".into())
                 .spawn(move || {
                     drain_loop(
-                        consumer, &dir, ledger_dir, &ledger_error, &write_error, &paused,
-                        &shutdown, &seq, watermark,
+                        consumer,
+                        &dir,
+                        ledger_dir,
+                        &ledger_error,
+                        &write_error,
+                        &paused,
+                        &shutdown,
+                        &seq,
+                        watermark,
                     )
                 })?
         };
@@ -408,14 +417,15 @@ impl EvidenceRing {
             .lock()
             .expect("write error lock poisoned")
             .as_ref()
-            .map(|detail| RingError::BrokenChain { detail: detail.clone() })
+            .map(|detail| RingError::BrokenChain {
+                detail: detail.clone(),
+            })
     }
 
     /// Total pushes attempted (buffered + dropped).
     pub fn pushed_total(&self) -> u64 {
         self.seq_counter.load(Ordering::Relaxed)
     }
-
 
     /// Total pushes refused drop-newest (mirrored by `dropped` ledger lines).
     pub fn dropped_total(&self) -> u64 {
@@ -605,9 +615,9 @@ fn drain_loop(
     let mut ledger = ledger_dir.map(|d| (d, None::<crate::query_ledger::QueryLedger>));
     let mut batch: Vec<crate::query_ledger::Descriptor> = Vec::with_capacity(DRAIN_BATCH);
     let open_ledger = |slot: &mut Option<crate::query_ledger::QueryLedger>,
-                           d: &Path,
-                           err: &Mutex<Option<String>>,
-                           producer_next_seq: u64| {
+                       d: &Path,
+                       err: &Mutex<Option<String>>,
+                       producer_next_seq: u64| {
         // Reconcile at open against the true producer watermark: the higher
         // of the resumed NDJSON coverage watermark (the previous session's
         // last covered sequence) and the caller-supplied producer attempted
@@ -646,8 +656,7 @@ fn drain_loop(
         if producer_attempted > restart_seq {
             if let Some(l) = slot.as_mut() {
                 if let Err(e) = l.record_gap(restart_seq + 1, producer_attempted) {
-                    *ledger_error.lock().expect("ledger error lock poisoned") =
-                        Some(e.to_string());
+                    *ledger_error.lock().expect("ledger error lock poisoned") = Some(e.to_string());
                 }
             }
         }
@@ -710,9 +719,7 @@ fn drain_loop(
                         }
                         let count = slot.seq - expected_seq - 1;
                         if let Some((_, Some(l))) = ledger.as_mut() {
-                            if let Err(e) =
-                                l.record_gap(expected_seq + 1, slot.seq - 1)
-                            {
+                            if let Err(e) = l.record_gap(expected_seq + 1, slot.seq - 1) {
                                 *ledger_error.lock().expect("ledger error lock poisoned") =
                                     Some(e.to_string());
                             }
@@ -751,8 +758,7 @@ fn drain_loop(
         if drained > 0 {
             if let Some((_, Some(l))) = ledger.as_mut() {
                 if let Err(e) = l.record_batch(&batch) {
-                    *ledger_error.lock().expect("ledger error lock poisoned") =
-                        Some(e.to_string());
+                    *ledger_error.lock().expect("ledger error lock poisoned") = Some(e.to_string());
                 }
             }
             // RUST-4: a failed batch write NEVER advances the on-disk
@@ -859,7 +865,10 @@ pub fn verify(dir: impl AsRef<Path>) -> Result<(usize, usize, u64), RingError> {
     let mut dropped_total = 0u64;
     for (idx, line) in text.lines().enumerate() {
         let line_no = idx + 1;
-        let (body, child) = match line.strip_suffix("\"}").and_then(|b| b.rsplit_once(",\"child\":\"")) {
+        let (body, child) = match line
+            .strip_suffix("\"}")
+            .and_then(|b| b.rsplit_once(",\"child\":\""))
+        {
             Some((b, c)) if !c.contains('"') => (b, c),
             _ => return Err(RingError::Malformed { line: line_no }),
         };
@@ -874,23 +883,28 @@ pub fn verify(dir: impl AsRef<Path>) -> Result<(usize, usize, u64), RingError> {
         let seq = decode_u64_field(body, "seq").ok_or(RingError::Malformed { line: line_no })?;
         let kind = decode_hex_field(body, "kind").ok_or(RingError::Malformed { line: line_no })?;
         if kind == "evidence" {
-            let hq = decode_hex_field(body, "h_query").ok_or(RingError::Malformed { line: line_no })?;
+            let hq =
+                decode_hex_field(body, "h_query").ok_or(RingError::Malformed { line: line_no })?;
             if hq.len() != 64 {
                 return Err(RingError::Malformed { line: line_no });
             }
             if seq != expected_seq + 1 {
                 return Err(RingError::SequenceGap {
-                    detail: format!("line {line_no}: evidence seq {seq}, expected {}", expected_seq + 1),
+                    detail: format!(
+                        "line {line_no}: evidence seq {seq}, expected {}",
+                        expected_seq + 1
+                    ),
                 });
             }
             evidence += 1;
-            let pads = decode_u64_field(body, "pads").ok_or(RingError::Malformed { line: line_no })?;
+            let pads =
+                decode_u64_field(body, "pads").ok_or(RingError::Malformed { line: line_no })?;
             if pads != 0 {
                 return Err(RingError::TornSlot { line: line_no });
             }
         } else if kind == "dropped" {
-            let count =
-                decode_u64_field(body, "dropped_count").ok_or(RingError::Malformed { line: line_no })?;
+            let count = decode_u64_field(body, "dropped_count")
+                .ok_or(RingError::Malformed { line: line_no })?;
             let hq = decode_hex_field(body, "refused_h_query")
                 .ok_or(RingError::Malformed { line: line_no })?;
             if count == 0 || hq.len() != 64 {
@@ -898,7 +912,10 @@ pub fn verify(dir: impl AsRef<Path>) -> Result<(usize, usize, u64), RingError> {
             }
             if seq != expected_seq + 1 {
                 return Err(RingError::SequenceGap {
-                    detail: format!("line {line_no}: drop seq {seq}, expected {}", expected_seq + 1),
+                    detail: format!(
+                        "line {line_no}: drop seq {seq}, expected {}",
+                        expected_seq + 1
+                    ),
                 });
             }
             expected_seq += count - 1;

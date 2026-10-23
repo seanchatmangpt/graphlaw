@@ -17,8 +17,9 @@ use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 
 use serde_json::Value;
-use wasmi::{Engine, Instance, Linker, Memory, Module, Store, TypedFunc};
-use wasmi_wasi::{WasiCtx, WasiCtxBuilder};
+use wasmtime::{Config, Engine, Instance, Linker, Memory, Module, Store, TypedFunc};
+use wasmtime_wasi::p1::{WasiP1Ctx, add_to_linker_sync};
+use wasmtime_wasi::WasiCtxBuilder;
 
 /// Path of the wasm artifact: `GRAPHLAW_WASM`, else a one-time build.
 ///
@@ -59,13 +60,19 @@ pub fn wasm_path() -> PathBuf {
             .lines()
             .find(|l| l.contains("WASI_SDK_PATH"))
             .map(|l| l.to_string());
-        let linker_line = wasi_sdk_refusal.clone().or_else(|| {
-            stderr
-                .lines()
-                .find(|l| l.contains("rust-lld") || l.contains("-lduckdb"))
-                .map(|l| l.to_string())
-        }).or_else(|| {
-                stderr.lines().rev().find(|l| l.starts_with("error:"))
+        let linker_line = wasi_sdk_refusal
+            .clone()
+            .or_else(|| {
+                stderr
+                    .lines()
+                    .find(|l| l.contains("rust-lld") || l.contains("-lduckdb"))
+                    .map(|l| l.to_string())
+            })
+            .or_else(|| {
+                stderr
+                    .lines()
+                    .rev()
+                    .find(|l| l.starts_with("error:"))
                     .map(|l| l.to_string())
             })
             .unwrap_or_else(|| "<linker line not present in stderr>".to_string());
@@ -101,7 +108,7 @@ pub fn wasm_path() -> PathBuf {
 }
 
 struct Host {
-    store: Store<WasiCtx>,
+    store: Store<WasiP1Ctx>,
     memory: Memory,
     alloc: TypedFunc<u32, u32>,
     free: TypedFunc<(u32, u32), ()>,
@@ -111,38 +118,56 @@ struct Host {
 impl Host {
     fn new() -> Self {
         let bytes = std::fs::read(wasm_path()).expect("wasm artifact");
-        let engine = Engine::default();
-        let module = Module::new(&engine, &bytes[..]).expect("valid wasm");
+        Self::from_bytes(&bytes).expect("hosts the wasm module")
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
+        let mut cfg = Config::new();
+        cfg.wasm_exceptions(true);
+        let engine = Engine::new(&cfg).map_err(|e| format!("engine: {e}"))?;
+        let module = Module::new(&engine, bytes).map_err(|e| format!("module: {e}"))?;
         // The only imports allowed are WASI's (clock, random, stdio): no JavaScript glue.
         for i in module.imports() {
-            assert_eq!(
-                i.module(),
-                "wasi_snapshot_preview1",
-                "unexpected host import {}::{}",
-                i.module(),
-                i.name()
-            );
+            if i.module() != "wasi_snapshot_preview1" {
+                return Err(format!("unexpected host import {}::{}", i.module(), i.name()));
+            }
         }
-        let mut store = Store::new(&engine, WasiCtxBuilder::new().build());
-        let mut linker = <Linker<WasiCtx>>::new(&engine);
-        wasmi_wasi::add_to_linker(&mut linker, |ctx| ctx).expect("links WASI");
+        let mut store = Store::new(
+            &engine,
+            WasiCtxBuilder::new()
+                .inherit_stdio()
+                .inherit_env()
+                .build_p1(),
+        );
+        let mut linker = <Linker<WasiP1Ctx>>::new(&engine);
+        add_to_linker_sync(&mut linker, |ctx| ctx).map_err(|e| format!("wasi linker: {e}"))?;
+        // `Linker::instantiate` runs the start section, then the host calls
+        // `_initialize` once for reactor-style modules.
         let instance: Instance = linker
-            .instantiate_and_start(&mut store, &module)
-            .expect("instantiates");
-        // Reactor-style modules expose `_initialize`; hosts must call it once.
-        if let Ok(init) = instance.get_typed_func::<(), ()>(&store, "_initialize") {
-            init.call(&mut store, ()).expect("_initialize");
+            .instantiate(&mut store, &module)
+            .map_err(|e| format!("instantiate: {e}"))?;
+        if let Ok(init) = instance.get_typed_func::<(), ()>(&mut store, "_initialize") {
+            init.call(&mut store, ())
+                .map_err(|e| format!("_initialize: {e}"))?;
         }
         let memory = instance
-            .get_memory(&store, "memory")
-            .expect("exports memory");
-        Host {
-            alloc: instance.get_typed_func(&store, "gl_alloc").unwrap(),
-            free: instance.get_typed_func(&store, "gl_free").unwrap(),
-            call: instance.get_typed_func(&store, "gl_call").unwrap(),
+            .get_memory(&mut store, "memory")
+            .ok_or("module does not export memory")?;
+        let missing =
+            |name: &'static str, e: wasmtime::Error| format!("missing or mistyped export {name}: {e}");
+        Ok(Host {
+            alloc: instance
+                .get_typed_func::<u32, u32>(&mut store, "gl_alloc")
+                .map_err(|e| missing("gl_alloc", e))?,
+            free: instance
+                .get_typed_func::<(u32, u32), ()>(&mut store, "gl_free")
+                .map_err(|e| missing("gl_free", e))?,
+            call: instance
+                .get_typed_func::<(u32, u32), u64>(&mut store, "gl_call")
+                .map_err(|e| missing("gl_call", e))?,
             store,
             memory,
-        }
+        })
     }
 
     fn request_bytes(&mut self, req: &Value) -> Vec<u8> {

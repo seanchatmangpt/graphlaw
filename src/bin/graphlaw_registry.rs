@@ -210,7 +210,9 @@ fn check() -> ExitCode {
                     Some(f) if f == expected => println!("ok      {ARTIFACTS_FILE} {kind}"),
                     Some(f) => {
                         drift = true;
-                        println!("DRIFT   {ARTIFACTS_FILE} {kind}: expected `{expected}`, found `{f}`");
+                        println!(
+                            "DRIFT   {ARTIFACTS_FILE} {kind}: expected `{expected}`, found `{f}`"
+                        );
                     }
                     None => {
                         drift = true;

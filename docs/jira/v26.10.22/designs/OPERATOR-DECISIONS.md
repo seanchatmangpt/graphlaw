@@ -233,7 +233,7 @@ commit them as repo policy or keep local?
 already-committed policy text; committing them closes a doc/behavior divergence, and
 `__pycache__/` joins `.gitignore` alongside `scheduled_tasks.lock`.
 
-**DECISION (operator):** (a)/(b): ______  date: __________
+**DECISION (operator):** (a) wasmtime 48 + `wasm_exceptions` single DuckDB-linked artifact (archive law `-mllvm -wasm-use-legacy-eh=0`); Route C stood down. Date: 2026-10-23. Witness: eh-runner-decision-memo DECISION block; artifact 46,015,267 B / Tag x1, wasmtime CLI validation exit 0.
 
 ---
 

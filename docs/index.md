@@ -28,6 +28,14 @@ Freshness vocabulary: **CURRENT** (maintained against the live tree) ·
   — frozen-duckdb ingestion, SQL-in-RDF, compaction proofs. CURRENT.
 - [how-to/use-from-javascript.md](how-to/use-from-javascript.md) — npm package
   in Node/browsers over the JSON ABI. CURRENT.
+- [how-to/first-in-wasm-sql-lifecycle.md](how-to/first-in-wasm-sql-lifecycle.md)
+  — end-to-end SQL-in-wasm walkthrough: build, session, CREATE/INSERT/
+  SELECT, stream, close, typed DELETE refusal. CURRENT.
+- [how-to/persistent-duckdb-sessions.md](how-to/persistent-duckdb-sessions.md)
+  — named DuckDB sessions over the op-15 wire; reuse connections across
+  exec frames. CURRENT.
+- [how-to/document-sequences.md](how-to/document-sequences.md) — run several
+  admitted SQL statements in one wire call, receipt per member. CURRENT.
 - [api-stability.md](api-stability.md) — semver policy, `#[non_exhaustive]`
   list, MSRV, frozen ABI_VERSION 1. CURRENT.
 
@@ -41,8 +49,17 @@ Freshness vocabulary: **CURRENT** (maintained against the live tree) ·
   `src/dialect.rs`. CURRENT.
 - [refusals.md](refusals.md) — typed refusal register: codes, `details`
   fields, remediation. CURRENT.
+- [reference/refusal-catalog.md](reference/refusal-catalog.md) — user-facing
+  refusal view: envelope shape, per-code cause and fix; normative register is
+  `refusals.md`. CURRENT.
+- [reference/runner-exit-codes.md](reference/runner-exit-codes.md) — typed
+  exit codes for `graphlaw-run` / `graphlaw-run-eh`, diagnostics, recovery.
+  CURRENT.
 - [explanation/receipt-fields.md](explanation/receipt-fields.md) — receipt
   fields, informal mapping to the portfolio receipt concept. CURRENT.
+- [explanation/eh-closure-story.md](explanation/eh-closure-story.md) — why
+  the wasm module was unhostable (legacy vs try_table EH) and how it closed.
+  CURRENT.
 - [Edge sovereignty & compaction](explanation/edge-sovereignty-and-zero-trust-compaction.md)
   — why local analytical compaction for edge/DDIL systems. CURRENT.
 - [QUALIFICATION_ALGEBRA.md](QUALIFICATION_ALGEBRA.md) — standing as
@@ -60,11 +77,13 @@ Freshness vocabulary: **CURRENT** (maintained against the live tree) ·
   — powerless state → hook projection contract (authority NONE). CURRENT.
 - [qme-1-reference.md](qme-1-reference.md) — QME-1 participation, pinned to
   chatman-ecosystem@88b276f. CURRENT.
-- [THESIS.md](THESIS.md) — mathematical-foundations essay (sheaves, variational
-  law calculus), dated 2026-10, no maintenance marker. PENDING
-  (stale-unmarked: needs banner or archive move).
-- [UNIFIED_DISSERTATION.md](UNIFIED_DISSERTATION.md) — doctoral-essay
-  predecessor of THESIS.md, same status. PENDING (stale-unmarked).
+- [archive/THESIS.md](archive/THESIS.md) — mathematical-foundations essay
+  (sheaves, variational law calculus), 2026-10 provenance snapshot. ARCHIVED:
+  superseded by [jira/v26.10.22/THESIS.md](jira/v26.10.22/THESIS.md).
+- [archive/UNIFIED_DISSERTATION.md](archive/UNIFIED_DISSERTATION.md) —
+  doctoral-essay predecessor of THESIS.md. ARCHIVED: aspirational PQC claims
+  unreceipted (Z19 finding); superseded by
+  [jira/v26.10.22/DISSERTATION.md](jira/v26.10.22/DISSERTATION.md).
 
 ## Conformance
 
@@ -136,7 +155,9 @@ exit discipline live in the root `CLAUDE.md` Commands section.
 Active window: `jira/v26.10.22/`. Older windows: `sjira/v26.10.8/`.
 
 - [jira/v26.10.22/INDEX.md](jira/v26.10.22/INDEX.md) — ticket register:
-  SQLRDF-01..20, all Open except SQLRDF-08 (withdrawn). CURRENT.
+  SQLRDF-01..22, all Open except SQLRDF-08 (withdrawn); SQLRDF-21
+  (EH closure / in-module duckdb) and SQLRDF-22 (compiler gaps) open.
+  CURRENT.
 - [jira/v26.10.22/CHARTER-DFLSS.md](jira/v26.10.22/CHARTER-DFLSS.md) —
   operator charter; header admits dispatch-by-summary, verbatim text not on
   disk. PENDING (self-declared UNVERIFIED charter text).
@@ -164,10 +185,9 @@ Active window: `jira/v26.10.22/`. Older windows: `sjira/v26.10.8/`.
   references table rows (long single-line table syntax) exceed 100 by
   necessity — re-checked with `awk 'length>100'` on 2026-10-22, exactly 4
   lines, all table rows in that section.
-- README.md pointer: NOT added — README.md is modified under L77's lane.
-  Relay to L77: extend the README docs table (README.md:44-51) with
-  `**Index** | [docs/index.md](docs/index.md)` alongside the Diataxis hub
-  link at line 44.
+- README.md pointer: LANDED — the README docs table (README.md:49-52) now
+  carries `**Index** | [docs/INDEX.md](docs/INDEX.md)` at README.md:49,
+  alongside the Diataxis hub link at line 45.
 
 ## Cross-repo references
 
@@ -180,5 +200,5 @@ producing repo unless noted.
 |---|---|---|---|---|
 | Spec dossier: `docs/jira/v26.10.21/{WASM-SANDBOX-SPEC,GRAPHLAW-SPEC,COLDCHAIN-CASE-STUDY}.md` + `receipts/` (gl4/gl5 graphlaw courts, gws2/gws7/gws11 wasm courts, wasm1 otp29 port, coldchain receipts) | `/Users/sac/smalt` | graphlaw (downstream consumer evidence: wasm sandbox + graphlaw engine courts run against the graphlaw artifact) | none (read-only spec receipts; re-run smalt courts against a new graphlaw wasm sha) | VERIFIED — all three spec docs + receipts dir present 2026-10-22; receipts confirmed by filename grep |
 | Frozen vector fixtures: `crates/wasm4pm-cognition/tests/fixtures/graphlaw/*.json` (50 vectors, ENCODERS.md, SCHEMA.md, REV-RELEASE-MAP.md) | graphlaw (`scripts/gen_wasm4pm_graphlaw_vectors.py`) | `/Users/sac/wasm4pm` (test court `tests/graphlaw_vector_oracle.rs`; `graphlaw_rev_ancestry_court` requires fixture rev to remain an ancestor of graphlaw main) | `python3 scripts/gen_wasm4pm_graphlaw_vectors.py` (regenerate at new graphlaw rev, then commit in wasm4pm) | VERIFIED — fixtures dir + generator script present; ancestry court named in REV-RELEASE-MAP.md |
-| WASI FFI shell: `wasm/src/ffi.rs` ("Rendered by ggen (rust-wasi-wasmex-pack) from the wja: graph", header `ffi.rs:7`) | `/Users/sac/ggen-marketplace` pack `rust-wasi-wasmex-pack` (`templates/abi/ffi.rs.tmpl` + `queries/ffi.rq`) | graphlaw `wasm/src/ffi.rs` (generated artifact — regenerate, never hand-edit) | `ggen sync run` from the pack graph (no `ggen.toml` pin in graphlaw root yet — render is manual today) | VERIFIED — template, `ffi.rq` query, and rendered artifact all present; template header matches artifact header |
+| WASI FFI shell: `wasm/src/ffi.rs` ("Rendered by ggen (rust-wasi-wasmex-pack) from the wja: graph", header `wasm/src/ffi.rs:7`) | `/Users/sac/ggen-marketplace` pack `rust-wasi-wasmex-pack` (`templates/abi/ffi.rs.tmpl` + `queries/ffi.rq`) | graphlaw `wasm/src/ffi.rs` (generated artifact — regenerate, never hand-edit) | `ggen sync run` from the pack graph (no `ggen.toml` pin in graphlaw root yet — render is manual today) | VERIFIED — template, `ffi.rq` query, and rendered artifact all present; template header matches artifact header |
 | frozen-duckdb crate | crates.io `frozen-duckdb` 2.0.2 | graphlaw `Cargo.toml:35` (`frozen-duckdb = { version = "2.0.2" }`) | none — not a path dep and not under `[patch.crates-io]` (the only patch entry is `purrdf-sparql-eval`, `Cargo.toml:144-145`) | CLOSED — version-pinned to 2.0.2. Do not add a path `[patch]`. |

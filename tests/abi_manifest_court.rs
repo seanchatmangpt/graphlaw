@@ -102,11 +102,9 @@ fn envelope(bytes: &[u8]) -> Value {
 /// One native vector per registry op, driven from the committed examples.
 #[test]
 fn one_native_vector_per_op_reaches_its_declared_outcome() {
-    let path =
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("registry/op-examples.json");
-    let doc: Value =
-        serde_json::from_str(&std::fs::read_to_string(&path).expect("read examples"))
-            .expect("examples are JSON");
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("registry/op-examples.json");
+    let doc: Value = serde_json::from_str(&std::fs::read_to_string(&path).expect("read examples"))
+        .expect("examples are JSON");
     assert_eq!(doc["schema"], "graphlaw.op-examples/1");
     let examples = doc["examples"].as_array().expect("examples array");
     let mut ops_seen = std::collections::BTreeSet::new();
@@ -114,7 +112,9 @@ fn one_native_vector_per_op_reaches_its_declared_outcome() {
         let id = ex["id"].as_str().expect("id");
         let op = ex["op"].as_str().expect("op");
         let response = envelope(&graphlaw::abi::call(
-            serde_json::to_vec(&ex["request"]).expect("request serializes").as_slice(),
+            serde_json::to_vec(&ex["request"])
+                .expect("request serializes")
+                .as_slice(),
         ));
         match ex["outcome"].as_str().expect("outcome") {
             "ok" => assert_eq!(response["ok"], json!(true), "{id}"),
@@ -125,7 +125,10 @@ fn one_native_vector_per_op_reaches_its_declared_outcome() {
     }
     assert_eq!(
         ops_seen,
-        graphlaw::registry::op_names().into_iter().map(str::to_owned).collect(),
+        graphlaw::registry::op_names()
+            .into_iter()
+            .map(str::to_owned)
+            .collect(),
         "every one of the 14 ops contributed at least one native vector"
     );
 }
@@ -168,14 +171,20 @@ fn depth_65_request_refuses_at_max_json_depth_plus_one() {
     let v = envelope(&graphlaw::abi::call(req.as_bytes()));
     assert_eq!(v["ok"], json!(false));
     assert_eq!(v["error"]["details"]["limit"], json!("json_depth"));
-    assert_eq!(v["error"]["details"]["max"], json!(graphlaw::abi::MAX_JSON_DEPTH));
+    assert_eq!(
+        v["error"]["details"]["max"],
+        json!(graphlaw::abi::MAX_JSON_DEPTH)
+    );
 }
 
 #[test]
 fn manifest_export_signatures_match_the_documented_ffi() {
     let doc = graphlaw::abi_manifest::manifest_value();
     let exports = doc["exports"].as_array().expect("exports");
-    let names: Vec<&str> = exports.iter().map(|e| e["name"].as_str().unwrap()).collect();
+    let names: Vec<&str> = exports
+        .iter()
+        .map(|e| e["name"].as_str().unwrap())
+        .collect();
     assert_eq!(names, vec!["gl_alloc", "gl_free", "gl_call"]);
     let by_name = |n: &str| {
         exports
@@ -249,15 +258,25 @@ const GOLDEN_FRAME_HASH_HEX: &str = "0807060504030201887766554433221100ff0000000
 #[test]
 fn frame_hash_bytes_match_the_pinned_golden() {
     let bytes = golden_frame().to_hash_bytes();
-    assert_eq!(bytes, expected_hash_bytes(), "recomputed vs documented layout");
+    assert_eq!(
+        bytes,
+        expected_hash_bytes(),
+        "recomputed vs documented layout"
+    );
     let hex: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
-    assert_eq!(hex, GOLDEN_FRAME_HASH_HEX, "pinned golden digest of to_hash_bytes");
+    assert_eq!(
+        hex, GOLDEN_FRAME_HASH_HEX,
+        "pinned golden digest of to_hash_bytes"
+    );
 }
 
 #[test]
 fn manifest_frame_spec_matches_the_real_struct_and_layout() {
     let frame = doc_frame_spec();
-    assert_eq!(frame["size_bytes"], json!(std::mem::size_of::<OcelCausalFrame>()));
+    assert_eq!(
+        frame["size_bytes"],
+        json!(std::mem::size_of::<OcelCausalFrame>())
+    );
     assert_eq!(frame["hash_bytes_len"], json!(99));
     let fields = frame["fields"].as_array().expect("fields");
     let mut expected = 0;

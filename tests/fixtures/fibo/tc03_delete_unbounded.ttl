@@ -1,0 +1,15 @@
+# FIBO court-matrix fixture tc03_delete_unbounded — the Beta attack fixture.
+# DeleteStatement with NO where predicates. Must refuse typed:
+# the DeleteStatementShape sh:or (ggen/sql-dialect/statement_classes.ttl,
+# minCount 1 on whereColumn OR whereValue) fails SHACL validation first,
+# producing AstError{RefusalCode::MalformedAst, SHACL_VIOLATIONS} whose first
+# violation message carries "[REFUSAL-05] UnboundedMutationRefusal: a
+# DeleteStatement MUST carry a WHERE clause (requires BOTH sql:whereColumn
+# and sql:whereValue)." The compiler's own RefusalCode::UnboundedMutation arm
+# (sql_ast.rs compile_command guard) is defense in depth behind the shape.
+@prefix ex: <http://example.org/fibo#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+
+ex:stmt1 a sql:DeleteStatement ;
+    sql:statementIndex 3 ;
+    sql:targetTable "fibo_accounts" .

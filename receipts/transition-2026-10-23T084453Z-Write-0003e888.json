@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "0003e88852bdbd023bc9a0ca452846b63eb3625915bff2675075626bf7a066a9",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T084453Z-Write-0003e888.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/eh-libunwind-candidate/NOTES.md",
+  "timestamp_utc": "2026-10-23T084453Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

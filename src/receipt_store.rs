@@ -15,7 +15,6 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-
 use crate::attest::{AttestError, Attestation, TrustedKeys, verify_receipt};
 use crate::law::Receipt;
 use crate::{BACKEND_AUTHORITIES, BackendAuthority};

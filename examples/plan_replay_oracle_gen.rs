@@ -133,7 +133,9 @@ fn strips_step(
     let suffix = format!("@t{}", step + 1);
     let mut next = BTreeSet::new();
     for k in &keys {
-        if k.starts_with("ok@") { continue; }
+        if k.starts_with("ok@") {
+            continue;
+        }
         if let Some(base) = k.strip_suffix(&suffix) {
             next.insert(base.to_string());
         }
@@ -141,7 +143,10 @@ fn strips_step(
     // Frame persistence: every non-deleted atom must have persisted.
     for atom in state {
         if !dels.iter().any(|d| d == atom) {
-            assert!(next.contains(atom), "frame rule failed: {atom} lost at step {step}");
+            assert!(
+                next.contains(atom),
+                "frame rule failed: {atom} lost at step {step}"
+            );
         }
     }
     // Adds landed, dels removed (closed world per step).
@@ -150,7 +155,10 @@ fn strips_step(
     }
     for d in dels {
         if !adds.contains(d) {
-            assert!(!next.contains(*d), "del {d} still present after step {step}");
+            assert!(
+                !next.contains(*d),
+                "del {d} still present after step {step}"
+            );
         }
     }
     next
@@ -199,7 +207,13 @@ fn apply_act(w: &World, dels: &[&str], adds: &[&str]) -> World {
 fn exec_branch(tree: &Tree, w: World, path: &mut Vec<String>) -> (String, World) {
     match tree {
         Tree::Done => (path.join("/"), w),
-        Tree::Act { name, dels, adds, pre, sub } => {
+        Tree::Act {
+            name,
+            dels,
+            adds,
+            pre,
+            sub,
+        } => {
             for p in *pre {
                 let (atom, want) = match p.strip_prefix('!') {
                     Some(a) => (a, false),
@@ -217,7 +231,12 @@ fn exec_branch(tree: &Tree, w: World, path: &mut Vec<String>) -> (String, World)
             path.pop();
             r
         }
-        Tree::Sense { name, atom, then, els } => {
+        Tree::Sense {
+            name,
+            atom,
+            then,
+            els,
+        } => {
             let v = holds(&w, atom, true);
             path.push(format!("sense:{name}={}", if v { "true" } else { "false" }));
             let r = exec_branch(if v { then } else { els }, w, path);
@@ -259,7 +278,11 @@ fn execute_all_worlds(
                     .enumerate()
                     .map(|(i, a)| format!(
                         "{a}={}",
-                        if mask & (1 << i) != 0 { "true" } else { "false" }
+                        if mask & (1 << i) != 0 {
+                            "true"
+                        } else {
+                            "false"
+                        }
                     ))
                     .collect::<Vec<_>>()
                     .join(",")
@@ -273,7 +296,11 @@ fn execute_all_worlds(
                         .enumerate()
                         .map(|(i, a)| format!(
                             "{a}={}",
-                            if mask & (1 << i) != 0 { "true" } else { "false" }
+                            if mask & (1 << i) != 0 {
+                                "true"
+                            } else {
+                                "false"
+                            }
                         ))
                         .collect::<Vec<_>>()
                         .join(",")
@@ -383,12 +410,26 @@ fn fact_json(key: &str, value: &str) -> Value {
 fn gps_case_paper() -> Vector {
     // papers/gps.json (Newell & Simon 1963, Fig. 4): L1 -R6-> L2 -R12-> L0.
     let ops = vec![
-        Op { id: "R6", pre: &["expr=L1"], adds: &["expr=L2"], dels: &["expr=L1"] },
-        Op { id: "R12", pre: &["expr=L2"], adds: &["expr=L0"], dels: &["expr=L2"] },
+        Op {
+            id: "R6",
+            pre: &["expr=L1"],
+            adds: &["expr=L2"],
+            dels: &["expr=L1"],
+        },
+        Op {
+            id: "R12",
+            pre: &["expr=L2"],
+            adds: &["expr=L0"],
+            dels: &["expr=L2"],
+        },
     ];
     let derived = replay_plan(&ops, &["expr=L1"]);
     let plan = "R6,R12";
-    assert_eq!(derived, vec!["expr=L0@t2".to_string()], "paper replay must reach L0 and only L0");
+    assert_eq!(
+        derived,
+        vec!["expr=L0@t2".to_string()],
+        "paper replay must reach L0 and only L0"
+    );
     let mut input = base_input(
         "transform propositional logic expression L1 into L0 using symbolic-logic rules",
     );
@@ -428,8 +469,18 @@ fn gps_case_multistep() -> Vector {
     // robot walks to office, then carries the box in (its precond was produced
     // by step 1 and must persist through step 2's frame rules).
     let ops = vec![
-        Op { id: "op:walk_office", pre: &["robot=home"], adds: &["robot=office"], dels: &["robot=home"] },
-        Op { id: "op:carry_box", pre: &["robot=office", "box=home"], adds: &["box=office"], dels: &["box=home"] },
+        Op {
+            id: "op:walk_office",
+            pre: &["robot=home"],
+            adds: &["robot=office"],
+            dels: &["robot=home"],
+        },
+        Op {
+            id: "op:carry_box",
+            pre: &["robot=office", "box=home"],
+            adds: &["box=office"],
+            dels: &["box=home"],
+        },
     ];
     let derived = replay_plan(&ops, &["robot=home", "box=home"]);
     let plan = "op:walk_office,op:carry_box";
@@ -440,8 +491,16 @@ fn gps_case_multistep() -> Vector {
     );
     let mut input = base_input("move robot and box to the office");
     input["rules"] = json!([
-        rule_json("op:walk_office", &["robot=home"], "robot=office;!robot=home"),
-        rule_json("op:carry_box", &["robot=office", "box=home"], "box=office;!box=home"),
+        rule_json(
+            "op:walk_office",
+            &["robot=home"],
+            "robot=office;!robot=home"
+        ),
+        rule_json(
+            "op:carry_box",
+            &["robot=office", "box=home"],
+            "box=office;!box=home"
+        ),
     ]);
     input["goals"] = json!([
         goal_json("g1", "robot", "office"),
@@ -493,14 +552,13 @@ fn contingent_case_vacuum() -> Vector {
         }),
         els: Box::new(Tree::Done),
     };
-    let (verdicts, leaf_states) = execute_all_worlds(
-        &["dirt"],
-        &[],
-        &[(false, "dirt")],
-        &tree,
-    );
+    let (verdicts, leaf_states) = execute_all_worlds(&["dirt"], &[], &[(false, "dirt")], &tree);
     assert_eq!(verdicts.len(), 2, "2 worlds -> 2 leaf verdicts");
-    assert_eq!(leaf_states.len(), 2, "2 worlds x 1 tracked fluent as leaf states");
+    assert_eq!(
+        leaf_states.len(),
+        2,
+        "2 worlds x 1 tracked fluent as leaf states"
+    );
     let tree_str = "(sense check-dirt dirt (act suck (done)) (done))";
     let exp_facts = vec![tree_str.to_string()];
     let mut verdicts = verdicts;
@@ -562,12 +620,7 @@ fn contingent_case_two_unknowns() -> Vector {
             sub: Box::new(Tree::Done),
         }),
     };
-    let (verdicts, leaf_states) = execute_all_worlds(
-        &["A", "B"],
-        &[],
-        &[(true, "G")],
-        &tree,
-    );
+    let (verdicts, leaf_states) = execute_all_worlds(&["A", "B"], &[], &[(true, "G")], &tree);
     assert_eq!(verdicts.len(), 4, "4 worlds -> 4 leaf verdicts");
     // pre "!A" is not a positive hold — the generator's exec_branch asserts
     // positive preconds only; gf's !A guard is enforced by construction
@@ -575,7 +628,11 @@ fn contingent_case_two_unknowns() -> Vector {
     for label in verdicts.keys() {
         assert!(label.contains("A=false") || label.contains("A=true"));
     }
-    assert_eq!(leaf_states.len(), 12, "4 worlds x 3 tracked fluents as leaf states");
+    assert_eq!(
+        leaf_states.len(),
+        12,
+        "4 worlds x 3 tracked fluents as leaf states"
+    );
     let tree_str = "(sense check-A A (act gt (done)) (act gf (done)))";
     let exp_facts = vec![tree_str.to_string()];
     let mut verdicts = verdicts;
@@ -620,7 +677,12 @@ fn contingent_case_two_unknowns() -> Vector {
 fn htn_case_paper() -> Vector {
     // papers/htn_planning.json (Nau et al. 2003 SHOP2 §2, go_to_dest):
     // method:go_to_dest:walk -> op:walk; primitive-sequence executability only.
-    let ops = vec![Op { id: "op:walk", pre: &[], adds: &["at=dest"], dels: &[] }];
+    let ops = vec![Op {
+        id: "op:walk",
+        pre: &[],
+        adds: &["at=dest"],
+        dels: &[],
+    }];
     // op:walk has empty preconds: the executability witness rule would have an
     // empty body; replay asserts the add is derived from the (empty) body —
     // handled via the always-present frame base: at=dest@t1 :- at=home@t0.
@@ -628,7 +690,10 @@ fn htn_case_paper() -> Vector {
     state = strips_step(&state, &["at=home"], &["at=dest"], &[], 0);
     let mut final_atoms: Vec<String> = state.iter().map(|a| format!("{a}@t1")).collect();
     final_atoms.sort();
-    assert_eq!(final_atoms, vec!["at=dest@t1".to_string(), "at=home@t1".to_string()]);
+    assert_eq!(
+        final_atoms,
+        vec!["at=dest@t1".to_string(), "at=home@t1".to_string()]
+    );
     let _ = ops; // replay done above with an explicit precondition set
 
     let mut input = base_input("plan");
@@ -681,13 +746,27 @@ fn htn_case_multistep() -> Vector {
     // travel -> op:book (pay=ok -> booked=yes); op:fly (booked=yes ->
     // at=paris, !at=home).
     let ops = vec![
-        Op { id: "op:book", pre: &["pay=ok"], adds: &["booked=yes"], dels: &[] },
-        Op { id: "op:fly", pre: &["booked=yes"], adds: &["at=paris"], dels: &["at=home"] },
+        Op {
+            id: "op:book",
+            pre: &["pay=ok"],
+            adds: &["booked=yes"],
+            dels: &[],
+        },
+        Op {
+            id: "op:fly",
+            pre: &["booked=yes"],
+            adds: &["at=paris"],
+            dels: &["at=home"],
+        },
     ];
     let derived = replay_plan(&ops, &["at=home", "pay=ok"]);
     assert_eq!(
         derived,
-        vec!["at=paris@t2".to_string(), "booked=yes@t2".to_string(), "pay=ok@t2".to_string()],
+        vec![
+            "at=paris@t2".to_string(),
+            "booked=yes@t2".to_string(),
+            "pay=ok@t2".to_string()
+        ],
         "travel replay: at=home deleted, pay=ok persists, at=paris added"
     );
     let mut input = base_input("plan travel via booking then flight");
@@ -737,10 +816,7 @@ fn htn_case_multistep() -> Vector {
 
 /// isa transitive closure via the native engine (tc base + composition).
 fn isa_closure(edges: &[(&str, &str)]) -> Vec<String> {
-    let facts: Vec<Value> = edges
-        .iter()
-        .map(|(x, y)| json!([x, "isa", y]))
-        .collect();
+    let facts: Vec<Value> = edges.iter().map(|(x, y)| json!([x, "isa", y])).collect();
     let rules = vec![
         rule(json!(["?x", "tc", "?y"]), vec![json!(["?x", "isa", "?y"])]),
         rule(
@@ -851,12 +927,12 @@ fn frames_case_cycle() -> Vector {
     // Cycle: a > b > a. The breed REFUSES (isa cycle detected); no
     // reachability set is emitted.
     let mut input = base_input("resolve a color");
-    input["facts"] = json!([
-        fact_json("frame:a:isa", "b"),
-        fact_json("frame:b:isa", "a"),
-    ]);
+    input["facts"] = json!([fact_json("frame:a:isa", "b"), fact_json("frame:b:isa", "a"),]);
     let mut verdicts = BTreeMap::new();
-    verdicts.insert("cycle_refused".to_string(), "isa cycle detected at a".to_string());
+    verdicts.insert(
+        "cycle_refused".to_string(),
+        "isa cycle detected at a".to_string(),
+    );
     Vector {
         vector_id: "frames-cycle-refusal".into(),
         breed: "frames_inheritance",
@@ -920,7 +996,10 @@ fn rev() -> String {
         .args(["-C", env!("CARGO_MANIFEST_DIR"), "rev-parse", "HEAD"])
         .output()
         .expect("git rev-parse");
-    String::from_utf8(out.stdout).expect("utf8").trim().to_string()
+    String::from_utf8(out.stdout)
+        .expect("utf8")
+        .trim()
+        .to_string()
 }
 
 fn vecdir() -> PathBuf {
@@ -985,10 +1064,17 @@ fn main() {
             let disk_rev = {
                 let disk = fs::read_to_string(&path).unwrap();
                 let v: Value = serde_json::from_str(&disk).unwrap();
-                v["provenance"]["graphlaw_rev"].as_str().unwrap_or("").to_string()
+                v["provenance"]["graphlaw_rev"]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_string()
             };
             if disk_rev != rev() {
-                eprintln!("VERIFY FAIL {}: rev {disk_rev} != current {}", c.vector_id, rev());
+                eprintln!(
+                    "VERIFY FAIL {}: rev {disk_rev} != current {}",
+                    c.vector_id,
+                    rev()
+                );
                 failures += 1;
                 continue;
             }

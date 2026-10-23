@@ -213,9 +213,14 @@ pub(in crate::abi) fn op_datalog(v: &Value) -> Res<Value> {
     }
     let ev = evaluate(&exe, facts).map_err(|e| dl(&e))?;
     let all = ev.facts().facts_sorted();
+    let nquads: String = all
+        .iter()
+        .map(|f| format!("{} {} {} .\n", f.subject, f.predicate, f.object))
+        .collect();
     Ok(json!({
         "count": all.len(),
         "facts": all.iter().map(|f| json!([unsurface(&f.subject), unsurface(&f.predicate), unsurface(&f.object)])).collect::<Vec<_>>(),
+        "nquads": nquads,
     }))
 }
 

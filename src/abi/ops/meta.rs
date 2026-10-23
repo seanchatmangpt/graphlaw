@@ -3,6 +3,12 @@ use serde_json::{Value, json};
 use super::super::{ABI_VERSION, Res, bad, opt_str, state_field, str_field};
 use crate::dialect::sniff;
 
+/// `frozen-duckdb` is a normal dependency of every target — including the wasm
+/// unit — so every backend authority is reported on all targets.
+fn report_authority(_authority: &str) -> bool {
+    true
+}
+
 pub(in crate::abi) fn capabilities() -> Value {
     // P28-SIL overflow policy: the evidentiary counters are runtime facts, not
     // hashed surface inputs — cfg-gated additive keys (absent with the feature
@@ -42,7 +48,7 @@ pub(in crate::abi) fn capabilities() -> Value {
         "abi": ABI_VERSION,
         "abi_version": ABI_VERSION,
         "crate": env!("CARGO_PKG_VERSION"),
-        "authorities": crate::BACKEND_AUTHORITIES.iter().map(|a| json!({
+        "authorities": crate::BACKEND_AUTHORITIES.iter().filter(|a| report_authority(a.authority)).map(|a| json!({
             "capability": a.capability, "authority": a.authority, "revision": a.revision,
         })).collect::<Vec<_>>(),
         "rdf_dialects": crate::registry::rdf_dialect_names(),

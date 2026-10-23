@@ -73,8 +73,12 @@ const RULESET: &str = r#"
 /// Runs the real duckdb CLI over the COLD-1 fixture CSVs — the same aggregate
 /// pushdown leg smalt's court runs (WHERE > -20.0, qualifier, type, GROUP BY).
 fn duckdb_aggregates() -> BTreeMap<String, (f64, i64)> {
-    let dir = std::env::var("COLDCHAIN_CSV_DIR")
-        .unwrap_or_else(|_| "/Users/sac/smalt/tmp/coldchain".to_string());
+    let dir = std::env::var("COLDCHAIN_CSV_DIR").unwrap_or_else(|_| {
+        format!(
+            "{}/smalt/tmp/coldchain",
+            std::env::var("HOME").expect("HOME set")
+        )
+    });
     let duckdb =
         std::env::var("DUCKDB_BIN").unwrap_or_else(|_| "/opt/homebrew/bin/duckdb".to_string());
     let sql = format!(
@@ -103,8 +107,10 @@ fn duckdb_aggregates() -> BTreeMap<String, (f64, i64)> {
             assert_eq!(parts.len(), 3, "row shape: {l}");
             (
                 parts[0].to_string(),
-                (parts[1].parse::<f64>().expect("max_temp f64"),
-                 parts[2].parse::<i64>().expect("duration i64")),
+                (
+                    parts[1].parse::<f64>().expect("max_temp f64"),
+                    parts[2].parse::<i64>().expect("duration i64"),
+                ),
             )
         })
         .collect()
@@ -187,8 +193,7 @@ fn gws12_partition_identical_across_all_three_legs() {
 
     // Typed release (RULE 2): exactly COLD-1's released set.
     assert_eq!(
-        rel,
-        COLD1_RELEASED,
+        rel, COLD1_RELEASED,
         "release partition diverged from COLD-1 leg"
     );
 
@@ -212,7 +217,10 @@ fn gws12_partition_identical_across_all_three_legs() {
     // identically on both engines (derived text omits already-known facts —
     // eyeron derives only NEW triples, so the proof is present-by-input).
     let proof_count = data.matches(COLD1_AUDIT_HASH).count();
-    assert_eq!(proof_count, 9, "each aggregate batch carries the audit proof");
+    assert_eq!(
+        proof_count, 9,
+        "each aggregate batch carries the audit proof"
+    );
 }
 
 #[test]

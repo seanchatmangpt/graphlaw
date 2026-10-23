@@ -9,7 +9,167 @@ workspace calendar version; "Published as crates.io" lines refer to the `graphla
 
 ## [26.10.22] - 2026-10-22
 
-Wave release: sql-rdf dialect surface (35 statement classes, SHACL admission, expression
+Wave hardening: guard/gate census (19 scripts), typed-refusal expansions, exhaustive
+signature-tamper courts, OCEL exporter, and an external oracle CI job.
+
+### Added
+
+- Guard/gate census: 19 executable guard/gate/court scripts now live under `scripts/`
+  (`chain_flag_court.sh`, `count_gate.sh`, `doc_staleness_gate.sh`, `exit_capture_check.sh`,
+  `fleet_cleanup.sh`, `gen_w3c_manifest.sh`, `gen_wasm4pm_graphlaw_vectors.py`,
+  `machine_shaped_gate.sh`, `mutation_court.sh`, `partition_court.sh`,
+  `partition_court_selfcheck_g1.py`, `partition_court_selfcheck_g2.py`,
+  `receipt_chain_sync.sh`, `receipt_replay_court.sh`, `shape_mutation_court.sh`,
+  `spc_court.sh`, `wasm_audit.sh`, `wasm_unknown_unknown_smoke.sh`, `witness_gate.sh`).
+  The 14 new in this wave, one line each:
+  - `chain_flag_court.sh` — non-vacuity court for `receipt_chain_sync.sh`: real `--check`
+    verifies + unknown-flag usage refusal (exit 2) pinned so a flag regression fails loudly.
+  - `count_gate.sh` — re-runs allowlist courts cited by "N passed; 0 failed" rows in
+    `docs/**/*.md` and flags COUNT-STALE / COUNT-UNPAIRED mismatches; fenced output skipped
+    loudly, never counted as a claim.
+  - `doc_staleness_gate.sh` — fails on stale file:line doc anchors (code moved, doc did not).
+  - `exit_capture_check.sh` — self-test for the court-runner Exit-capture law: proves the
+    documented zsh pattern detects the real `false | true` head exit (a gate that cannot
+    exit 1 is the failure).
+  - `fleet_cleanup.sh` — advisory reclaim of repo-local `target-*` lane build roots older
+    than a grace window (default 45 min); never touches `./target`; always exits 0.
+  - `machine_shaped_gate.sh` — fails closed on `/Users/` literals in `tests/`/`src/` unless
+    commented or `MACHINE-PINNED:` annotated; carries a `--self-test` anti-vacuity court.
+  - `partition_court.sh` — code-partition court over `courts/code-partition/` pin files
+    (axioms blake3 + manifest), with `partition_court_selfcheck_g1.py`/`g2.py` as its
+    anti-vacuity self-check pair.
+  - `receipt_chain_sync.sh` — syncs `receipts/CHAIN.blake3` and verifies the receipt chain
+    (`--check`, unknown flags refused with usage).
+  - `receipt_replay_court.sh` — K7-class court: re-executes embedded `cargo test` commands
+    from a rotating deterministic sample of receipts and compares claimed vs observed counts;
+    selfcheck proves a fabricated receipt is flagged.
+  - `shape_mutation_court.sh` — anti-vacuity sweep for SHACL shapes: gates must flip on
+    shape mutation.
+  - `spc_court.sh` — SPC gate: Cpk ≥ 1.33 on the receipt fold path (P28-SIL program).
+  - `witness_gate.sh` — every factual build/run witness in `docs/**/*.md` must cite an
+    existing file:line (or carry `witness-gate:allow`); generated docs excluded.
+- Typed law-kernel refusal `UNKNOWN-STEP-CAPABILITY` (`REFUSAL_UNKNOWN_STEP_CAPABILITY`,
+  `src/law.rs:764`): a step naming a capability with no `BACKEND_AUTHORITIES` entry is a
+  typed refusal, not a panic. Courts in `tests/law_state.rs` (direct + K10 callsite path).
+- OCEL exporter binary `graphlaw-ocel-export` (`src/bin/graphlaw_ocel_export.rs`) with
+  court `tests/ocel_export_court.rs`.
+- External oracle CI job `external-oracle` (`.github/workflows/ci.yml`): the
+  ggen-marketplace pm4pytest/graphlaw pytest suite runs against the binaries this repo
+  builds (real subprocesses, no mocks; `continue-on-error: true` until stable).
+- EH wall closed (SQLRDF-21): the exception-handling wall that blocked in-wasm
+  DuckDB execution is closed by the dual-artifact policy — the archive law
+  `-mllvm -wasm-use-legacy-eh=0` produces a new-EH (`try_table`/`throw`)
+  artifact, hosted by wasmtime 48 with `wasm_exceptions` (wasmi 2.0.0 is a
+  hard NO: no exceptions-proposal support). A `runner-eh` cargo feature plus a
+  `graphlaw-run-eh` binary wrap the wasmtime-48 host runner. Design:
+  `docs/jira/v26.10.22/SQLRDF-21.md` (A1' recipe,
+  `designs/a1prime-trytable-recipe.md`; ENGINE-tier host decision,
+  `designs/wasmi-eh-research.md`). Artifact re-pinned 2026-10-23: blake3
+  `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`,
+  57,781,384 B, Tag(13)×1, wasm_audit PASS, registry `--check` exit 0
+  (`receipts/2026-10-23-eh-closure-wave.md` §8, canonical re-pin; the
+  interim new-EH pin `991b2bee…` 46,138,360 B and the legacy `f149433c…`
+  pin are historical).
+- Op `duckdb` (op-15) promoted in-module: the host-only cfg gates are removed;
+  the wasm module dispatches the `duckdb` op with no
+  `#[cfg(target_arch)]` strip and no `duckdb` feature, and the op authorities
+  now include frozen-duckdb on wasm. Raw SQL text is still not admitted —
+  SQLRDF-17 stands; the in-module op accepts a Turtle AST document via
+  `compile_turtle` only.
+- Op-15 exec admits all graph-backed statements: the execution arm accepts
+  every statement class backed by the admitted graph, not a hand-picked
+  subset. The legacy raw-SQL hole stays closed under SQLRDF-17.
+- `REFUSAL-05 UnboundedMutationRefusal` enforced: a WHERE-less UPDATE/DELETE
+  requires BOTH `sql:wherePredicate` slots to be present — stricter than the
+  shape's minimum — and refuses typed (`docs/refusals.md`, REFUSAL-05 row)
+  before any engine contact, leaving the database byte-identical.
+- MERGE is classified as a mutating statement class: its execution bumps the
+  epoch counter (receipt-witnessed), so MERGE effects participate in
+  epoch-based resync like other mutations.
+- Session surface note: the `open` / `exec-with-session` in-module session
+  surface is marked "landing" — status is declared in the ticket, not yet
+  receipted.
+
+### Changed
+
+- MERGE `ON` scope refusal widened: `REFUSAL-03 ScopeIntegrityRefusal` gains arm
+  `MERGE_ON_NO_TARGET_COLUMN = 7` (`src/sql_ast.rs:987-993`) — a MERGE `ON` condition
+  referencing no target-qualified column (a constant-only ON matches every target row and
+  makes WHEN MATCHED fan-out unbounded) is refused; register row in `docs/refusals.md`.
+- Exhaustive 64-byte signature-tamper courts (`tests/trust_attest.rs:316-364`): flipping
+  any single one of the 64 Ed25519 signature bytes fails verification, byte by byte.
+- Binaries return typed exit codes via `ExitCode`/`RunError` instead of ad hoc
+  `std::process::exit`/stringly errors (`src/bin/graphlaw_run.rs`, `dl_dualroute.rs`,
+  `sa2a_portability_verify.rs`, `sa2a_run14_verify.rs` — see `git diff` for the four bins).
+- Machine-shaped path fixes: `/Users/` absolute-path literals removed from tests per
+  `machine_shaped_gate.sh` (comments and `MACHINE-PINNED:` annotations excepted).
+- `docs/THESIS.md` and `docs/UNIFIED_DISSERTATION.md` moved to `docs/archive/` with a new
+  `docs/archive/README.md` marking them as superseded material, not current conformance text.
+- Op-15 `duckdb` no longer host-only (supersedes the 26.10.22 MIGRATION section
+  "Op-15 `duckdb` is host-only in the wasm artifact"): the
+  `#[cfg(not(target_arch = "wasm32"))]` dispatch gate is removed and the op
+  runs in-module; the typed `unknown op \`duckdb\`` refusal on wasm no longer
+  fires. See MIGRATION.md for what consumers must change.
+- Docs reconciled to the post-switchover reality: `docs/WASM.md`,
+  `docs/wasm-integration.md`, `docs/ARCHITECTURE.md`, `docs/DIALECTS.md`,
+  `docs/how-to/run-the-wasm-module.md`, `docs/index.md`; `docs/refusals.md`
+  rows 119-121 updated; operator decision OD-1 marked decided in
+  `docs/jira/v26.10.22/designs/OPERATOR-DECISIONS.md`.
+
+### Added (SQLRDF-21..24 wave, second batch)
+
+- Op-15 persistent session surface (`src/duckdb_op.rs`): `open` /
+  `exec`+`session` / `close` modes over a bounded registry — 16-session cap
+  (`src/duckdb_op.rs:77`), typed unknown-session and duplicate-open refusals,
+  session dies with the module instance.
+- ATTACH path admission policy: `GRAPHLAW_ATTACH_ROOTS` allowlist, fail-closed
+  when unset; `:memory:` is refused as an ATTACH target (`src/duckdb_op.rs`).
+- `REFUSAL-05` shape-layer alignment: the ggen shape's `xone` relaxed to `or`
+  to match the kernel's two-slot WHERE rule, and refusal messages carry the
+  `[REFUSAL-05]` prefix; register row at `docs/refusals.md:80`.
+- Multi-column INSERT/UPDATE extraction (SQLRDF-22 gap G4) with courts.
+- DECIMAL column type plus typed decimal literals (SQLRDF-22 gap G1,
+  `src/sql_ast.rs:1799`, courts at `src/sql_ast.rs:2650` block).
+- COPY egress artifact digest recorded in the ExecutionReceipt (SQLRDF-22 gap
+  G3), so egress is receipt-witnessed.
+- Session-ABI court around the op-15 session surface.
+- Wasmtime ports: common `Host` abstraction, boundary fuzz corpus (1172 cases,
+  0 failures), memory-wall court (8/8), and a gws4 surface court.
+- `graphlaw-run` EH-class pre-flight: the runner probes exception-support
+  before dispatch and exits 96 on the EH-blocked class
+  (`src/bin/graphlaw_run.rs`).
+- pm4pytest precision API: `min_precision` parameter with a non-vacuity court
+  (external oracle suite, CI `external-oracle` job).
+- FIBO fixtures for conformance courts: `tests/fixtures/fibo/` (delegation,
+  dvp_securities and failure-path variants).
+- Statement-sequence design ticket SQLRDF-23
+  (`docs/jira/v26.10.22/SQLRDF-23.md`).
+
+### Changed (SQLRDF-21..24 wave, second batch)
+
+- Canonical libunwind is now the uniform new-EH rebuild: candidate B
+  (sha256 `6a5f79f7…`) is the single rebuild path for the new-EH artifact; the
+  legacy variant is named only in build-script FAIL messages. Witness:
+  `receipts/2026-10-23-staging-wipe-incident.md`.
+
+### Fixed
+
+- Wasm dtor-runner trap root-caused and fixed (SQLRDF-24): two defects
+  witnessed — (1) musl atexit walker fn-read offsets + `slot` re-attach
+  (`atexit.c.obj` replaced with the current wasi-libc member,
+  sha256 prefix `a1874498…`), and (2) reactor-contract completion in
+  `wasm/src/lib.rs`: static extension registration via `.init_array`
+  constructors + atexit-family no-op overrides (destructors never run
+  mid-module-life). Size delta explained by statically-linked
+  core_functions/icu extension code + wave source delta under LTO.
+  Qualification: lifecycle courts 3/3 GREEN; trap table clean
+  (`receipts/2026-10-23-eh-closure-wave.md` §8).
+- Document-sequence wire surface verified end to end (SQLRDF-23):
+  duckdb_op 16/0, duckdb_eval 18/0, sql_ast 32/0 with the G1 DECIMAL 3
+  and G4 multi-column 6 courts folded in
+  (`receipts/2026-10-23-eh-closure-wave.md` §4).
+
+Continued — sql-rdf dialect surface (35 statement classes, SHACL admission, expression
 compiler, parameterized MERGE), typed refusal register, and receipt-hash pinning.
 
 ### Added
@@ -66,18 +226,21 @@ compiler, parameterized MERGE), typed refusal register, and receipt-hash pinning
 - Query ledger (`src/query_ledger.rs`), epoch-bounded cache store
   (`src/query_cache.rs`), LRU-256 prepared-statement seam with `$N`-bound
   parameters (RECEIPTS.md §8).
-- `frozen-duckdb` resolved from the crates.io 2.0 registry source with checksum
-  (`version = "2.0.2"`; the `[patch]` redirect to a local checkout is gone). The
-  `wasm32-wasip1` link is green under `WASI_SDK_PATH`; the vendored
-  `purrdf-sparql-eval` WASI clock patch is now guarded by
-  `tests/wasi_patch_guard.rs` (feature `wasi-patched-deps`).
+- `frozen-duckdb` 2.0.2 stays on the host
+  (`[target.'cfg(not(target_arch = "wasm32"))'.dependencies]`). The wasm
+  staticlib emits a Tag section that wasmi 2.0.0 rejects, so columnar
+  execution is not linked into `graphlaw-wasm`. SQL-in-RDF admission stays
+  in the module through `compile_turtle`. The vendored `purrdf-sparql-eval`
+  WASI clock patch is guarded by `tests/wasi_patch_guard.rs` (feature
+  `wasi-patched-deps`).
 - Licensing consolidated: `LICENSE` (MIT) and `LICENSE-P28-SIL.md` are replaced by
   a single `LICENSE.md` carrying the P28 Sovereign Invariant License
   (`urn:graphlaw:license:p28-sil:v2.1.0-sovereign`).
-- WASM artifact stays pinned at `332ea218…2c30c` (6,793,617 B). The wasm32-wasip1
-  link of the current tree is witnessed (2026-10-22; lane byte count in
-  `docs/WASM.md`). That witness is not a re-pin; a pin change belongs with a
-  graphlaw version bump (RECEIPTS.md Successor §2).
+- WASM artifact re-pinned with this version:
+  `f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e`
+  (7,104,147 B, tag section count 0, `pin-source=26.10.22`). The previous
+  workspace pin `74ec3c8d…` carried the 26.10.21 version string. `332ea218…`
+  (6,793,617 B) is historical.
 
 ## [26.10.21] - 2026-10-21
 

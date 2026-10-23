@@ -19,10 +19,14 @@ static ENGINE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 /// `SQL_STATEMENTS`. A missing sibling checkout is not the spec, and a
 /// missing file fails the court.
 fn committed_statement_names() -> Vec<String> {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("ggen/sql-dialect/ontology/statements.ttl");
-    let text = std::fs::read_to_string(&path)
-        .unwrap_or_else(|e| panic!("committed grammar ontology missing at {}: {e}", path.display()));
+    let path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("ggen/sql-dialect/ontology/statements.ttl");
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
+        panic!(
+            "committed grammar ontology missing at {}: {e}",
+            path.display()
+        )
+    });
     let mut names = Vec::new();
     for line in text.lines() {
         let line = line.trim();
@@ -62,7 +66,9 @@ fn every_source_extension_answers_or_is_absent() {
         .prepare("SELECT extension_name, installed FROM duckdb_extensions()")
         .unwrap();
     let catalog: Vec<(String, bool)> = stmt
-        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, bool>(1)?)))
+        .query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, bool>(1)?))
+        })
         .unwrap()
         .map(|r| r.unwrap())
         .collect();
@@ -94,7 +100,9 @@ fn every_source_extension_answers_or_is_absent() {
                     "{name}: {err}"
                 );
             }
-            None => panic!("{name} is in the DuckDB source tree and missing from duckdb_extensions()"),
+            None => {
+                panic!("{name} is in the DuckDB source tree and missing from duckdb_extensions()")
+            }
         }
     }
 }
@@ -112,7 +120,8 @@ fn every_statement_kind_runs() {
             Ok(()) => {}
             Err(e) if *name == "ConnectStatement" || *name == "DisconnectStatement" => {
                 let message = e.to_string();
-                let refused = message.contains("not yet implemented") || message.contains("no active CONNECT");
+                let refused = message.contains("not yet implemented")
+                    || message.contains("no active CONNECT");
                 if !refused {
                     failures.push(format!("{name}: {message}"));
                 }
@@ -120,7 +129,11 @@ fn every_statement_kind_runs() {
             Err(e) => failures.push(format!("{name}: {e}")),
         }
     }
-    assert!(failures.is_empty(), "statements that did not run:\n{}", failures.join("\n"));
+    assert!(
+        failures.is_empty(),
+        "statements that did not run:\n{}",
+        failures.join("\n")
+    );
 }
 
 // =============================================================================
@@ -165,7 +178,11 @@ fn expr_doc(kind: &str, variant: &str) -> String {
         "ResetStatement" => r#"; sql:resetTarget [ sql:configKey "memory_limit" ]"#.into(),
         "TransactionStatement" => format!("; sql:transactionAction sql:{variant}"),
         "LoadStatement" => r#"; sql:loadTarget [ sql:extensionName "icu" ]"#.into(),
-        "InstallStatement" => r#"; sql:installTarget [ sql:extensionName "tpch" ; sql:repositoryPath "/Users/sac/.duckdb/extensions" ]"#.to_string(),
+        // Env-derived extensions dir: machine-independent fixture (lane N1).
+        "InstallStatement" => format!(
+            r#"; sql:installTarget [ sql:extensionName "tpch" ; sql:repositoryPath "{}" ]"#,
+            std::env::temp_dir().join("graphlaw-duckdb-extensions").display()
+        ),
         "AttachStatement" => {
             r#"; sql:attachTarget [ sql:databasePath ":memory:" ; sql:attachAlias "memalias" ]"#.to_string()
         }
@@ -186,12 +203,19 @@ fn expr_doc(kind: &str, variant: &str) -> String {
 
 /// Witnesses the engine state change of one executed class by real catalog or
 /// table readback on the same connection. Empty list = class PASS.
-fn expression_readback(kind: &str, arg: &str, db: &GraphLawDuckDB, compiled_sql: &str) -> Vec<String> {
+fn expression_readback(
+    kind: &str,
+    arg: &str,
+    db: &GraphLawDuckDB,
+    compiled_sql: &str,
+) -> Vec<String> {
     let c = db.raw_connection();
     let q = |sql: &str, expect: &str| -> Vec<String> {
         match c.query_row(sql, [], |r| r.get::<_, String>(0)) {
             Ok(v) if v == expect => Vec::new(),
-            Ok(v) => vec![format!("{kind}/{arg}: readback {sql:?} = {v:?}, want {expect:?}")],
+            Ok(v) => vec![format!(
+                "{kind}/{arg}: readback {sql:?} = {v:?}, want {expect:?}"
+            )],
             Err(e) => vec![format!("{kind}/{arg}: readback {sql:?}: {e}")],
         }
     };
@@ -242,13 +266,11 @@ fn expression_readback(kind: &str, arg: &str, db: &GraphLawDuckDB, compiled_sql:
                 Err(e) => vec![format!("{kind}: EXECUTE q: {e}")],
             }
         }
-"ExecuteStatement" => {
-            match c.query_row("EXECUTE q", [], |r| r.get::<_, i64>(0)) {
-                Ok(42) => Vec::new(),
-                Ok(n) => vec![format!("{kind}: EXECUTE q = {n}, want 42")],
-                Err(e) => vec![format!("{kind}: EXECUTE q: {e}")],
-            }
-        }
+        "ExecuteStatement" => match c.query_row("EXECUTE q", [], |r| r.get::<_, i64>(0)) {
+            Ok(42) => Vec::new(),
+            Ok(n) => vec![format!("{kind}: EXECUTE q = {n}, want 42")],
+            Err(e) => vec![format!("{kind}: EXECUTE q: {e}")],
+        },
         "DeallocateStatement" => {
             let still = c.prepare("EXECUTE q").is_ok();
             if still {
@@ -257,18 +279,18 @@ fn expression_readback(kind: &str, arg: &str, db: &GraphLawDuckDB, compiled_sql:
                 Vec::new()
             }
         }
-        "ExplainStatement" => {
-            match c.query_row(compiled_sql, [], |r| r.get::<_, String>(0)) {
-                Ok(_) => Vec::new(),
-                Err(e) => vec![format!("{kind}: explain readback: {e}")],
-            }
-        }
+        "ExplainStatement" => match c.query_row(compiled_sql, [], |r| r.get::<_, String>(0)) {
+            Ok(_) => Vec::new(),
+            Err(e) => vec![format!("{kind}: explain readback: {e}")],
+        },
         "CallStatement" => q(
             "SELECT count(*)::VARCHAR FROM pragma_database_size() WHERE database_name='memory'",
             "1",
         ),
         "PragmaStatement" => {
-            match c.query_row("SELECT library_version FROM pragma_version()", [], |r| r.get::<_, String>(0)) {
+            match c.query_row("SELECT library_version FROM pragma_version()", [], |r| {
+                r.get::<_, String>(0)
+            }) {
                 Ok(v) if !v.is_empty() => Vec::new(),
                 Ok(v) => vec![format!("{kind}: empty version {v:?}")],
                 Err(e) => vec![format!("{kind}: pragma readback: {e}")],
@@ -276,7 +298,9 @@ fn expression_readback(kind: &str, arg: &str, db: &GraphLawDuckDB, compiled_sql:
         }
         "SetStatement" => q("SELECT current_setting('threads')::VARCHAR", "2"),
         "ResetStatement" => {
-            match c.query_row("SELECT current_setting('memory_limit')", [], |r| r.get::<_, String>(0)) {
+            match c.query_row("SELECT current_setting('memory_limit')", [], |r| {
+                r.get::<_, String>(0)
+            }) {
                 Ok(v) if v != "2GB" => Vec::new(),
                 Ok(v) => vec![format!("{kind}: memory_limit still {v:?} after RESET")],
                 Err(e) => vec![format!("{kind}: reset readback: {e}")],
@@ -388,7 +412,10 @@ fn every_command_class_compiles_from_expressions_and_runs_on_its_own_connection(
                     "CopyStatement" | "ExportStatement" | "ImportStatement" => tmp_arg(kind),
                     _ => String::new(),
                 }
-            } else if *kind == "CopyStatement" || *kind == "ExportStatement" || *kind == "ImportStatement" {
+            } else if *kind == "CopyStatement"
+                || *kind == "ExportStatement"
+                || *kind == "ImportStatement"
+            {
                 tmp_arg(kind)
             } else {
                 variant.clone()
@@ -445,10 +472,11 @@ fn every_command_class_compiles_from_expressions_and_runs_on_its_own_connection(
                 _ => None,
             };
             if let Some(setup) = setup
-                && let Err(e) = c.execute_batch(setup) {
-                    failures.push(format!("{kind}/{variant}: setup: {e}"));
-                    continue;
-                }
+                && let Err(e) = c.execute_batch(setup)
+            {
+                failures.push(format!("{kind}/{variant}: setup: {e}"));
+                continue;
+            }
             if let Err(e) = c.execute_batch(&compiled.sql) {
                 failures.push(format!("{kind}/{variant}: run `{}`: {e}", compiled.sql));
                 continue;
@@ -563,7 +591,11 @@ ex:q a sql:SelectStatement ;
         // LANE L3 minimal unblock (SLA, disclosed): the materialized check
         // tables are named {name}_chk; the compiled graph must read the same
         // table the certified value was read from.
-        assert_eq!(readback(&format!("{name}_chk")), certified, "{name} compiled-graph readback");
+        assert_eq!(
+            readback(&format!("{name}_chk")),
+            certified,
+            "{name} compiled-graph readback"
+        );
     }
 
     // tpch: fully AST-expressible check. Setup `CALL dbgen(sf = 0.01)` is not
@@ -587,7 +619,12 @@ ex:tpch a sql:SelectStatement ;
     let run_tpch = |doc: &str| -> i64 {
         let compiled = compile_turtle(doc).expect("tpch graph compiles");
         let receipt = db
-            .eval_ast_query("http://example.org/62#tpch", &compiled, "urn:62:s", "urn:62:v")
+            .eval_ast_query(
+                "http://example.org/62#tpch",
+                &compiled,
+                "urn:62:s",
+                "urn:62:v",
+            )
             .expect("tpch graph executes");
         let triple = receipt
             .result_triples
@@ -601,9 +638,132 @@ ex:tpch a sql:SelectStatement ;
     };
     let lawful = run_tpch(&tpch_doc("GreaterThan"));
     let inverted = run_tpch(&tpch_doc("LessThan"));
-    assert_ne!(lawful, inverted, "anti-vacuity: inverted operator must change the readback");
-    assert_eq!(lawful, 25, "tpch certified nation count through compiled AST graph");
+    assert_ne!(
+        lawful, inverted,
+        "anti-vacuity: inverted operator must change the readback"
+    );
+    assert_eq!(
+        lawful, 25,
+        "tpch certified nation count through compiled AST graph"
+    );
     assert_eq!(inverted, 0, "inverted predicate must match no nation rows");
+}
+
+/// SQLRDF-12 conversion courts: COPY and ATTACH must execute through the
+/// compiled expression graph on a real frozen-duckdb connection with real
+/// filesystem / cross-database readbacks (rec sections 3.2 and 6.1).
+#[test]
+fn copy_statement_writes_a_real_file_matching_the_table() {
+    let _engine = ENGINE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let path = tmp_arg("copy-convert");
+    // Table via the existing compiled create expression + real catalog
+    // readback (no raw CREATE for the subject table).
+    let create_sql = compile_turtle(&expr_doc("CreateStatement", ""))
+        .expect("create doc compiles")
+        .sql;
+    let db = GraphLawDuckDB::open_in_memory_allowing_unsigned_extensions().unwrap();
+    let c = db.raw_connection();
+    c.execute_batch(&create_sql).expect("create t2 runs");
+    assert_eq!(
+        c.query_row::<String, _, _>(
+            "SELECT count(*)::VARCHAR FROM duckdb_tables() WHERE table_name='t2'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap(),
+        "1",
+        "create readback"
+    );
+    c.execute_batch("INSERT INTO t2 VALUES (7, 'seven'), (8, 'eight')")
+        .expect("seed rows");
+
+    let copy_doc = format!(
+        r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+<http://example.org/s> a sql:CopyStatement ;
+    sql:statementIndex "0"^^xsd:integer ;
+    sql:copyOperation [ sql:tableName "t2" ; sql:filePath "{path}" ; sql:fileFormat "CSV" ] ."#
+    );
+    let copy_sql = compile_turtle(&copy_doc).expect("COPY doc compiles").sql;
+    c.execute_batch(&copy_sql).expect("compiled COPY runs");
+
+    // Real egress witness: read the file bytes from the filesystem and compare
+    // against a SELECT of the same table on the same connection.
+    let file = std::fs::read_to_string(&path).expect("COPY wrote a readable file");
+    let expected: Vec<(i64, String)> = c
+        .prepare("SELECT id, name FROM t2 ORDER BY id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(|r| r.unwrap())
+        .collect();
+    let expected_csv: String = expected
+        .iter()
+        .map(|(id, name)| format!("{id},{name}\n"))
+        .fold("id,name\n".to_string(), |acc, row| acc + &row);
+    assert_eq!(
+        file, expected_csv,
+        "file content must equal the table readback"
+    );
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
+fn attach_statement_binds_a_real_file_database_readable_through_the_alias() {
+    let _engine = ENGINE_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let dir = std::env::temp_dir().join(format!("graphlaw-attach-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let db_path = dir.join("second.duckdb");
+    // Create the second database on disk for real: attach raw, materialize a
+    // table in it, detach — the file persists independently.
+    let db = GraphLawDuckDB::open_in_memory_allowing_unsigned_extensions().unwrap();
+    let c = db.raw_connection();
+    c.execute_batch(&format!(
+        "ATTACH '{}' AS seeddb; CREATE TABLE seeddb.kv(k INTEGER, v VARCHAR); \
+         INSERT INTO seeddb.kv VALUES (1, 'one'), (2, 'two'); DETACH seeddb;",
+        db_path.display()
+    ))
+    .expect("seed second file database");
+    assert!(db_path.exists(), "seeded database file must exist on disk");
+
+    let attach_doc = format!(
+        r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+<http://example.org/s> a sql:AttachStatement ;
+    sql:statementIndex "0"^^xsd:integer ;
+    sql:attachTarget [ sql:databasePath "{}" ; sql:attachAlias "second" ] ."#,
+        db_path.display()
+    );
+    let attach_sql = compile_turtle(&attach_doc)
+        .expect("ATTACH doc compiles from expression vocabulary")
+        .sql;
+    c.execute_batch(&attach_sql).expect("compiled ATTACH runs");
+
+    // Catalog readback: the alias is a real attached database.
+    assert_eq!(
+        c.query_row::<String, _, _>(
+            "SELECT count(*)::VARCHAR FROM duckdb_databases() WHERE database_name='second'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap(),
+        "1",
+        "attached alias must appear in the catalog"
+    );
+    // Cross-database readback through the alias.
+    let rows: Vec<(i64, String)> = c
+        .prepare("SELECT k, v FROM second.kv ORDER BY k")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .map(|r| r.unwrap())
+        .collect();
+    assert_eq!(
+        rows,
+        vec![(1, "one".to_string()), (2, "two".to_string())],
+        "rows must read back through the attached alias"
+    );
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[test]
@@ -612,11 +772,7 @@ fn expression_courts_flip_under_operator_inversion() {
     // distinguish inverted operands, not merely accept the compiled SQL.
     // (a) SET: inverted literal must flip the setting readback.
     for (value, expect) in [("2", "2"), ("3", "3")] {
-        let doc = expr_doc(
-            "SetStatement",
-            "",
-        )
-        .replace(
+        let doc = expr_doc("SetStatement", "").replace(
             r#"sql:literalValue "2"^^xsd:integer"#,
             &format!(r#"sql:literalValue "{value}"^^xsd:integer"#),
         );
@@ -625,7 +781,9 @@ fn expression_courts_flip_under_operator_inversion() {
         db.raw_connection().execute_batch(&sql).unwrap();
         let got: String = db
             .raw_connection()
-            .query_row("SELECT current_setting('threads')::VARCHAR", [], |r| r.get(0))
+            .query_row("SELECT current_setting('threads')::VARCHAR", [], |r| {
+                r.get(0)
+            })
             .unwrap();
         assert_eq!(got, expect, "SET readback must follow the graph operand");
     }

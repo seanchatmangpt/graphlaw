@@ -1,6 +1,6 @@
 # API stability
 
-GraphLaw's workspace version is 26.10.21 (latest released); the capability-registry
+GraphLaw's workspace version is 26.10.22 (latest released); the capability-registry
 schema `graphlaw.capability-registry/1` and `ABI_VERSION = 1` were frozen at v26.9.29 and
 remain additive-only. This page states what downstream crates and JSON-ABI hosts may
 rely on, how deprecations work, and how the minimum supported Rust version moves.
@@ -88,10 +88,13 @@ crate versions move on independent axes:
   bump.** Rebuild the wasm artifact, then the coordinator re-pins both `registry/ARTIFACTS.blake3`
   and `priv/graphlaw.wasm.blake3` in the same commit as the version bump.
 - **Never ship a crate release whose digest pin predates its own version.** If the pins carry
-  `pin-source=<older>` than the crate version (as of 2026-10-22 the header reads
-  `pin-source=26.10.21` with the crate also at 26.10.21, but the wasm32-wasip1 link is red, so the
-  pins are historical rather than current — see [WASM.md](WASM.md)), the release is blocked until
-  a rebuild produces a fresh digest at the released source state.
+  `pin-source=<older>` than the crate version, the release is blocked until
+  a rebuild produces a fresh digest at the released source state. The current
+  pin digest is
+  `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`
+  (57,781,384 B, tag section count 1, re-pinned 2026-10-23); the legacy
+  `f149433c…` (7,104,147 B, tag section count 0) is historical. See
+  [WASM.md](WASM.md).
 
 ## Checks
 

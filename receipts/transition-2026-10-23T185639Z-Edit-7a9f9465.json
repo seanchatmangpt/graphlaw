@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "7a9f94657c69493dba0137fec2216e3c8c311b6f697082da779b78da3a8fbf22",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T185639Z-Edit-7a9f9465.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/wasi-probe/src/main.rs",
+  "timestamp_utc": "2026-10-23T185639Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

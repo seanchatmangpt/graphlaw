@@ -63,11 +63,16 @@ fn depth_guard_refused(err: &LawError) -> bool {
     // "SHACL validation failed ... constraint violated ... maximum safe
     // validation depth ...").
     match err {
-        LawError::NotAdmitted { violations, results } => {
+        LawError::NotAdmitted {
+            violations,
+            results,
+        } => {
             *violations == 1
                 && results.len() == 1
                 && results[0].component.contains("shacl_validation_depth")
-                && results[0].component.contains("maximum safe validation depth")
+                && results[0]
+                    .component
+                    .contains("maximum safe validation depth")
                 && results[0].message.is_empty()
         }
         _ => false,

@@ -4,8 +4,8 @@
 //! 3. Formal SHACL pre-flight gate on declarative SQL AST subgraphs.
 
 use graphlaw::duckdb_eval::GraphLawDuckDB;
-use graphlaw::rules::builtins::{builtin_eval_sql, BuiltinContext};
-use graphlaw::sql_ast::{validate_ast_shacl, RdfAstGraphReader};
+use graphlaw::rules::builtins::{BuiltinContext, builtin_eval_sql};
+use graphlaw::sql_ast::{RdfAstGraphReader, validate_ast_shacl};
 use purrdf::TermValue;
 use std::collections::HashMap;
 use std::fs;
@@ -78,7 +78,13 @@ const DOC_PREFIX: &str = r#"@prefix sql: <http://graphlaw.org/sql#> .
 #[test]
 fn test_parquet_hive_partition_and_zonemap_query() {
     let db = GraphLawDuckDB::open_in_memory().expect("Init failed");
-    let base_path = format!("/tmp/test_parquet_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+    let base_path = format!(
+        "/tmp/test_parquet_{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
     let _ = fs::remove_dir_all(&base_path);
     fs::create_dir_all(&base_path).expect("Failed to create temp dir");
 
@@ -133,14 +139,17 @@ ex:Q a sql:SelectStatement ;
     ] ;
     sql:groupBy ( [ sql:columnName "batch_id" ] ) .
 "#;
-    let compiled = graphlaw::sql_ast::compile_turtle(&doc).expect("admitted AST graph must compile");
+    let compiled =
+        graphlaw::sql_ast::compile_turtle(&doc).expect("admitted AST graph must compile");
 
     let query_iri = "http://example.org/queries/parquet-q1";
 
     // 4. Verify explain plan (zone-map and parquet filter pushdown)
     let plan = db.explain_ast_query(&compiled).expect("Explain failed");
     assert!(
-        plan.contains("READ_PARQUET") || plan.contains("SEQ_SCAN") || plan.contains("telemetry_events"),
+        plan.contains("READ_PARQUET")
+            || plan.contains("SEQ_SCAN")
+            || plan.contains("telemetry_events"),
         "Execution plan should inspect parquet source"
     );
 
@@ -233,7 +242,11 @@ ex:Q a sql:SelectStatement ;
 
     // Function simulating rule premise evaluation and state admission
     let evaluate_admission = |batch_id: &str, max_cost_threshold: i64| -> Option<[u8; 32]> {
-        let args = [query_iri, "http://example.org/data", "http://example.org/vocab"];
+        let args = [
+            query_iri,
+            "http://example.org/data",
+            "http://example.org/vocab",
+        ];
         let out_vars = ["receipt", "rowsEmitted", "queryHash"];
 
         let res = builtin_eval_sql(&args, &out_vars, &ctx, &reader).ok()?;
@@ -243,20 +256,23 @@ ex:Q a sql:SelectStatement ;
         for t in &res.derived_triples {
             if t.predicate == "http://example.org/vocab/batch_id"
                 && let TermValue::Literal { lexical_form, .. } = &t.object
-                    && lexical_form == batch_id {
-                        row_subject = Some(t.subject.clone());
-                        break;
-                    }
+                && lexical_form == batch_id
+            {
+                row_subject = Some(t.subject.clone());
+                break;
+            }
         }
 
         let subj = row_subject?;
         let mut total_cost = None;
         for t in &res.derived_triples {
-            if t.subject == subj && t.predicate == "http://example.org/vocab/total_cost"
-                && let TermValue::Literal { lexical_form, .. } = &t.object {
-                    total_cost = lexical_form.parse::<i64>().ok();
-                    break;
-                }
+            if t.subject == subj
+                && t.predicate == "http://example.org/vocab/total_cost"
+                && let TermValue::Literal { lexical_form, .. } = &t.object
+            {
+                total_cost = lexical_form.parse::<i64>().ok();
+                break;
+            }
         }
 
         let cost = total_cost?;
@@ -270,7 +286,11 @@ ex:Q a sql:SelectStatement ;
     // Case 1: batch-alpha (cost 225 <= 300) -> PASS Admission with BLAKE3 receipt
     let alpha_receipt = evaluate_admission("batch-alpha", 300);
     assert!(alpha_receipt.is_some(), "batch-alpha should be admitted");
-    assert_ne!(alpha_receipt.unwrap(), [0u8; 32], "BLAKE3 hash must be non-zero");
+    assert_ne!(
+        alpha_receipt.unwrap(),
+        [0u8; 32],
+        "BLAKE3 hash must be non-zero"
+    );
 
     // Case 2: batch-beta (cost 750 > 300) -> FAIL-CLOSED (no admission granted)
     let beta_receipt = evaluate_admission("batch-beta", 300);
@@ -301,7 +321,11 @@ fn test_shacl_ast_preflight_gate() {
     "#;
 
     let res = validate_ast_shacl(valid_ast_ttl, shapes_ttl);
-    assert!(res.is_ok(), "Valid AST must pass SHACL pre-flight gate: {:?}", res.err());
+    assert!(
+        res.is_ok(),
+        "Valid AST must pass SHACL pre-flight gate: {:?}",
+        res.err()
+    );
 
     // 2. Malformed AST: Missing sql:fromTable
     let malformed_ast_ttl = r#"
@@ -315,10 +339,16 @@ fn test_shacl_ast_preflight_gate() {
     "#;
 
     let res = validate_ast_shacl(malformed_ast_ttl, shapes_ttl);
-    assert!(res.is_err(), "AST missing fromTable must be refused by SHACL gate");
+    assert!(
+        res.is_err(),
+        "AST missing fromTable must be refused by SHACL gate"
+    );
     println!("Observed SHACL refusal message: {:?}", res);
     if let Err(e) = res {
-        assert!(!e.to_string().is_empty(), "Violation message must not be empty");
+        assert!(
+            !e.to_string().is_empty(),
+            "Violation message must not be empty"
+        );
     } else {
         panic!("Expected ShaclViolation error, got {:?}", res);
     }

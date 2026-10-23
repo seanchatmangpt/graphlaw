@@ -62,7 +62,17 @@ GraphLaw unconditionally embeds the **`frozen-duckdb 2.0`** analytical engine, u
   compilation for SELECT and the command classes, typed `REFUSAL-01..04` refusals, and
   BLAKE3 receipts binding the canonical AST graph + parameters.
 * **Signed Semantic Compaction**: Massive event bursts reduce to minimal, cryptographically verifiable RDF facts sealed with BLAKE3 execution receipts. A 500,000-event telemetry burst compresses to ~1 KB of signed triples before syncing across intermittent/DDIL networks.
-* **WASM size**: The pinned artifact in `registry/ARTIFACTS.blake3` is **6,793,617 bytes** (blake3 `332ea218…`), byte-identical to `priv/graphlaw.wasm` on this tree. The size court ceiling is the 64 MiB sandbox wall (`tests/wasm_size_court.rs`). SQL-in-RDF admits inside the module through `compile_turtle`. `REFUSAL-04` is the non-document-backed builtin reader, not a missing engine.
+* **WASM size**: The pinned artifact in `registry/ARTIFACTS.blake3` is **57,781,384 bytes**
+  (blake3 `fa155830…`, byte-identical to `priv/graphlaw.wasm` on this tree) — the
+  DuckDB-linked new-EH artifact (Tag(13) section count 1, wasm_audit PASS), re-pinned
+  2026-10-23 (`receipts/2026-10-23-eh-closure-wave.md`; the pre-closure pin `991b2bee…`,
+  46,138,360 B, and legacy pin `f149433c…`, 7,104,147 B, are historical). The ~58 MB
+  size class vs the 46 MB pre-closure pin is the wave's own statically-registered
+  core_functions/icu extensions + statement-sequence/REFUSAL-05 code under LTO
+  (libc swap effect measured at −106 B). The size court ceiling is the 64 MiB sandbox wall
+  (`tests/wasm_size_court.rs`). A SQL-in-RDF document parsed as `sql` returns the same
+  dataset id as the same bytes parsed as Turtle. `REFUSAL-04` is the non-document-backed
+  builtin reader, not a missing engine.
 * **Disconnected Fail-Closed Operations**: Missing filter bounds or excursion breaches trigger immediate local actuator lockouts and quarantined states without requiring an upstream cloud coordinator.
 
 See [docs/how-to/how-to-edge-ingestion-and-compaction.md](docs/how-to/how-to-edge-ingestion-and-compaction.md) and [docs/explanation/edge-sovereignty-and-zero-trust-compaction.md](docs/explanation/edge-sovereignty-and-zero-trust-compaction.md).
@@ -141,6 +151,14 @@ The public op surface is published as a machine-readable registry
 (`registry/capability-registry.json` + Turtle + `op-examples.json`), emitted by the
 `graphlaw-registry` binary and carried as release assets with `.blake3` files. See
 [docs/capability-registry.md](docs/capability-registry.md).
+
+## External oracle
+
+An out-of-tree pytest suite (the `pm4pytest/graphlaw` suite in `ggen-marketplace`)
+drives this repo's real binaries and examples over subprocess — no mocks, no
+in-process fakes. CI runs it as the `external-oracle` job
+(`.github/workflows/ci.yml`); see [docs/how-to/verify-without-trusting-the-operator.md](docs/how-to/verify-without-trusting-the-operator.md)
+for the offline-verification discipline it exercises.
 
 ## Verifying without trusting the operator
 

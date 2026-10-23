@@ -1,14 +1,10 @@
 //! Op-15 `duckdb` court (GWS-16): cursor-streamed analytical eval, native ABI
 //! surface (`graphlaw::abi::call`).
 //!
-//! Frozen-duckdb is a required dependency. The wasm module dispatches `duckdb`.
-//! The op stays off the hashed 14-op table until a digest bump; that absence
-//! is not a capability refusal. frozen-duckdb 2.0.2 emits `static=duckdb` for
-//! wasm32-wasip1. The link is witnessed (2026-10-22); the recorded pin
-//! `332ea218…` was not replaced. `WASI_SDK_PATH` must be a wasi-sdk root
-//! (`bin/clang`, `share/cmake/wasi-sdk-p1.cmake`). Without it,
-//! frozen-duckdb-sys `build.rs` fails typed (`WASI_SDK_PATH required`). This court exercises the
-//! op through `graphlaw::abi::call` on the host.
+//! Frozen-duckdb is a host dependency. The wasm module does not dispatch
+//! `duckdb` (`unknown op`). The op stays off the hashed 14-op table; that
+//! absence is not a capability refusal. This court exercises the op through
+//! `graphlaw::abi::call` on the host.
 //!
 //! Proven here:
 //! (a) exec/stream/close happy path over an injected CSV (the GWS-4 injection
@@ -149,7 +145,10 @@ fn exec_stream_close_happy_path_over_injected_csv() {
     assert_eq!(s1["more"], Value::Bool(true));
     let nt1 = s1["nquads"].as_str().expect("nquads");
     assert!(nt1.contains("<https://example.org/data/row_1>"), "{nt1}");
-    assert!(nt1.contains("<https://example.org/vocab/total_cost>"), "{nt1}");
+    assert!(
+        nt1.contains("<https://example.org/vocab/total_cost>"),
+        "{nt1}"
+    );
 
     // Stream page 2 (last row) — cursor goes null, more=false.
     let drained = call(&json!({
@@ -157,7 +156,10 @@ fn exec_stream_close_happy_path_over_injected_csv() {
     }));
     assert_eq!(drained["rows"], 1);
     assert_eq!(drained["more"], Value::Bool(false));
-    assert!(drained["cursor"].is_null(), "cursor must be null when drained");
+    assert!(
+        drained["cursor"].is_null(),
+        "cursor must be null when drained"
+    );
     let nt2 = drained["nquads"].as_str().expect("nquads");
     assert!(nt2.contains("<https://example.org/data/row_2>"), "{nt2}");
 
@@ -202,7 +204,10 @@ fn chunk_row_limit_is_a_typed_refusal() {
         "vocab_prefix": VOCAB,
         "chunk_rows": 10_001,
     }));
-    assert_eq!(ex2["error"]["details"]["limit"], "duckdb_chunk_rows", "{ex2}");
+    assert_eq!(
+        ex2["error"]["details"]["limit"], "duckdb_chunk_rows",
+        "{ex2}"
+    );
 }
 
 #[test]
@@ -360,11 +365,303 @@ fn builtin_eval_sql_and_abi_op_receipt_query_hash_byte_identity() {
     let ex = exec_latency_gt(&telemetry_rows(), 500);
     assert_eq!(ex["sql"], Value::String(compiled.sql.clone()), "{ex}");
     assert_eq!(ex["rows_emitted"], Value::from(result.rows_emitted));
-    assert_eq!(ex["query_hash"], Value::String(native_hash), "query_hash diverges");
-    assert_eq!(ex["receipt"], Value::String(native_receipt_iri), "receipt IRI diverges");
+    assert_eq!(
+        ex["query_hash"],
+        Value::String(native_hash),
+        "query_hash diverges"
+    );
+    assert_eq!(
+        ex["receipt"],
+        Value::String(native_receipt_iri),
+        "receipt IRI diverges"
+    );
 }
 
-// ------------------------------------------------- (e) SQLRDF-17 raw-SQL refusal
+// ------------------------------------------------- (e) graph-backed lifecycle
+//
+// CTQ-2 lift: every statement class `compile_turtle` admits executes via
+// op-15 exec (src/duckdb_op.rs — no statement-class gate; SQLRDF-17 still
+// refuses raw `ast.text`; Connect/Disconnect remain REFUSAL-02 at compile).
+// ABI `exec` opens a fresh in-memory connection per call, so the CREATE →
+// INSERT → SELECT lifecycle rides ONE host `GraphLawDuckDB` connection via
+// the same `compile_turtle` + `eval_ast_query` admission path the op uses,
+// with real catalog/table readbacks and the §1.4 receipt assertions.
+
+#[test]
+fn host_lifecycle_create_insert_select_aggregate_with_receipts() {
+    use graphlaw::duckdb_eval::GraphLawDuckDB;
+    use graphlaw::sql_ast::compile_turtle;
+
+    const Q_PREFIX: &str = "https://example.org/queries";
+
+    // CREATE via the admitted CreateStatement expression form.
+    let create_doc = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex:  <https://example.org/queries#> .
+ex:create a sql:CreateStatement ;
+    sql:statementIndex 1 ;
+    sql:tableDefinition [ sql:tableName "telemetry" ; sql:columns (
+        [ sql:columnName "batch_id" ; sql:columnType "VARCHAR" ]
+        [ sql:columnName "cost" ; sql:columnType "BIGINT" ]
+        [ sql:columnName "latency" ; sql:columnType "INTEGER" ]
+    ) ] .
+"#;
+    let compiled_create = compile_turtle(create_doc).expect("CREATE compiles");
+    assert!(
+        compiled_create.sql.starts_with("CREATE TABLE"),
+        "{}",
+        compiled_create.sql
+    );
+    let db = GraphLawDuckDB::open_in_memory().expect("duckdb");
+    let create_receipt = db
+        .eval_ast_query(
+            "https://example.org/queries#create",
+            &compiled_create,
+            SUBJECT,
+            VOCAB,
+        )
+        .expect("CREATE executes");
+    assert_eq!(create_receipt.rows_emitted, 0);
+    assert_ne!(create_receipt.query_hash, [0u8; 32]);
+    // Real readback: the table exists in the live DuckDB catalog.
+    let tables: i64 = db
+        .raw_connection()
+        .query_row(
+            "SELECT count(*)::BIGINT FROM duckdb_tables() \
+             WHERE schema_name='main' AND table_name='telemetry'",
+            [],
+            |r| r.get(0),
+        )
+        .expect("catalog readback");
+    assert_eq!(tables, 1, "CREATE must be visible in duckdb_tables()");
+
+    // INSERT via the admitted scalar InsertStatement form: exactly ONE
+    // assignColumn/assignValue pair per statement, so each INSERT appends
+    // one row with one populated column (others NULL).
+    let insert_doc = |col: &str, val: &str| {
+        format!(
+            r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:  <https://example.org/queries#> .
+ex:insert a sql:InsertStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "telemetry" ;
+    sql:assignColumn "{col}" ;
+    sql:assignValue "{val}"^^xsd:string .
+"#
+        )
+    };
+    for (col, val) in [("cost", "120"), ("cost", "450")] {
+        let doc = insert_doc(col, val);
+        let compiled = compile_turtle(&doc).expect("INSERT compiles");
+        assert!(compiled.sql.starts_with("INSERT INTO"), "{}", compiled.sql);
+        let receipt = db
+            .eval_ast_query(
+                "https://example.org/queries#insert",
+                &compiled,
+                SUBJECT,
+                VOCAB,
+            )
+            .expect("INSERT executes");
+        // DuckDB projects the INSERT change-count as exactly one result row.
+        assert_eq!(receipt.rows_emitted, 1, "INSERT count row: {receipt:?}");
+        assert_ne!(receipt.query_hash, [0u8; 32]);
+    }
+
+    // Real readback: the two rows landed.
+    let rows: i64 = db
+        .raw_connection()
+        .query_row("SELECT count(*)::BIGINT FROM telemetry", [], |r| r.get(0))
+        .expect("table readback");
+    assert_eq!(rows, 2);
+
+    // SELECT aggregate over the same connection: exact rows_emitted + exact
+    // values read back from the receipt's own triple projection. Rows are
+    // (cost=120, latency NULL) and (cost=450, latency NULL), so the compiled
+    // WHERE cost > 400 admits exactly one row and SUM(cost) = 450; a dropped
+    // WHERE would emit 1 row too but SUM 570, so the VALUE is the mutation
+    // fence.
+    let agg_doc = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:  <https://example.org/queries#> .
+ex:agg a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry" ] ;
+    sql:selectList (
+        [ sql:aliasName "total_cost" ; sql:expression [
+            sql:function <http://graphlaw.org/functions#SUM> ;
+            sql:argument [ sql:columnName "cost" ] ] ]
+    ) ;
+    sql:whereClause [
+        sql:operator sql:GreaterThan ;
+        sql:leftOperand [ sql:columnName "cost" ] ;
+        sql:rightOperand [ sql:literalValue "400"^^xsd:integer ]
+    ] .
+"#;
+    let agg = compile_turtle(agg_doc).expect("SELECT compiles");
+    let receipt = db
+        .eval_ast_query(&format!("{Q_PREFIX}/agg"), &agg, SUBJECT, VOCAB)
+        .expect("SELECT executes");
+    assert_ne!(receipt.query_hash, [0u8; 32]);
+    assert_eq!(receipt.rows_emitted, 1, "WHERE cost > 400 admits one row");
+    let totals: Vec<String> = receipt
+        .result_triples
+        .iter()
+        .filter(|t| t.predicate.ends_with("/total_cost"))
+        .filter_map(|t| match &t.object {
+            graphlaw::purrdf::TermValue::Literal { lexical_form, .. } => {
+                Some(lexical_form.clone())
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(totals, vec!["450".to_string()], "SUM over the admitted row set");
+}
+
+// ------------------------------------------------- (f1) ABI session lifecycle
+//
+/// Mirrors the in-src court `session_lifecycle_create_insert_select`
+/// (src/duckdb_op.rs tests) but entirely through `graphlaw::abi::call_json`
+/// with the named-session surface: open → CREATE → INSERT ×2 → SELECT SUM →
+/// stream readback (exact values) → close. The typed refusals are courted on
+/// the same session: unknown-session exec, duplicate open, post-close exec.
+#[test]
+fn abi_session_lifecycle_create_insert_select_readback() {
+    // Unique-per-court session name: the registry is process-local and
+    // shared with the in-src unit courts.
+    const SESSION: &str = "abi-court";
+
+    let create = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/sessions#> .
+ex:C a sql:CreateStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "abi_session_events" ;
+    sql:assignColumn "cost" .
+"#;
+    let insert = |val: i64| {
+        format!(
+            r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <http://example.org/sessions#> .
+ex:I a sql:InsertStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "abi_session_events" ;
+    sql:assignColumn "cost" ;
+    sql:assignValue "{val}"^^xsd:integer .
+"#
+        )
+    };
+    let select_sum = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/sessions#> .
+ex:S a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "abi_session_events" ] ;
+    sql:selectList (
+        [ sql:aliasName "total_cost" ; sql:expression [
+            sql:function <http://graphlaw.org/functions#SUM> ;
+            sql:argument [ sql:columnName "cost" ] ] ]
+    ) .
+"#;
+
+    let exec = |turtle: String| {
+        call(&json!({
+            "op": "duckdb",
+            "mode": "exec",
+            "session": SESSION,
+            "query_ast": "urn:q",
+            "ast": {"turtle": turtle},
+            "subject_prefix": "urn:row/",
+            "vocab_prefix": "urn:p/",
+        }))
+    };
+
+    // (1) Open the named session.
+    let open = call(&json!({"op": "duckdb", "mode": "open", "session": SESSION}));
+    assert_eq!(open["ok"], Value::Bool(true), "{open}");
+    assert_eq!(open["session"], SESSION, "{open}");
+
+    // (2) Duplicate open on the live name is a typed refusal.
+    let dup = call(&json!({"op": "duckdb", "mode": "open", "session": SESSION}));
+    assert_eq!(dup["ok"], Value::Bool(false), "{dup}");
+    assert!(
+        dup["error"]["message"]
+            .as_str()
+            .unwrap_or_else(|| panic!("envelope missing error.message"))
+            .contains("already exists"),
+        "{dup}"
+    );
+
+    // (3) CREATE on the session connection.
+    let c = exec(create.to_string());
+    assert_eq!(c["ok"], Value::Bool(true), "{c}");
+
+    // (4) INSERT ×2 — each lands on the SAME persistent connection.
+    for val in [120_i64, 450] {
+        let i = exec(insert(val));
+        assert_eq!(i["ok"], Value::Bool(true), "{i}");
+        assert_eq!(i["rows_emitted"], 1, "{i}");
+    }
+
+    // (5) SELECT SUM over the session: rows_emitted=1 and the streamed value
+    // is exact — SUM=570 proves both INSERTs persisted on one connection
+    // (a fresh-connection exec would hit the missing-table error instead).
+    let s = exec(select_sum.to_string());
+    assert_eq!(s["ok"], Value::Bool(true), "{s}");
+    assert_eq!(s["rows_emitted"], 1, "{s}");
+    let cur = s["cursor"].as_str().expect("select cursor").to_string();
+
+    // (6) Stream the cursor and assert the exact aggregate value.
+    let page = call(&json!({
+        "op": "duckdb", "mode": "stream", "cursor": cur, "max_rows": 10
+    }));
+    assert_eq!(page["ok"], Value::Bool(true), "{page}");
+    assert_eq!(page["rows"], 1, "{page}");
+    let nt = page["nquads"].as_str().expect("nquads");
+    assert!(
+        nt.contains("\"570\""),
+        "SUM(cost) over the two persisted rows must read back exactly 570: {page}"
+    );
+
+    // (7) Close the session, then exec on it is a typed refusal
+    // (unknown or expired), and the name is freed.
+    let closed = call(&json!({"op": "duckdb", "mode": "close", "session": SESSION}));
+    assert_eq!(closed["ok"], Value::Bool(true), "{closed}");
+    let post = exec(create.to_string());
+    assert_eq!(post["ok"], Value::Bool(false), "{post}");
+    assert_eq!(post["error"]["kind"], "DuckDb", "{post}");
+    assert!(
+        post["error"]["message"]
+            .as_str()
+            .unwrap_or_else(|| panic!("envelope missing error.message"))
+            .contains("unknown or expired session"),
+        "{post}"
+    );
+
+    // (8) Unknown-session exec (never opened) is the same typed refusal.
+    let unknown = call(&json!({
+        "op": "duckdb", "mode": "exec", "session": "abi-court-never-opened",
+        "query_ast": "urn:q",
+        "ast": {"turtle": select_sum},
+        "subject_prefix": "urn:row/",
+        "vocab_prefix": "urn:p/",
+    }));
+    assert_eq!(unknown["ok"], Value::Bool(false), "{unknown}");
+    assert_eq!(unknown["error"]["kind"], "DuckDb", "{unknown}");
+    assert!(
+        unknown["error"]["message"]
+            .as_str()
+            .unwrap_or_else(|| panic!("envelope missing error.message"))
+            .contains("unknown or expired session"),
+        "{unknown}"
+    );
+}
+
+// ------------------------------------------------- (f) SQLRDF-17 raw-SQL refusal
 
 /// SQLRDF-17 dynamic falsifier: feeding raw SQL text to the op must return
 /// the typed refusal, never an executed statement.
@@ -381,8 +678,61 @@ fn raw_sql_text_is_refused_not_executed() {
         "vocab_prefix": VOCAB,
         "params": [500],
     }));
-    assert_eq!(ex["ok"], Value::Bool(false), "raw SQL must not execute: {ex}");
-    let msg = ex["error"]["details"]["message"].as_str().unwrap_or_default();
+    assert_eq!(
+        ex["ok"],
+        Value::Bool(false),
+        "raw SQL must not execute: {ex}"
+    );
+    let msg = ex["error"]["details"]["message"].as_str().unwrap_or_else(|| {
+        panic!("refusal envelope missing error.details.message: {ex}")
+    });
     assert!(msg.contains("SQLRDF-17"), "{ex}");
     assert!(msg.contains("ast.turtle"), "{ex}");
+}
+
+// ------------------------------------------------- (g) graph-backed DML via ABI
+
+/// CTQ-2 lift witness at the ABI wall: a graph-backed InsertStatement (not
+/// raw SQL) passes admission and REACHES the engine through `mode: exec` —
+/// the observable is the DuckDB-level catalog error (a CSV-backed view is
+/// not an insertable table on the per-call connection), never a SQLRDF-17
+/// admission refusal. Raw SQL text stays typed-refused by (f); admission and
+/// execution with receipts are courted host-side in (e) on one connection.
+#[test]
+fn graph_backed_insert_reaches_the_engine_via_abi() {
+    let csv = CsvFixture::write("dml", TELEMETRY_HEADER, &telemetry_rows());
+    let insert_turtle = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <https://example.org/queries/> .
+ex:q3 a sql:InsertStatement ;
+    sql:statementIndex 1 ;
+    sql:targetTable "telemetry" ;
+    sql:assignColumn "batch_id" ;
+    sql:assignValue "batch-009"^^xsd:string .
+"#;
+    let ex = call(&json!({
+        "op": "duckdb",
+        "mode": "exec",
+        "views": [{"name": "telemetry", "glob": csv.glob()}],
+        "query_ast": "https://example.org/queries/q3",
+        "ast": {"turtle": insert_turtle},
+        "subject_prefix": SUBJECT,
+        "vocab_prefix": VOCAB,
+    }));
+    // Past admission: the refusal is the engine's catalog error, NOT a
+    // SQLRDF-17/compile refusal. The SELECT-only lift is exactly this flip.
+    assert_eq!(ex["ok"], Value::Bool(false), "{ex}");
+    assert_eq!(ex["error"]["kind"], "DuckDb", "{ex}");
+    let msg = ex["error"]["details"]["message"].as_str().unwrap_or_else(|| {
+        panic!("refusal envelope missing error.details.message: {ex}")
+    });
+    assert!(
+        msg.contains("Catalog Error"),
+        "expected engine-level catalog error past admission: {ex}"
+    );
+    assert!(
+        !msg.contains("SQLRDF-17"),
+        "graph-backed DML must not be admission-refused: {ex}"
+    );
 }

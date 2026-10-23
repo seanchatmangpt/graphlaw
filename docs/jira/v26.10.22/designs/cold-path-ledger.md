@@ -82,6 +82,8 @@ exceeded `dropped_total` by exactly 911 when the live counter was used
 
 ```
 $ cargo test --features evidentiary-ring --test evidentiary_ring_court
+(re-measured 2026-10-23: 10 passed; 0 failed)
+
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.74s
 ```
 
@@ -100,6 +102,8 @@ test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 ```
 $ CARGO_TARGET_DIR=target-bench cargo test --release --features evidentiary-ring \
     --test evidentiary_ring_court no_blocking_release_absolute_bound -- --nocapture
+(re-measured 2026-10-23: full court 10 passed; 0 failed)
+
 release absolute leg: stalled max push 1.584µs < 10µs
 test result: ok. 1 passed; 0 failed; 8 filtered out; finished in 0.13s
 ```

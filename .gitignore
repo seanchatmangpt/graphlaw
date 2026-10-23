@@ -37,3 +37,8 @@ js/npm/playwright-report/
 
 # python bytecode (hook courts)
 __pycache__/
+
+# wave hygiene (2026-10-23)
+.cursor/
+tests_py/__pycache__/
+tests_py/.pytest_cache/

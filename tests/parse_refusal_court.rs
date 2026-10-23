@@ -5,8 +5,8 @@
 //! snippet must be bounded at 64 bytes.
 
 use graphlaw::dialect::{
-    check, check_typed, parse_rdf_typed, Dialect, Engine, ParseRefusal, ReasonClass, Refusal,
-    RefusalKind,
+    Dialect, Engine, ParseRefusal, ReasonClass, Refusal, RefusalKind, check, check_typed,
+    parse_rdf_typed,
 };
 
 /// Turtle statement with a truncated object and no closing `.`: a real syntax
@@ -21,7 +21,10 @@ fn syntax_from_real_bad_turtle_carries_backend_location() {
     // PurRDF reports line/column for text-family parses; we surface, not guess.
     assert!(err.line.is_some(), "expected backend line: {err}");
     assert!(err.col.is_some(), "expected backend column: {err}");
-    assert!(err.byte_offset.is_none(), "PurRDF never reports a byte offset");
+    assert!(
+        err.byte_offset.is_none(),
+        "PurRDF never reports a byte offset"
+    );
     assert!(err.snippet.as_deref().is_some_and(|s| !s.is_empty()));
 }
 
@@ -112,7 +115,8 @@ fn jsonld_remote_context_typed_refusal_no_network() {
 
     // Inline object contexts (terms mapping to absolute IRIs) are LOCAL and
     // must still parse.
-    let local = br#"{"@context": {"ex": "http://example.com/"}, "@id": "ex:s", "ex:p": {"@value": "v"}}"#;
+    let local =
+        br#"{"@context": {"ex": "http://example.com/"}, "@id": "ex:s", "ex:p": {"@value": "v"}}"#;
     check_typed(local, Dialect::JsonLd, None).expect("inline context must not be refused");
 }
 
@@ -120,7 +124,8 @@ fn jsonld_remote_context_typed_refusal_no_network() {
 /// inline mapping object is not.
 #[test]
 fn remote_context_array_detected_inline_object_not() {
-    let remote = br#"{"@context": ["https://example.invalid/c.jsonld"], "@id": "http://example.com/s"}"#;
+    let remote =
+        br#"{"@context": ["https://example.invalid/c.jsonld"], "@id": "http://example.com/s"}"#;
     let err = check_typed(remote, Dialect::JsonLd, None).unwrap_err();
     assert_eq!(err.reason, ReasonClass::RemoteContext);
 }
@@ -129,7 +134,13 @@ fn remote_context_array_detected_inline_object_not() {
 /// `eyeron::ReasonerLimit`, and convert to the legacy ResourceLimit kind.
 #[test]
 fn limit_class_carries_counts_and_maps_from_reasoner_limit() {
-    let r = ParseRefusal::limit(Dialect::N3, "n3_derived_facts", 10_001, 10_000, "closure cap");
+    let r = ParseRefusal::limit(
+        Dialect::N3,
+        "n3_derived_facts",
+        10_001,
+        10_000,
+        "closure cap",
+    );
     assert_eq!(
         r.reason,
         ReasonClass::Limit {

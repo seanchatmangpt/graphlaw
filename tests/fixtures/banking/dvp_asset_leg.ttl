@@ -1,0 +1,14 @@
+# Banking DvP asset leg — bounded UPDATE transfer (single root, bare form).
+# BOTH where-predicates required (compile_command UpdateStatement guard,
+# CTQ-4 / REFUSAL-05). Expected SQL:
+#   UPDATE dvp_asset_ledger SET holder = 'BOOK-B' WHERE asset = 'ISIN-XX-0001'
+@prefix ex: <http://example.org/banking#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+
+ex:stmt1 a sql:UpdateStatement ;
+    sql:statementIndex 3 ;
+    sql:targetTable "dvp_asset_ledger" ;
+    sql:assignColumn "holder" ;
+    sql:assignValue "BOOK-B" ;
+    sql:whereColumn "asset" ;
+    sql:whereValue "ISIN-XX-0001" .

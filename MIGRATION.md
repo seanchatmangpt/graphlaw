@@ -90,3 +90,79 @@ structs are not an admitted path.
   Evaluation runs on real frozen-duckdb connections
   (`graphlaw::duckdb_eval`). This tree has no `[patch]` for frozen-duckdb;
   local and published builds both resolve 2.0.2 from crates.io.
+
+## Op-15 `duckdb` is host-only in the wasm artifact (26.10.22)
+
+The `duckdb` ABI op is now compiled only for non-wasm targets: the dispatch arm
+is `#[cfg(not(target_arch = "wasm32"))]`-gated (`src/abi.rs:334-335`), and
+`duckdb_op`/`duckdb_eval`/SQL builtins are documented host-only
+(`src/lib.rs:246-257`). The wasm module still admits and compiles SQL-in-RDF
+through `compile_turtle` unchanged; what is absent inside wasm is the
+frozen-duckdb execution step.
+
+Callers invoking op-15 (`"op": "duckdb"`) through the wasm artifact
+(`priv/graphlaw.wasm` / `graphlaw-run` wasmi runner) must move the execution
+call to the **host dispatch** (native `graphlaw::abi::call` with the
+`duckdb` op, or the `graphlaw-verify`/host binaries). If you call the wasm
+artifact anyway, the typed refusal you will see is:
+
+```json
+{ "kind": "Unsupported", "message": "unknown op `duckdb`" }
+```
+
+(produced by the fallthrough arm at `src/abi.rs:336`:
+`other => Err(bad(format!("unknown op \`{other}\`")))` with
+`RefusalKind::Unsupported`, `src/abi.rs:174-180`). This is a typed refusal,
+not a crash or trap. Do not string-match the message at the edge — match on
+`kind == "Unsupported"` and route execution to the host. The in-wasm SQL
+execution path is expected to return with the EH-wall emsdk rebuild; until
+that lands, host dispatch is the only execution route for the `duckdb` op.
+
+## MERGE `ON` must reference a target column (26.10.22)
+
+A MERGE statement whose `ON` condition references no target-qualified column
+is now refused. Constant-only `ON` conditions (e.g. `ON $1 = $2`) match every
+target row, making `WHEN MATCHED` fan-out unbounded, so admission rejects them
+typed as `REFUSAL-03` arm 7 (`MERGE_ON_NO_TARGET_COLUMN`,
+`src/sql_ast.rs:987-993`; register entry `docs/refusals.md`, REFUSAL-03 row).
+The refusal surfaces as `sql_ast::AstError::ShaclViolation` with
+`[REFUSAL-03]` in the message; appended arms carry
+`code: RefusalCode::ScopeIntegrity` with `shape_id` =
+`refusal_arm::MERGE_ON_NO_TARGET_COLUMN` (= 7).
+
+Migration: qualify the `ON` condition to at least one target column, e.g.
+`ON t.id = s.id` instead of `ON $1 = $2`. See the REFUSAL-03 recovery text in
+`docs/refusals.md`.
+
+## EH closure and in-module `duckdb` promotion (26.10.22 -> 2026-10-23, SQLRDF-21)
+
+Reference: `docs/jira/v26.10.22/SQLRDF-21.md`. The exception-handling wall is
+closed: the archive rebuild carries `-mllvm -wasm-use-legacy-eh=0` (new-EH
+`try_table`/`throw` artifact), hosted by wasmtime 48 with `wasm_exceptions`;
+wasmi 2.0.0 cannot host it (no exceptions-proposal support). The `duckdb` op
+(op-15) is promoted in-module: the host-only cfg gates are gone and the op
+authorities include frozen-duckdb on wasm. Raw SQL text is still refused —
+SQLRDF-17 stands.
+
+What consumers must change:
+
+1. **wasmi-hosted callers must move to `graphlaw-run-eh`.** The linked
+   artifact now uses new EH; wasmi cannot host it. If you drive the module
+   through the wasmi-based `graphlaw-run` runner, switch to the
+   wasmtime-48-based `graphlaw-run-eh` binary (cargo feature `runner-eh`) or
+   a wasmtime 48 host with `wasm_exceptions` enabled.
+2. **Archive rebuilds must carry the flag.** Any rebuild of the wasm artifact
+   from the frozen-duckdb archive must pass `-mllvm
+   -wasm-use-legacy-eh=0`; a legacy-EH rebuild produces an artifact no
+   available runtime hosts (the MIXED wall).
+3. **The 7.1 MB pin class is legacy.** Artifact pins in the ~7.1 MB class
+   (legacy-EH builds) are superseded; pin the new-EH artifact digest from
+   `priv/graphlaw.wasm.blake3` / `registry/ARTIFACTS.blake3`. The exact new
+   digest is pending the integration receipt — do not carry a remembered
+   value forward.
+4. **Supersession.** The section "Op-15 `duckdb` is host-only in the wasm
+   artifact (26.10.22)" above no longer applies to the current artifact: the
+   `unknown op \`duckdb\`` wasm refusal is retired. The MERGE `ON`
+   target-column refusal (REFUSAL-03 arm 7) still applies, and MERGE is now
+   classified mutating (execution bumps the epoch counter). WHERE-less
+   UPDATE/DELETE refuse `REFUSAL-05` and require BOTH where-predicates.

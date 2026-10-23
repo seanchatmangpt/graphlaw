@@ -96,11 +96,7 @@ fn atom_to_triple(key: &str) -> [String; 3] {
 /// Build one rule from breed-style conclusion + premise strings. A premise
 /// prefixed '!' becomes a negated (negation-as-failure) body atom.
 fn term(t: &str) -> ClauseTerm {
-    if t.starts_with('?') {
-        vr(t)
-    } else {
-        iri(t)
-    }
+    if t.starts_with('?') { vr(t) } else { iri(t) }
 }
 
 fn rule(conclusion: &str, premises: &[&str]) -> DlClause {
@@ -140,11 +136,7 @@ fn eval_fixpoint(rules: Vec<DlClause>, edb_keys: &[&str]) -> BTreeSet<String> {
     let ev = evaluate(&exe, store).expect("datalog evaluate");
     let mut out = BTreeSet::new();
     for f in ev.facts().facts_sorted() {
-        let un = |x: &str| {
-            x.trim_start_matches('<')
-                .trim_end_matches('>')
-                .to_string()
-        };
+        let un = |x: &str| x.trim_start_matches('<').trim_end_matches('>').to_string();
         let (s, p, o) = (un(&f.subject), un(&f.predicate), un(&f.object));
         let key = match o.as_str() {
             "-" => p.clone(),
@@ -324,11 +316,8 @@ fn pop_rules() -> Vec<DlClause> {
 
 /// Verdict helpers over a fixpoint.
 fn has_pred(fix: &BTreeSet<String>, pred: &str) -> bool {
-    fix.iter().any(|k| {
-        k.split_once(':')
-            .map(|(p, _)| p == pred)
-            .unwrap_or(false)
-    })
+    fix.iter()
+        .any(|k| k.split_once(':').map(|(p, _)| p == pred).unwrap_or(false))
 }
 
 fn dsep_verdict(fix: &BTreeSet<String>, end: &str) -> &'static str {
@@ -559,15 +548,21 @@ fn pop_cases() -> Vec<PopCase> {
                 ("put_b_on_c", "del"),
             ],
             native_rules: &[
-                ("put_c_from_a_on_table",
-                 "clear_c=true,on_c_a=true",
-                 "clear_a=true; ontable_c=true; !on_c_a=true"),
-                ("put_a_on_b",
-                 "clear_a=true,clear_b=true,ontable_a=true",
-                 "on_a_b=true; !clear_b=true; !ontable_a=true"),
-                ("put_b_on_c",
-                 "clear_b=true,clear_c=true,ontable_b=true",
-                 "on_b_c=true; !clear_c=true; !ontable_b=true"),
+                (
+                    "put_c_from_a_on_table",
+                    "clear_c=true,on_c_a=true",
+                    "clear_a=true; ontable_c=true; !on_c_a=true",
+                ),
+                (
+                    "put_a_on_b",
+                    "clear_a=true,clear_b=true,ontable_a=true",
+                    "on_a_b=true; !clear_b=true; !ontable_a=true",
+                ),
+                (
+                    "put_b_on_c",
+                    "clear_b=true,clear_c=true,ontable_b=true",
+                    "on_b_c=true; !clear_c=true; !ontable_b=true",
+                ),
             ],
             native_state: &[
                 ("on_c_a", "true"),
@@ -597,12 +592,7 @@ fn pop_cases() -> Vec<PopCase> {
                 ("opB", "opC"),
                 ("opC", "end"),
             ],
-            pre: &[
-                ("opA", "p"),
-                ("opB", "r"),
-                ("opC", "s"),
-                ("end", "t"),
-            ],
+            pre: &[("opA", "p"), ("opB", "r"), ("opC", "s"), ("end", "t")],
             add: &[
                 ("start", "p"),
                 ("start", "q"),
@@ -610,10 +600,7 @@ fn pop_cases() -> Vec<PopCase> {
                 ("opB", "s"),
                 ("opC", "t"),
             ],
-            del: &[
-                ("opA", "q"),
-                ("opC", "r"),
-            ],
+            del: &[("opA", "q"), ("opC", "r")],
             links: &[
                 ("K1", "start", "opA", "p"),
                 ("K2", "opA", "opB", "r"),
@@ -621,9 +608,14 @@ fn pop_cases() -> Vec<PopCase> {
                 ("K4", "opC", "end", "t"),
             ],
             native_ops: &[
-                ("opA", "pre"), ("opA", "add"), ("opA", "del"),
-                ("opB", "pre"), ("opB", "add"),
-                ("opC", "pre"), ("opC", "add"), ("opC", "del"),
+                ("opA", "pre"),
+                ("opA", "add"),
+                ("opA", "del"),
+                ("opB", "pre"),
+                ("opB", "add"),
+                ("opC", "pre"),
+                ("opC", "add"),
+                ("opC", "del"),
             ],
             native_rules: &[
                 ("opA", "p=true", "r=true; !q=true"),
@@ -652,18 +644,8 @@ fn pop_cases() -> Vec<PopCase> {
                 ("opC", "opA"),
                 ("opC", "end"),
             ],
-            pre: &[
-                ("opA", "p"),
-                ("opB", "r"),
-                ("opC", "s"),
-                ("end", "t"),
-            ],
-            add: &[
-                ("start", "p"),
-                ("opA", "r"),
-                ("opB", "s"),
-                ("opC", "t"),
-            ],
+            pre: &[("opA", "p"), ("opB", "r"), ("opC", "s"), ("end", "t")],
+            add: &[("start", "p"), ("opA", "r"), ("opB", "s"), ("opC", "t")],
             del: &[],
             links: &[
                 ("K1", "start", "opA", "p"),
@@ -672,9 +654,13 @@ fn pop_cases() -> Vec<PopCase> {
                 ("K4", "opC", "end", "t"),
             ],
             native_ops: &[
-                ("opA", "pre"), ("opA", "add"),
-                ("opB", "pre"), ("opB", "add"),
-                ("opC", "pre"), ("opC", "add"), ("opC", "del"),
+                ("opA", "pre"),
+                ("opA", "add"),
+                ("opB", "pre"),
+                ("opB", "add"),
+                ("opC", "pre"),
+                ("opC", "add"),
+                ("opC", "del"),
             ],
             native_rules: &[
                 ("opA", "p=true", "r=true"),
@@ -711,7 +697,10 @@ fn git_rev() -> String {
         .args(["-C", env!("CARGO_MANIFEST_DIR"), "rev-parse", "HEAD"])
         .output()
         .expect("git rev-parse");
-    String::from_utf8(out.stdout).expect("utf8").trim().to_string()
+    String::from_utf8(out.stdout)
+        .expect("utf8")
+        .trim()
+        .to_string()
 }
 
 /// Build EDB fact keys (Datalog court) + breed-native breed_input for a dsep
@@ -733,12 +722,7 @@ fn dsep_edb(c: &DsepCase) -> (Vec<String>, Value) {
     // Breed-native input: the Pearl network as cpt: facts (values are the
     // canonical alarm-network CPTs where applicable; dsep reads only the
     // graph, but values keep the input honest).
-    let goal_value = format!(
-        "dsep:{},{}|{}",
-        c.start,
-        c.end,
-        c.obs.join(",")
-    );
+    let goal_value = format!("dsep:{},{}|{}", c.start, c.end, c.obs.join(","));
     let cpt_facts: Vec<Value> = c
         .cpts
         .iter()
@@ -867,26 +851,32 @@ fn pop_rule_specs() -> Vec<Value> {
         mk("ordtc:?0,?1", &["ord:?0,?1"]),
         mk("ordtc:?0,?2", &["ord:?0,?1", "ordtc:?1,?2"]),
         mk("cyclic:?0", &["ordtc:?0,?0"]),
-        mk("supp:?0,?1", &[
-            "pre:?0,?1",
-            "link:?2",
-            "linkfrom:?2,?3",
-            "linkto:?2,?0",
-            "linkcond:?2,?1",
-            "add:?3,?1",
-        ]),
+        mk(
+            "supp:?0,?1",
+            &[
+                "pre:?0,?1",
+                "link:?2",
+                "linkfrom:?2,?3",
+                "linkto:?2,?0",
+                "linkcond:?2,?1",
+                "add:?3,?1",
+            ],
+        ),
         mk("unsupp:?0,?1", &["pre:?0,?1", "!supp:?0,?1"]),
-        mk("threat:?0,?1", &[
-            "link:?0",
-            "linkfrom:?0,?2",
-            "linkto:?0,?3",
-            "linkcond:?0,?4",
-            "del:?1,?4",
-            "pdiff:?1,?2",
-            "pdiff:?1,?3",
-            "!ordtc:?1,?2",
-            "!ordtc:?3,?1",
-        ]),
+        mk(
+            "threat:?0,?1",
+            &[
+                "link:?0",
+                "linkfrom:?0,?2",
+                "linkto:?0,?3",
+                "linkcond:?0,?4",
+                "del:?1,?4",
+                "pdiff:?1,?2",
+                "pdiff:?1,?3",
+                "!ordtc:?1,?2",
+                "!ordtc:?3,?1",
+            ],
+        ),
     ]
 }
 
@@ -902,7 +892,10 @@ fn main() {
     let dsep = dsep_cases();
     for c in &dsep {
         let (facts, breed_input) = dsep_edb(c);
-        let fix = eval_fixpoint(dsep_rules(), &facts.iter().map(|s| s.as_str()).collect::<Vec<_>>());
+        let fix = eval_fixpoint(
+            dsep_rules(),
+            &facts.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+        );
         if std::env::var_os("GL_DEBUG").is_some() {
             eprintln!("--- {} facts:", c.vector_id);
             for f in &fix {
@@ -916,7 +909,13 @@ fn main() {
         let edges_usize: Vec<(usize, usize)> =
             c.edges.iter().map(|(ch, pa)| (idx(pa), idx(ch))).collect();
         let obs_set: BTreeSet<usize> = c.obs.iter().map(|o| idx(o)).collect();
-        let native = bayes_ball_native(&edges_usize, c.nodes.len(), idx(c.start), idx(c.end), &obs_set);
+        let native = bayes_ball_native(
+            &edges_usize,
+            c.nodes.len(),
+            idx(c.start),
+            idx(c.end),
+            &obs_set,
+        );
         let native_verdict = if native { "dsep" } else { "not_dsep" };
         if native_verdict != c.expected {
             eprintln!(
@@ -1004,7 +1003,10 @@ fn main() {
     let pop = pop_cases();
     for c in &pop {
         let (facts, breed_input) = pop_edb(c);
-        let fix = eval_fixpoint(pop_rules(), &facts.iter().map(|s| s.as_str()).collect::<Vec<_>>());
+        let fix = eval_fixpoint(
+            pop_rules(),
+            &facts.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+        );
         if std::env::var_os("GL_DEBUG").is_some() {
             eprintln!("--- {} offending facts:", c.vector_id);
             for f in &fix {
@@ -1037,7 +1039,10 @@ fn main() {
                 .map(|f| f.as_str().expect("fact").to_string())
                 .collect();
             if exp_verdict != c.expected || fix_sorted != disk_fix {
-                eprintln!("VERIFY FAIL {}: {} vs {}", c.vector_id, exp_verdict, c.expected);
+                eprintln!(
+                    "VERIFY FAIL {}: {} vs {}",
+                    c.vector_id, exp_verdict, c.expected
+                );
                 failures += 1;
             }
             let disk_rev = v["provenance"]["graphlaw_rev"].as_str().expect("rev");
@@ -1045,7 +1050,7 @@ fn main() {
                 eprintln!("VERIFY FAIL {}: rev {disk_rev} != {rev}", c.vector_id);
                 failures += 1;
             }
-} else {
+        } else {
             let vector = json!({
                 "vector_id": c.vector_id,
                 "breed": "partial_order_plan",

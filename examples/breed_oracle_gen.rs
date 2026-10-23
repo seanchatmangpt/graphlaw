@@ -177,11 +177,7 @@ fn main() {
             let (_, set) = run_native(&v["breed_input"]);
             for f in c.exp_facts {
                 let arr = atom_to_triple(f);
-                let t = (
-                    arr[0].clone(),
-                    arr[1].clone(),
-                    arr[2].clone(),
-                );
+                let t = (arr[0].clone(), arr[1].clone(), arr[2].clone());
                 if !set.contains(&t) {
                     eprintln!(
                         "VERIFY FAIL {}: conformed fact `{f}` not derived by the engine",
@@ -223,18 +219,27 @@ fn main() {
             // (3) Provenance must be present and well-formed on disk.
             let disk_rev = v["provenance"]["graphlaw_rev"].as_str().unwrap_or("");
             if disk_rev.len() != 40 {
-                eprintln!("VERIFY FAIL {}: provenance.graphlaw_rev must be 40-hex", c.vector_id);
+                eprintln!(
+                    "VERIFY FAIL {}: provenance.graphlaw_rev must be 40-hex",
+                    c.vector_id
+                );
                 failures += 1;
             }
             if v["provenance"]["graphlaw_version"].as_str().is_none() {
-                eprintln!("VERIFY FAIL {}: provenance.graphlaw_version missing", c.vector_id);
+                eprintln!(
+                    "VERIFY FAIL {}: provenance.graphlaw_version missing",
+                    c.vector_id
+                );
                 failures += 1;
             }
         }
         if failures > 0 {
             panic!("{failures} vector(s) failed independent re-verification");
         }
-        println!("verify: {} vector(s) re-evaluated and identical modulo provenance; rev {rev}; version {version}", cases.len());
+        println!(
+            "verify: {} vector(s) re-evaluated and identical modulo provenance; rev {rev}; version {version}",
+            cases.len()
+        );
         return;
     }
 
@@ -243,11 +248,17 @@ fn main() {
     fs::create_dir_all(&dir).expect("create vecdir");
     for c in &cases {
         let path = dir.join(format!("{}.json", c.vector_id));
-        fs::write(&path, serde_json::to_string_pretty(&build_vector(c, &rev, &version)).unwrap() + "\n")
-            .expect("write vector");
+        fs::write(
+            &path,
+            serde_json::to_string_pretty(&build_vector(c, &rev, &version)).unwrap() + "\n",
+        )
+        .expect("write vector");
         println!("wrote {}", path.display());
     }
-    println!("generated {} vector(s); rev {rev}; version {version}; now run with --verify", cases.len());
+    println!(
+        "generated {} vector(s); rev {rev}; version {version}; now run with --verify",
+        cases.len()
+    );
 }
 
 fn rev() -> String {
@@ -255,7 +266,10 @@ fn rev() -> String {
         .args(["-C", env!("CARGO_MANIFEST_DIR"), "rev-parse", "HEAD"])
         .output()
         .expect("git rev-parse");
-    String::from_utf8(out.stdout).expect("utf8").trim().to_string()
+    String::from_utf8(out.stdout)
+        .expect("utf8")
+        .trim()
+        .to_string()
 }
 
 /// Full SCHEMA v1 emission for one case. Engine replay runs first as a
@@ -382,11 +396,24 @@ fn cases() -> Vec<Case> {
             vector_id: "prolog_multi_rule_join",
             breed: "prolog",
             intent: "multi-rule join: grandparent composes two parent premises; ancestor adds recursion",
-            facts: &["parent:pam,bob", "parent:tom,bob", "parent:bob,ann", "parent:bob,pat"],
+            facts: &[
+                "parent:pam,bob",
+                "parent:tom,bob",
+                "parent:bob,ann",
+                "parent:bob,pat",
+            ],
             rules: &[
-                ("r_grandparent", "grandparent:?0,?2", &["parent:?0,?1", "parent:?1,?2"]),
+                (
+                    "r_grandparent",
+                    "grandparent:?0,?2",
+                    &["parent:?0,?1", "parent:?1,?2"],
+                ),
                 ("r_ancestor_base", "ancestor:?0,?1", &["parent:?0,?1"]),
-                ("r_ancestor_trans", "ancestor:?0,?2", &["ancestor:?0,?1", "ancestor:?1,?2"]),
+                (
+                    "r_ancestor_trans",
+                    "ancestor:?0,?2",
+                    &["ancestor:?0,?1", "ancestor:?1,?2"],
+                ),
             ],
             goals: &[("g1", "grandparent:pam,ann")],
             exp_facts: &[
@@ -418,7 +445,11 @@ fn cases() -> Vec<Case> {
             breed: "prolog",
             intent: "rule present but no premise join is satisfiable — nothing derived",
             facts: &["parent:x,y"],
-            rules: &[("r_grandparent", "grandparent:?0,?2", &["parent:?0,?1", "parent:?1,?2"])],
+            rules: &[(
+                "r_grandparent",
+                "grandparent:?0,?2",
+                &["parent:?0,?1", "parent:?1,?2"],
+            )],
             goals: &[("g1", "grandparent:x,y")],
             exp_facts: &["parent:x,y"],
             verdicts: &[("g1", "refused")],

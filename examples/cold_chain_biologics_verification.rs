@@ -27,7 +27,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("===============================================================================\n");
 
     // 1. Setup temporary directory and mock OCEL v2 partitioned Parquet logs
-    let base_dir = format!("/tmp/biopharma_ocel_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+    let base_dir = format!(
+        "/tmp/biopharma_ocel_{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
     let _ = fs::remove_dir_all(&base_dir);
     fs::create_dir_all(&base_dir)?;
 
@@ -63,9 +69,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     db.raw_connection().execute_batch(&gen_rel)?;
 
     // Mount virtual zero-copy views
-    db.register_parquet_view("ocel_events", &format!("{}/events/**/*.parquet", base_dir), true)?;
-    db.register_parquet_view("ocel_event_object_rel", &format!("{}/event_object_map.parquet", base_dir), false)?;
-    println!("  -> Mounted /events/**/*.parquet as view 'ocel_events' (Hive partition: facility_id)");
+    db.register_parquet_view(
+        "ocel_events",
+        &format!("{}/events/**/*.parquet", base_dir),
+        true,
+    )?;
+    db.register_parquet_view(
+        "ocel_event_object_rel",
+        &format!("{}/event_object_map.parquet", base_dir),
+        false,
+    )?;
+    println!(
+        "  -> Mounted /events/**/*.parquet as view 'ocel_events' (Hive partition: facility_id)"
+    );
     println!("  -> Mounted /event_object_map.parquet as view 'ocel_event_object_rel'");
 
     println!("\n=== Phase 2: Structural Verification via SHACL Pre-Flight Gate ===");
@@ -131,7 +147,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     "#;
 
     validate_ast_shacl(query_ast_ttl, shapes_ttl)?;
-    println!("  -> AST conformance verified: adherence to sql:SelectStatementShape and token safety rules.");
+    println!(
+        "  -> AST conformance verified: adherence to sql:SelectStatementShape and token safety rules."
+    );
 
     println!("\n=== Phase 3: Extracting AST & Compiling Parameterized SQL Pushdown ===");
     let query_node = "http://biopharma.org/queries#ColdChainExcursionQuery".to_string();
@@ -150,11 +168,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("  -> Rows Emitted       : {}", receipt.rows_emitted);
     println!("  -> Pushdown Duration  : {:.3} ms", receipt.execution_ms);
-    println!("  -> BLAKE3 Query Hash  : {}", hex::encode(receipt.query_hash));
+    println!(
+        "  -> BLAKE3 Query Hash  : {}",
+        hex::encode(receipt.query_hash)
+    );
 
     println!("\n=== Phase 5: Materialized Triples (Bridged to Deductive State) ===");
     for stmt in &receipt.result_triples {
-        println!("  <{}> <{}> {:?}", stmt.subject, stmt.predicate, stmt.object);
+        println!(
+            "  <{}> <{}> {:?}",
+            stmt.subject, stmt.predicate, stmt.object
+        );
     }
 
     println!("\n=== Phase 6: Deductive GxP State Admission (FDA 21 CFR 211.165) ===");
@@ -166,10 +190,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for t in &receipt.result_triples {
             if t.predicate == "http://biopharma.org/vocab/object_id"
                 && let TermValue::Literal { lexical_form, .. } = &t.object
-                    && lexical_form == target_batch {
-                        row_subj = Some(t.subject.clone());
-                        break;
-                    }
+                && lexical_form == target_batch
+            {
+                row_subj = Some(t.subject.clone());
+                break;
+            }
         }
 
         let subj = row_subj.expect("Batch row should exist in result");
@@ -179,27 +204,46 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         for t in &receipt.result_triples {
             if t.subject == subj {
                 if t.predicate == "http://biopharma.org/vocab/total_excursion_duration"
-                    && let TermValue::Literal { lexical_form, .. } = &t.object {
-                        duration = lexical_form.parse().unwrap_or(0);
-                    }
+                    && let TermValue::Literal { lexical_form, .. } = &t.object
+                {
+                    duration = lexical_form.parse().unwrap_or(0);
+                }
                 if t.predicate == "http://biopharma.org/vocab/max_excursion_temp"
-                    && let TermValue::Literal { lexical_form, .. } = &t.object {
-                        max_temp = lexical_form.parse().unwrap_or(0.0);
-                    }
+                    && let TermValue::Literal { lexical_form, .. } = &t.object
+                {
+                    max_temp = lexical_form.parse().unwrap_or(0.0);
+                }
             }
         }
 
-        print!("  Checking Batch {}: duration={}s, max_temp={:.1}C -> ", target_batch, duration, max_temp);
+        print!(
+            "  Checking Batch {}: duration={}s, max_temp={:.1}C -> ",
+            target_batch, duration, max_temp
+        );
         if duration <= 300 && max_temp < -15.0 {
             println!("PASS [bio:ReleasedBatch]");
-            println!("    Assert: <http://biopharma.org/batches/{}> a bio:ReleasedBatch ;", target_batch);
+            println!(
+                "    Assert: <http://biopharma.org/batches/{}> a bio:ReleasedBatch ;",
+                target_batch
+            );
             println!("            bio:releaseApproval \"FDA 21 CFR 211.165 Compliant\" ;");
-            println!("            gl:auditProof \"{}\"^^xsd:hexBinary .\n", hex::encode(receipt.query_hash));
+            println!(
+                "            gl:auditProof \"{}\"^^xsd:hexBinary .\n",
+                hex::encode(receipt.query_hash)
+            );
         } else {
             println!("FAIL [bio:QuarantinedBatch] (FAIL-CLOSED)");
-            println!("    Assert: <http://biopharma.org/batches/{}> a bio:QuarantinedBatch ;", target_batch);
-            println!("            bio:quarantineReason \"Cold-chain cumulative duration/temp breach\" ;");
-            println!("            gl:auditProof \"{}\"^^xsd:hexBinary .\n", hex::encode(receipt.query_hash));
+            println!(
+                "    Assert: <http://biopharma.org/batches/{}> a bio:QuarantinedBatch ;",
+                target_batch
+            );
+            println!(
+                "            bio:quarantineReason \"Cold-chain cumulative duration/temp breach\" ;"
+            );
+            println!(
+                "            gl:auditProof \"{}\"^^xsd:hexBinary .\n",
+                hex::encode(receipt.query_hash)
+            );
         }
     }
 

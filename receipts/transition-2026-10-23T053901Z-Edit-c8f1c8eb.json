@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "c8f1c8eb4093359b73f5145594f9cfce7bb475ed53100ade9fdb1c693b64221d",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T053901Z-Edit-c8f1c8eb.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/.claude/agents/court-runner.md",
+  "timestamp_utc": "2026-10-23T053901Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

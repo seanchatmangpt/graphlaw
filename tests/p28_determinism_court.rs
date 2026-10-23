@@ -196,9 +196,16 @@ fn tc_epoch_reserved_three_term_formula_compatibility() {
     // not a no-op identity).
     let h3_epoch0 = h3(0);
     for i in 0..1_000 {
-        assert_eq!(h3(0), h3_epoch0, "epoch 0 derivation must be deterministic (iteration {i})");
+        assert_eq!(
+            h3(0),
+            h3_epoch0,
+            "epoch 0 derivation must be deterministic (iteration {i})"
+        );
     }
-    assert_ne!(h3_epoch0, h2, "zero-epoch reserved value must transform H², not equal it");
+    assert_ne!(
+        h3_epoch0, h2,
+        "zero-epoch reserved value must transform H², not equal it"
+    );
 
     // Same epoch → same receipt (deployment determinism); different epochs
     // → domain-separated receipts (cross-deployment non-collision on the
@@ -212,7 +219,11 @@ fn tc_epoch_reserved_three_term_formula_compatibility() {
         );
     }
     for [a, b] in [[1u64, 2], [42, u64::MAX], [1, u64::MAX]] {
-        assert_ne!(h3(a), h3(b), "epochs {a} and {b} must yield distinct receipts");
+        assert_ne!(
+            h3(a),
+            h3(b),
+            "epochs {a} and {b} must yield distinct receipts"
+        );
     }
 
     // The epoch input must actually flow into the digest (anti-vacuity: a
@@ -221,7 +232,11 @@ fn tc_epoch_reserved_three_term_formula_compatibility() {
     let mut hasher = blake3::Hasher::new();
     hasher.update(&h2);
     let h_no_epoch = *hasher.finalize().as_bytes();
-    assert_ne!(h_no_epoch, h3(0), "dropping the epoch term must not reproduce H³(0)");
+    assert_ne!(
+        h_no_epoch,
+        h3(0),
+        "dropping the epoch term must not reproduce H³(0)"
+    );
 }
 
 /// TC-LEGAL-02: a ProcessScope attribute surfaced in the projection list is a

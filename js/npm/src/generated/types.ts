@@ -1,5 +1,5 @@
 // GENERATED from registry/capability-registry.json
-// registry_blake3: blake3:22b7478c47293741a17c0ec1f884472bac8fcb0ec7320b0925b48aa04d80908b
+// registry_blake3: blake3:cdead01f74a86a1ed7ded9a7acf2bebd99caa45221f2a0551316e35941bf59ed
 // Do not edit by hand; run `npm run gen` to regenerate.
 
 import type { DataSpec, Term } from '../types.js';

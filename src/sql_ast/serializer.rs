@@ -2,13 +2,16 @@
 #![allow(clippy::result_large_err)]
 
 use super::ast::{
-    AggregateFunction, CompiledQuery, JoinClause, OrderTerm, ScopePos, SqlExpr, SqlLiteral,
-    TableRef, validate_identifier, validate_qualified_identifier,
+    AggregateFunction, CompiledQuery, Cte, FrameSpec, JoinClause, OrderTerm, ScopePos, SqlExpr,
+    SqlLiteral, TableRef, validate_identifier, validate_qualified_identifier,
 };
 use super::refusals::{AstError, RefusalCode, refusal_arm};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SelectStatement {
+    /// SQLRDF-25: `WITH [RECURSIVE] name (cols) AS (query), ...` arms,
+    /// serialized before the main SELECT. Empty = no WITH clause.
+    pub ctes: Vec<Cte>,
     pub from: TableRef,
     pub joins: Vec<JoinClause>,
     pub select_list: Vec<SqlExpr>,
@@ -20,6 +23,10 @@ pub struct SelectStatement {
     pub order_by: Vec<OrderTerm>,
     pub limit: Option<usize>,
     pub offset: Option<usize>,
+    /// `sql:qualify` expression (SQLRDF-25): window-filtering predicate,
+    /// rendered after HAVING, before ORDER BY/LIMIT. Window functions and
+    /// aggregates are legal here; column-only predicates extract too.
+    pub qualify: Option<SqlExpr>,
 }
 
 impl SelectStatement {
@@ -37,17 +44,49 @@ impl SelectStatement {
     /// not anchor a canonical graph; only [`compile_turtle`] produces the
     /// graph-backed form the receipt law keys on.
     pub fn compile(&self) -> Result<CompiledQuery, AstError> {
-        validate_identifier(&self.from.name)?;
-        if let Some(schema) = &self.from.schema {
-            validate_qualified_identifier(schema)?;
-        }
-        if let Some(alias) = &self.from.alias {
-            validate_identifier(alias)?;
-        }
-
         let mut params = Vec::new();
         let mut sql = String::with_capacity(256);
+        self.compile_into(&mut sql, &mut params)?;
+        Ok(CompiledQuery::raw_compiled(sql, params))
+    }
 
+    /// Serializes this select (including any WITH clause) into `sql`,
+    /// appending bound parameters to `params`. Nested CTE queries serialize
+    /// with the SAME shared parameter vector: `serialize_expr` numbers each
+    /// placeholder from `params.len()` at push time, so a CTE's literals
+    /// occupy the lowest indices and the outer body continues after them —
+    /// exactly DuckDB's global positional-prepared numbering.
+    fn compile_into(&self, sql: &mut String, params: &mut Vec<SqlLiteral>) -> Result<(), AstError> {
+        if !self.ctes.is_empty() {
+            sql.push_str("WITH ");
+            if self.ctes.iter().any(|cte| cte.recursive) {
+                sql.push_str("RECURSIVE ");
+            }
+            for (idx, cte) in self.ctes.iter().enumerate() {
+                if idx > 0 {
+                    sql.push_str(", ");
+                }
+                validate_identifier(&cte.name)?;
+                sql.push_str(&cte.name);
+                if !cte.columns.is_empty() {
+                    sql.push('(');
+                    for (col_idx, col) in cte.columns.iter().enumerate() {
+                        if col_idx > 0 {
+                            sql.push_str(", ");
+                        }
+                        validate_identifier(col)?;
+                        sql.push_str(col);
+                    }
+                    sql.push(')');
+                }
+                sql.push_str(" AS (");
+                cte.query.compile_into(sql, params)?;
+                sql.push(')');
+            }
+            sql.push(' ');
+        }
+
+        validate_identifier(&self.from.name)?;
         sql.push_str("SELECT ");
         if self.select_list.is_empty() {
             sql.push('*');
@@ -56,7 +95,7 @@ impl SelectStatement {
                 if idx > 0 {
                     sql.push_str(", ");
                 }
-                Self::serialize_expr(item, &mut sql, &mut params, 0, ScopePos::SelectList)?;
+                 Self::serialize_expr(item, sql, params, 0, ScopePos::SelectList)?;
             }
         }
 
@@ -94,8 +133,8 @@ impl SelectStatement {
             sql.push_str(" ON ");
             Self::serialize_expr(
                 &join.condition,
-                &mut sql,
-                &mut params,
+                sql,
+                params,
                 0,
                 ScopePos::Predicate,
             )?;
@@ -103,7 +142,7 @@ impl SelectStatement {
 
         if let Some(where_clause) = &self.where_clause {
             sql.push_str(" WHERE ");
-            Self::serialize_expr(where_clause, &mut sql, &mut params, 0, ScopePos::Predicate)?;
+             Self::serialize_expr(where_clause, sql, params, 0, ScopePos::Predicate)?;
         }
 
         if !self.group_by.is_empty() {
@@ -112,13 +151,18 @@ impl SelectStatement {
                 if idx > 0 {
                     sql.push_str(", ");
                 }
-                Self::serialize_expr(item, &mut sql, &mut params, 0, ScopePos::GroupBy)?;
+                 Self::serialize_expr(item, sql, params, 0, ScopePos::GroupBy)?;
             }
         }
 
         if let Some(having) = &self.having {
             sql.push_str(" HAVING ");
-            Self::serialize_expr(having, &mut sql, &mut params, 0, ScopePos::Having)?;
+             Self::serialize_expr(having, sql, params, 0, ScopePos::Having)?;
+        }
+
+        if let Some(qualify) = &self.qualify {
+            sql.push_str(" QUALIFY ");
+             Self::serialize_expr(qualify, sql, params, 0, ScopePos::Qualify)?;
         }
 
         if !self.order_by.is_empty() {
@@ -127,7 +171,7 @@ impl SelectStatement {
                 if idx > 0 {
                     sql.push_str(", ");
                 }
-                Self::serialize_expr(&term.expr, &mut sql, &mut params, 0, ScopePos::OrderBy)?;
+                 Self::serialize_expr(&term.expr, sql, params, 0, ScopePos::OrderBy)?;
                 if term.descending {
                     sql.push_str(" DESC");
                 }
@@ -141,10 +185,7 @@ impl SelectStatement {
         if let Some(offset) = self.offset {
             sql.push_str(&format!(" OFFSET {}", offset));
         }
-
-        // C1-a: SelectStatement::compile() alone is not graph-backed; only the
-        // `compile_turtle` SelectStatement arm classifies as cacheable.
-        Ok(CompiledQuery::raw_compiled(sql, params))
+        Ok(())
     }
 
     pub(super) fn serialize_expr(
@@ -201,10 +242,20 @@ impl SelectStatement {
                         AggregateFunction::Avg => 2,
                         AggregateFunction::Min => 3,
                         AggregateFunction::Max => 4,
+                        // Zero-argument ranking function (SQLRDF-25); the
+                        // cold-path debug name renders the generic aggregate.
+                        AggregateFunction::RowNumber => 5,
                     }));
                 }
                 sql.push_str(function.as_sql());
                 sql.push('(');
+                if function == &AggregateFunction::RowNumber {
+                    // Zero-argument ranking function (SQLRDF-25): the argument
+                    // slot is structural (hand-built courts pass
+                    // Literal(Null)); it never serializes.
+                    sql.push(')');
+                    return Ok(());
+                }
                 Self::serialize_expr(
                     argument,
                     sql,
@@ -212,6 +263,64 @@ impl SelectStatement {
                     depth + 1,
                     ScopePos::AggregateArgument,
                 )?;
+                sql.push(')');
+            }
+            SqlExpr::WindowFn {
+                function,
+                partition_by,
+                order_by,
+                frame,
+            } => {
+                // SQLRDF-25: window functions are legal only in SELECT list,
+                // ORDER BY and QUALIFY; under a predicate (WHERE / JOIN ON /
+                // GROUP BY / HAVING) it is a typed REFUSAL-01, mirroring the
+                // aggregate-position law.
+                if !pos.allows_window() {
+                    return Err(AstError::new(
+                        RefusalCode::MalformedAst,
+                        refusal_arm::WINDOW_FN_POSITION,
+                    )
+                    .with_ident("SqlExpr::WindowFn"));
+                }
+                // Serialize the inner function in the SAME position: an
+                // aggregate window fn (SUM(x) OVER ...) keeps the caller's
+                // aggregate legality; the OVER wrapper is what carries the
+                // window semantics.
+                Self::serialize_expr(function, sql, params, depth + 1, pos)?;
+                sql.push_str(" OVER (");
+                let mut first = true;
+                if !partition_by.is_empty() {
+                    sql.push_str("PARTITION BY ");
+                    for (idx, part) in partition_by.iter().enumerate() {
+                        if idx > 0 {
+                            sql.push_str(", ");
+                        }
+                        Self::serialize_expr(part, sql, params, depth + 1, ScopePos::GroupBy)?;
+                    }
+                    first = false;
+                }
+                if !order_by.is_empty() {
+                    if !first {
+                        sql.push(' ');
+                    }
+                    sql.push_str("ORDER BY ");
+                    for (idx, term) in order_by.iter().enumerate() {
+                        if idx > 0 {
+                            sql.push_str(", ");
+                        }
+                        Self::serialize_expr(&term.expr, sql, params, depth + 1, ScopePos::OrderBy)?;
+                        if term.descending {
+                            sql.push_str(" DESC");
+                        }
+                    }
+                    first = false;
+                }
+                if let Some(frame) = frame {
+                    if !first {
+                        sql.push(' ');
+                    }
+                    serialize_frame(frame, sql, params, depth + 1)?;
+                }
                 sql.push(')');
             }
             SqlExpr::Alias { expr, alias } => {
@@ -229,4 +338,29 @@ impl SelectStatement {
         }
         Ok(())
     }
+}
+
+/// Serializes a window frame spec (SQLRDF-25): `ROWS BETWEEN a AND b` in the
+/// two-bound form, `ROWS a` in the single-bound form.
+fn serialize_frame(
+    frame: &FrameSpec,
+    sql: &mut String,
+    params: &mut Vec<SqlLiteral>,
+    depth: usize,
+) -> Result<(), AstError> {
+    let _ = depth;
+    sql.push_str(frame.unit.as_sql());
+    match &frame.end {
+        Some(end) => {
+            sql.push_str(" BETWEEN ");
+            sql.push_str(&frame.start.as_sql());
+            sql.push_str(" AND ");
+            sql.push_str(&end.as_sql());
+        }
+        None => {
+            sql.push(' ');
+            sql.push_str(&frame.start.as_sql());
+        }
+    }
+    Ok(())
 }

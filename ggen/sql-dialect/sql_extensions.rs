@@ -19,10 +19,6 @@ pub const SQL_EXTENSIONS: &[(&str, &str, &str, i64)] = &[
 
     ("tpcds", r#"LOAD tpcds; CALL dsdgen(sf = 0)"#, r#"SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END FROM call_center"#, 1),
 
-    // LANE L3 hand-patch of generated data (disclosed): witnessed on the real
-    // frozen engine — `dbgen(sf = 0)` populates 0 rows; rec 6.2's certified
-    // result of 25 nation rows is produced by `dbgen(sf = 0.01)` (witnessed
-    // 2026-10-22). Regenerate via extract_statements.py to overwrite.
     ("tpch", r#"CALL dbgen(sf = 0.01)"#, r#"SELECT count(*) FROM nation"#, 25),
 
 ];

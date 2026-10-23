@@ -640,7 +640,11 @@ fn artifacts_pin_file_carries_the_live_registry_and_surface_digests() {
     if std::env::var_os("GRAPHLAW_REQUIRE_WASM_PIN").is_some() {
         let path = std::env::var("GRAPHLAW_WASM").expect("GRAPHLAW_WASM set with the pin check");
         let bytes = std::fs::read(path).expect("wasm readable");
-        assert_eq!(hex(blake3::hash(&bytes).as_bytes()), wasm[1], "wasm pin is stale");
+        assert_eq!(
+            hex(blake3::hash(&bytes).as_bytes()),
+            wasm[1],
+            "wasm pin is stale"
+        );
     }
 }
 
@@ -672,7 +676,10 @@ fn artifacts_write_repin_matches_live_digests() {
             "--write must report the ARTIFACTS repin"
         );
         // The write is idempotent over an already-pinned file.
-        assert_eq!(after, before, "--write must be idempotent when rows are fresh");
+        assert_eq!(
+            after, before,
+            "--write must be idempotent when rows are fresh"
+        );
 
         // Every owned row equals the live computed digest.
         let rows: Vec<Vec<&str>> = after
@@ -713,7 +720,10 @@ fn artifacts_write_repin_matches_live_digests() {
     if result.is_err() {
         restore(&before);
     }
-    assert!(result.is_ok(), "artifacts_write_repin_matches_live_digests failed");
+    assert!(
+        result.is_ok(),
+        "artifacts_write_repin_matches_live_digests failed"
+    );
 }
 
 #[test]
@@ -730,7 +740,10 @@ fn artifacts_check_flags_stale_owned_row() {
     assert_ne!(mutant, before, "mutation applied");
     std::fs::write(&path, &mutant).expect("write mutant");
     let exe = env!("CARGO_BIN_EXE_graphlaw-registry");
-    let out = Command::new(exe).arg("--check").output().expect("emitter runs");
+    let out = Command::new(exe)
+        .arg("--check")
+        .output()
+        .expect("emitter runs");
     mutant = before.clone(); // restore before asserting on the exit
     std::fs::write(&path, &mutant).expect("restore");
     assert_eq!(out.status.code(), Some(1), "--check must flag a stale row");

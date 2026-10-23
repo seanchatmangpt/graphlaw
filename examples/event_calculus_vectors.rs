@@ -180,7 +180,10 @@ fn graphlaw_rev() -> String {
         .args(["-C", env!("CARGO_MANIFEST_DIR"), "rev-parse", "HEAD"])
         .output()
         .expect("git rev-parse");
-    String::from_utf8(out.stdout).expect("utf8 rev").trim().to_string()
+    String::from_utf8(out.stdout)
+        .expect("utf8 rev")
+        .trim()
+        .to_string()
 }
 
 fn vecdir() -> PathBuf {
@@ -194,7 +197,11 @@ fn vecdir() -> PathBuf {
 
 /// Horizon T: the largest time on the timeline (events and queries).
 fn horizon_of(sc: &Scenario) -> usize {
-    sc.happens.iter().map(|(_, t)| *t).max().unwrap_or(0)
+    sc.happens
+        .iter()
+        .map(|(_, t)| *t)
+        .max()
+        .unwrap_or(0)
         .max(sc.queries.iter().map(|(_, _, t)| *t).max().unwrap_or(0))
 }
 
@@ -318,16 +325,36 @@ fn run_negation_route(sc: &Scenario, horizon: usize) -> BTreeSet<(String, usize)
 
     let mut store = RelationStore::new();
     for t in 0..horizon {
-        insert(&mut store, &format!("urn:ec:t:{t}"), P_SUCC, &format!("urn:ec:t:{}", t + 1));
+        insert(
+            &mut store,
+            &format!("urn:ec:t:{t}"),
+            P_SUCC,
+            &format!("urn:ec:t:{}", t + 1),
+        );
     }
     for (e, t) in sc.happens {
-        insert(&mut store, &format!("urn:ec:e:{e}"), P_HAPPENS, &format!("urn:ec:t:{t}"));
+        insert(
+            &mut store,
+            &format!("urn:ec:e:{e}"),
+            P_HAPPENS,
+            &format!("urn:ec:t:{t}"),
+        );
     }
     for (e, f) in sc.initiates {
-        insert(&mut store, &format!("urn:ec:e:{e}"), P_INITIATES, &format!("urn:ec:f:{f}"));
+        insert(
+            &mut store,
+            &format!("urn:ec:e:{e}"),
+            P_INITIATES,
+            &format!("urn:ec:f:{f}"),
+        );
     }
     for (e, f) in sc.terminates {
-        insert(&mut store, &format!("urn:ec:e:{e}"), P_TERMINATES, &format!("urn:ec:f:{f}"));
+        insert(
+            &mut store,
+            &format!("urn:ec:e:{e}"),
+            P_TERMINATES,
+            &format!("urn:ec:f:{f}"),
+        );
     }
     for f in sc.initially {
         insert(&mut store, &format!("urn:ec:f:{f}"), P_HOLDS, "urn:ec:t:0");
@@ -337,8 +364,14 @@ fn run_negation_route(sc: &Scenario, horizon: usize) -> BTreeSet<(String, usize)
     let mut holds = BTreeSet::new();
     for fact in ev.facts().facts_sorted() {
         if fact.predicate == format!("<{P_HOLDS}>") {
-            let f = fact.subject.trim_start_matches("<urn:ec:f:").trim_end_matches('>');
-            let t = fact.object.trim_start_matches("<urn:ec:t:").trim_end_matches('>');
+            let f = fact
+                .subject
+                .trim_start_matches("<urn:ec:f:")
+                .trim_end_matches('>');
+            let t = fact
+                .object
+                .trim_start_matches("<urn:ec:t:")
+                .trim_end_matches('>');
             holds.insert((f.to_string(), t.parse::<usize>().expect("numeric time")));
         }
     }
@@ -384,13 +417,28 @@ fn run_complement_route(sc: &Scenario, horizon: usize) -> BTreeSet<(String, usiz
 
     let mut store = RelationStore::new();
     for t in 0..horizon {
-        insert(&mut store, &format!("urn:ec:t:{t}"), P_SUCC, &format!("urn:ec:t:{}", t + 1));
+        insert(
+            &mut store,
+            &format!("urn:ec:t:{t}"),
+            P_SUCC,
+            &format!("urn:ec:t:{}", t + 1),
+        );
     }
     for (e, t) in sc.happens {
-        insert(&mut store, &format!("urn:ec:e:{e}"), P_HAPPENS, &format!("urn:ec:t:{t}"));
+        insert(
+            &mut store,
+            &format!("urn:ec:e:{e}"),
+            P_HAPPENS,
+            &format!("urn:ec:t:{t}"),
+        );
     }
     for (e, f) in sc.initiates {
-        insert(&mut store, &format!("urn:ec:e:{e}"), P_INITIATES, &format!("urn:ec:f:{f}"));
+        insert(
+            &mut store,
+            &format!("urn:ec:e:{e}"),
+            P_INITIATES,
+            &format!("urn:ec:f:{f}"),
+        );
     }
     for f in sc.initially {
         insert(&mut store, &format!("urn:ec:f:{f}"), P_HOLDS, "urn:ec:t:0");
@@ -400,7 +448,12 @@ fn run_complement_route(sc: &Scenario, horizon: usize) -> BTreeSet<(String, usiz
     for f in &fluents {
         for t in 1..=horizon {
             if !terminated.contains(&(*f, t - 1)) {
-                insert(&mut store, &format!("urn:ec:f:{f}"), P_COMP, &format!("urn:ec:t:{t}"));
+                insert(
+                    &mut store,
+                    &format!("urn:ec:f:{f}"),
+                    P_COMP,
+                    &format!("urn:ec:t:{t}"),
+                );
             }
         }
     }
@@ -409,8 +462,14 @@ fn run_complement_route(sc: &Scenario, horizon: usize) -> BTreeSet<(String, usiz
     let mut holds = BTreeSet::new();
     for fact in ev.facts().facts_sorted() {
         if fact.predicate == format!("<{P_HOLDS}>") {
-            let f = fact.subject.trim_start_matches("<urn:ec:f:").trim_end_matches('>');
-            let t = fact.object.trim_start_matches("<urn:ec:t:").trim_end_matches('>');
+            let f = fact
+                .subject
+                .trim_start_matches("<urn:ec:f:")
+                .trim_end_matches('>');
+            let t = fact
+                .object
+                .trim_start_matches("<urn:ec:t:")
+                .trim_end_matches('>');
             holds.insert((f.to_string(), t.parse::<usize>().expect("numeric time")));
         }
     }
@@ -438,7 +497,11 @@ fn build_vector(
         .happens
         .iter()
         .map(|(e, t)| json!({"key": format!("ec:happens:{t}"), "value": e}))
-        .chain(sc.initially.iter().map(|f| json!({"key": "ec:initially", "value": f})))
+        .chain(
+            sc.initially
+                .iter()
+                .map(|f| json!({"key": "ec:initially", "value": f})),
+        )
         .chain(
             sc.initiates
                 .iter()
@@ -461,8 +524,14 @@ fn build_vector(
     // haystack — the ec-verdict trace line and the selected verdict string.
     let mut derived: Vec<String> = Vec::new();
     for (gid, f, t) in sc.queries {
-        derived.push(format!("{gid}: HoldsAt({f}@{t}) = {}", verdicts[&format!("{gid}: HoldsAt({f}@{t})")]));
-        derived.push(format!("ec:verdict:{f}@{t}={}", verdicts[&format!("{gid}: HoldsAt({f}@{t})")]));
+        derived.push(format!(
+            "{gid}: HoldsAt({f}@{t}) = {}",
+            verdicts[&format!("{gid}: HoldsAt({f}@{t})")]
+        ));
+        derived.push(format!(
+            "ec:verdict:{f}@{t}={}",
+            verdicts[&format!("{gid}: HoldsAt({f}@{t})")]
+        ));
     }
     derived.sort();
 

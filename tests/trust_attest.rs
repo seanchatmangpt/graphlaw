@@ -6,8 +6,8 @@ use graphlaw::attest::{
 };
 use graphlaw::dialect::Dialect;
 use graphlaw::law::{
-    Ceiling, FixedClock, LawError, LawState, Lease, LeaseReason, Receipt, ReceiptReason, Step,
-    SystemClock,
+    Ceiling, FixedClock, LawError, LawState, Lease, LeaseReason, Receipt, ReceiptReason,
+    SignedLease, Step, SystemClock,
 };
 use graphlaw::receipt;
 
@@ -311,4 +311,70 @@ fn signing_is_deterministic_and_attestation_json_round_trips() {
         Err(AttestError::Malformed(_))
     ));
     assert_eq!(a1.key_id, k.verifying_key().key_id());
+}
+
+/// K2 guard: every one of the 64 signature bytes is load-bearing. Flipping any
+/// single byte of a receipt attestation's signature must yield `BadSignature`.
+#[test]
+fn every_single_byte_flip_of_a_receipt_signature_is_refused() {
+    let (_, r) = real_receipt();
+    let k = key(1);
+    let trusted = trusting(&k);
+    let att = attest::sign_receipt(&k, &r);
+    attest::verify_receipt(&r, &att, &trusted).unwrap();
+
+    let sig = hex_decode(&att.signature).unwrap();
+    assert_eq!(sig.len(), 64);
+    let mut refused = 0usize;
+    for byte in 0..64 {
+        let mut sig = sig.clone();
+        sig[byte] ^= 1;
+        let bad = Attestation {
+            signature: hex_encode(&sig),
+            ..att.clone()
+        };
+        assert_eq!(
+            attest::verify_receipt(&r, &bad, &trusted),
+            Err(AttestError::BadSignature),
+            "byte {byte} flip was not refused"
+        );
+        refused += 1;
+    }
+    assert_eq!(refused, 64);
+}
+
+/// K2 guard: same exhaustive byte-flip over the lease signature path — flipping
+/// any single signature byte of a `SignedLease` must yield `BadSignature`.
+#[test]
+fn every_single_byte_flip_of_a_lease_signature_is_refused() {
+    let issuer = key(2);
+    let trusted = trusting(&issuer);
+    let signed = attest::sign_lease(&issuer, lease(10_000, 0));
+    let step = Step::EntailRdfs;
+    // The unmutated lease authorizes, so any refusal below is caused by the flip.
+    base()
+        .transition_authorized(&signed, &trusted, &FixedClock(1), 60, &step)
+        .unwrap();
+
+    let sig = hex_decode(&signed.attestation.signature).unwrap();
+    assert_eq!(sig.len(), 64);
+    let mut refused = 0usize;
+    for byte in 0..64 {
+        let mut bad_sig = sig.clone();
+        bad_sig[byte] ^= 1;
+        let bad = SignedLease {
+            lease: signed.lease.clone(),
+            attestation: Attestation {
+                signature: hex_encode(&bad_sig),
+                ..signed.attestation.clone()
+            },
+        };
+        assert_eq!(
+            lease_reason(base().transition_authorized(&bad, &trusted, &FixedClock(1), 60, &step)),
+            LeaseReason::BadSignature,
+            "byte {byte} flip was not refused"
+        );
+        refused += 1;
+    }
+    assert_eq!(refused, 64);
 }

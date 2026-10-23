@@ -1,0 +1,46 @@
+feat(wasm): sovereign in-WASM DuckDB — EH closure, trap fix, SQLRDF-21..24
+
+Sovereign in-wasm DuckDB execution landed: the single graphlaw.wasm links
+frozen-duckdb on every target (uniform new-EH archive law:
+-fwasm-exceptions -mllvm -wasm-use-legacy-eh=0), hosted by wasmtime 48
+wasm_exceptions (runner-eh / graphlaw-run-eh). wasmi retained only for
+legacy pre-duckdb artifact courts (EH-class preflight exits 96).
+
+Core:
+- op duckdb promoted in-module (cfg gates removed); session surface
+  (open / exec+session / close, 16-cap, typed refusals); document:true
+  multi-statement sequences (SQLRDF-23) with BatchReceipt +
+  BatchMemberFailed partial semantics.
+- op-15 exec admits all graph-backed statements; raw ast.text SQL still
+  refused (SQLRDF-17). ATTACH allowlist (GRAPHLAW_ATTACH_ROOTS,
+  fail-closed); COPY egress digest in ExecutionReceipt (G3).
+- REFUSAL-05 UnboundedMutationRefusal at both layers (SHACL xone->or +
+  compiler arm; BOTH where-predicates required); REFUSAL-01 arms 39-41
+  for statement sequences; MERGE classified mutating (epoch bump).
+- DECIMAL column type + typed decimal literals (G1); multi-column
+  INSERT/UPDATE (G4).
+
+Artifact:
+- EH wall closed: archive rebuilt uniformly new-EH; wasmtime 48.0.1
+  validates; Court C instantiation PASS; symbolized artifact (profile
+  wasm-syms) localized the trap to __funcs_on_exit.
+- Root cause (SQLRDF-24): musl atexit global `slot` not reset on head
+  re-attach — per-export ctor/dtor cycles drained the builtin chunk's
+  zero slots (call_indirect 0). One-line fix in atexit.c; fixed libc.a
+  relink; qualification courts pending in this commit's trailer receipt.
+- Artifact re-pin: priv/graphlaw.wasm <DIGEST-PENDING-EXECUTOR>
+  (held from this message; see receipts/2026-10-23-eh-closure-wave.md).
+
+Courts (witnessed, receipts/2026-10-23-eh-closure-wave.md + RECEIPTS.md
+1169-1420): duckdb_op 16/0, duckdb_eval 18/0, sql_ast 32/0, chicago 12/0,
+dialect 36/0, conformance 8/0, statement_kinds 8/0, query_cache 9/0,
+crosswalk 6/0, fuzz 1172/0, memory_wall 8/0, eh exit-code 7/0, refusal
+family 75/0, probe 12/12, SPC PASS, npm 198/198, pm4pytest conformance
+legs 3/0 (fitness+precision 1.0), receipt chain VERIFIED.
+
+Docs: WASM/wasm-integration/ARCHITECTURE/DIALECTS reconciled; refusals
+register rows 96-110/119-124; SQLRDF-21..24 tickets; FIBO fixtures +
+pm4py court matrix; OD-1 decided (wasmtime 48).
+
+Closes: SQLRDF-21 (in-wasm execution), SQLRDF-22 (G1/G3/G4/G6),
+SQLRDF-23 (sequences), SQLRDF-24 (trap + re-pin).

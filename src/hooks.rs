@@ -37,7 +37,6 @@
 
 use std::collections::BTreeSet;
 
-
 use purrdf::{RdfDatasetBuilder, SparqlEngine, SparqlRequest, SparqlResult, TermValue};
 
 use crate::dialect::{Dialect, Refusal, RefusalKind, RefusalMessage};
@@ -319,7 +318,8 @@ impl HookPack {
                     let digest = blake3::hash(format!("{}\0{bound:?}", hook.iri).as_bytes());
                     let marker = format!(
                         "urn:graphlaw:hook-firing:{}",
-                        digest.as_bytes()
+                        digest
+                            .as_bytes()
                             .iter()
                             .map(|b| format!("{b:02x}"))
                             .collect::<String>()

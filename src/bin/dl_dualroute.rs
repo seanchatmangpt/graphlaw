@@ -21,9 +21,9 @@
 
 use graphlaw::dialect::Dialect;
 use graphlaw::law::{LawState, Step};
-use graphlaw::tier::validate_n3_rules;
 use graphlaw::rdf::{SparqlEngine, SparqlRequest, SparqlResult, TermValue};
 use graphlaw::sparql::NativeSparqlEngine;
+use graphlaw::tier::validate_n3_rules;
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
 
@@ -70,14 +70,16 @@ fn parse(facts: &[(String, String)]) -> Result<Parsed, String> {
                 .ok_or_else(|| format!("malformed dl:exists_rhs value '{value}'"))?;
             p.concepts.insert(a.to_string());
             p.concepts.insert(b.to_string());
-            p.exists_rhs.push((a.to_string(), r.to_string(), b.to_string()));
+            p.exists_rhs
+                .push((a.to_string(), r.to_string(), b.to_string()));
         } else if let Some(rest) = key.strip_prefix("dl:exists_lhs:") {
             let (r, a) = rest
                 .split_once('.')
                 .ok_or_else(|| format!("malformed dl:exists_lhs key '{key}'"))?;
             p.concepts.insert(a.to_string());
             p.concepts.insert(value.clone());
-            p.exists_lhs.push((r.to_string(), a.to_string(), value.clone()));
+            p.exists_lhs
+                .push((r.to_string(), a.to_string(), value.clone()));
         }
     }
     if p.subclass.len() + p.conj.len() + p.exists_rhs.len() + p.exists_lhs.len() == 0 {
@@ -109,7 +111,12 @@ fn cases() -> Vec<Case> {
                 f("dl:subclass:Dog", "Pet"),
                 f("dl:conj:Mammal+Pet", "HousePet"),
             ],
-            goals: vec!["Puppy:HousePet", "Dog:HousePet", "HousePet:Dog", "Mammal:HousePet"],
+            goals: vec![
+                "Puppy:HousePet",
+                "Dog:HousePet",
+                "HousePet:Dog",
+                "Mammal:HousePet",
+            ],
             notes: "3-level chain + CR2 conjunction",
         },
         Case {
@@ -119,7 +126,11 @@ fn cases() -> Vec<Case> {
                 f("dl:exists_rhs:Transfer", "involves.Account"),
                 f("dl:exists_lhs:involves.Account", "LedgerEntry"),
             ],
-            goals: vec!["Transfer:LedgerEntry", "LedgerEntry:Transfer", "Transfer:Event"],
+            goals: vec![
+                "Transfer:LedgerEntry",
+                "LedgerEntry:Transfer",
+                "Transfer:Event",
+            ],
             notes: "exists_rhs + exists_lhs (CR3 then CR4), plus asserted and negative verdicts",
         },
         Case {
@@ -133,7 +144,9 @@ fn cases() -> Vec<Case> {
                 f("dl:exists_lhs:s.Y2", "x_V2"),
                 f("dl:conj:x_V2+x_W", "x_V"),
             ],
-            goals: vec!["x_X:x_V", "x_V:x_X", "x_Z:x_V", "x_Z:x_V2", "x_V2:x_Z", "x_V2:x_W"],
+            goals: vec![
+                "x_X:x_V", "x_V:x_X", "x_Z:x_V", "x_Z:x_V2", "x_V2:x_Z", "x_V2:x_W",
+            ],
             notes: "adversarial: CR3->CR4->CR2 interlock run twice over two roles",
         },
     ]
@@ -164,48 +177,64 @@ fn route_a(p: &Parsed, goals: &[&str]) -> Result<Vec<bool>, String> {
         let _ = writeln!(
             rules,
             "# CR2 conj[{i}] {a1} n{a2} sub {b}\n{{ ?x dl:sub <{}> . ?x dl:sub <{}> }} => {{ ?x dl:sub <{}> }} .\n",
-            iri(a1), iri(a2), iri(b)
+            iri(a1),
+            iri(a2),
+            iri(b)
         );
     }
     for (i, (a, r, b)) in p.exists_rhs.iter().enumerate() {
         let _ = writeln!(
             rules,
             "# CR3 exists_rhs[{i}] {a} sub exists {r}.{b}\n{{ ?x dl:sub <{}> }} => {{ ?x dl:edge_{r} <{}> }} .\n",
-            iri(a), iri(b)
+            iri(a),
+            iri(b)
         );
     }
     for (i, (r, a, b)) in p.exists_lhs.iter().enumerate() {
         let _ = writeln!(
             rules,
             "# CR4 exists_lhs[{i}] exists {r}.{a} sub {b}\n{{ ?x dl:edge_{r} <{}> }} => {{ ?x dl:sub <{}> }} .\n",
-            iri(a), iri(b)
+            iri(a),
+            iri(b)
         );
     }
 
     let s0 = LawState::parse(base.as_bytes(), Dialect::Turtle, None)
         .map_err(|e| format!("route A parse: {e:?}"))?;
-    let ruleset = validate_n3_rules(rules.as_bytes(), None)
-        .map_err(|e| format!("route A rules: {e:?}"))?;
+    let ruleset =
+        validate_n3_rules(rules.as_bytes(), None).map_err(|e| format!("route A rules: {e:?}"))?;
     let (s1, _r) = s0
-        .transition(&Step::DeriveN3 { rules: &rules, ruleset: &ruleset })
+        .transition(&Step::DeriveN3 {
+            rules: &rules,
+            ruleset: &ruleset,
+        })
         .map_err(|e| format!("route A derive: {e:?}"))?;
 
     // Closure: all sub pairs.
     let mut closure: BTreeSet<(String, String)> = BTreeSet::new();
-    for row in select(&s1, "SELECT ?a ?b WHERE { ?a <https://graphlaw.dev/dl#sub> ?b }")? {
-        let (Some(a), Some(b)) = (row.first().cloned(), row.get(1).cloned())
-        else {
+    for row in select(
+        &s1,
+        "SELECT ?a ?b WHERE { ?a <https://graphlaw.dev/dl#sub> ?b }",
+    )? {
+        let (Some(a), Some(b)) = (row.first().cloned(), row.get(1).cloned()) else {
             continue;
         };
         closure.insert((a, b));
     }
-    goals.iter().map(|g| eval_goal(g, &closure, &p.concepts)).collect()
+    goals
+        .iter()
+        .map(|g| eval_goal(g, &closure, &p.concepts))
+        .collect()
 }
 
 fn select(state: &LawState, q: &str) -> Result<Vec<Vec<String>>, String> {
     match NativeSparqlEngine::new().query(
         state.dataset(),
-        SparqlRequest { query: q, base_iri: None, substitutions: &[] },
+        SparqlRequest {
+            query: q,
+            base_iri: None,
+            substitutions: &[],
+        },
     ) {
         Ok(SparqlResult::Solutions { rows, .. }) => Ok(rows
             .iter()
@@ -264,7 +293,9 @@ fn route_b(p: &Parsed, goals: &[&str]) -> Result<Vec<bool>, String> {
         let _ = writeln!(
             g,
             "[] a owl:Class ; owl:intersectionOf ( <{}> <{}> ) ; rdfs:subClassOf <{}> .",
-            iri(a1), iri(a2), iri(b)
+            iri(a1),
+            iri(a2),
+            iri(b)
         );
     }
     // exists_rhs A sub exists r.B -> A subClassOf restriction(r, someValuesFrom B)
@@ -272,7 +303,9 @@ fn route_b(p: &Parsed, goals: &[&str]) -> Result<Vec<bool>, String> {
         let _ = writeln!(
             g,
             "<{}> rdfs:subClassOf _:res_{a}_{r}_{b} .\n_:res_{a}_{r}_{b} a owl:Restriction ; owl:onProperty <{}> ; owl:someValuesFrom <{}> .",
-            iri(a), iri(r), iri(b)
+            iri(a),
+            iri(r),
+            iri(b)
         );
     }
     // exists_lhs exists r.A sub B -> restriction(r, someValuesFrom A) subClassOf B
@@ -280,7 +313,9 @@ fn route_b(p: &Parsed, goals: &[&str]) -> Result<Vec<bool>, String> {
         let _ = writeln!(
             g,
             "_:res_{r}_{a}_{b} a owl:Restriction ; owl:onProperty <{}> ; owl:someValuesFrom <{}> ; rdfs:subClassOf <{}> .",
-            iri(r), iri(a), iri(b)
+            iri(r),
+            iri(a),
+            iri(b)
         );
     }
 
@@ -292,16 +327,22 @@ fn route_b(p: &Parsed, goals: &[&str]) -> Result<Vec<bool>, String> {
 
     // Verdict surface: witness type closure. w_A rdf:type B  <=>  A sub B.
     let mut types: BTreeSet<(String, String)> = BTreeSet::new();
-    for row in select(&s1, "SELECT ?s ?o WHERE { ?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?o }")? {
+    for row in select(
+        &s1,
+        "SELECT ?s ?o WHERE { ?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> ?o }",
+    )? {
         let (Some(s), Some(o)) = (row.first().cloned(), row.get(1).cloned()) else {
             continue;
         };
         types.insert((s, o));
     }
-    goals.iter().map(|goal| {
-        let (a, b) = split_goal(goal)?;
-        Ok(types.contains(&(format!("{}w_{}", DL, a), iri(b))))
-    }).collect()
+    goals
+        .iter()
+        .map(|goal| {
+            let (a, b) = split_goal(goal)?;
+            Ok(types.contains(&(format!("{}w_{}", DL, a), iri(b))))
+        })
+        .collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -310,14 +351,17 @@ fn route_b(p: &Parsed, goals: &[&str]) -> Result<Vec<bool>, String> {
 
 fn emit_vector(case: &Case, _parsed: &Parsed, verdicts: &[bool]) -> Result<String, String> {
     let rev = std::process::Command::new("git")
-        .args(["-C", "/Users/sac/graphlaw", "rev-parse", "HEAD"])
+        // Repo root derived at compile time from the manifest dir (lane N1).
+        .args(["-C", env!("CARGO_MANIFEST_DIR"), "rev-parse", "HEAD"])
         .output()
         .map_err(|e| e.to_string())?;
     let rev = String::from_utf8_lossy(&rev.stdout).trim().to_string();
 
     let mut facts_json = String::new();
     for (i, (k, v)) in case.facts.iter().enumerate() {
-        if i > 0 { facts_json.push_str(",\n        "); }
+        if i > 0 {
+            facts_json.push_str(",\n        ");
+        }
         facts_json.push_str(&format!("{{ \"key\": \"{k}\", \"value\": \"{v}\" }}"));
     }
     let mut goals_json = String::new();
@@ -326,18 +370,24 @@ fn emit_vector(case: &Case, _parsed: &Parsed, verdicts: &[bool]) -> Result<Strin
     for (i, (g, v)) in case.goals.iter().zip(verdicts).enumerate() {
         let (a, b) = split_goal(g)?;
         let gid = format!("g{}", i + 1);
-        if i > 0 { goals_json.push_str(", "); }
+        if i > 0 {
+            goals_json.push_str(", ");
+        }
         goals_json.push_str(&format!(
             "{{ \"id\": \"{gid}\", \"predicate\": \"dl:subsumes\", \"value\": \"{g}\" }}"
         ));
-        if i > 0 { verdicts_json.push_str(", "); }
+        if i > 0 {
+            verdicts_json.push_str(", ");
+        }
         verdicts_json.push_str(&format!("\"{gid}\": \"{a}\u{2291}{b}={v}\""));
         derived.push(format!("dl:verdict:{a}:{b}={v}"));
     }
     derived.sort();
     let mut derived_json = String::new();
     for (i, d) in derived.iter().enumerate() {
-        if i > 0 { derived_json.push_str(",\n      "); }
+        if i > 0 {
+            derived_json.push_str(",\n      ");
+        }
         derived_json.push_str(&format!("\"{d}\""));
     }
 
@@ -385,7 +435,13 @@ fn emit_vector(case: &Case, _parsed: &Parsed, verdicts: &[bool]) -> Result<Strin
 }
 
 fn main() {
-    let out_dir = "/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw";
+    // Env-derived: $WASM4PM_FIXTURES, else $HOME-relative sibling checkout.
+    let out_dir = std::env::var("WASM4PM_FIXTURES").unwrap_or_else(|_| {
+        format!(
+            "{}/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw",
+            std::env::var("HOME").expect("HOME set")
+        )
+    });
     let paper = [
         ("Pericarditis:HeartDisease", true),
         ("HeartDisease:Pericarditis", false),
@@ -440,7 +496,10 @@ fn main() {
                     continue;
                 };
                 if a[i] != expected {
-                    eprintln!("FAIL: paper-fixture cross-check {g}: got {}, want {expected}", a[i]);
+                    eprintln!(
+                        "FAIL: paper-fixture cross-check {g}: got {}, want {expected}",
+                        a[i]
+                    );
                     failed = true;
                 }
             }
@@ -454,7 +513,11 @@ fn main() {
             }
         };
         let path = format!("{out_dir}/description_logic-{}.json", case.slug);
-        std::fs::write(&path, json).expect("write vector");
+        if let Err(e) = std::fs::write(&path, json) {
+            eprintln!("FAIL[{}]: write {}: {e}", case.slug, path);
+            failed = true;
+            continue;
+        }
         println!("OK[{}]: dual-route agreement, vector -> {path}", case.slug);
     }
 

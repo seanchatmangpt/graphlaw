@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "edb47f10c9c56236a7117e90d0a8dc04f5d1a8040c1182210adb67e17999aa6a",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T164545Z-Write-edb47f10.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/how-to/persistent-duckdb-sessions.md",
+  "timestamp_utc": "2026-10-23T164545Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

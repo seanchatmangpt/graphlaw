@@ -65,8 +65,14 @@ fn max_inclusive_admits_at_boundary_and_refuses_past_it() {
     assert_eq!(e["details"]["code"], "NotAdmitted", "{e}");
     assert_eq!(e["message"], "SHACL admission refused: 1 violation(s)");
     let v = &e["details"]["violations"][0];
-    assert!(v["component"].as_str().unwrap().contains("MaxInclusive"), "{v}");
-    assert!(v["path"].as_str().unwrap().contains("https://e/amount"), "{v}");
+    assert!(
+        v["component"].as_str().unwrap().contains("MaxInclusive"),
+        "{v}"
+    );
+    assert!(
+        v["path"].as_str().unwrap().contains("https://e/amount"),
+        "{v}"
+    );
     assert!(v["focus"].as_str().unwrap().contains("https://e/o1"), "{v}");
 }
 
@@ -85,7 +91,10 @@ fn min_inclusive_admits_at_boundary_and_refuses_below_it() {
     assert_eq!(e["details"]["code"], "NotAdmitted", "{e}");
     assert!(violation_component(&e).contains("MinInclusive"), "{e}");
     let v = &e["details"]["violations"][0];
-    assert!(v["path"].as_str().unwrap().contains("https://e/amount"), "{v}");
+    assert!(
+        v["path"].as_str().unwrap().contains("https://e/amount"),
+        "{v}"
+    );
 }
 
 // -------------------------------------------------------------------- disjoint
@@ -121,7 +130,8 @@ fn closed_shape_admits_declared_properties_and_refuses_undeclared() {
     let shapes = format!(
         "{PREFIX}ex:Agent a sh:NodeShape ; sh:targetClass ex:Agent ; sh:closed true ; sh:ignoredProperties ( rdf:type ) ;\n  sh:property [ sh:path ex:name ] ;\n  sh:property [ sh:path ex:role ] .\n"
     );
-    let ok = "<https://e/a> a <https://e/Agent> ; <https://e/name> \"r\" ; <https://e/role> \"w\" .\n";
+    let ok =
+        "<https://e/a> a <https://e/Agent> ; <https://e/name> \"r\" ; <https://e/role> \"w\" .\n";
     admit(&law_req(ok, &shapes));
 
     let bad = "<https://e/a> a <https://e/Agent> ; <https://e/name> \"r\" ; <https://e/side_effect> <https://e/x> .\n";

@@ -28,10 +28,12 @@ fn read(p: &str) -> String {
 /// machine, one gate, no mocks. The parametric family (shape 50) is asserted
 /// separately in p43 so the single-violation invariant stays exact.
 fn admit(twin_ttl: &str) -> Result<(LawState, Receipt), LawError> {
-    let state = LawState::parse(twin_ttl.as_bytes(), Dialect::Turtle, None)
-        .expect("twin parses as Turtle");
+    let state =
+        LawState::parse(twin_ttl.as_bytes(), Dialect::Turtle, None).expect("twin parses as Turtle");
     let shapes = read("ontology/shapes/51_precision_anchor_41209.ttl");
-    state.transition(&Step::AdmitShacl { shapes_ttl: &shapes })
+    state.transition(&Step::AdmitShacl {
+        shapes_ttl: &shapes,
+    })
 }
 
 fn digest(r: &Receipt) -> String {
@@ -80,7 +82,11 @@ fn p42_twins_diverge_at_exactly_one_byte_offset() {
 #[test]
 fn p43_mutated_twin_refuses_with_one_typed_violation() {
     let err = admit(&read("ontology/twins/41209_mutated.ttl")).unwrap_err();
-    let LawError::NotAdmitted { violations, results } = err else {
+    let LawError::NotAdmitted {
+        violations,
+        results,
+    } = err
+    else {
         panic!("expected NotAdmitted, got {err:?}");
     };
     assert_eq!(violations, 1, "exactly one violating constraint");
@@ -115,8 +121,14 @@ fn p43_mutated_twin_refuses_with_one_typed_violation() {
     )
     .unwrap();
     let family = read("ontology/shapes/50_currency_precision.ttl");
-    let LawError::NotAdmitted { violations: fv, results: fres } =
-        state.transition(&Step::AdmitShacl { shapes_ttl: &family }).unwrap_err()
+    let LawError::NotAdmitted {
+        violations: fv,
+        results: fres,
+    } = state
+        .transition(&Step::AdmitShacl {
+            shapes_ttl: &family,
+        })
+        .unwrap_err()
     else {
         panic!("family shape must also refuse the mutated twin");
     };

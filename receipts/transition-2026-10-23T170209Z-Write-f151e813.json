@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "f151e813c32f3b2dd4d752455f6a953fc2d48c84a968c33eaf9ebe0fb1e91aa5",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T170209Z-Write-f151e813.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/cte_courts.rs",
+  "timestamp_utc": "2026-10-23T170209Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

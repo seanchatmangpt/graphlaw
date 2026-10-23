@@ -146,16 +146,154 @@ pub enum ScopePos {
     /// section 7 example (ProcessScope amount inside a projection-list
     /// aggregate) stays lawful.
     PredicateAggregateArgument,
+    /// QUALIFY clause of a window query (SQLRDF-25): aggregates and window
+    /// functions are legal here; rendered after HAVING, before ORDER BY.
+    Qualify,
 }
 
 impl ScopePos {
     pub(super) fn allows_aggregate(self) -> bool {
-        matches!(self, Self::SelectList | Self::OrderBy | Self::Having)
+        matches!(
+            self,
+            Self::SelectList | Self::OrderBy | Self::Having | Self::Qualify
+        )
     }
 
     pub(super) fn is_view_surface(self) -> bool {
         matches!(self, Self::SelectList | Self::OrderBy)
     }
+}
+
+/// Position lattice for an aggregate ARGUMENT: under an output-position
+/// aggregate (SELECT list / ORDER BY — the section 7 example, where a
+/// ProcessScope column inside a projection-list aggregate is lawful view
+/// output of an internal computation) the argument keeps the plain
+/// AggregateArgument position; under a predicate-rooted aggregate
+/// (WHERE/JOIN/HAVING/GROUP BY) the argument is
+/// PredicateAggregateArgument, where an explicit sql:scope marker is
+/// REFUSAL-03 (TC-MUT-01 arm B).
+impl ScopePos {
+    /// Window functions are legal in SELECT list, ORDER BY and QUALIFY
+    /// (SQLRDF-25); a window function under a predicate is REFUSAL-01.
+    pub(super) fn allows_window(self) -> bool {
+        matches!(self, Self::SelectList | Self::OrderBy | Self::Qualify)
+    }
+}
+
+/// Window frame unit (`sql:frameUnit`): ROWS or RANGE (SQLRDF-25).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FrameUnit {
+    Rows,
+    Range,
+}
+
+impl FrameUnit {
+    pub fn as_sql(&self) -> &'static str {
+        match self {
+            Self::Rows => "ROWS",
+            Self::Range => "RANGE",
+        }
+    }
+}
+
+/// One window frame bound (SQLRDF-25).
+#[derive(Debug, Clone, PartialEq)]
+pub enum FrameBound {
+    UnboundedPreceding,
+    Preceding(u64),
+    CurrentRow,
+    Following(u64),
+    UnboundedFollowing,
+}
+
+impl FrameBound {
+    /// Parses a frame-bound token (`CURRENT ROW`, `UNBOUNDED PRECEDING`,
+    /// `UNBOUNDED FOLLOWING`, `<n> PRECEDING`, `<n> FOLLOWING`); anything
+    /// else is a typed REFUSAL-01 (arm FRAME_BOUND).
+    pub fn parse_token(token: &str) -> Result<Self, AstError> {
+        let t = token.trim();
+        match t {
+            "CURRENT ROW" | "CURRENT_ROW" => Ok(Self::CurrentRow),
+            "UNBOUNDED PRECEDING" | "UNBOUNDED_PRECEDING" => Ok(Self::UnboundedPreceding),
+            "UNBOUNDED FOLLOWING" | "UNBOUNDED_FOLLOWING" => Ok(Self::UnboundedFollowing),
+            _ => {
+                let mut parts = t.split_whitespace();
+                let (n, kind) = match (parts.next(), parts.next(), parts.next()) {
+                    (Some(n), Some(kind), None) => (n, kind),
+                    _ => {
+                        return Err(AstError::new(
+                            RefusalCode::MalformedAst,
+                            refusal_arm::FRAME_BOUND,
+                        )
+                        .with_ident(token))
+                    }
+                };
+                let n: u64 = n.parse().map_err(|_| {
+                    AstError::new(RefusalCode::MalformedAst, refusal_arm::FRAME_BOUND)
+                        .with_ident(token)
+                })?;
+                match kind.to_ascii_uppercase().as_str() {
+                    "PRECEDING" => Ok(Self::Preceding(n)),
+                    "FOLLOWING" => Ok(Self::Following(n)),
+                    _ => Err(
+                        AstError::new(RefusalCode::MalformedAst, refusal_arm::FRAME_BOUND)
+                            .with_ident(token),
+                    ),
+                }
+            }
+        }
+    }
+
+    pub(super) fn as_sql(&self) -> String {
+        match self {
+            Self::UnboundedPreceding => "UNBOUNDED PRECEDING".to_string(),
+            Self::Preceding(n) => format!("{} PRECEDING", n),
+            Self::CurrentRow => "CURRENT ROW".to_string(),
+            Self::Following(n) => format!("{} FOLLOWING", n),
+            Self::UnboundedFollowing => "UNBOUNDED FOLLOWING".to_string(),
+        }
+    }
+}
+
+/// Window frame specification (SQLRDF-25): ROWS/RANGE unit plus a start
+/// bound and an optional end bound (BETWEEN form when the end is present).
+#[derive(Debug, Clone, PartialEq)]
+pub struct FrameSpec {
+    pub unit: FrameUnit,
+    pub start: FrameBound,
+    pub end: Option<FrameBound>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SqlExpr {
+    ColumnRef {
+        column: String,
+        table_alias: Option<String>,
+    },
+    Literal(SqlLiteral),
+    Binary {
+        op: Operator,
+        left: Box<SqlExpr>,
+        right: Box<SqlExpr>,
+    },
+    FunctionCall {
+        function: AggregateFunction,
+        argument: Box<SqlExpr>,
+    },
+    /// Window function (`fn(...) OVER (PARTITION BY ... ORDER BY ... frame)`,
+    /// SQLRDF-25). `function` is the aggregate/scalar expression node; legal
+    /// only in SELECT list, ORDER BY and QUALIFY — a window function under a
+    /// predicate is a typed REFUSAL-01 (arm WINDOW_FN_POSITION).
+    WindowFn {
+        function: Box<SqlExpr>,
+        partition_by: Vec<SqlExpr>,
+        order_by: Vec<OrderTerm>,
+        frame: Option<FrameSpec>,
+    },
+    Alias {
+        expr: Box<SqlExpr>,
+        alias: String,
+    },
 }
 
 /// Position lattice for an aggregate ARGUMENT: under an output-position
@@ -181,6 +319,9 @@ pub enum AggregateFunction {
     Avg,
     Min,
     Max,
+    /// Zero-argument ranking function (`ROW_NUMBER() OVER (...)`); serialized
+    /// with empty parens (SQLRDF-25).
+    RowNumber,
 }
 
 impl AggregateFunction {
@@ -191,6 +332,7 @@ impl AggregateFunction {
             Self::Avg => "AVG",
             Self::Min => "MIN",
             Self::Max => "MAX",
+            Self::RowNumber => "ROW_NUMBER",
         }
     }
 
@@ -201,6 +343,7 @@ impl AggregateFunction {
             "http://graphlaw.org/functions#AVG" => Ok(Self::Avg),
             "http://graphlaw.org/functions#MIN" => Ok(Self::Min),
             "http://graphlaw.org/functions#MAX" => Ok(Self::Max),
+            "http://graphlaw.org/functions#ROW_NUMBER" => Ok(Self::RowNumber),
             _ => Err(AstError::UnsupportedTerm(iri.to_string())),
         }
     }
@@ -222,6 +365,7 @@ pub(super) fn aggregate_from_name(name: &str) -> Result<AggregateFunction, AstEr
         "AVG" => Ok(AggregateFunction::Avg),
         "MIN" => Ok(AggregateFunction::Min),
         "MAX" => Ok(AggregateFunction::Max),
+        "ROW_NUMBER" => Ok(AggregateFunction::RowNumber),
         _ => Err(AstError::UnsupportedTerm(name.to_string())),
     }
 }
@@ -233,28 +377,6 @@ pub enum SqlLiteral {
     Float(f64),
     Boolean(bool),
     Null,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SqlExpr {
-    ColumnRef {
-        column: String,
-        table_alias: Option<String>,
-    },
-    Literal(SqlLiteral),
-    Binary {
-        op: Operator,
-        left: Box<SqlExpr>,
-        right: Box<SqlExpr>,
-    },
-    FunctionCall {
-        function: AggregateFunction,
-        argument: Box<SqlExpr>,
-    },
-    Alias {
-        expr: Box<SqlExpr>,
-        alias: String,
-    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -275,6 +397,18 @@ pub fn validate_qualified_identifier(ident: &str) -> Result<(), AstError> {
         validate_identifier(part)?;
     }
     Ok(())
+}
+
+/// One CTE arm of a `WITH` clause (SQLRDF-25): a named sub-select with an
+/// optional column list. `recursive` marks a member of a `WITH RECURSIVE`
+/// list; the serializer promotes the whole `WITH` to `WITH RECURSIVE` when
+/// any member is recursive (SQL allows the keyword once for the list).
+#[derive(Debug, Clone, PartialEq)]
+pub struct Cte {
+    pub name: String,
+    pub columns: Vec<String>,
+    pub query: Box<SelectStatement>,
+    pub recursive: bool,
 }
 
 /// One ORDER BY term: expression plus direction (`sql:direction`, ASC default).
@@ -413,6 +547,28 @@ impl CompiledQuery {
     pub fn seal_bytes(&self) -> [u8; 32] {
         self.admission_seal
     }
+}
+
+/// A compiled statement-sequence document (SQLRDF-23, compile half): the
+/// members in spine order plus the domain-separated document hash.
+///
+/// `doc_hash = BLAKE3(0x00 || h_1 || 0x00 || h_2 || ...)` where each `h_i` is
+/// the member's `receipt_state` anchor — the 0x00 separators are the domain
+/// separation from any bare-form hash, so a sequence-of-one hashes
+/// differently from the bare single-root form of the same statement (the
+/// envelope is part of the identity).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CompiledDocument {
+    /// Members in spine order (`unroll_rdf_list` walk order, cross-checked
+    /// against the strictly-ascending `sql:statementIndex`).
+    pub statements: Vec<CompiledQuery>,
+    /// Domain-separated document hash; sequence form only.
+    pub doc_hash: [u8; 32],
+    /// SQLRDF-26: atomic mode. `false` (default) keeps the SQLRDF-23
+    /// best-effort sequential-autocommit (pipeline) semantics. `true` —
+    /// from `sql:atomic true` on the `sql:StatementSequence` root — wraps
+    /// the whole document in BEGIN/COMMIT with ROLLBACK on member failure.
+    pub atomic: bool,
 }
 
 // TC-HOT-01: `receipt_state` now carries `h_ast = BLAKE3(Canon(G_AST))` as a

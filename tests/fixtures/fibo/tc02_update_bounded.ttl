@@ -1,0 +1,16 @@
+# FIBO court-matrix fixture tc02_update_bounded
+# UpdateStatement with BOTH whereColumn and whereValue (compiler law is
+# stricter than the sh:or shape: BOTH required — sql_ast.rs compile_command
+# UpdateStatement guard). Expected SQL:
+#   UPDATE fibo_accounts SET balance = 99000.25 WHERE facility_id = 'FAC-CORP-9882'
+@prefix ex: <http://example.org/fibo#> .
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:stmt1 a sql:UpdateStatement ;
+    sql:statementIndex 2 ;
+    sql:targetTable "fibo_accounts" ;
+    sql:assignColumn "balance" ;
+    sql:assignValue "99000.25"^^xsd:decimal ;
+    sql:whereColumn "facility_id" ;
+    sql:whereValue "FAC-CORP-9882" .

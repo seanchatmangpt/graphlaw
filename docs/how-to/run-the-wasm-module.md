@@ -18,6 +18,37 @@ cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 host); the standard clock/RNG paths are supplied by the `vendor/` cfg patches, so
 building for WASI outside this workspace is a compile error by design.
 
+## Runners
+
+Two host runners ship in this workspace; both speak the same packet-4 stdio
+protocol (4-byte big-endian length-prefixed frames, smalt eval-envelope
+auto-detect, `{"ok":true,"result":...}` reply envelope).
+
+| runner | runtime | artifact class | build |
+|---|---|---|---|
+| `graphlaw-run` | wasmi | legacy (pre-DuckDB) artifact — the class pinned for `tests/wasm_abi.rs` courts | `cargo build --features runner --bin graphlaw-run` |
+| `graphlaw-run-eh` | wasmtime 48 (`wasm_exceptions` enabled) | the DuckDB-linked artifact | `cargo build --features runner-eh --bin graphlaw-run-eh` |
+
+`graphlaw-run-eh` is gated by the `runner-eh` feature (`[[bin]]`
+`required-features`, `Cargo.toml:89` / `Cargo.toml:118`); wasmi is host-only and
+cannot compile for wasm32, which is why the runners are feature-split. Only
+`wasi_snapshot_preview1` imports are accepted by either runner; anything else is
+a typed instantiation refusal.
+
+Exit codes (stub-compatible across both runners, typed in `RunError`,
+`src/bin/graphlaw_run.rs:35` and `src/bin/graphlaw_run_eh.rs:30`): 0 success,
+2 usage/I/O, 84 artifact digest mismatch, 86 guest-panic / 64 MiB memory-wall
+trap, 90 EOF mid-frame, 91 stdin read error, 93 malformed envelope, 94 non-JSON
+module response, and the wasm-artifact classes 95 (invalid module), 96
+(instantiation/link failure), 97 (guest ABI fault). Malformed input never panics
+a runner; every failure is a typed one-line stderr diagnostic plus its stable
+exit code.
+
+Artifact identity: `--wasm <path>`, else `GRAPHLAW_WASM`, else the working-tree
+build; `--expect-blake3` verifies loaded bytes before serving (mismatch is exit
+84, never a silent serve). The DuckDB-linked artifact class is roughly 45 MB and
+its registry re-pin is pending a witnessed digest — no digest is asserted here.
+
 ## Host call contract
 
 One self-contained WASI module; imports are `wasi_snapshot_preview1` only
@@ -72,4 +103,6 @@ cargo test --test wasm_abi
 builds the module itself and drives `capabilities`, `sniff`, `parse`, `convert`,
 `canonical`, `sparql`, `shacl`, `shex`, `n3`, `entail`, `datalog`, `hooks`, `law`,
 `policy` through a real wasmi+WASI runtime (18 tests, verified 2026-10-10:
-`18 passed; 0 failed`). |
+`18 passed; 0 failed`). This historical wasmi receipt belongs to the legacy
+pre-DuckDB artifact court (`tests/wasm_abi.rs`) — the wasmi runner's domain, not
+the `graphlaw-run-eh` / DuckDB-linked artifact class above.

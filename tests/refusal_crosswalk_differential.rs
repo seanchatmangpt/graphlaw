@@ -30,7 +30,15 @@ use std::process::Command;
 const FIXTURE_ROOT: &str = "tests/fixtures/refusal_crosswalk";
 
 /// Live sibling source of the pins (READ-ONLY; never edited by this repo).
-const SIBLING_ROOT: &str = "/Users/sac/ggen-marketplace/packs/refusal-vocabulary-pack";
+/// Env-derived: $REFUSAL_VOCAB_PACK, else $HOME-relative sibling pack.
+fn sibling_root() -> String {
+    std::env::var("REFUSAL_VOCAB_PACK").unwrap_or_else(|_| {
+        format!(
+            "{}/ggen-marketplace/packs/refusal-vocabulary-pack",
+            std::env::var("HOME").expect("HOME set")
+        )
+    })
+}
 
 /// Pinned files: (relative path under fixture root, relative path under the
 /// sibling pack).
@@ -78,7 +86,11 @@ fn fixture_path(rel: &str) -> String {
 fn blake3_hex(bytes: &[u8]) -> String {
     let mut h = blake3::Hasher::new();
     h.update(bytes);
-    h.finalize().as_bytes().iter().map(|b| format!("{b:02x}")).collect()
+    h.finalize()
+        .as_bytes()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 /// Verify pinned bytes match manifest.blake3 before any evaluation runs.
@@ -205,17 +217,18 @@ SELECT DISTINCT ?code WHERE {
 #[test]
 fn refusal_crosswalk_pin_matches_live_sibling() {
     pinned_fixtures_match_manifest();
-    if !std::path::Path::new(SIBLING_ROOT).is_dir() {
-        eprintln!("BLOCKED: sibling pack absent at {SIBLING_ROOT}; drift check skipped");
+    let sibling_root = sibling_root();
+    if !std::path::Path::new(&sibling_root).is_dir() {
+        eprintln!("BLOCKED: sibling pack absent at {sibling_root}; drift check skipped");
         return;
     }
     for (rel, sibling_rel) in PINNED {
         let pinned_bytes = std::fs::read(fixture_path(rel)).expect("pinned file readable");
-        let live = std::fs::read(format!("{SIBLING_ROOT}/{sibling_rel}"))
+        let live = std::fs::read(format!("{sibling_root}/{sibling_rel}"))
             .unwrap_or_else(|e| panic!("sibling file {sibling_rel} unreadable: {e}"));
         assert_eq!(
             pinned_bytes, live,
-            "pin drift: tests/fixtures/refusal_crosswalk/{rel} differs from live {SIBLING_ROOT}/{sibling_rel} (re-copy and re-pin)"
+            "pin drift: tests/fixtures/refusal_crosswalk/{rel} differs from live {sibling_root}/{sibling_rel} (re-copy and re-pin)"
         );
     }
 }

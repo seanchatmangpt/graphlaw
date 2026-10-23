@@ -35,18 +35,25 @@ fn check_args() -> Result<(), ToolError> {
         println!("{HELP}");
         std::process::exit(0);
     }
-    const VALUE_FLAGS: [&str; 5] =
-        ["--transcript", "--out", "--session-id", "--base", "--topic-filter"];
+    const VALUE_FLAGS: [&str; 5] = [
+        "--transcript",
+        "--out",
+        "--session-id",
+        "--base",
+        "--topic-filter",
+    ];
     const SWITCHES: [&str; 1] = ["--assistant-only"];
     let mut i = 0;
     while i < argv.len() {
         let a = &argv[i];
         if VALUE_FLAGS.contains(&a.as_str()) {
-            let v = argv.get(i + 1).ok_or_else(|| {
-                format!("{a} needs a value (see --help)")
-            })?;
+            let v = argv
+                .get(i + 1)
+                .ok_or_else(|| format!("{a} needs a value (see --help)"))?;
             if v.starts_with("--") {
-                return Err(format!("{a} needs a value; found another flag `{v}` (see --help)"));
+                return Err(format!(
+                    "{a} needs a value; found another flag `{v}` (see --help)"
+                ));
             }
             i += 2;
         } else if SWITCHES.contains(&a.as_str()) {

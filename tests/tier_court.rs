@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use graphlaw::dialect::{Dialect, RefusalKind, admit_bytes};
-use graphlaw::tier::{Admitted, DialectDecl, Tier, admit_declared, admit_bytes_tiered};
+use graphlaw::tier::{Admitted, DialectDecl, Tier, admit_bytes_tiered, admit_declared};
 
 const N3_RULES: &[u8] = b"\
 @prefix : <https://e/> .\n\
@@ -77,8 +77,8 @@ fn undeclared_sniff_behavior_unchanged_for_datasets() {
 fn undeclared_n3_logic_refused_as_tier_mismatch() {
     // Sniff routes `=>` documents to Dialect::N3; the RDF admit path used to
     // surface a confusing dataset refusal. Now it is a typed TierMismatch.
-    let err = admit_bytes_tiered(N3_RULES, None, None, None)
-        .expect_err("N3 logic needs a declaration");
+    let err =
+        admit_bytes_tiered(N3_RULES, None, None, None).expect_err("N3 logic needs a declaration");
     assert_eq!(err.kind, RefusalKind::TierMismatch, "actual: {err}");
 }
 

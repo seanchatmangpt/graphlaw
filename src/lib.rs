@@ -236,18 +236,23 @@ pub const BACKEND_AUTHORITIES: &[BackendAuthority] = &[
 /// This release has no legacy semantic fallback path.
 pub const LEGACY_FALLBACK_ENABLED: bool = false;
 
-pub mod sql_ast;
-pub mod sql_statement_kinds;
+/// SQL evaluation against frozen-duckdb. frozen-duckdb's wasm static archive is
+/// rebuilt with `-fwasm-exceptions -mllvm -wasm-use-legacy-eh=0` (uniform W3C
+/// exception handling) and is hosted by wasmtime 48 `wasm_exceptions`; DuckDB is
+/// not a feature — the same graphlaw crate links it on every target.
+pub mod duckdb_eval;
+/// ABI op `duckdb`.
+pub mod duckdb_op;
 /// P28-SIL §3.2 SPSC evidentiary ring + NDJSON receipt ledger (native-only,
 /// feature `evidentiary-ring`, default OFF until TC-HOT-01/02 bench it).
 #[cfg(all(feature = "evidentiary-ring", not(target_arch = "wasm32")))]
 #[cfg_attr(docsrs, doc(cfg(feature = "evidentiary-ring")))]
 pub mod evidence_ring;
-/// Compiled-plan cache for SQL evaluation. Linked into the wasm module with the rest of the kernel.
+/// Compiled-plan cache for SQL evaluation. The frozen-duckdb wasm static
+/// archive uses uniform W3C exception handling (legacy EH disabled), hosted by
+/// wasmtime 48 `wasm_exceptions` — no wasmi EH rejection.
 pub mod query_cache;
-/// SQL evaluation against frozen-duckdb. Linked into the wasm module with the rest of the kernel.
-pub mod duckdb_eval;
-/// ABI op `duckdb`: cursor-streamed analytical eval inside the wasm module.
-pub mod duckdb_op;
+/// SQL builtins; they call `duckdb_eval`.
 pub mod rules;
-
+pub mod sql_ast;
+pub mod sql_statement_kinds;

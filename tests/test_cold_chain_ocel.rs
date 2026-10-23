@@ -4,7 +4,13 @@ use std::fs;
 
 #[test]
 fn test_cold_chain_biologics_verification_flow() {
-    let base_dir = format!("/tmp/test_ocel_{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos());
+    let base_dir = format!(
+        "/tmp/test_ocel_{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    );
     let _ = fs::remove_dir_all(&base_dir);
     fs::create_dir_all(&base_dir).unwrap();
 
@@ -32,8 +38,18 @@ fn test_cold_chain_biologics_verification_flow() {
     db.raw_connection().execute_batch(&gen_rel).unwrap();
 
     // 2. Mount virtual zero-copy views
-    db.register_parquet_view("ocel_events", &format!("{}/events/**/*.parquet", base_dir), true).unwrap();
-    db.register_parquet_view("ocel_event_object_rel", &format!("{}/event_object_map.parquet", base_dir), false).unwrap();
+    db.register_parquet_view(
+        "ocel_events",
+        &format!("{}/events/**/*.parquet", base_dir),
+        true,
+    )
+    .unwrap();
+    db.register_parquet_view(
+        "ocel_event_object_rel",
+        &format!("{}/event_object_map.parquet", base_dir),
+        false,
+    )
+    .unwrap();
 
     // 3. SHACL validation of AST
     let shapes_ttl = include_str!("../ontologies/sql-ast.ttl");
@@ -100,16 +116,18 @@ fn test_cold_chain_biologics_verification_flow() {
 
     // 4. Compile and evaluate (SQLRDF-17: admission is compile_turtle —
     // a CompiledQuery with no canon bytes is EvaluatorError::NoCanonicalGraph at eval).
-    let compiled = graphlaw::sql_ast::compile_turtle(query_ast_ttl)
-        .expect("admitted AST graph must compile");
+    let compiled =
+        graphlaw::sql_ast::compile_turtle(query_ast_ttl).expect("admitted AST graph must compile");
     let query_node = "http://biopharma.org/queries#ColdChainExcursionQuery".to_string();
 
-    let receipt = db.eval_ast_query(
-        &query_node,
-        &compiled,
-        "http://biopharma.org/data",
-        "http://biopharma.org/vocab",
-    ).unwrap();
+    let receipt = db
+        .eval_ast_query(
+            &query_node,
+            &compiled,
+            "http://biopharma.org/data",
+            "http://biopharma.org/vocab",
+        )
+        .unwrap();
 
     assert_eq!(receipt.rows_emitted, 2);
     assert_ne!(receipt.query_hash, [0u8; 32]);

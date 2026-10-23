@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "bb5eef426c9b3dea0fbe911812197a2efed4a38c09b53b2ec3074d90d01a15fd",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T184346Z-Write-bb5eef42.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/banking_eh_driver.py",
+  "timestamp_utc": "2026-10-23T184346Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

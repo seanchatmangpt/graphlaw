@@ -65,7 +65,10 @@ fn read_pack_file(rel: &str) -> String {
 fn assert_pinned(rel: &str, bytes: &[u8], want: &str) {
     assert!(!want.is_empty(), "{rel} pin is deliberately unset");
     let got = hex(blake3::hash(bytes).as_bytes());
-    assert_eq!(got, want, "{rel} drifted from its pinned blake3; re-pin the court");
+    assert_eq!(
+        got, want,
+        "{rel} drifted from its pinned blake3; re-pin the court"
+    );
 }
 
 fn hex(digest: &[u8]) -> String {
@@ -94,16 +97,24 @@ fn nums_block(src: &str, start_marker: &str) -> Vec<u64> {
         if let Some((_, rhs)) = code.rsplit_once('=') {
             code = rhs;
         }
-        let mut piece = code.trim().trim_start_matches("&[").trim_end_matches(';').trim();
+        let mut piece = code
+            .trim()
+            .trim_start_matches("&[")
+            .trim_end_matches(';')
+            .trim();
         // Strip tuple punctuation.
-        piece = piece.trim_start_matches('(').trim_end_matches("),").trim_end_matches(',');
+        piece = piece
+            .trim_start_matches('(')
+            .trim_end_matches("),")
+            .trim_end_matches(',');
         for tok in piece.split(',') {
             let tok = tok.trim().trim_start_matches('(').trim_end_matches(')');
             let tok = tok.trim();
             if tok.is_empty() {
                 continue;
             }
-            let (radix, digits) = if let Some(d) = tok.strip_prefix("0x").or(tok.strip_prefix("0X")) {
+            let (radix, digits) = if let Some(d) = tok.strip_prefix("0x").or(tok.strip_prefix("0X"))
+            {
                 (16, d)
             } else {
                 (10, tok)
@@ -160,20 +171,19 @@ fn mask_u16(lexical: &str) -> u16 {
         Some(d) => (16, d),
         None => (10, t),
     };
-    u16::from_str_radix(digits, radix)
-        .unwrap_or_else(|e| panic!("mask literal {lexical:?}: {e}"))
+    u16::from_str_radix(digits, radix).unwrap_or_else(|e| panic!("mask literal {lexical:?}: {e}"))
 }
 
 /// The six canonical RONR transitions, ground truth (ronr.rs noun space):
 /// (opcode, pre, post). Masks carried over value-identically through the
 /// st: -> pn: schema reconciliation.
 const CANONICAL_SIX: [(u16, u16, u16); 6] = [
-    (1, 129, 130),  // MoveMainMotion      0x0081/0x0082
-    (2, 2, 12),     // SecondMotion        0x0002/0x000C
-    (3, 8, 16),     // MoveToAmend         0x0008/0x0010
-    (4, 16, 8),     // AdoptAmendment      0x0010/0x0008
-    (5, 8, 96),     // CallPreviousQuestion 0x0008/0x0060
-    (6, 36, 257),   // VoteAdoptMainMotion 0x0024/0x0101
+    (1, 129, 130), // MoveMainMotion      0x0081/0x0082
+    (2, 2, 12),    // SecondMotion        0x0002/0x000C
+    (3, 8, 16),    // MoveToAmend         0x0008/0x0010
+    (4, 16, 8),    // AdoptAmendment      0x0010/0x0008
+    (5, 8, 96),    // CallPreviousQuestion 0x0008/0x0060
+    (6, 36, 257),  // VoteAdoptMainMotion 0x0024/0x0101
 ];
 
 #[test]
@@ -220,11 +230,18 @@ fn ttl_transitions(ds: &Arc<RdfDataset>) -> Vec<(u16, u16, u16)> {
             FILTER (?op <= 6)
         } ORDER BY ?op"#,
     );
-    assert_eq!(rows.len(), 6, "ontology must declare exactly six canonical transitions");
+    assert_eq!(
+        rows.len(),
+        6,
+        "ontology must declare exactly six canonical transitions"
+    );
     let mut out = Vec::new();
     for row in &rows {
         let op = mask_u16(&literal(&row[0]));
-        assert!((1..=6).contains(&op), "opcode {op:#04x} out of canonical range");
+        assert!(
+            (1..=6).contains(&op),
+            "opcode {op:#04x} out of canonical range"
+        );
         out.push((op, mask_u16(&literal(&row[1])), mask_u16(&literal(&row[2]))));
     }
     out
@@ -238,9 +255,17 @@ fn generated_transitions() -> (Vec<u64>, Vec<u64>, Vec<u64>, Vec<u64>) {
     let terminals = nums_block(&src, "pub const TERMINALS");
     let pairs = nums_block(&src, "pub const TRANSITIONS");
     assert_eq!(pre.len(), 25, "PRE_MASKS projection (25 canonical opcodes)");
-    assert_eq!(post.len(), 25, "POST_MASKS projection (25 canonical opcodes)");
+    assert_eq!(
+        post.len(),
+        25,
+        "POST_MASKS projection (25 canonical opcodes)"
+    );
     assert_eq!(terminals.len(), 2, "TERMINALS projection");
-    assert_eq!(pairs.len(), 50, "TRANSITIONS projection (25 (pre, post) pairs)");
+    assert_eq!(
+        pairs.len(),
+        50,
+        "TRANSITIONS projection (25 (pre, post) pairs)"
+    );
     (pre, post, terminals, pairs)
 }
 
@@ -250,9 +275,21 @@ fn ontology_pre_post_masks_equal_generated_projection() {
     let ttl = ttl_transitions(&ds);
     let (pre, post, _terminals, pairs) = generated_transitions();
     for (i, (op, tpre, tpost)) in ttl.iter().enumerate() {
-        assert_eq!(*op as usize, i + 1, "transitions must be the canonical six in order");
-        assert_eq!(tpre, &(pre[i] as u16), "PRE mask disagreement at opcode {op:#04x}");
-        assert_eq!(tpost, &(post[i] as u16), "POST mask disagreement at opcode {op:#04x}");
+        assert_eq!(
+            *op as usize,
+            i + 1,
+            "transitions must be the canonical six in order"
+        );
+        assert_eq!(
+            tpre,
+            &(pre[i] as u16),
+            "PRE mask disagreement at opcode {op:#04x}"
+        );
+        assert_eq!(
+            tpost,
+            &(post[i] as u16),
+            "POST mask disagreement at opcode {op:#04x}"
+        );
         assert_eq!(
             (*tpre, *tpost),
             (pairs[2 * i] as u16, pairs[2 * i + 1] as u16),
@@ -274,7 +311,10 @@ fn bitoffset_semantics_reconstruct_masks() {
         }"#,
     ) {
         let off: i64 = literal(&row[0]).parse().expect("bitOffset integer");
-        assert!((0..16).contains(&off), "bitOffset {off} outside the 16-bit word");
+        assert!(
+            (0..16).contains(&off),
+            "bitOffset {off} outside the 16-bit word"
+        );
         offs.push(off as u16);
     }
     // The pn: vocabulary carries pn:slot0..slot14 plus pn:Committed (bit 15) —
@@ -295,11 +335,27 @@ fn bitoffset_semantics_reconstruct_masks() {
     for (i, (op, want_pre, want_post)) in CANONICAL_SIX.iter().enumerate() {
         let (top, tpre, tpost) = &ttl[i];
         assert_eq!(*top, *op, "spec/TTL opcode alignment at index {i}");
-        assert_eq!(*tpre, *want_pre, "bitOffset composition, pre, opcode {op:#04x}");
-        assert_eq!(*tpost, *want_post, "bitOffset composition, post, opcode {op:#04x}");
-        assert_eq!(pre[i] as u16, *want_pre, "generated pre matches the mask law, opcode {op:#04x}");
-        assert_eq!(post[i] as u16, *want_post, "generated post matches the mask law, opcode {op:#04x}");
-        assert_eq!((pairs[2 * i], pairs[2 * i + 1]), (*want_pre as u64, *want_post as u64), "TRANSITIONS mirror, opcode {op:#04x}");
+        assert_eq!(
+            *tpre, *want_pre,
+            "bitOffset composition, pre, opcode {op:#04x}"
+        );
+        assert_eq!(
+            *tpost, *want_post,
+            "bitOffset composition, post, opcode {op:#04x}"
+        );
+        assert_eq!(
+            pre[i] as u16, *want_pre,
+            "generated pre matches the mask law, opcode {op:#04x}"
+        );
+        assert_eq!(
+            post[i] as u16, *want_post,
+            "generated post matches the mask law, opcode {op:#04x}"
+        );
+        assert_eq!(
+            (pairs[2 * i], pairs[2 * i + 1]),
+            (*want_pre as u64, *want_post as u64),
+            "TRANSITIONS mirror, opcode {op:#04x}"
+        );
     }
 }
 
@@ -368,7 +424,11 @@ fn dao_verb_values_bind_distinctly() {
         };
         verbs.push((verb, mask_u16(&literal(&row[1]))));
     }
-    assert_eq!(verbs.len(), 7, "seven DaoVerbs (Propose, Second, Amend, ExecuteTransaction, Ragequit, Delegate, AcquireLease)");
+    assert_eq!(
+        verbs.len(),
+        7,
+        "seven DaoVerbs (Propose, Second, Amend, ExecuteTransaction, Ragequit, Delegate, AcquireLease)"
+    );
     let mut vals: Vec<u16> = verbs.iter().map(|(_, v)| *v).collect();
     vals.sort();
     vals.dedup();
@@ -377,7 +437,10 @@ fn dao_verb_values_bind_distinctly() {
     // collides with pn:SecondMotion's RONR opcode 2 — this court reads the
     // DaoVerb namespace only and cannot see the collision; do not resolve it
     // here.
-    assert!(vals.contains(&2), "pn:Second's documented value-2 collision is present");
+    assert!(
+        vals.contains(&2),
+        "pn:Second's documented value-2 collision is present"
+    );
 }
 
 #[test]
@@ -390,9 +453,15 @@ fn divergence_witness_off_enabled_domain() {
     let post: u16 = 0x000C; // SECONDED | DEBATABLE
     assert_eq!((0x0000u16 & !pre) | post, 0x000C);
     assert_eq!(((0x0000u16 ^ pre) | post) & 0xFFFF, 0x000E);
-    assert_ne!((0x0000u16 & !pre) | post, ((0x0000u16 ^ pre) | post) & 0xFFFF);
+    assert_ne!(
+        (0x0000u16 & !pre) | post,
+        ((0x0000u16 ^ pre) | post) & 0xFFFF
+    );
     // On the enabled domain (m=0x0002 enables pre=0x0002) they agree.
-    assert_eq!((0x0002u16 & !pre) | post, ((0x0002u16 ^ pre) | post) & 0xFFFF);
+    assert_eq!(
+        (0x0002u16 & !pre) | post,
+        ((0x0002u16 ^ pre) | post) & 0xFFFF
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -439,7 +508,9 @@ fn kernel_fire(pre: u16, post: u16, m: u16) -> Option<u16> {
 
 /// Deterministic LCG so the sampled mask corpus is reproducible.
 fn lcg(state: &mut u64) -> u64 {
-    *state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+    *state = state
+        .wrapping_mul(6364136223846793005)
+        .wrapping_add(1442695040888963407);
     *state >> 16
 }
 
@@ -495,7 +566,11 @@ fn off_domain_divergence_witness_m0_pre1_post0() {
     let (pre, post, m) = (1u16, 0u16, 0u16);
     assert_ne!(m & pre, pre, "witness case must be off the enabled domain");
     assert_eq!(fire_xor(pre, post, m), 1, "xor form fabricates a token");
-    assert_eq!(fire_cts(pre, post, m), 0, "clear-then-set leaves m unchanged");
+    assert_eq!(
+        fire_cts(pre, post, m),
+        0,
+        "clear-then-set leaves m unchanged"
+    );
     assert_ne!(fire_xor(pre, post, m), fire_cts(pre, post, m));
     assert_eq!(kernel_fire(pre, post, m), None, "gated kernel fire refuses");
     // The masked bit-level xnor-free statement: Fire 1 0 0 = 1 ∧

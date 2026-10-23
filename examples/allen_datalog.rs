@@ -42,13 +42,18 @@ const NAMES: [&str; 13] = [
 const PAGE_COLS: [usize; 13] = [0, 2, 4, 11, 7, 8, 12, 9, 6, 10, 5, 3, 1];
 
 fn idx(name: &str) -> usize {
-    NAMES.iter().position(|n| *n == name).expect("relation name")
+    NAMES
+        .iter()
+        .position(|n| *n == name)
+        .expect("relation name")
 }
 
 fn mask_of(spec: &str) -> u16 {
     let mut m = 0u16;
     for t in spec.split('|') {
-        if t.is_empty() { continue; }
+        if t.is_empty() {
+            continue;
+        }
         m |= 1 << idx(t);
     }
     m
@@ -65,9 +70,19 @@ fn expand(token: &str) -> String {
     let mut out: Vec<&str> = Vec::new();
     for c in token.chars() {
         out.push(match c {
-            'p' => "p", 'm' => "m", 'o' => "o", 'd' => "d", 's' => "s",
-            'f' => "f", 'e' => "eq", 'F' => "fi", 'D' => "di", 'S' => "si",
-            'O' => "oi", 'M' => "mi", 'P' => "pi",
+            'p' => "p",
+            'm' => "m",
+            'o' => "o",
+            'd' => "d",
+            's' => "s",
+            'f' => "f",
+            'e' => "eq",
+            'F' => "fi",
+            'D' => "di",
+            'S' => "si",
+            'O' => "oi",
+            'M' => "mi",
+            'P' => "pi",
             _ => panic!("bad token char {c}"),
         });
     }
@@ -79,19 +94,45 @@ fn expand(token: &str) -> String {
 // ---------------------------------------------------------------------------
 
 const PAGE_ROWS: [[&str; 13]; 13] = [
-    ["p", "p", "p", "p", "p", "p", "p", "p", "pmosd", "pmosd", "pmosd", "pmosd", "full"],
-    ["p", "p", "p", "p", "p", "m", "m", "m", "osd", "osd", "osd", "Fef", "DSOMP"],
-    ["p", "p", "pmo", "pmo", "pmoFD", "o", "o", "oFD", "osd", "osd", "concur", "DSO", "DSOMP"],
-    ["p", "m", "o", "F", "D", "o", "F", "D", "osd", "Fef", "DSO", "DSO", "DSOMP"],
-    ["pmoFD", "oFD", "oFD", "D", "D", "oFD", "D", "D", "concur", "DSO", "DSO", "DSO", "DSOMP"],
-    ["p", "p", "pmo", "pmo", "pmoFD", "s", "s", "seS", "d", "d", "dfO", "M", "P"],
-    ["p", "m", "o", "F", "D", "s", "e", "S", "d", "f", "O", "M", "P"],
-    ["pmoFD", "oFD", "oFD", "D", "D", "seS", "S", "S", "dfO", "O", "O", "M", "P"],
-    ["p", "p", "pmosd", "pmosd", "full", "d", "d", "dfOMP", "d", "d", "dfOMP", "P", "P"],
-    ["p", "m", "osd", "Fef", "DSOMP", "d", "f", "OMP", "d", "f", "OMP", "P", "P"],
-    ["pmoFD", "oFD", "concur", "DSO", "DSOMP", "dfO", "O", "OMP", "dfO", "O", "OMP", "P", "P"],
-    ["pmoFD", "seS", "dfO", "M", "P", "dfO", "M", "P", "dfO", "M", "P", "P", "P"],
-    ["full", "dfOMP", "dfOMP", "P", "P", "dfOMP", "P", "P", "dfOMP", "P", "P", "P", "P"],
+    [
+        "p", "p", "p", "p", "p", "p", "p", "p", "pmosd", "pmosd", "pmosd", "pmosd", "full",
+    ],
+    [
+        "p", "p", "p", "p", "p", "m", "m", "m", "osd", "osd", "osd", "Fef", "DSOMP",
+    ],
+    [
+        "p", "p", "pmo", "pmo", "pmoFD", "o", "o", "oFD", "osd", "osd", "concur", "DSO", "DSOMP",
+    ],
+    [
+        "p", "m", "o", "F", "D", "o", "F", "D", "osd", "Fef", "DSO", "DSO", "DSOMP",
+    ],
+    [
+        "pmoFD", "oFD", "oFD", "D", "D", "oFD", "D", "D", "concur", "DSO", "DSO", "DSO", "DSOMP",
+    ],
+    [
+        "p", "p", "pmo", "pmo", "pmoFD", "s", "s", "seS", "d", "d", "dfO", "M", "P",
+    ],
+    [
+        "p", "m", "o", "F", "D", "s", "e", "S", "d", "f", "O", "M", "P",
+    ],
+    [
+        "pmoFD", "oFD", "oFD", "D", "D", "seS", "S", "S", "dfO", "O", "O", "M", "P",
+    ],
+    [
+        "p", "p", "pmosd", "pmosd", "full", "d", "d", "dfOMP", "d", "d", "dfOMP", "P", "P",
+    ],
+    [
+        "p", "m", "osd", "Fef", "DSOMP", "d", "f", "OMP", "d", "f", "OMP", "P", "P",
+    ],
+    [
+        "pmoFD", "oFD", "concur", "DSO", "DSOMP", "dfO", "O", "OMP", "dfO", "O", "OMP", "P", "P",
+    ],
+    [
+        "pmoFD", "seS", "dfO", "M", "P", "dfO", "M", "P", "dfO", "M", "P", "P", "P",
+    ],
+    [
+        "full", "dfOMP", "dfOMP", "P", "P", "dfOMP", "P", "P", "dfOMP", "P", "P", "P", "P",
+    ],
 ];
 
 fn transcribed_table() -> [[u16; 13]; 13] {
@@ -111,19 +152,33 @@ fn transcribed_table() -> [[u16; 13]; 13] {
 const INVERSE: [usize; 13] = [1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 12];
 
 const fn rel(s1: i32, e1: i32, s2: i32, e2: i32) -> usize {
-    if e1 < s2 { 0 }
-    else if e2 < s1 { 1 }
-    else if e1 == s2 { 2 }
-    else if e2 == s1 { 3 }
-    else if s1 < s2 && e1 > s2 && e1 < e2 { 4 }
-    else if s2 < s1 && e2 > s1 && e2 < e1 { 5 }
-    else if s1 > s2 && e1 < e2 { 6 }
-    else if s1 < s2 && e1 > e2 { 7 }
-    else if s1 == s2 && e1 < e2 { 8 }
-    else if s1 == s2 && e1 > e2 { 9 }
-    else if e1 == e2 && s1 > s2 { 10 }
-    else if e1 == e2 && s1 < s2 { 11 }
-    else { 12 }
+    if e1 < s2 {
+        0
+    } else if e2 < s1 {
+        1
+    } else if e1 == s2 {
+        2
+    } else if e2 == s1 {
+        3
+    } else if s1 < s2 && e1 > s2 && e1 < e2 {
+        4
+    } else if s2 < s1 && e2 > s1 && e2 < e1 {
+        5
+    } else if s1 > s2 && e1 < e2 {
+        6
+    } else if s1 < s2 && e1 > e2 {
+        7
+    } else if s1 == s2 && e1 < e2 {
+        8
+    } else if s1 == s2 && e1 > e2 {
+        9
+    } else if e1 == e2 && s1 > s2 {
+        10
+    } else if e1 == e2 && s1 < s2 {
+        11
+    } else {
+        12
+    }
 }
 
 const fn compute_table() -> [[u16; 13]; 13] {
@@ -253,7 +308,12 @@ fn emit_vectors(tag: &str, names: &[&str], matrix: &[Vec<u16>]) {
     for i in 0..names.len() {
         for j in 0..names.len() {
             if i != j {
-                println!("derived:{}:{} = {}", names[i], names[j], mask_str(matrix[i][j]));
+                println!(
+                    "derived:{}:{} = {}",
+                    names[i],
+                    names[j],
+                    mask_str(matrix[i][j])
+                );
             }
         }
     }
@@ -295,7 +355,8 @@ fn main() {
                 mismatches += 1;
                 println!(
                     "mismatch [{} o {}] transcribed={} oracle={}",
-                    NAMES[r1], NAMES[r2],
+                    NAMES[r1],
+                    NAMES[r2],
                     mask_str(transcribed[r1][r2]),
                     mask_str(COMPOSE_TABLE[r1][r2])
                 );
@@ -313,7 +374,9 @@ fn main() {
     n3.push_str("# Allen 1983 interval-algebra composition table as Datalog facts.\n");
     n3.push_str("#   comp(r1, r2) = set   encoded as   :r1 :comp_<r2> ( :rA :rB ... ) .\n");
     n3.push_str("# Verified against the wasm4pm-cognition allen_temporal breed's brute-force\n");
-    n3.push_str("# composer (allen_temporal.rs:40-71) on all 169 entries (see generator output).\n");
+    n3.push_str(
+        "# composer (allen_temporal.rs:40-71) on all 169 entries (see generator output).\n",
+    );
     n3.push('\n');
     n3.push_str("# Path-consistency transitive refinement rules (applied to fixpoint by the\n");
     n3.push_str("# generator's engine loop; forward N3 is monotone, refinement is not):\n");
@@ -329,7 +392,10 @@ fn main() {
                 .map(|s| format!(":{s}"))
                 .collect::<Vec<_>>()
                 .join(" ");
-            n3.push_str(&format!(":{} :comp_{} ( {} ) .\n", NAMES[r1], NAMES[r2], list));
+            n3.push_str(&format!(
+                ":{} :comp_{} ( {} ) .\n",
+                NAMES[r1], NAMES[r2], list
+            ));
         }
     }
     fs::write("examples/allen_comp_table.n3", &n3).expect("write facts file");
@@ -345,16 +411,24 @@ fn main() {
         let Term::Iri(p) = &t.p else { continue };
         let subj = s.as_str();
         let pred = p.as_str();
-        let Some(r1name) = subj.rsplit(':').next() else { continue };
-        let Some((_, r2name)) = pred.rsplit_once("_") else { continue };
+        let Some(r1name) = subj.rsplit(':').next() else {
+            continue;
+        };
+        let Some((_, r2name)) = pred.rsplit_once("_") else {
+            continue;
+        };
         let (Some(r1), Some(r2)) = (
             NAMES.iter().position(|n| *n == r1name),
             NAMES.iter().position(|n| *n == r2name),
-        ) else { continue };
+        ) else {
+            continue;
+        };
         let Term::List(items) = &t.o else { continue };
         let mut m = 0u16;
         for term in items {
-            let Term::Iri(nm) = term else { panic!("list item not an IRI") };
+            let Term::Iri(nm) = term else {
+                panic!("list item not an IRI")
+            };
             let name = nm.as_str().rsplit(':').next().expect("nonempty iri");
             m |= 1 << idx(name);
         }
@@ -365,10 +439,22 @@ fn main() {
     println!("reparse: loaded {count}/169 comp facts from N3, table == oracle");
 
     // ---- 4. Cases
-    let ca = run_case(&["A", "B", "C"], &[(0, 1, "m"), (1, 2, "m")], "case-a-paper-fixture");
-    assert_eq!(mask_str(ca[0][2]), "p", "case (a) derived:A:C must be p (paper fixture)");
+    let ca = run_case(
+        &["A", "B", "C"],
+        &[(0, 1, "m"), (1, 2, "m")],
+        "case-a-paper-fixture",
+    );
+    assert_eq!(
+        mask_str(ca[0][2]),
+        "p",
+        "case (a) derived:A:C must be p (paper fixture)"
+    );
     println!("case (a) paper fixture: derived:A:C = p ASSERTED OK");
-    let cb = run_case(&["i1", "i2", "i3"], &[(0, 1, "m"), (1, 2, "m")], "case-b-meet-chain");
+    let cb = run_case(
+        &["i1", "i2", "i3"],
+        &[(0, 1, "m"), (1, 2, "m")],
+        "case-b-meet-chain",
+    );
     assert_eq!(mask_str(cb[0][2]), "p", "case (b) derived:i1:i3 must be p");
     println!("case (b) meet-chain: derived:i1:i3 = p ASSERTED OK");
 

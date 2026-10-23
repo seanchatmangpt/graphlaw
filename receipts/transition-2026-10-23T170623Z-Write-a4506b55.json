@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "a4506b55b8b9be73af5af1e1b2653bbcd3e59479ba7d13ee4a4f14f0f68d0f55",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T170623Z-Write-a4506b55.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/tests/fixtures/banking/rehy_setup.ttl",
+  "timestamp_utc": "2026-10-23T170623Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

@@ -38,10 +38,10 @@ use std::time::Instant;
 use hdrhistogram::Histogram;
 
 use graphlaw::duckdb_eval::{
-    admitted_statement_hash, canonical_ast_graph_bytes, fold_params_anchored, hash_param_buffer,
-    ParamBytes,
+    ParamBytes, admitted_statement_hash, canonical_ast_graph_bytes, fold_params_anchored,
+    hash_param_buffer,
 };
-use graphlaw::sql_ast::{compile_turtle, SqlLiteral};
+use graphlaw::sql_ast::{SqlLiteral, compile_turtle};
 
 /// Per-fold latency budget (nanoseconds), p99, on the incremental clone path.
 const BUDGET_NS: u64 = 250;
@@ -176,7 +176,9 @@ fn graph_backed_compile() -> (Vec<u8>, [u8; 32]) {
         None => {
             // Refuse loudly: without the pinned h_ast anchor there is no
             // anchor path to witness.
-            eprintln!("TC-HOT-01 REFUSED: compile_turtle did not pin the h_ast receipt_state anchor");
+            eprintln!(
+                "TC-HOT-01 REFUSED: compile_turtle did not pin the h_ast receipt_state anchor"
+            );
             std::process::exit(2);
         }
     };
@@ -303,41 +305,41 @@ fn main() {
     for _batch in 0..BATCHES {
         let mut batch_clone_hist = Histogram::<u64>::new(3).expect("hdrhistogram init");
         for _ in 0..batch_iters {
-        // Leg 1: full re-absorb baseline.
-        let t0 = Instant::now();
-        let d = admitted_statement_hash(black_box(&canon), black_box(&params));
-        let el = t0.elapsed();
-        black_box(d);
-        tail = d;
-        baseline_hist.record(el.as_nanos() as u64).expect("record");
+            // Leg 1: full re-absorb baseline.
+            let t0 = Instant::now();
+            let d = admitted_statement_hash(black_box(&canon), black_box(&params));
+            let el = t0.elapsed();
+            black_box(d);
+            tail = d;
+            baseline_hist.record(el.as_nanos() as u64).expect("record");
 
-        // Leg 2: production anchor fold (one stack buffer, one update).
-        if inject_ns > 0 {
-            // Anti-vacuity busy-spin (structural fault injection, no sleeps).
-            let spin_start = Instant::now();
-            while spin_start.elapsed().as_nanos() < inject_ns as u128 {
-                std::hint::black_box(&spin_start);
+            // Leg 2: production anchor fold (one stack buffer, one update).
+            if inject_ns > 0 {
+                // Anti-vacuity busy-spin (structural fault injection, no sleeps).
+                let spin_start = Instant::now();
+                while spin_start.elapsed().as_nanos() < inject_ns as u128 {
+                    std::hint::black_box(&spin_start);
+                }
             }
-        }
-        let t1 = Instant::now();
-        let d2 = fold_params_anchored(black_box(&state), black_box(&params));
-        let el2 = t1.elapsed();
-        black_box(d2);
-        let el2_ns = el2.as_nanos() as u64;
-        clone_hist.record(el2_ns).expect("record");
-        batch_clone_hist.record(el2_ns).expect("record");
-        clone_series.push(el2_ns);
+            let t1 = Instant::now();
+            let d2 = fold_params_anchored(black_box(&state), black_box(&params));
+            let el2 = t1.elapsed();
+            black_box(d2);
+            let el2_ns = el2.as_nanos() as u64;
+            clone_hist.record(el2_ns).expect("record");
+            batch_clone_hist.record(el2_ns).expect("record");
+            clone_series.push(el2_ns);
 
-        // Leg 3: refusal invariant. Two static copies. `Display` formats
-        // kind, engine, and dialect and stays outside this timed section.
-        let t2 = Instant::now();
-        let message = graphlaw::dialect::RefusalMessage::Static("tc-hot-01 invariant probe");
-        rendered_buf.clear();
-        let _ = std::fmt::Write::write_str(&mut rendered_buf, "EngineRejected");
-        let _ = std::fmt::Write::write_str(&mut rendered_buf, message.as_str());
-        let el3 = t2.elapsed();
-        black_box(rendered_buf.as_str());
-        refusal_hist.record(el3.as_nanos() as u64).expect("record");
+            // Leg 3: refusal invariant. Two static copies. `Display` formats
+            // kind, engine, and dialect and stays outside this timed section.
+            let t2 = Instant::now();
+            let message = graphlaw::dialect::RefusalMessage::Static("tc-hot-01 invariant probe");
+            rendered_buf.clear();
+            let _ = std::fmt::Write::write_str(&mut rendered_buf, "EngineRejected");
+            let _ = std::fmt::Write::write_str(&mut rendered_buf, message.as_str());
+            let el3 = t2.elapsed();
+            black_box(rendered_buf.as_str());
+            refusal_hist.record(el3.as_nanos() as u64).expect("record");
         }
         batch_p50s.push(batch_clone_hist.value_at_quantile(0.50));
     }
@@ -422,15 +424,22 @@ fn main() {
 
     // Variance self-check verdict (charter invariant < 5%): PASS /
     // VARIANCE-EXCEEDED, emitted honestly either way.
-    let batch_mean =
-        batch_p50s.iter().map(|v| *v as f64).sum::<f64>() / BATCHES as f64;
+    let batch_mean = batch_p50s.iter().map(|v| *v as f64).sum::<f64>() / BATCHES as f64;
     let spread = (batch_p50s.iter().max().unwrap() - batch_p50s.iter().min().unwrap()) as f64;
-    let spread_pct = if batch_mean > 0.0 { spread / batch_mean * 100.0 } else { f64::INFINITY };
+    let spread_pct = if batch_mean > 0.0 {
+        spread / batch_mean * 100.0
+    } else {
+        f64::INFINITY
+    };
     let variance_ok = spread_pct < VARIANCE_BUDGET_PCT;
     println!(
         "VARIANCE_SELF_CHECK batches={BATCHES} batch_iters={batch_iters} batch_p50s={:?} spread_pct={spread_pct:.2}% budget={VARIANCE_BUDGET_PCT}% : {}",
         batch_p50s,
-        if variance_ok { "PASS" } else { "VARIANCE-EXCEEDED" }
+        if variance_ok {
+            "PASS"
+        } else {
+            "VARIANCE-EXCEEDED"
+        }
     );
 
     // Refusal invariant: the stack render must carry class + message.
@@ -443,7 +452,11 @@ fn main() {
         rendered.contains("EngineRejected") && rendered.contains("tc-hot-01 invariant probe");
 
     println!("digest_tail={:02x?}", tail);
-    for (name, h) in [("re_absorb_baseline", &baseline_hist), ("clone_path", &clone_hist), ("refusal_invariant", &refusal_hist)] {
+    for (name, h) in [
+        ("re_absorb_baseline", &baseline_hist),
+        ("clone_path", &clone_hist),
+        ("refusal_invariant", &refusal_hist),
+    ] {
         let (p50, p95, p99, p999) = (
             h.value_at_quantile(0.50),
             h.value_at_quantile(0.95),
@@ -456,7 +469,9 @@ fn main() {
         "throughput: {:.1} full-legs/sec (all 3 legs per iteration)",
         timed_iters as f64 / total.as_secs_f64()
     );
-    println!("REFUSAL_INVARIANT display_render={rendered:?} carries_class_and_message={invariant_ok}");
+    println!(
+        "REFUSAL_INVARIANT display_render={rendered:?} carries_class_and_message={invariant_ok}"
+    );
 
     let p99 = clone_hist.value_at_quantile(0.99);
     let pass = p99 <= BUDGET_NS && invariant_ok && variance_ok;
@@ -490,8 +505,8 @@ fn main() {
     println!(
         "RESULT param_integration_large amortized net_ns={large_amortized_net:.2} (gross={large_fold_only:.2}, scaffold={scaffold:.2}) budget={PARAM_BUDGET_NS}ns"
     );
-    let param_pass = small_net <= PARAM_BUDGET_NS as f64
-        && large_amortized_net <= PARAM_BUDGET_NS as f64;
+    let param_pass =
+        small_net <= PARAM_BUDGET_NS as f64 && large_amortized_net <= PARAM_BUDGET_NS as f64;
     println!(
         "GATE param_integration small net({small_net:.2}ns) / large amortized net({large_amortized_net:.2}ns) <= {PARAM_BUDGET_NS}ns : {}",
         if param_pass { "PASS" } else { "FAIL" }
@@ -540,10 +555,7 @@ fn main() {
             eprintln!("TC-HOT-01 REFUSED: SPC export write failure: {e}");
             std::process::exit(2);
         }
-        println!(
-            "SPC_EXPORT path={path} samples={}",
-            clone_series.len()
-        );
+        println!("SPC_EXPORT path={path} samples={}", clone_series.len());
     }
 
     // Lane A02 timestamp-source court: the coarse hot-path clock
@@ -576,8 +588,7 @@ fn main() {
             black_box(0u8);
         }
         let ovh = t2.elapsed();
-        let per_ns =
-            (total.as_nanos() as f64 - ovh.as_nanos() as f64) / TS_ITERS as f64;
+        let per_ns = (total.as_nanos() as f64 - ovh.as_nanos() as f64) / TS_ITERS as f64;
         let inst_t = Instant::now();
         for _ in 0..TS_ITERS {
             black_box(Instant::now());
