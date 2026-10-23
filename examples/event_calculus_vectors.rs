@@ -33,8 +33,12 @@
 //! previous step (clipping); simultaneous initiate+terminate at one step
 //! favors initiation (the initiation rule reads no negated atom).
 //!
-//! Run: cargo run --release --example event_calculus_vectors [-- --verify]
-//! (from /Users/sac/graphlaw)
+//! Run: cargo run --example event_calculus_vectors [-- --verify]
+//! (--release is accepted but not required.)
+//! Output: `generated N vector(s); ... dual-route agreement on all scenarios`
+//! (exit 0); `--verify` re-evaluates independently and byte-compares.
+//! Court: tests/corpus_conformance.rs::vecgen_event_calculus_dual_route_agrees
+//! (generate-only; self-checks run inside generation).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -50,6 +54,8 @@ use serde_json::json;
 const PURRDF: &str = "2.0.2";
 const EYERON: &str = "0.7.8";
 const GENERATOR: &str = "event_calculus_vectors";
+/// Live crate version stamped into provenance (post-L98/L106 pattern).
+const GL_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // ------------------------------------------------------------------ scenario
 
@@ -465,6 +471,7 @@ fn build_vector(
         "breed": "event_calculus",
         "provenance": {
             "graphlaw_rev": rev,
+            "graphlaw_version": GL_VERSION,
             "purrdf": PURRDF,
             "eyeron": EYERON,
             "generator": GENERATOR,

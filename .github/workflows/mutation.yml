@@ -9,8 +9,12 @@ permissions:
   contents: read
 
 jobs:
+  # 360-minute timeout is DELIBERATE, not a copy-paste: mutation scoring runs
+  # the full suite per mutant. Real runs finish well inside it; raise, don't
+  # lower, if a wave ever trips it.
+  # Local equivalent: bash scripts/mutation_court.sh (same script, no --check).
   mutation:
-    name: native mutation court (registry + ABI dispatch)
+    name: mutation court (cargo-mutants over registry + ABI dispatch)
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -21,7 +25,7 @@ jobs:
           components: rustfmt, clippy
       - name: Install cargo-mutants
         run: cargo install cargo-mutants --version 27.1.0 --locked
-      - name: Run the court
+      - name: Run mutation court (scripts/mutation_court.sh --check)
         env:
           CARGO_TARGET_DIR: target-mutants
         run: scripts/mutation_court.sh --check

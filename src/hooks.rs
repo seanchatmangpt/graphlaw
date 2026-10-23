@@ -40,7 +40,7 @@ use std::collections::BTreeSet;
 
 use purrdf::{RdfDatasetBuilder, SparqlEngine, SparqlRequest, SparqlResult, TermValue};
 
-use crate::dialect::{Dialect, Refusal, RefusalKind};
+use crate::dialect::{Dialect, Refusal, RefusalKind, RefusalMessage};
 use crate::law::LawState;
 use purrdf::sparql::NativeSparqlEngine;
 
@@ -160,7 +160,7 @@ fn refuse(kind: RefusalKind, message: impl Into<String>) -> Refusal {
         kind,
         dialect: Some(Dialect::Sparql),
         engine: Some(crate::dialect::Engine::PurRdf),
-        message: message.into(),
+        message: RefusalMessage::Dynamic(message.into()),
     }
 }
 

@@ -5,1055 +5,26 @@
 //! and recursive bounded RDF collection unrolling.
 
 #![allow(missing_docs)]
+// Clippy `result_large_err` residual (coordinator decision, scoped to this
+// file only): `AstError` intentionally embeds the ~208-byte `RefusalContext`
+// by design — refusals are pure data (docs/refusals.md typed-refusal law).
+// Boxing the context is an API change deferred to the switchover phase, not
+// a lane-level edit.
+#![allow(clippy::result_large_err)]
 
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
-/// Typed refusal codes (`docs/refusals.md`). These are the stable message
-/// markers carried inside `AstError` text; only REFUSAL-04 lives in
-/// `src/tier.rs` (capability refusals).
-pub const REFUSAL_01_MALFORMED_AST: &str = "[REFUSAL-01] MalformedAstRefusal:";
-pub const REFUSAL_02_UNIMPLEMENTED: &str = "[REFUSAL-02] UnimplementedStatementRefusal:";
-pub const REFUSAL_03_SCOPE_INTEGRITY: &str = "[REFUSAL-03] ScopeIntegrityRefusal:";
-
-/// Internal message-arm discriminants (`RefusalContext::shape_id`). Each
-/// stable refusal code has a fixed table of rendering arms; the arm selects
-/// which `&'static str` template the cold Display path interpolates.
-///
-/// OPEN DRIFT NOTE (SQLRDF-18 pure-data refusal restructure): these are
-/// internal, never serialized over the ABI; new arms append, never renumber.
-pub mod refusal_arm {
-    pub const OPERATOR_TOKEN: u16 = 1;
-    pub const SCOPE_INDIVIDUAL: u16 = 2;
-    pub const CANONICALIZATION: u16 = 3;
-    pub const DUP_CLAUSE_PREDICATE: u16 = 4;
-    pub const SCOPE_CARDINALITY: u16 = 5;
-    pub const SCOPE_WRONG_NODE: u16 = 6;
-    pub const DISCRIMINATORS: u16 = 7;
-    pub const EXPRESSION_WRAPPER: u16 = 8;
-    pub const ALIAS_IN_AGG_ARG: u16 = 9;
-    pub const DUAL_LEFT_OPERAND: u16 = 10;
-    pub const DUAL_RIGHT_OPERAND: u16 = 11;
-    pub const DUAL_OPERATOR_FORMS: u16 = 12;
-    pub const SQL_ALIAS_IN_AGG_ARG: u16 = 13;
-    pub const SCOPE_ON_TABLE_REF: u16 = 14;
-    pub const DUAL_FROM: u16 = 15;
-    pub const EMPTY_FROM: u16 = 16;
-    pub const NO_FROM: u16 = 17;
-    pub const DUAL_SELECT: u16 = 18;
-    pub const NO_PROJECTION: u16 = 19;
-    pub const EMPTY_PROJECTION: u16 = 20;
-    pub const DUAL_WHERE: u16 = 21;
-    pub const DUAL_HAVING: u16 = 22;
-    pub const DIRECTION_LEX: u16 = 23;
-    pub const DIRECTION_IRI: u16 = 24;
-    pub const LIMIT_MALFORMED: u16 = 25;
-    pub const LIMIT_DUP: u16 = 26;
-    pub const LIMIT_NOT_INT: u16 = 27;
-    pub const OFFSET_MALFORMED: u16 = 28;
-    pub const OFFSET_DUP: u16 = 29;
-    pub const OFFSET_NOT_INT: u16 = 30;
-    pub const INDEX_MISSING: u16 = 31;
-    pub const INDEX_DUP: u16 = 32;
-    pub const INDEX_NOT_INT: u16 = 33;
-    pub const INDEX_BAD_DTYPE: u16 = 34;
-    pub const INDEX_NEGATIVE: u16 = 35;
-    pub const UNKNOWN_STATEMENT_PREDICATE: u16 = 36;
-    // ScopeIntegrity (REFUSAL-03) arms.
-    pub const AGG_IN_POSITION: u16 = 1;
-    pub const ALIASED_AGG_ARG: u16 = 2;
-    pub const AGG_IN_PREDICATE: u16 = 3;
-    pub const PROCESS_SCOPE_IN_SELECT: u16 = 4;
-    pub const VIEW_SCOPE_IN_PREDICATE: u16 = 5;
-    pub const SCOPE_IN_PRED_AGG_ARG: u16 = 6;
-    // Internal MalformedAst-family arms (ShaclViolation carriers without a
-    // stable [REFUSAL-nn] marker today — the docs/refusals.md known gap).
-    pub const SHACL_DEPTH: u16 = 100;
-    pub const PARSE_DATASET: u16 = 101;
-    pub const PARSE_SHAPES: u16 = 102;
-    pub const SHACL_ENGINE: u16 = 103;
-    pub const SHACL_VIOLATIONS: u16 = 104;
-    // UnsupportedTerm internal arms.
-    pub const UNSUPPORTED_GENERIC: u16 = 0;
-    // LANE L2 disclosed compat arm (SQLRDF-18 restructure unblock): free-form
-    // legacy ShaclViolation text renders raw through the ident buffer.
-    pub const LEGACY_MESSAGE: u16 = 255;
-    pub const UNIMPLEMENTED_STATEMENT: u16 = 1;
-    pub const NO_SQL_TEMPLATE: u16 = 2;
-}
-
-/// Stable sql-rdf refusal codes (`docs/refusals.md`, REFUSAL-01..04) plus the
-/// internal discriminants for the malformed-AST family. Pure data: `repr(u8)`,
-/// stable values never renumbered.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(u8)]
-pub enum RefusalCode {
-    /// REFUSAL-01 `MalformedAstRefusal`.
-    MalformedAst = 1,
-    /// REFUSAL-02 `UnimplementedStatementRefusal`.
-    UnimplementedStatement = 2,
-    /// REFUSAL-03 `ScopeIntegrityRefusal`.
-    ScopeIntegrity = 3,
-    /// REFUSAL-04 `CapabilityRefusal` (document-backed builtin eval; see `docs/refusals.md`).
-    Capability = 4,
-    /// Internal: identifier fails the strict ident regex.
-    InvalidIdentifier = 16,
-    /// Internal: required property absent on a node.
-    MissingProperty = 17,
-    /// Internal: recursion/list depth cap breached.
-    RecursionLimitExceeded = 18,
-    /// Internal: circular or unclosed RDF list.
-    MalformedList = 19,
-    /// Internal: unsupported operator/function/statement IRI or token.
-    UnsupportedTerm = 20,
-    /// Internal: expression node matches no discriminator.
-    MalformedNode = 21,
-}
-
-impl RefusalCode {
-    /// The stable `[REFUSAL-nn]` marker for the stable codes, `None` for the
-    /// internal discriminants.
-    pub const fn marker(self) -> Option<&'static str> {
-        match self {
-            Self::MalformedAst => Some(REFUSAL_01_MALFORMED_AST),
-            Self::UnimplementedStatement => Some(REFUSAL_02_UNIMPLEMENTED),
-            Self::ScopeIntegrity => Some(REFUSAL_03_SCOPE_INTEGRITY),
-            Self::Capability => Some(crate::tier::REFUSAL_04_CAPABILITY_REFUSAL),
-            _ => None,
-        }
-    }
-}
-
-/// Max bytes packed per identifier. Anything longer truncates (the cold
-/// Display path renders the truncated prefix).
-pub const REFUSAL_IDENT_BYTES: usize = 192;
-
-/// Fixed-size packed identifier: up to `REFUSAL_IDENT_BYTES` bytes copied at
-/// construction (memcpy, no heap), rendered lossily on the cold Display path.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PackedIdent {
-    len: u8,
-    bytes: [u8; REFUSAL_IDENT_BYTES],
-}
-
-impl Default for PackedIdent {
-    fn default() -> Self {
-        Self { len: 0, bytes: [0u8; REFUSAL_IDENT_BYTES] }
-    }
-}
-
-impl PackedIdent {
-    /// Packs a Display value into the fixed buffer without heap allocation.
-    pub fn pack(v: impl fmt::Display) -> Self {
-        let mut p = Self::default();
-        p.push(v);
-        p
-    }
-
-    /// Packs two Display values concatenated (`a` then `b`).
-    pub fn packed2(a: impl fmt::Display, b: impl fmt::Display) -> Self {
-        let mut p = Self::default();
-        p.push(a);
-        p.push(b);
-        p
-    }
-
-    /// Appends a Display value (truncating at capacity).
-    pub fn push(&mut self, v: impl fmt::Display) {
-        let mut w = FixedWriter { buf: &mut self.bytes, len: self.len as usize };
-        // Formatting can only fail when the underlying writer fails; the
-        // fixed buffer never fails, it truncates.
-        let _ = fmt::write(&mut w, format_args!("{v}"));
-        self.len = w.len.min(REFUSAL_IDENT_BYTES) as u8;
-    }
-
-    /// The packed bytes as a (possibly lossy) string, cold path.
-    pub fn as_str_lossy(&self) -> std::borrow::Cow<'_, str> {
-        String::from_utf8_lossy(&self.bytes[..self.len as usize])
-    }
-}
-
-struct FixedWriter<'a> {
-    buf: &'a mut [u8; REFUSAL_IDENT_BYTES],
-    len: usize,
-}
-
-impl fmt::Write for FixedWriter<'_> {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        let rem = REFUSAL_IDENT_BYTES - self.len;
-        let n = s.len().min(rem);
-        self.buf[self.len..self.len + n].copy_from_slice(&s.as_bytes()[..n]);
-        self.len += n;
-        Ok(())
-    }
-}
-
-/// Fixed-size refusal context: shape id, predicate index, numeric arguments,
-/// and packed idents. `Copy`, no `String`, no heap — construction is a pair
-/// of bounded memcpys (hot path budget <10ns).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct RefusalContext {
-    /// Internal static-message-template selector (see [`refusal_arm`]).
-    pub shape_id: u16,
-    /// Statement index / ordinal position the refusal attaches to.
-    pub predicate_idx: u16,
-    /// Primary numeric argument (count or limit).
-    pub num: u32,
-    /// Secondary numeric argument.
-    pub aux_num: u32,
-    /// Primary packed identifier.
-    pub ident: PackedIdent,
-    /// Secondary packed identifier.
-    pub aux_ident: PackedIdent,
-}
-
-impl Default for RefusalContext {
-    fn default() -> Self {
-        Self {
-            shape_id: 0,
-            predicate_idx: 0,
-            num: 0,
-            aux_num: 0,
-            ident: PackedIdent::default(),
-            aux_ident: PackedIdent::default(),
-        }
-    }
-}
-
-/// A typed sql-rdf refusal. Pure data (SQLRDF-18 restructure): `code` +
-/// fixed-size `ctx`, with message rendering deferred entirely to the cold
-/// Display/JSON-at-ABI path via the const code→template table.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct AstError {
-    /// Stable (or internal) refusal code.
-    pub code: RefusalCode,
-    /// Fixed-size rendering context.
-    pub ctx: RefusalContext,
-}
-
-impl AstError {
-    #[inline]
-    fn new(code: RefusalCode, shape_id: u16) -> Self {
-        Self { code, ctx: RefusalContext { shape_id, ..RefusalContext::default() } }
-    }
-    #[inline]
-    fn with_num(mut self, num: usize) -> Self {
-        self.ctx.num = num as u32;
-        self
-    }
-    #[inline]
-    fn with_aux_num(mut self, aux_num: usize) -> Self {
-        self.ctx.aux_num = aux_num as u32;
-        self
-    }
-    #[inline]
-    fn with_ident(mut self, ident: impl fmt::Display) -> Self {
-        self.ctx.ident.push(ident);
-        self
-    }
-    #[inline]
-    fn with_aux_ident(mut self, aux: impl fmt::Display) -> Self {
-        self.ctx.aux_ident.push(aux);
-        self
-    }
-
-}
-
-// LANE L2 disclosed compat shim (SQLRDF-18 restructure unblock): the two
-// concurrent shim sets collided; this is the constructor surface the legacy
-// call sites use. Rendering goes through the arm table / LEGACY_MESSAGE
-// fallback; free-form tails truncate at the REFUSAL_IDENT_BYTES (192) buffer.
-// N2 closure: no construction site in this file uses LEGACY_MESSAGE anymore;
-// the only producer is `ShaclViolation` (arbitrary caller-supplied free-form
-// text — no typed arm can represent it without a String field on AstError).
-impl AstError {
-    #[allow(non_snake_case)]
-    pub fn ShaclViolation(msg: String) -> Self {
-        let code = if msg.contains(REFUSAL_03_SCOPE_INTEGRITY) {
-            RefusalCode::ScopeIntegrity
-        } else {
-            RefusalCode::MalformedAst
-        };
-        AstError::new(code, refusal_arm::LEGACY_MESSAGE).with_ident(msg)
-    }
-    #[allow(non_snake_case)]
-    pub fn MissingProperty(a: String, b: String) -> Self {
-        AstError::new(RefusalCode::MissingProperty, 0).with_ident(a).with_aux_ident(b)
-    }
-    #[allow(non_snake_case)]
-    pub fn InvalidIdentifier(a: String) -> Self {
-        AstError::new(RefusalCode::InvalidIdentifier, 0).with_ident(a)
-    }
-    #[allow(non_snake_case)]
-    pub fn UnsupportedTerm(a: String) -> Self {
-        AstError::new(RefusalCode::UnsupportedTerm, refusal_arm::UNSUPPORTED_GENERIC).with_ident(a)
-    }
-    #[allow(non_snake_case)]
-    pub fn RecursionLimitExceeded(n: usize) -> Self {
-        AstError::new(RefusalCode::RecursionLimitExceeded, 0).with_num(n)
-    }
-    #[allow(non_snake_case)]
-    pub fn MalformedNode(a: String) -> Self {
-        AstError::new(RefusalCode::MalformedNode, 0).with_ident(a)
-    }
-}
-
-impl std::error::Error for AstError {}
-
-impl fmt::Display for AstError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use refusal_arm as arm;
-        let id = self.ctx.ident.as_str_lossy();
-        let aux = self.ctx.aux_ident.as_str_lossy();
-        // Cold path only: code → static template from the const table, with
-        // context interpolation. Byte-compatible with the pre-restructure
-        // format!-built messages (needle courts pin these fragments).
-        match self.code {
-            RefusalCode::InvalidIdentifier => {
-                write!(f, "Invalid SQL identifier: {id}")
-            }
-            RefusalCode::MissingProperty => {
-                write!(f, "Missing required property '{id}' on node {aux}")
-            }
-            RefusalCode::RecursionLimitExceeded => write!(
-                f,
-                "Recursion depth limit exceeded ({}) while traversing AST",
-                self.ctx.num
-            ),
-            RefusalCode::MalformedList => write!(
-                f,
-                "Malformed RDF list: circular reference or unclosed node"
-            ),
-            RefusalCode::MalformedNode => {
-                write!(f, "Unexpected terminal node: {id}")
-            }
-            RefusalCode::UnsupportedTerm | RefusalCode::UnimplementedStatement => match self.ctx.shape_id {
-                arm::UNIMPLEMENTED_STATEMENT => write!(
-                    f,
-                    "compile refusal: http://graphlaw.org/sql#{id} {REFUSAL_02_UNIMPLEMENTED} not implemented by this DuckDB build"
-                ),
-                arm::NO_SQL_TEMPLATE => write!(f,
-                    "Unsupported operator or function IRI: compile refusal: {id} has no SQL template"),
-                _ => write!(f, "Unsupported operator or function IRI: {id}"),
-            },
-            RefusalCode::MalformedAst => {
-                // ShaclViolation carriers render the structural prefix, the
-                // stable marker, then the arm template.
-                let marker = self.code.marker().unwrap_or("");
-                match self.ctx.shape_id {
-                    arm::OPERATOR_TOKEN => write!(f,
-                        "SHACL AST structural violation: {marker}operator token '{id}' is not in the section 4 enum (= != < <= > >= AND OR + - * / % LIKE ILIKE)"),
-                    arm::SCOPE_INDIVIDUAL => write!(f,
-                        "SHACL AST structural violation: {marker}'{id}' is not a sql:Scope individual (sql:ViewScope | sql:ProcessScope)"),
-                    arm::CANONICALIZATION => write!(f,
-                        "SHACL AST structural violation: {marker} admitted AST graph canonicalization refused"),
-                    arm::DUP_CLAUSE_PREDICATE => write!(f,
-                        "SHACL AST structural violation: {marker}{id} on {aux} appears more than once; clause predicates are single-cardinality"),
-                    arm::SCOPE_CARDINALITY => write!(f,
-                        "SHACL AST structural violation: {marker}node {id} carries {} sql:scope values; scope is single-cardinality", self.ctx.num),
-                    arm::SCOPE_WRONG_NODE => write!(f,
-                        "SHACL AST structural violation: {marker}sql:scope on {id} is only defined on column or output-expression nodes, not on literals or operator nodes"),
-                    arm::DISCRIMINATORS => write!(f,
-                        "SHACL AST structural violation: {marker}node {id} carries {} expression discriminators (columnName/literalValue/value/aliasName/function/functionName/operator); exactly one is allowed", self.ctx.num),
-                    arm::EXPRESSION_WRAPPER => write!(f,
-                        "SHACL AST structural violation: {marker}node {id} carries sql:expression alongside another expression discriminator; a bare sql:expression wrapper must be the node's only term"),
-                    arm::ALIAS_IN_AGG_ARG => write!(f,
-                        "SHACL AST structural violation: {marker}aliased expression {id} inside an aggregate argument is not serializable SQL (fuzz 3: SUM(a AS col))"),
-                    arm::DUAL_LEFT_OPERAND => write!(f,
-                        "SHACL AST structural violation: {marker}binary expression {id} carries both sql:leftOperand and sql:left; mixed operand names launder a term past review"),
-                    arm::DUAL_RIGHT_OPERAND => write!(f,
-                        "SHACL AST structural violation: {marker}binary expression {id} carries both sql:rightOperand and sql:right; mixed operand names launder a term past review"),
-                    arm::DUAL_OPERATOR_FORMS => write!(f,
-                        "SHACL AST structural violation: {marker}binary expression {id} carries sql:operator as both a string token and an IRI; exactly one operator form is allowed"),
-                    arm::SQL_ALIAS_IN_AGG_ARG => write!(f,
-                        "SHACL AST structural violation: {marker}sql:alias on {id} inside an aggregate argument is not serializable SQL"),
-                    arm::SCOPE_ON_TABLE_REF => write!(f,
-                        "SHACL AST structural violation: {marker}sql:scope on table-reference node {id} is a term out of place; scope is defined on column or output-expression nodes, never on sql:fromTable/sql:joinTable table references"),
-                    arm::DUAL_FROM => write!(f,
-                        "SHACL AST structural violation: {marker}statement {id} carries both sql:from and sql:fromTable; exactly one data source clause is allowed"),
-                    arm::EMPTY_FROM => write!(f,
-                        "SHACL AST structural violation: {marker}sql:from list on {id} is empty"),
-                    arm::NO_FROM => write!(f,
-                        "SHACL AST structural violation: {marker}statement {id} has no sql:from (or legacy sql:fromTable) clause"),
-                    arm::DUAL_SELECT => write!(f,
-                        "SHACL AST structural violation: {marker}SelectStatement {id} carries both sql:selectList and sql:select; exactly one projection list is allowed"),
-                    arm::NO_PROJECTION => write!(f,
-                        "SHACL AST structural violation: {marker}SelectStatement {id} has no projection list (sql:select or sql:selectList)"),
-                    arm::EMPTY_PROJECTION => write!(f,
-                        "SHACL AST structural violation: {marker}SelectStatement {id} has an empty projection list; projection is never zero-column (SELECT * is not implied by rdf:nil)"),
-                    arm::DUAL_WHERE => write!(f,
-                        "SHACL AST structural violation: {marker}SelectStatement {id} carries both sql:whereClause and sql:where; exactly one filter clause is allowed"),
-                    arm::DUAL_HAVING => write!(f,
-                        "SHACL AST structural violation: {marker}SelectStatement {id} carries both sql:having and sql:havingClause; exactly one filter clause is allowed"),
-                    arm::DIRECTION_LEX => write!(f,
-                        "SHACL AST structural violation: {marker}sql:direction '{id}' on {aux} is not ASC or DESC"),
-                    arm::DIRECTION_IRI => write!(f,
-                        "SHACL AST structural violation: {marker}sql:direction on {id} must be an ASC or DESC string literal, not an IRI"),
-                    arm::LIMIT_MALFORMED | arm::OFFSET_MALFORMED => write!(f,
-                        "SHACL AST structural violation: {marker}sql:{} '{id}' on {aux} is not a valid non-negative integer",
-                        if self.ctx.shape_id == arm::LIMIT_MALFORMED { "limit" } else { "offset" }),
-                    arm::LIMIT_DUP | arm::OFFSET_DUP => write!(f,
-                        "SHACL AST structural violation: {marker}sql:{} on {id} appears more than once; clause predicates are single-cardinality",
-                        if self.ctx.shape_id == arm::LIMIT_DUP { "limit" } else { "offset" }),
-                    arm::LIMIT_NOT_INT | arm::OFFSET_NOT_INT => write!(f,
-                        "SHACL AST structural violation: {marker}sql:{} on {id} must be an xsd:integer literal",
-                        if self.ctx.shape_id == arm::LIMIT_NOT_INT { "limit" } else { "offset" }),
-                    arm::INDEX_MISSING => write!(f,
-                        "SHACL AST structural violation: {marker}statement {id} is missing required sql:statementIndex (section 4 StatementBaseShape)"),
-                    arm::INDEX_DUP => write!(f,
-                        "SHACL AST structural violation: {marker}statement {id} carries {} sql:statementIndex values, maxCount is 1", self.ctx.num),
-                    arm::INDEX_NOT_INT => write!(f,
-                        "SHACL AST structural violation: {marker}sql:statementIndex on {id} is not an xsd:integer literal (section 4 datatype)"),
-                    arm::INDEX_BAD_DTYPE => write!(f,
-                        "SHACL AST structural violation: {marker}sql:statementIndex on {id} has a non-integer datatype, expected xsd:integer"),
-                    arm::INDEX_NEGATIVE => write!(f,
-                        "SHACL AST structural violation: {marker}sql:statementIndex '{id}' on {aux} is not a non-negative xsd:integer"),
-                    arm::UNKNOWN_STATEMENT_PREDICATE => write!(f,
-                        "SHACL AST structural violation: {marker}statement {id} carries unknown sql: predicate '{aux}'; term out of place — the sql: predicate set is a closed enum, a rename is not a silent-ignore escape hatch"),
-                    arm::SHACL_DEPTH => write!(f,
-                        "SHACL AST structural violation: SHACL nesting depth exceeded: observed {}, max {}",
-                        self.ctx.num, self.ctx.aux_num),
-                    arm::PARSE_DATASET => write!(f,
-                        "SHACL AST structural violation: Failed to parse AST dataset"),
-                    arm::PARSE_SHAPES => write!(f,
-                        "SHACL AST structural violation: Failed to parse SHACL shapes"),
-                    arm::SHACL_ENGINE => write!(f,
-                        "SHACL AST structural violation: Validation engine failure"),
-                    arm::LEGACY_MESSAGE => write!(f,
-                        "SHACL AST structural violation: {marker}{id}"),
-                    arm::SHACL_VIOLATIONS => {
-                        if self.ctx.num > 1 {
-                            write!(f,
-                                "SHACL AST structural violation: Node <{id}>: {aux} (+{} more violations)",
-                                self.ctx.num - 1)
-                        } else {
-                            write!(f, "SHACL AST structural violation: Node <{id}>: {aux}")
-                        }
-                    }
-                    _ => write!(f,
-                        "SHACL AST structural violation: {marker}node {id}"),
-                }
-            }
-            RefusalCode::ScopeIntegrity => {
-                // REFUSAL-03 arms: per-code arm namespace (same numeric ids
-                // as the MalformedAst namespace, different code).
-                let marker = self.code.marker().unwrap_or("");
-                match self.ctx.shape_id {
-                    arm::AGG_IN_POSITION => write!(f,
-                        "SHACL AST structural violation: {marker}aggregate {} is not allowed in this syntactic position (section 1.3/5: WHERE, JOIN, GROUP BY are process-only)",
-                        aggregate_debug_name(self.ctx.num)),
-                    arm::ALIASED_AGG_ARG => write!(f,
-                        "SHACL AST structural violation: {marker}aliased aggregate argument is not serializable SQL"),
-                    arm::AGG_IN_PREDICATE => write!(f,
-                        "SHACL AST structural violation: {marker}aggregate in a WHERE/JOIN/GROUP BY position is refused (section 1.3/5); re-scope the expression"),
-                    arm::PROCESS_SCOPE_IN_SELECT => write!(f,
-                        "SHACL AST structural violation: {marker}column '{id}' is sql:ProcessScope but sits in the projection list (section 1.3: a selected column crosses into the consumer's view)"),
-                    arm::VIEW_SCOPE_IN_PREDICATE => write!(f,
-                        "SHACL AST structural violation: {marker}column '{id}' is sql:ViewScope but sits inside a predicate (section 1.3: WHERE/JOIN/HAVING columns are processed, not viewed)"),
-                    arm::SCOPE_IN_PRED_AGG_ARG => write!(f,
-                        "SHACL AST structural violation: {marker}column '{id}' is {aux} inside an aggregate argument in a predicate position (section 1.3: the predicate-side argument is process-only by construction; an explicit sql:scope marker re-scopes the aggregate past review)"),
-                    arm::LEGACY_MESSAGE => write!(f,
-                        "SHACL AST structural violation: {marker}{id}"),
-                    _ => write!(f,
-                        "SHACL AST structural violation: {marker}node {id}"),
-                }
-            }
-            RefusalCode::Capability => write!(f, "{}", crate::tier::REFUSAL_04_CAPABILITY_REFUSAL),
-        }
-    }
-}
-
-/// Debug-style aggregate name for the AGG_IN_POSITION arm (cold path).
-fn aggregate_debug_name(idx: u32) -> &'static str {
-    match idx {
-        0 => "Count",
-        1 => "Sum",
-        2 => "Avg",
-        3 => "Min",
-        4 => "Max",
-        _ => "Aggregate",
-    }
-}
-
-/// Validates strict SQL identifier semantics to eliminate structural injection.
-/// Conforms to `^[a-zA-Z_][a-zA-Z0-9_]*$`.
-pub fn validate_identifier(ident: &str) -> Result<&str, AstError> {
-    if ident.is_empty() {
-        return Err(AstError::InvalidIdentifier(ident.to_string()));
-    }
-    let mut chars = ident.chars();
-    let first = chars.next().unwrap();
-    if !(first.is_ascii_alphabetic() || first == '_') {
-        return Err(AstError::InvalidIdentifier(ident.to_string()));
-    }
-    for c in chars {
-        if !(c.is_ascii_alphanumeric() || c == '_') {
-            return Err(AstError::InvalidIdentifier(ident.to_string()));
-        }
-    }
-    Ok(ident)
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum Operator {
-    Equals,
-    NotEquals,
-    GreaterThan,
-    GreaterThanOrEq,
-    LessThan,
-    LessThanOrEq,
-    And,
-    Or,
-    Like,
-    ILike,
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    Modulo,
-}
-
-impl Operator {
-    pub fn as_sql(&self) -> &'static str {
-        match self {
-            Self::Equals => "=",
-            Self::NotEquals => "<>",
-            Self::GreaterThan => ">",
-            Self::GreaterThanOrEq => ">=",
-            Self::LessThan => "<",
-            Self::LessThanOrEq => "<=",
-            Self::And => "AND",
-            Self::Or => "OR",
-            Self::Like => "LIKE",
-            Self::ILike => "ILIKE",
-            Self::Add => "+",
-            Self::Subtract => "-",
-            Self::Multiply => "*",
-            Self::Divide => "/",
-            Self::Modulo => "%",
-        }
-    }
-
-    /// Legacy axiom IRIs (`sql:Equals`, ...) stay legal (SQLRDF-01 alias window).
-    pub fn from_iri(iri: &str) -> Result<Self, AstError> {
-        match iri {
-            "http://graphlaw.org/sql#Equals" => Ok(Self::Equals),
-            "http://graphlaw.org/sql#NotEquals" => Ok(Self::NotEquals),
-            "http://graphlaw.org/sql#GreaterThan" => Ok(Self::GreaterThan),
-            "http://graphlaw.org/sql#GreaterThanOrEq" => Ok(Self::GreaterThanOrEq),
-            "http://graphlaw.org/sql#LessThan" => Ok(Self::LessThan),
-            "http://graphlaw.org/sql#LessThanOrEq" => Ok(Self::LessThanOrEq),
-            "http://graphlaw.org/sql#And" => Ok(Self::And),
-            "http://graphlaw.org/sql#Or" => Ok(Self::Or),
-            "http://graphlaw.org/sql#Like" => Ok(Self::Like),
-            _ => Self::from_token(iri),
-        }
-    }
-
-    /// Section 4 operator token enum:
-    /// `"=" "!=" "<" "<=" ">" ">=" "AND" "OR" "+" "-" "*" "/" "%" "LIKE" "ILIKE"`.
-    /// Any other token is REFUSAL-01 (`MalformedAstRefusal`).
-    pub fn from_token(token: &str) -> Result<Self, AstError> {
-        match token {
-            "=" => Ok(Self::Equals),
-            "!=" => Ok(Self::NotEquals),
-            "<" => Ok(Self::LessThan),
-            "<=" => Ok(Self::LessThanOrEq),
-            ">" => Ok(Self::GreaterThan),
-            ">=" => Ok(Self::GreaterThanOrEq),
-            "AND" => Ok(Self::And),
-            "OR" => Ok(Self::Or),
-            "+" => Ok(Self::Add),
-            "-" => Ok(Self::Subtract),
-            "*" => Ok(Self::Multiply),
-            "/" => Ok(Self::Divide),
-            "%" => Ok(Self::Modulo),
-            "LIKE" => Ok(Self::Like),
-            "ILIKE" => Ok(Self::ILike),
-            other => Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::OPERATOR_TOKEN).with_ident(other)),
-        }
-    }
-}
-
-/// Operational scope of a term (sql-rdf Rec section 1.3/3.3).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Scope {
-    View,
-    Process,
-}
-
-impl Scope {
-    pub fn from_iri(iri: &str) -> Result<Self, AstError> {
-        match iri {
-            "http://graphlaw.org/sql#ViewScope" => Ok(Self::View),
-            "http://graphlaw.org/sql#ProcessScope" => Ok(Self::Process),
-            other => Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::SCOPE_INDIVIDUAL).with_ident(other)),
-        }
-    }
-}
-
-/// Syntactic position of an expression, driving scope-integrity enforcement
-/// (section 1.3/5, REFUSAL-03): aggregates are illegal in predicates and
-/// GROUP BY; nested aggregates are illegal everywhere; an explicit
-/// sql:ProcessScope column may not surface in a projection list.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ScopePos {
-    SelectList,
-    OrderBy,
-    Having,
-    Predicate,
-    GroupBy,
-    AggregateArgument,
-    /// Aggregate argument beneath a PREDICATE-rooted aggregate (WHERE/JOIN/
-    /// HAVING/GROUP BY): same aggregate-nesting semantics as AggregateArgument,
-    /// but an explicit sql:scope on the argument is a laundering marker
-    /// (TC-MUT-01 arm B) — under an output aggregate (SELECT/ORDER BY) the
-    /// section 7 example (ProcessScope amount inside a projection-list
-    /// aggregate) stays lawful.
-    PredicateAggregateArgument,
-}
-
-impl ScopePos {
-    fn allows_aggregate(self) -> bool {
-        matches!(
-            self,
-            Self::SelectList | Self::OrderBy | Self::Having
-        )
-    }
-
-    fn is_view_surface(self) -> bool {
-        matches!(self, Self::SelectList | Self::OrderBy)
-    }
-}
-
-/// Position lattice for an aggregate ARGUMENT: under an output-position
-/// aggregate (SELECT list / ORDER BY — the section 7 example, where a
-/// ProcessScope column inside a projection-list aggregate is lawful view
-/// output of an internal computation) the argument keeps the plain
-/// AggregateArgument position; under a predicate-rooted aggregate
-/// (WHERE/JOIN/HAVING/GROUP BY) the argument is
-/// PredicateAggregateArgument, where an explicit sql:scope marker is
-/// REFUSAL-03 (TC-MUT-01 arm B).
-fn aggregate_argument_pos(root: ScopePos) -> ScopePos {
-    if root.is_view_surface() {
-        ScopePos::AggregateArgument
-    } else {
-        ScopePos::PredicateAggregateArgument
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum AggregateFunction {
-    Count,
-    Sum,
-    Avg,
-    Min,
-    Max,
-}
-
-impl AggregateFunction {
-    pub fn as_sql(&self) -> &'static str {
-        match self {
-            Self::Count => "COUNT",
-            Self::Sum => "SUM",
-            Self::Avg => "AVG",
-            Self::Min => "MIN",
-            Self::Max => "MAX",
-        }
-    }
-
-    pub fn from_iri(iri: &str) -> Result<Self, AstError> {
-        match iri {
-            "http://graphlaw.org/functions#COUNT" => Ok(Self::Count),
-            "http://graphlaw.org/functions#SUM" => Ok(Self::Sum),
-            "http://graphlaw.org/functions#AVG" => Ok(Self::Avg),
-            "http://graphlaw.org/functions#MIN" => Ok(Self::Min),
-            "http://graphlaw.org/functions#MAX" => Ok(Self::Max),
-            _ => Err(AstError::UnsupportedTerm(iri.to_string())),
-        }
-    }
-}
-
-/// LANE L5 minimal unblock (compile-freeze SLA, disclosed): name-form
-/// constructor referenced by lane L2's in-flight section 7 function form
-/// (`sql_ast.rs:703`). Accepts the SQL function name (case-insensitive) or
-/// its `graphlaw.org/functions#` IRI; anything else is the typed
-/// `AstError::UnsupportedTerm` refusal. Remove when lane L2 lands their own.
-fn aggregate_from_name(name: &str) -> Result<AggregateFunction, AstError> {
-    let upper = name.to_ascii_uppercase();
-    let token = upper
-        .strip_prefix("HTTP://GRAPHLAW.ORG/FUNCTIONS#")
-        .unwrap_or(&upper);
-    match token {
-        "COUNT" => Ok(AggregateFunction::Count),
-        "SUM" => Ok(AggregateFunction::Sum),
-        "AVG" => Ok(AggregateFunction::Avg),
-        "MIN" => Ok(AggregateFunction::Min),
-        "MAX" => Ok(AggregateFunction::Max),
-        _ => Err(AstError::UnsupportedTerm(name.to_string())),
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SqlLiteral {
-    String(String),
-    Integer(i64),
-    Float(f64),
-    Boolean(bool),
-    Null,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum SqlExpr {
-    ColumnRef {
-        column: String,
-        table_alias: Option<String>,
-    },
-    Literal(SqlLiteral),
-    Binary {
-        op: Operator,
-        left: Box<SqlExpr>,
-        right: Box<SqlExpr>,
-    },
-    FunctionCall {
-        function: AggregateFunction,
-        argument: Box<SqlExpr>,
-    },
-    Alias {
-        expr: Box<SqlExpr>,
-        alias: String,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct TableRef {
-    pub name: String,
-    pub alias: Option<String>,
-    /// Optional schema qualifier (`sql:schemaName`); rendered as `schema.name`.
-    pub schema: Option<String>,
-}
-
-/// Validates a dotted identifier (`main.regional_sales`): every dot-separated
-/// part must satisfy [`validate_identifier`].
-pub fn validate_qualified_identifier(ident: &str) -> Result<(), AstError> {
-    if ident.is_empty() {
-        return Err(AstError::InvalidIdentifier(ident.to_string()));
-    }
-    for part in ident.split('.') {
-        validate_identifier(part)?;
-    }
-    Ok(())
-}
-
-/// One ORDER BY term: expression plus direction (`sql:direction`, ASC default).
-#[derive(Debug, Clone, PartialEq)]
-pub struct OrderTerm {
-    pub expr: SqlExpr,
-    pub descending: bool,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum JoinType {
-    Inner,
-    LeftOuter,
-}
-
-impl JoinType {
-    pub fn as_sql(&self) -> &'static str {
-        match self {
-            Self::Inner => "JOIN",
-            Self::LeftOuter => "LEFT JOIN",
-        }
-    }
-
-    pub fn from_iri(iri: &str) -> Result<Self, AstError> {
-        match iri {
-            "http://graphlaw.org/sql#InnerJoin" => Ok(Self::Inner),
-            "http://graphlaw.org/sql#LeftJoin" => Ok(Self::LeftOuter),
-            _ => Err(AstError::UnsupportedTerm(iri.to_string())),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct JoinClause {
-    pub join_type: JoinType,
-    pub table: TableRef,
-    pub condition: SqlExpr,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct SelectStatement {
-    pub from: TableRef,
-    pub joins: Vec<JoinClause>,
-    pub select_list: Vec<SqlExpr>,
-    pub where_clause: Option<SqlExpr>,
-    pub group_by: Vec<SqlExpr>,
-    /// `sql:having` / `sql:havingClause` predicate (aggregates legal here).
-    pub having: Option<SqlExpr>,
-    /// `sql:orderBy` terms (aggregates legal here).
-    pub order_by: Vec<OrderTerm>,
-    pub limit: Option<usize>,
-    pub offset: Option<usize>,
-}
-
-#[derive(Debug, Clone)]
-pub struct CompiledQuery {
-    pub sql: String,
-    pub params: Vec<SqlLiteral>,
-    /// The admitted AST graph (Turtle source) this query was compiled from,
-    /// when the compile was graph-backed. When present, the execution receipt
-    /// hash is BLAKE3(Canon(G_AST) || P_params) (sql-rdf Rec. section 1.4);
-    /// when `None` (hand-built ASTs), the legacy SQL-string hash is used.
-    /// LANE L5 minimal seam (SQLRDF-09), disclosed: field added by lane L5.
-    pub ast_graph_turtle: Option<String>,
-    /// RDFC-1.0 canonical byte form of the admitted AST graph
-    /// (`Canon(G_AST)`), computed exactly ONCE per `compile_turtle` and
-    /// carried here so the eval/receipt path never re-parses or
-    /// re-canonicalizes per receipt (R1 moonshot). Receipt law is unchanged:
-    /// `H_query = BLAKE3(Canon(G_AST) || P_params)` (sql-rdf Rec. section
-    /// 1.4). `None` for hand-built ASTs (legacy SQL-string hash applies).
-    /// Failure to canonicalize at compile time is a typed
-    /// `AstError::ShaclViolation` carrying the REFUSAL-01 marker.
-    pub canon_graph_bytes: Option<Vec<u8>>,
-    /// Receipt anchor `h_ast` (P28-SIL §3.1, TC-HOT-01 two-node formula):
-    /// `h_ast = BLAKE3(Canon(G_AST))`, computed exactly once at
-    /// `compile_turtle` time. Per receipt, eval hashes
-    /// `H_query = BLAKE3(h_ast || P_params)` (sql-rdf Rec. section 1.4
-    /// first formula, two-node form) with ONE fresh hasher + two updates +
-    /// finalize — a 32-byte Copy instead of a ~2KB hasher clone, and no
-    /// O(|Canon|) re-absorb per receipt. `None` for hand-built ASTs
-    /// (legacy paths apply). Bit-identical to the
-    /// `admitted_statement_hash` reference by construction (same formula).
-    pub receipt_state: Option<[u8; 32]>,
-    /// C1-a classification bit (designs/C1-cache.md): whether this compiled
-    /// statement may EVER be served from a compiled-plan cache. Set `true`
-    /// only on the `SelectStatement` arm of `compile_turtle`; every
-    /// hand-built or raw constructor is `false`. The compiler's statement
-    /// classification gates caching — a cache store (post-integration) must
-    /// never admit a query with `cacheable == false`. Pure classification:
-    /// no cache store exists yet, and the bit does not alter compile/eval
-    /// behavior (sql-rdf Rec. section 1.4 receipt law unchanged).
-    pub cacheable: bool,
-}
-
-// TC-HOT-01: `receipt_state` now carries `h_ast = BLAKE3(Canon(G_AST))` as a
-// 32-byte Copy digest, so `PartialEq` compares it directly (a plain
-// `[u8; 32]` equality — same law as before, cheaper mechanics).
-impl PartialEq for CompiledQuery {
-    fn eq(&self, other: &Self) -> bool {
-        self.sql == other.sql
-            && self.params == other.params
-            && self.ast_graph_turtle == other.ast_graph_turtle
-            && self.canon_graph_bytes == other.canon_graph_bytes
-            && self.receipt_state == other.receipt_state
-            && self.cacheable == other.cacheable
-    }
-}
-
-// Number of RDFC-1.0 canonicalizations performed by this module. Instrument
-// for the R1 receipt-cost reduction: canonicalization is amortized to once
-// per compile, not once per receipt. Eval reads the carried
-// `CompiledQuery::canon_graph_bytes` instead of re-canonicalizing.
-thread_local! {
-    pub static CANONICALIZATION_COUNT: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
-}
-
-/// Computes `Canon(G_AST)` — the RDFC-1.0 canonical byte form of an admitted
-/// AST graph — using the same `purrdf::try_canonicalize` law as
-/// `duckdb_eval::canonical_ast_graph_bytes`. Called exactly once per
-/// `compile_turtle`; failure is a typed REFUSAL-01 `AstError`, never a panic.
-fn canonical_graph_bytes(turtle: &str) -> Result<Vec<u8>, AstError> {
-    let dataset = purrdf::parse_dataset(turtle.as_bytes(), "text/turtle", None).map_err(|_| {
-        AstError::new(RefusalCode::MalformedAst, refusal_arm::CANONICALIZATION)
-    })?;
-    let canon = purrdf::try_canonicalize(&dataset).map_err(|_| {
-        AstError::new(RefusalCode::MalformedAst, refusal_arm::CANONICALIZATION)
-    })?;
-    CANONICALIZATION_COUNT.set(CANONICALIZATION_COUNT.get() + 1);
-    Ok(canon.nquads.into_bytes())
-}
-
-impl SelectStatement {
-    const MAX_DEPTH: usize = 64;
-
-    /// Compiles the AST into parameterized SQL compatible with DuckDB prepared statements ($1, $2, ...).
-    pub fn compile(&self) -> Result<CompiledQuery, AstError> {
-        validate_identifier(&self.from.name)?;
-        if let Some(schema) = &self.from.schema {
-            validate_qualified_identifier(schema)?;
-        }
-        if let Some(alias) = &self.from.alias {
-            validate_identifier(alias)?;
-        }
-
-        let mut params = Vec::new();
-        let mut sql = String::with_capacity(256);
-
-        sql.push_str("SELECT ");
-        if self.select_list.is_empty() {
-            sql.push('*');
-        } else {
-            for (idx, item) in self.select_list.iter().enumerate() {
-                if idx > 0 {
-                    sql.push_str(", ");
-                }
-                Self::serialize_expr(item, &mut sql, &mut params, 0, ScopePos::SelectList)?;
-            }
-        }
-
-        sql.push_str(" FROM ");
-        if let Some(schema) = &self.from.schema {
-            sql.push_str(schema);
-            sql.push('.');
-        }
-        sql.push_str(&self.from.name);
-        if let Some(alias) = &self.from.alias {
-            sql.push(' ');
-            sql.push_str(alias);
-        }
-
-        for join in &self.joins {
-            validate_identifier(&join.table.name)?;
-            if let Some(schema) = &join.table.schema {
-                validate_qualified_identifier(schema)?;
-            }
-            if let Some(alias) = &join.table.alias {
-                validate_identifier(alias)?;
-            }
-            sql.push(' ');
-            sql.push_str(join.join_type.as_sql());
-            sql.push(' ');
-            if let Some(schema) = &join.table.schema {
-                sql.push_str(schema);
-                sql.push('.');
-            }
-            sql.push_str(&join.table.name);
-            if let Some(alias) = &join.table.alias {
-                sql.push(' ');
-                sql.push_str(alias);
-            }
-            sql.push_str(" ON ");
-            Self::serialize_expr(&join.condition, &mut sql, &mut params, 0, ScopePos::Predicate)?;
-        }
-
-        if let Some(where_clause) = &self.where_clause {
-            sql.push_str(" WHERE ");
-            Self::serialize_expr(where_clause, &mut sql, &mut params, 0, ScopePos::Predicate)?;
-        }
-
-        if !self.group_by.is_empty() {
-            sql.push_str(" GROUP BY ");
-            for (idx, item) in self.group_by.iter().enumerate() {
-                if idx > 0 {
-                    sql.push_str(", ");
-                }
-                Self::serialize_expr(item, &mut sql, &mut params, 0, ScopePos::GroupBy)?;
-            }
-        }
-
-        if let Some(having) = &self.having {
-            sql.push_str(" HAVING ");
-            Self::serialize_expr(having, &mut sql, &mut params, 0, ScopePos::Having)?;
-        }
-
-        if !self.order_by.is_empty() {
-            sql.push_str(" ORDER BY ");
-            for (idx, term) in self.order_by.iter().enumerate() {
-                if idx > 0 {
-                    sql.push_str(", ");
-                }
-                Self::serialize_expr(&term.expr, &mut sql, &mut params, 0, ScopePos::OrderBy)?;
-                if term.descending {
-                    sql.push_str(" DESC");
-                }
-            }
-        }
-
-        if let Some(limit) = self.limit {
-            sql.push_str(&format!(" LIMIT {}", limit));
-        }
-
-        if let Some(offset) = self.offset {
-            sql.push_str(&format!(" OFFSET {}", offset));
-        }
-
-        // C1-a: SelectStatement::compile() alone is not graph-backed; only the
-        // `compile_turtle` SelectStatement arm classifies as cacheable.
-        Ok(CompiledQuery { sql, params, ast_graph_turtle: None, canon_graph_bytes: None, receipt_state: None, cacheable: false })
-    }
-
-    fn serialize_expr(
-        expr: &SqlExpr,
-        sql: &mut String,
-        params: &mut Vec<SqlLiteral>,
-        depth: usize,
-        pos: ScopePos,
-    ) -> Result<(), AstError> {
-        if depth > Self::MAX_DEPTH {
-            return Err(AstError::RecursionLimitExceeded(Self::MAX_DEPTH));
-        }
-
-        match expr {
-            SqlExpr::ColumnRef { column, table_alias } => {
-                validate_identifier(column)?;
-                if let Some(alias) = table_alias {
-                    // Qualified references (`main.regional_sales.region_id`)
-                    // validate per dot-separated part.
-                    validate_qualified_identifier(alias)?;
-                    sql.push_str(alias);
-                    sql.push('.');
-                }
-                sql.push_str(column);
-            }
-            SqlExpr::Literal(lit) => {
-                params.push(lit.clone());
-                sql.push('$');
-                sql.push_str(&params.len().to_string());
-            }
-            SqlExpr::Binary { op, left, right } => {
-                sql.push('(');
-                Self::serialize_expr(left, sql, params, depth + 1, pos)?;
-                sql.push(' ');
-                sql.push_str(op.as_sql());
-                sql.push(' ');
-                Self::serialize_expr(right, sql, params, depth + 1, pos)?;
-                sql.push(')');
-            }
-            SqlExpr::FunctionCall { function, argument } => {
-                if !pos.allows_aggregate() {
-                    // Typed arm: `num` carries the aggregate discriminant that
-                    // `aggregate_debug_name` renders on the cold Display path.
-                    return Err(AstError::new(RefusalCode::ScopeIntegrity, refusal_arm::AGG_IN_POSITION)
-                        .with_num(match function {
-                            AggregateFunction::Count => 0,
-                            AggregateFunction::Sum => 1,
-                            AggregateFunction::Avg => 2,
-                            AggregateFunction::Min => 3,
-                            AggregateFunction::Max => 4,
-                        }));
-                }
-                sql.push_str(function.as_sql());
-                sql.push('(');
-                Self::serialize_expr(argument, sql, params, depth + 1, ScopePos::AggregateArgument)?;
-                sql.push(')');
-            }
-            SqlExpr::Alias { expr, alias } => {
-                if pos == ScopePos::AggregateArgument {
-                    return Err(AstError::new(
-                        RefusalCode::ScopeIntegrity,
-                        refusal_arm::ALIASED_AGG_ARG,
-                    ));
-                }
-                validate_identifier(alias)?;
-                Self::serialize_expr(expr, sql, params, depth + 1, pos)?;
-                sql.push_str(" AS ");
-                sql.push_str(alias);
-            }
-        }
-        Ok(())
-    }
-}
+mod ast;
+mod refusals;
+mod serializer;
+
+pub use ast::*;
+pub use refusals::refusal_arm;
+pub use refusals::*;
+pub use serializer::*;
+
+use ast::{aggregate_argument_pos, aggregate_from_name, canonical_graph_bytes};
 
 // =============================================================================
 // Graph Unrolling Helper (purrdf / RDF list extraction)
@@ -1063,7 +34,11 @@ pub trait RdfAstGraphReader {
     type Node: Clone + fmt::Display;
 
     fn get_single_object(&self, subject: &Self::Node, predicate: &str) -> Option<Self::Node>;
-    fn get_datatype_literal(&self, subject: &Self::Node, predicate: &str) -> Option<(String, Option<String>)>;
+    fn get_datatype_literal(
+        &self,
+        subject: &Self::Node,
+        predicate: &str,
+    ) -> Option<(String, Option<String>)>;
     fn get_iri(&self, node: &Self::Node) -> Option<String>;
 
     /// Number of objects on `(node, predicate)`, across IRIs and literals.
@@ -1100,13 +75,22 @@ pub trait RdfAstGraphReader {
         predicate: &str,
     ) -> Result<Option<Self::Node>, AstError> {
         if self.object_count(node, predicate) > 1 {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DUP_CLAUSE_PREDICATE).with_ident(predicate).with_aux_ident(node));
+            return Err(AstError::new(
+                RefusalCode::MalformedAst,
+                refusal_arm::DUP_CLAUSE_PREDICATE,
+            )
+            .with_ident(predicate)
+            .with_aux_ident(node));
         }
         Ok(self.get_single_object(node, predicate))
     }
 
     /// Deterministically unwraps an rdf:List (rdf:first / rdf:rest chain) up to max_items.
-    fn unroll_rdf_list(&self, head: &Self::Node, max_items: usize) -> Result<Vec<Self::Node>, AstError> {
+    fn unroll_rdf_list(
+        &self,
+        head: &Self::Node,
+        max_items: usize,
+    ) -> Result<Vec<Self::Node>, AstError> {
         let rdf_first = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first";
         let rdf_rest = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest";
         let rdf_nil = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil";
@@ -1128,11 +112,13 @@ pub trait RdfAstGraphReader {
                 return Err(AstError::new(RefusalCode::MalformedList, 0));
             }
 
-            let first = self.get_single_object(&curr, rdf_first)
-                .ok_or_else(|| AstError::MissingProperty(rdf_first.to_string(), curr.to_string()))?;
+            let first = self.get_single_object(&curr, rdf_first).ok_or_else(|| {
+                AstError::MissingProperty(rdf_first.to_string(), curr.to_string())
+            })?;
             items.push(first);
 
-            curr = self.get_single_object(&curr, rdf_rest)
+            curr = self
+                .get_single_object(&curr, rdf_rest)
                 .ok_or_else(|| AstError::MissingProperty(rdf_rest.to_string(), curr.to_string()))?;
         }
 
@@ -1171,9 +157,11 @@ pub trait RdfAstGraphReader {
         // REFUSAL-01, never silently ignored (fuzz 1/4).
         let scope_objects = self.object_count(node, "http://graphlaw.org/sql#scope");
         if scope_objects > 1 {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::SCOPE_CARDINALITY)
-                .with_ident(node)
-                .with_num(scope_objects));
+            return Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::SCOPE_CARDINALITY)
+                    .with_ident(node)
+                    .with_num(scope_objects),
+            );
         }
         let explicit_scope = self
             .get_single_object(node, "http://graphlaw.org/sql#scope")
@@ -1193,36 +181,64 @@ pub trait RdfAstGraphReader {
             let is_output_expr = self
                 .get_datatype_literal(node, "http://graphlaw.org/sql#aliasName")
                 .is_some()
-                || self.get_datatype_literal(node, "http://graphlaw.org/sql#alias").is_some()
-                || self.get_datatype_literal(node, "http://graphlaw.org/sql#functionName").is_some()
-                || self.get_single_object(node, "http://graphlaw.org/sql#function").is_some();
+                || self
+                    .get_datatype_literal(node, "http://graphlaw.org/sql#alias")
+                    .is_some()
+                || self
+                    .get_datatype_literal(node, "http://graphlaw.org/sql#functionName")
+                    .is_some()
+                || self
+                    .get_single_object(node, "http://graphlaw.org/sql#function")
+                    .is_some();
             if !is_column && !is_output_expr {
-                return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::SCOPE_WRONG_NODE)
-                    .with_ident(node));
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::SCOPE_WRONG_NODE,
+                )
+                .with_ident(node));
             }
         }
 
         // Ambiguity gate: at most one expression discriminator per node.
-        let has_column = self.get_datatype_literal(node, "http://graphlaw.org/sql#columnName").is_some();
+        let has_column = self
+            .get_datatype_literal(node, "http://graphlaw.org/sql#columnName")
+            .is_some();
         let has_literal = self
             .get_datatype_literal(node, "http://graphlaw.org/sql#literalValue")
             .or_else(|| self.get_datatype_literal(node, "http://graphlaw.org/sql#value"))
             .is_some();
-        let has_alias_wrapper = self.get_datatype_literal(node, "http://graphlaw.org/sql#aliasName").is_some();
-        let has_func_iri = self.get_single_object(node, "http://graphlaw.org/sql#function").is_some();
-        let has_func_name = self.get_datatype_literal(node, "http://graphlaw.org/sql#functionName").is_some();
-        let has_operator = self.get_single_object(node, "http://graphlaw.org/sql#operator").is_some()
-            || self.get_datatype_literal(node, "http://graphlaw.org/sql#operator").is_some();
+        let has_alias_wrapper = self
+            .get_datatype_literal(node, "http://graphlaw.org/sql#aliasName")
+            .is_some();
+        let has_func_iri = self
+            .get_single_object(node, "http://graphlaw.org/sql#function")
+            .is_some();
+        let has_func_name = self
+            .get_datatype_literal(node, "http://graphlaw.org/sql#functionName")
+            .is_some();
+        let has_operator = self
+            .get_single_object(node, "http://graphlaw.org/sql#operator")
+            .is_some()
+            || self
+                .get_datatype_literal(node, "http://graphlaw.org/sql#operator")
+                .is_some();
         let discriminators = [
-            has_column, has_literal, has_alias_wrapper, has_func_iri, has_func_name, has_operator,
+            has_column,
+            has_literal,
+            has_alias_wrapper,
+            has_func_iri,
+            has_func_name,
+            has_operator,
         ]
         .iter()
         .filter(|b| **b)
         .count();
         if discriminators > 1 {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DISCRIMINATORS)
-                .with_ident(node)
-                .with_num(discriminators));
+            return Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::DISCRIMINATORS)
+                    .with_ident(node)
+                    .with_num(discriminators),
+            );
         }
 
         // D3: `sql:expression` is the property of the alias wrapper
@@ -1235,8 +251,10 @@ pub trait RdfAstGraphReader {
             .get_single_object(node, "http://graphlaw.org/sql#expression")
             .is_some();
         if has_expr_wrapper && !has_alias_wrapper && discriminators > 0 {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::EXPRESSION_WRAPPER)
-                .with_ident(node));
+            return Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::EXPRESSION_WRAPPER)
+                    .with_ident(node),
+            );
         }
 
         // Check if node is a ColumnRef
@@ -1254,8 +272,7 @@ pub trait RdfAstGraphReader {
                 .or(alias);
 
             // Scope integrity on explicit scope annotations (section 1.3/5).
-            if let Some(scope_iri) = explicit_scope
-            {
+            if let Some(scope_iri) = explicit_scope {
                 let scope = Scope::from_iri(&scope_iri)?;
                 if scope == Scope::Process && pos.is_view_surface() {
                     return Err(AstError::new(
@@ -1308,11 +325,22 @@ pub trait RdfAstGraphReader {
                 .or_else(|| self.get_datatype_literal(node, "http://graphlaw.org/sql#value"))
                 .expect("checked above");
             let lit = match dtype.as_deref() {
+                // Typed refusals (LITERAL_NOT_INT / LITERAL_NOT_FLOAT): a
+                // typed literal that fails to parse refuses; it is never
+                // silently stringified or coerced to 0/0.0.
                 Some("http://www.w3.org/2001/XMLSchema#integer") => {
-                    SqlLiteral::Integer(val_str.parse().unwrap_or(0))
+                    SqlLiteral::Integer(val_str.parse().map_err(|_| {
+                        AstError::new(RefusalCode::LiteralNotInt, 0)
+                            .with_ident(&val_str)
+                            .with_aux_ident(node)
+                    })?)
                 }
                 Some("http://www.w3.org/2001/XMLSchema#double") => {
-                    SqlLiteral::Float(val_str.parse().unwrap_or(0.0))
+                    SqlLiteral::Float(val_str.parse().map_err(|_| {
+                        AstError::new(RefusalCode::LiteralNotFloat, 0)
+                            .with_ident(&val_str)
+                            .with_aux_ident(node)
+                    })?)
                 }
                 Some("http://www.w3.org/2001/XMLSchema#boolean") => {
                     SqlLiteral::Boolean(val_str == "true" || val_str == "1")
@@ -1328,8 +356,11 @@ pub trait RdfAstGraphReader {
                 pos,
                 ScopePos::AggregateArgument | ScopePos::PredicateAggregateArgument
             ) {
-                return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::ALIAS_IN_AGG_ARG)
-                    .with_ident(node));
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::ALIAS_IN_AGG_ARG,
+                )
+                .with_ident(node));
             }
             let (alias_name, _) = self
                 .get_datatype_literal(node, "http://graphlaw.org/sql#aliasName")
@@ -1355,7 +386,10 @@ pub trait RdfAstGraphReader {
                 .get_single_object(node, "http://graphlaw.org/sql#function")
                 .expect("checked above");
             let func_iri = self.get_iri(&func_node).ok_or_else(|| {
-                AstError::MissingProperty("http://graphlaw.org/sql#function".to_string(), node.to_string())
+                AstError::MissingProperty(
+                    "http://graphlaw.org/sql#function".to_string(),
+                    node.to_string(),
+                )
             })?;
             let function = AggregateFunction::from_iri(&func_iri)?;
             let arg_node = self
@@ -1366,13 +400,13 @@ pub trait RdfAstGraphReader {
                         node.to_string(),
                     )
                 })?;
-            let argument = self.extract_expr_scoped(
-                &arg_node,
-                depth + 1,
-                aggregate_argument_pos(pos),
-            )?;
+            let argument =
+                self.extract_expr_scoped(&arg_node, depth + 1, aggregate_argument_pos(pos))?;
             let expr = Self::check_aggregate_position(
-                SqlExpr::FunctionCall { function, argument: Box::new(argument) },
+                SqlExpr::FunctionCall {
+                    function,
+                    argument: Box::new(argument),
+                },
                 pos,
             )?;
             return Self::finish_alias(self, node, expr, sql_ns, pos);
@@ -1399,13 +433,13 @@ pub trait RdfAstGraphReader {
                     node.to_string(),
                 )
             })?;
-            let argument = self.extract_expr_scoped(
-                arg_node,
-                depth + 1,
-                aggregate_argument_pos(pos),
-            )?;
+            let argument =
+                self.extract_expr_scoped(arg_node, depth + 1, aggregate_argument_pos(pos))?;
             let expr = Self::check_aggregate_position(
-                SqlExpr::FunctionCall { function, argument: Box::new(argument) },
+                SqlExpr::FunctionCall {
+                    function,
+                    argument: Box::new(argument),
+                },
                 pos,
             )?;
             return Self::finish_alias(self, node, expr, sql_ns, pos);
@@ -1413,23 +447,32 @@ pub trait RdfAstGraphReader {
 
         // Check if node is a BinaryExpression
         if has_operator {
-            let op = self
-                .read_operator(node)?
-                .ok_or_else(|| {
-                    AstError::MissingProperty("http://graphlaw.org/sql#operator".to_string(), node.to_string())
-                })?;
+            let op = self.read_operator(node)?.ok_or_else(|| {
+                AstError::MissingProperty(
+                    "http://graphlaw.org/sql#operator".to_string(),
+                    node.to_string(),
+                )
+            })?;
 
-            let left_legacy = self.single_object_checked(node, "http://graphlaw.org/sql#leftOperand")?;
+            let left_legacy =
+                self.single_object_checked(node, "http://graphlaw.org/sql#leftOperand")?;
             let left_norm = self.single_object_checked(node, "http://graphlaw.org/sql#left")?;
             if left_legacy.is_some() && left_norm.is_some() {
-                return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_LEFT_OPERAND)
-                    .with_ident(node));
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::DUAL_LEFT_OPERAND,
+                )
+                .with_ident(node));
             }
-            let right_legacy = self.single_object_checked(node, "http://graphlaw.org/sql#rightOperand")?;
+            let right_legacy =
+                self.single_object_checked(node, "http://graphlaw.org/sql#rightOperand")?;
             let right_norm = self.single_object_checked(node, "http://graphlaw.org/sql#right")?;
             if right_legacy.is_some() && right_norm.is_some() {
-                return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_RIGHT_OPERAND)
-                    .with_ident(node));
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::DUAL_RIGHT_OPERAND,
+                )
+                .with_ident(node));
             }
             let left_node = self
                 .get_single_object(node, "http://graphlaw.org/sql#leftOperand")
@@ -1477,7 +520,10 @@ pub trait RdfAstGraphReader {
     /// ORDER BY; nested aggregates (COUNT(SUM(x))) refuse everywhere.
     fn check_aggregate_position(expr: SqlExpr, pos: ScopePos) -> Result<SqlExpr, AstError> {
         if !pos.allows_aggregate() {
-            return Err(AstError::new(RefusalCode::ScopeIntegrity, refusal_arm::AGG_IN_PREDICATE));
+            return Err(AstError::new(
+                RefusalCode::ScopeIntegrity,
+                refusal_arm::AGG_IN_PREDICATE,
+            ));
         }
         Ok(expr)
     }
@@ -1502,7 +548,7 @@ pub trait RdfAstGraphReader {
                 )
                 .with_ident(node));
             }
-        
+
             return Ok(SqlExpr::Alias {
                 expr: Box::new(expr),
                 alias,
@@ -1526,17 +572,24 @@ pub trait RdfAstGraphReader {
         // a dedicated `iri_object_count` trait method — `get_single_object`
         // only inspects the first term, so the string-first ordering slipped
         // past the dual-carry gate.
-        let iri_operator_objects = self
-            .iri_object_count(node, "http://graphlaw.org/sql#operator");
+        let iri_operator_objects = self.iri_object_count(node, "http://graphlaw.org/sql#operator");
         if has_string_operator && iri_operator_objects > 0 {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_OPERATOR_FORMS).with_ident(node));
+            return Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_OPERATOR_FORMS)
+                    .with_ident(node),
+            );
         }
-        if let Some((token, _)) = self.get_datatype_literal(node, "http://graphlaw.org/sql#operator") {
+        if let Some((token, _)) =
+            self.get_datatype_literal(node, "http://graphlaw.org/sql#operator")
+        {
             return Operator::from_token(&token).map(Some);
         }
         if let Some(op_node) = self.get_single_object(node, "http://graphlaw.org/sql#operator") {
             let iri = self.get_iri(&op_node).ok_or_else(|| {
-                AstError::MissingProperty("http://graphlaw.org/sql#operator".to_string(), node.to_string())
+                AstError::MissingProperty(
+                    "http://graphlaw.org/sql#operator".to_string(),
+                    node.to_string(),
+                )
             })?;
             return Operator::from_iri(&iri).map(Some);
         }
@@ -1556,8 +609,10 @@ pub trait RdfAstGraphReader {
                 .get_datatype_literal(node, "http://graphlaw.org/sql#scope")
                 .is_some();
         if scope_marker {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::SCOPE_ON_TABLE_REF)
-                .with_ident(node));
+            return Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::SCOPE_ON_TABLE_REF)
+                    .with_ident(node),
+            );
         }
         let (name, _) = self
             .get_datatype_literal(node, "http://graphlaw.org/sql#tableName")
@@ -1573,7 +628,11 @@ pub trait RdfAstGraphReader {
         let schema = self
             .get_datatype_literal(node, "http://graphlaw.org/sql#schemaName")
             .map(|(s, _)| s);
-        Ok(TableRef { name, alias, schema })
+        Ok(TableRef {
+            name,
+            alias,
+            schema,
+        })
     }
 
     /// Reads the FROM clause: `sql:from` rdf:List first, `sql:fromTable`
@@ -1582,10 +641,13 @@ pub trait RdfAstGraphReader {
         // Mixed-source documents are REFUSAL-01: the validated sql:fromTable
         // must not be a decoy for an unreviewed sql:from list (audit E2).
         let from_list = self.single_object_checked(query_node, "http://graphlaw.org/sql#from")?;
-        let from_table = self.single_object_checked(query_node, "http://graphlaw.org/sql#fromTable")?;
+        let from_table =
+            self.single_object_checked(query_node, "http://graphlaw.org/sql#fromTable")?;
         if from_list.is_some() && from_table.is_some() {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_FROM)
-                .with_ident(query_node));
+            return Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_FROM)
+                    .with_ident(query_node),
+            );
         }
         if let Some(from_head) = from_list {
             let items = self.unroll_rdf_list(&from_head, 64)?;
@@ -1605,7 +667,10 @@ pub trait RdfAstGraphReader {
     /// Normative property names (rec 3.3: sql:select/from/where/having/
     /// orderBy/groupBy) are read first; the SQLRDF-01 aliases (selectList/
     /// fromTable/whereClause/havingClause) stay legal.
-    fn extract_select_statement(&self, query_node: &Self::Node) -> Result<SelectStatement, AstError> {
+    fn extract_select_statement(
+        &self,
+        query_node: &Self::Node,
+    ) -> Result<SelectStatement, AstError> {
         // D1/RUST-7 unknown-predicate gate: every sql:-namespaced predicate on
         // the statement node must be in the closed enum the reader knows how
         // to review. A renamed clause (sql:whereX) must refuse typed
@@ -1613,39 +678,77 @@ pub trait RdfAstGraphReader {
         // without the filter the author wrote.
         const SQL_NS: &str = "http://graphlaw.org/sql#";
         const KNOWN_SQL_PREDICATES: &[&str] = &[
-            "statementIndex", "selectList", "select", "from", "fromTable",
-            "joinClause", "whereClause", "where", "having", "havingClause",
-            "groupBy", "orderBy", "limit", "offset",
+            "statementIndex",
+            "selectList",
+            "select",
+            "from",
+            "fromTable",
+            "joinClause",
+            "whereClause",
+            "where",
+            "having",
+            "havingClause",
+            "groupBy",
+            "orderBy",
+            "limit",
+            "offset",
         ];
         for pred in self.predicate_iris(query_node) {
-            if let Some(local) = pred.strip_prefix(SQL_NS) {
-                if !KNOWN_SQL_PREDICATES.contains(&local) {
-                    return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::UNKNOWN_STATEMENT_PREDICATE)
-                        .with_ident(query_node)
-                        .with_aux_ident(&pred));
-                }
+            if let Some(local) = pred.strip_prefix(SQL_NS)
+                && !KNOWN_SQL_PREDICATES.contains(&local)
+            {
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::UNKNOWN_STATEMENT_PREDICATE,
+                )
+                .with_ident(query_node)
+                .with_aux_ident(&pred));
             }
         }
         let from = self.extract_from(query_node)?;
 
         // Joins (optional)
         let mut joins = Vec::new();
-        if let Some(join_node) = self.get_single_object(query_node, "http://graphlaw.org/sql#joinClause") {
-            let join_type = if let Some(type_node) = self.get_single_object(&join_node, "http://graphlaw.org/sql#joinType") {
+        if let Some(join_node) =
+            self.get_single_object(query_node, "http://graphlaw.org/sql#joinClause")
+        {
+            let join_type = if let Some(type_node) =
+                self.get_single_object(&join_node, "http://graphlaw.org/sql#joinType")
+            {
                 let type_iri = self.get_iri(&type_node).unwrap_or_default();
-                JoinType::from_iri(&type_iri).unwrap_or(JoinType::Inner)
+                // Unknown join-type IRI: typed REFUSAL-01 refusal (arm
+                // JOIN_TYPE_IRI) — never a silent downgrade to Inner. A
+                // MISSING sql:joinType predicate stays Inner (default), and
+                // both behaviors are pinned by courts.
+                JoinType::from_iri(&type_iri).map_err(|_| {
+                    AstError::new(RefusalCode::MalformedAst, refusal_arm::JOIN_TYPE_IRI)
+                        .with_ident(&type_iri)
+                })?
             } else {
                 JoinType::Inner
             };
 
-            let join_table_node = self.get_single_object(&join_node, "http://graphlaw.org/sql#joinTable")
-                .ok_or_else(|| AstError::MissingProperty("http://graphlaw.org/sql#joinTable".to_string(), join_node.to_string()))?;
+            let join_table_node = self
+                .get_single_object(&join_node, "http://graphlaw.org/sql#joinTable")
+                .ok_or_else(|| {
+                    AstError::MissingProperty(
+                        "http://graphlaw.org/sql#joinTable".to_string(),
+                        join_node.to_string(),
+                    )
+                })?;
             let join_table = self.extract_table_ref(&join_table_node)?;
 
-            let join_cond_node = self.get_single_object(&join_node, "http://graphlaw.org/sql#joinCondition")
-                .ok_or_else(|| AstError::MissingProperty("http://graphlaw.org/sql#joinCondition".to_string(), join_node.to_string()))?;
+            let join_cond_node = self
+                .get_single_object(&join_node, "http://graphlaw.org/sql#joinCondition")
+                .ok_or_else(|| {
+                    AstError::MissingProperty(
+                        "http://graphlaw.org/sql#joinCondition".to_string(),
+                        join_node.to_string(),
+                    )
+                })?;
 
-            let join_condition = self.extract_expr_scoped(&join_cond_node, 0, ScopePos::Predicate)?;
+            let join_condition =
+                self.extract_expr_scoped(&join_cond_node, 0, ScopePos::Predicate)?;
 
             joins.push(JoinClause {
                 join_type,
@@ -1657,11 +760,15 @@ pub trait RdfAstGraphReader {
         // Unroll projection list (rdf:List): sql:selectList or sql:select.
         // Carrying both is REFUSAL-01: the reviewer must see the list the
         // engine executes (audit E1).
-        let select_legacy = self.single_object_checked(query_node, "http://graphlaw.org/sql#selectList")?;
-        let select_norm = self.single_object_checked(query_node, "http://graphlaw.org/sql#select")?;
+        let select_legacy =
+            self.single_object_checked(query_node, "http://graphlaw.org/sql#selectList")?;
+        let select_norm =
+            self.single_object_checked(query_node, "http://graphlaw.org/sql#select")?;
         if select_legacy.is_some() && select_norm.is_some() {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_SELECT)
-                .with_ident(query_node));
+            return Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_SELECT)
+                    .with_ident(query_node),
+            );
         }
         let select_head = select_legacy.or(select_norm);
         let select_head = select_head.ok_or_else(|| {
@@ -1677,16 +784,21 @@ pub trait RdfAstGraphReader {
         // SELECT *: the ontology says projection is never zero-column
         // (both sql:selectList and sql:select paths funnel through here).
         if select_list.is_empty() {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::EMPTY_PROJECTION)
-                .with_ident(query_node));
+            return Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::EMPTY_PROJECTION)
+                    .with_ident(query_node),
+            );
         }
 
         // Where clause (optional): sql:whereClause or sql:where; both is REFUSAL-01.
-        let where_legacy = self.single_object_checked(query_node, "http://graphlaw.org/sql#whereClause")?;
+        let where_legacy =
+            self.single_object_checked(query_node, "http://graphlaw.org/sql#whereClause")?;
         let where_norm = self.single_object_checked(query_node, "http://graphlaw.org/sql#where")?;
         if where_legacy.is_some() && where_norm.is_some() {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_WHERE)
-                .with_ident(query_node));
+            return Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_WHERE)
+                    .with_ident(query_node),
+            );
         }
         let where_clause = if let Some(where_node) = where_legacy.or(where_norm) {
             Some(self.extract_expr_scoped(&where_node, 0, ScopePos::Predicate)?)
@@ -1695,7 +807,8 @@ pub trait RdfAstGraphReader {
         };
 
         // Group by (optional rdf:List)
-        let group_head = self.single_object_checked(query_node, "http://graphlaw.org/sql#groupBy")?;
+        let group_head =
+            self.single_object_checked(query_node, "http://graphlaw.org/sql#groupBy")?;
         let group_by = if let Some(group_head) = group_head {
             let group_nodes = self.unroll_rdf_list(&group_head, 64)?;
             let mut list = Vec::with_capacity(group_nodes.len());
@@ -1708,11 +821,15 @@ pub trait RdfAstGraphReader {
         };
 
         // Having (optional): sql:having or sql:havingClause; both is REFUSAL-01.
-        let having_norm = self.single_object_checked(query_node, "http://graphlaw.org/sql#having")?;
-        let having_alias = self.single_object_checked(query_node, "http://graphlaw.org/sql#havingClause")?;
+        let having_norm =
+            self.single_object_checked(query_node, "http://graphlaw.org/sql#having")?;
+        let having_alias =
+            self.single_object_checked(query_node, "http://graphlaw.org/sql#havingClause")?;
         if having_norm.is_some() && having_alias.is_some() {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_HAVING)
-                .with_ident(query_node));
+            return Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::DUAL_HAVING)
+                    .with_ident(query_node),
+            );
         }
         let having = if let Some(having_node) = having_norm.or(having_alias) {
             Some(self.extract_expr_scoped(&having_node, 0, ScopePos::Having)?)
@@ -1722,7 +839,8 @@ pub trait RdfAstGraphReader {
 
         // Order by (optional rdf:List): sql:orderBy; items carry optional
         // sql:direction ("ASC" | "DESC", ASC default).
-        let order_head = self.single_object_checked(query_node, "http://graphlaw.org/sql#orderBy")?;
+        let order_head =
+            self.single_object_checked(query_node, "http://graphlaw.org/sql#orderBy")?;
         let order_by = if let Some(order_head) = order_head {
             let order_nodes = self.unroll_rdf_list(&order_head, 64)?;
             let mut list = Vec::with_capacity(order_nodes.len());
@@ -1733,29 +851,35 @@ pub trait RdfAstGraphReader {
                 // D4-adjacent: a present-but-IRI sql:direction is REFUSAL-01,
                 // never a silent fold to ASC (distinguish present-but-IRI
                 // from absent via object_count).
-                let descending = if self.object_count(&node, "http://graphlaw.org/sql#direction") > 0 {
-                    match self
-                        .get_datatype_literal(&node, "http://graphlaw.org/sql#direction")
-                    {
+                let descending = if self.object_count(&node, "http://graphlaw.org/sql#direction")
+                    > 0
+                {
+                    match self.get_datatype_literal(&node, "http://graphlaw.org/sql#direction") {
                         Some((d, _)) => {
-                        if d.eq_ignore_ascii_case("DESC") {
-                            true
-                        } else if d.eq_ignore_ascii_case("ASC") {
-                            false
-                        } else {
-                            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DIRECTION_LEX)
+                            if d.eq_ignore_ascii_case("DESC") {
+                                true
+                            } else if d.eq_ignore_ascii_case("ASC") {
+                                false
+                            } else {
+                                return Err(AstError::new(
+                                    RefusalCode::MalformedAst,
+                                    refusal_arm::DIRECTION_LEX,
+                                )
                                 .with_ident(&d)
                                 .with_aux_ident(query_node));
+                            }
+                        }
+                        None => {
+                            return Err(AstError::new(
+                                RefusalCode::MalformedAst,
+                                refusal_arm::DIRECTION_IRI,
+                            )
+                            .with_ident(query_node));
                         }
                     }
-                    None => {
-                        return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DIRECTION_IRI)
-                            .with_ident(query_node))
-                    }
-                }
-            } else {
-                false
-            };
+                } else {
+                    false
+                };
                 list.push(OrderTerm { expr, descending });
             }
             list
@@ -1766,7 +890,11 @@ pub trait RdfAstGraphReader {
         // Limit & offset: a malformed integer is REFUSAL-01, never a silent
         // clause drop (audit E4: unbounded scan from a SHACL-clean doc).
         let parse_clause_int = |lex: String, prop: &str| -> Result<usize, AstError> {
-            let arm = if prop == "limit" { refusal_arm::LIMIT_MALFORMED } else { refusal_arm::OFFSET_MALFORMED };
+            let arm = if prop == "limit" {
+                refusal_arm::LIMIT_MALFORMED
+            } else {
+                refusal_arm::OFFSET_MALFORMED
+            };
             lex.parse::<usize>().map_err(|_| {
                 AstError::new(RefusalCode::MalformedAst, arm)
                     .with_ident(&lex)
@@ -1781,12 +909,22 @@ pub trait RdfAstGraphReader {
         let limit_clause = |prop: &str| -> Result<Option<usize>, AstError> {
             let count = self.object_count(query_node, &format!("http://graphlaw.org/sql#{prop}"));
             if count > 1 {
-                return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::DUP_CLAUSE_PREDICATE).with_ident(prop).with_aux_ident(query_node));
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::DUP_CLAUSE_PREDICATE,
+                )
+                .with_ident(prop)
+                .with_aux_ident(query_node));
             }
-            match self.get_datatype_literal(query_node, &format!("http://graphlaw.org/sql#{prop}")) {
+            match self.get_datatype_literal(query_node, &format!("http://graphlaw.org/sql#{prop}"))
+            {
                 Some((lex, _)) => parse_clause_int(lex, prop).map(Some),
                 None if count > 0 => {
-                    let arm = if prop == "limit" { refusal_arm::LIMIT_NOT_INT } else { refusal_arm::OFFSET_NOT_INT };
+                    let arm = if prop == "limit" {
+                        refusal_arm::LIMIT_NOT_INT
+                    } else {
+                        refusal_arm::OFFSET_NOT_INT
+                    };
                     Err(AstError::new(RefusalCode::MalformedAst, arm).with_ident(query_node))
                 }
                 None => Ok(None),
@@ -1815,28 +953,40 @@ pub trait RdfAstGraphReader {
         let target_node = self
             .single_object_checked(node, "http://graphlaw.org/sql#targetTable")?
             .ok_or_else(|| {
-                AstError::MissingProperty("http://graphlaw.org/sql#targetTable".to_string(), node.to_string())
+                AstError::MissingProperty(
+                    "http://graphlaw.org/sql#targetTable".to_string(),
+                    node.to_string(),
+                )
             })?;
         let target = self.extract_table_ref(&target_node)?;
 
         let using_node = self
             .single_object_checked(node, "http://graphlaw.org/sql#usingSource")?
             .ok_or_else(|| {
-                AstError::MissingProperty("http://graphlaw.org/sql#usingSource".to_string(), node.to_string())
+                AstError::MissingProperty(
+                    "http://graphlaw.org/sql#usingSource".to_string(),
+                    node.to_string(),
+                )
             })?;
         let source = self.extract_select_statement(&using_node)?;
 
         let on_node = self
             .single_object_checked(node, "http://graphlaw.org/sql#mergeOn")?
             .ok_or_else(|| {
-                AstError::MissingProperty("http://graphlaw.org/sql#mergeOn".to_string(), node.to_string())
+                AstError::MissingProperty(
+                    "http://graphlaw.org/sql#mergeOn".to_string(),
+                    node.to_string(),
+                )
             })?;
         let on = self.extract_expr_scoped(&on_node, 0, ScopePos::Predicate)?;
 
         let when_node = self
             .single_object_checked(node, "http://graphlaw.org/sql#whenMatched")?
             .ok_or_else(|| {
-                AstError::MissingProperty("http://graphlaw.org/sql#whenMatched".to_string(), node.to_string())
+                AstError::MissingProperty(
+                    "http://graphlaw.org/sql#whenMatched".to_string(),
+                    node.to_string(),
+                )
             })?;
         let assigns_head = self
             .get_single_object(&when_node, "http://graphlaw.org/sql#setAssignments")
@@ -1868,82 +1018,23 @@ pub trait RdfAstGraphReader {
             assignments.push((column, value));
         }
 
-        Ok(MergeStatement { target, source, on, assignments })
-    }
-
-}
-
-/// Section 7 analytical MERGE statement (rec 7/7.1): the target table, the
-/// grouped USING sub-select, the ON condition, and the WHEN MATCHED update
-/// assignments. Compiled by [`MergeStatement::compile_merge`] with the
-/// sub-select literal (section 7.1: `$1`) extracted into the parameter
-/// buffer.
-#[derive(Debug, Clone, PartialEq)]
-pub struct MergeStatement {
-    pub target: TableRef,
-    pub source: SelectStatement,
-    pub on: SqlExpr,
-    pub assignments: Vec<(String, SqlExpr)>,
-}
-
-impl MergeStatement {
-    /// Compiles the section 7 graph to the section 7.1 parameterized MERGE.
-    /// The sub-select literal is extracted into `params` ($1 = "SETTLED" for
-    /// the section 7 graph), never string-interpolated.
-    pub fn compile_merge(&self) -> Result<CompiledQuery, AstError> {
-        validate_identifier(&self.target.name)?;
-        if let Some(schema) = &self.target.schema {
-            validate_qualified_identifier(schema)?;
-        }
-        if let Some(alias) = &self.target.alias {
-            validate_identifier(alias)?;
-        }
-
-        let mut params = Vec::new();
-        // Inner sub-select body (the leading "SELECT " of the clause compiler
-        // output is stripped for embedding).
-        let inner = self.source.compile()?;
-        let body = inner.sql;
-        params.extend(inner.params);
-
-        let mut sql = String::with_capacity(body.len() + 160);
-        sql.push_str("MERGE INTO ");
-        if let Some(schema) = &self.target.schema {
-            sql.push_str(schema);
-            sql.push('.');
-        }
-        sql.push_str(&self.target.name);
-        sql.push_str(" USING (");
-        sql.push_str(&body);
-        sql.push_str(") AS src ON ");
-        let mut on_sql = String::new();
-        SelectStatement::serialize_expr(&self.on, &mut on_sql, &mut params, 0, ScopePos::Predicate)?;
-        sql.push_str(&on_sql);
-        sql.push_str(" WHEN MATCHED THEN UPDATE SET ");
-        for (idx, (column, value)) in self.assignments.iter().enumerate() {
-            if idx > 0 {
-                sql.push_str(", ");
-            }
-            validate_identifier(column)?;
-            sql.push_str(column);
-            sql.push_str(" = ");
-            SelectStatement::serialize_expr(value, &mut sql, &mut params, 0, ScopePos::Predicate)?;
-        }
-        sql.push(';');
-        // C1-a: merge compile is not the SelectStatement arm; never cacheable.
-        Ok(CompiledQuery { sql, params, ast_graph_turtle: None, canon_graph_bytes: None, receipt_state: None, cacheable: false })
+        Ok(MergeStatement {
+            target,
+            source,
+            on,
+            assignments,
+        })
     }
 }
 
 /// Validates an RDF AST dataset in Turtle syntax against the canonical SHACL rules in `ontologies/sql-ast.ttl`.
-pub fn validate_ast_shacl(
-    turtle_dataset: &str,
-    shapes_ttl: &str,
-) -> Result<(), AstError> {
+pub fn validate_ast_shacl(turtle_dataset: &str, shapes_ttl: &str) -> Result<(), AstError> {
     if let Err(over) = crate::shacl_guard::check_shape_depth(shapes_ttl) {
-        return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::SHACL_DEPTH)
-            .with_num(over.observed)
-            .with_aux_num(crate::shacl_guard::MAX_SHACL_VALIDATION_DEPTH));
+        return Err(
+            AstError::new(RefusalCode::MalformedAst, refusal_arm::SHACL_DEPTH)
+                .with_num(over.observed)
+                .with_aux_num(crate::shacl_guard::MAX_SHACL_VALIDATION_DEPTH),
+        );
     }
 
     let ds = purrdf::parse_dataset(turtle_dataset.as_bytes(), "text/turtle", None)
@@ -1961,10 +1052,12 @@ pub fn validate_ast_shacl(
         let first = report.results.first().ok_or_else(|| {
             AstError::new(RefusalCode::MalformedAst, refusal_arm::SHACL_VIOLATIONS)
         })?;
-        return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::SHACL_VIOLATIONS)
-            .with_ident(&first.focus_node)
-            .with_aux_ident(first.message.as_deref().unwrap_or("violation"))
-            .with_num(report.results.len()));
+        return Err(
+            AstError::new(RefusalCode::MalformedAst, refusal_arm::SHACL_VIOLATIONS)
+                .with_ident(&first.focus_node)
+                .with_aux_ident(first.message.as_deref().unwrap_or("violation"))
+                .with_num(report.results.len()),
+        );
     }
 
     Ok(())
@@ -1989,10 +1082,58 @@ static AST_COMPILE_MEMO: std::sync::OnceLock<
 
 const AST_COMPILE_MEMO_CAPACITY: usize = 256;
 
-fn ast_compile_memo() -> &'static std::sync::Mutex<HashMap<[u8; 32], std::sync::Arc<CompiledQuery>>> {
+fn ast_compile_memo() -> &'static std::sync::Mutex<HashMap<[u8; 32], std::sync::Arc<CompiledQuery>>>
+{
     AST_COMPILE_MEMO.get_or_init(|| std::sync::Mutex::new(HashMap::new()))
 }
 
+/// Sole admission path for SQL-in-RDF: validates a Turtle description of a
+/// SQL statement against the SHACL shapes in `ontologies/sql-ast.ttl` plus
+/// the dialect pack (`ggen/sql-dialect/statement_classes.ttl`), parses the
+/// statement graph, and compiles it to parameterized DuckDB SQL
+/// (`$1, $2, ...` placeholders) pinned to the graph that produced it.
+///
+/// Returns the [`CompiledQuery`] carrying:
+///
+/// - `sql` + `params`: the parameterized statement text and its typed
+///   parameter vector.
+/// - `ast_graph_turtle` / `canon_graph_bytes`: the admitted graph and its
+///   RDFC-1.0 canonical form (`Canon(G_AST)`), computed once here so the
+///   eval/receipt path never re-parses.
+/// - the admission seal: [`CompiledQuery::verify_seal`] must hold before
+///   execution; `crate::duckdb_eval::GraphLawDuckDB::eval_ast_query`
+///   enforces it.
+///
+/// # Refusals
+/// Typed and stable-coded (`docs/refusals.md`), never a panic or generic DB
+/// error:
+///
+/// - `[REFUSAL-01] MalformedAstRefusal` — shape violation: missing or
+///   duplicated `sql:statementIndex`, non-integer or negative index,
+///   invalid identifier characters.
+/// - `[REFUSAL-02] UnimplementedStatementRefusal` — the statement class is
+///   valid SHACL but outside the supported set (e.g. an unsupported
+///   statement kind).
+/// - `[REFUSAL-03] ScopeIntegrityRefusal` — a clause scope references the
+///   wrong node or wrong cardinality.
+///
+/// # Examples
+/// ```
+/// use graphlaw::sql_ast::compile_turtle;
+///
+/// let doc = concat!(
+///     "@prefix sql: <http://graphlaw.org/sql#> .\n",
+///     "@prefix ex: <http://example.org/queries#> .\n",
+///     "ex:S a sql:SelectStatement ;\n",
+///     "    sql:statementIndex 1 ;\n",
+///     "    sql:fromTable [ sql:tableName \"t\" ] ;\n",
+///     "    sql:selectList ( [ sql:columnName \"c\" ] ) .\n",
+/// );
+/// let compiled = compile_turtle(doc)?;
+/// assert!(compiled.sql.starts_with("SELECT"));
+/// assert!(compiled.verify_seal());
+/// # Ok::<(), graphlaw::sql_ast::AstError>(())
+/// ```
 pub fn compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> {
     let shapes = format!(
         "{}\n{}",
@@ -2008,12 +1149,17 @@ pub fn compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> {
     let require_index = |reader: &DatasetReader, n: &String| -> Result<(), AstError> {
         match reader.object_count(n, "http://graphlaw.org/sql#statementIndex") {
             0 => {
-                return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_MISSING).with_ident(&n))
+                return Err(
+                    AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_MISSING)
+                        .with_ident(n),
+                );
             }
             c if c > 1 => {
-                return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_DUP)
-                    .with_ident(n)
-                    .with_num(c))
+                return Err(
+                    AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_DUP)
+                        .with_ident(n)
+                        .with_num(c),
+                );
             }
             _ => {}
         }
@@ -2023,14 +1169,18 @@ pub fn compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> {
                 AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_NOT_INT).with_ident(n)
             })?;
         if datatype.as_deref() != Some("http://www.w3.org/2001/XMLSchema#integer") {
-            return Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_BAD_DTYPE)
-                .with_ident(n));
+            return Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_BAD_DTYPE)
+                    .with_ident(n),
+            );
         }
         match index_lex.parse::<i64>() {
             Ok(v) if v >= 0 => Ok(()),
-            _ => Err(AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_NEGATIVE)
-                .with_ident(&index_lex)
-                .with_aux_ident(n)),
+            _ => Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::INDEX_NEGATIVE)
+                    .with_ident(&index_lex)
+                    .with_aux_ident(n),
+            ),
         }
     };
     require_index(&reader, &node)?;
@@ -2048,12 +1198,15 @@ pub fn compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> {
     // never memoized. `ast_graph_turtle` is restamped from THIS call's
     // source (canonically identical graphs may differ textually).
     let h_ast = *blake3::hash(&canon_bytes).as_bytes();
-    if kind.as_str() == "SelectStatement" {
-        if let Some(arc) = ast_compile_memo().lock().ok().and_then(|m| m.get(&h_ast).cloned()) {
-            let mut cq = (*arc).clone();
-            cq.ast_graph_turtle = Some(turtle.to_string());
-            return Ok(cq);
-        }
+    if kind.as_str() == "SelectStatement"
+        && let Some(arc) = ast_compile_memo()
+            .lock()
+            .ok()
+            .and_then(|m| m.get(&h_ast).cloned())
+    {
+        let mut cq = (*arc).clone();
+        cq.ast_graph_turtle = Some(turtle.to_string());
+        return Ok(cq);
     }
     let compiled = match kind.as_str() {
         "SelectStatement" => reader.extract_select_statement(&node)?.compile(),
@@ -2074,7 +1227,7 @@ pub fn compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> {
         }
         other => reader.compile_command(&node, other),
     };
-    let mut compiled = compiled.map(|mut cq| {
+    let compiled = compiled.map(|mut cq| {
         // P28-SIL §3.1 + TC-HOT-01 two-node formula: pin the receipt anchor
         // `h_ast = BLAKE3(Canon(G_AST))` exactly ONCE at compile time —
         // BEFORE moving the bytes into `canon_graph_bytes`. Eval then
@@ -2088,18 +1241,21 @@ pub fn compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> {
         // (and every hand-built constructor) compile with `cacheable: false`;
         // no cache store exists yet — this bit only gates future admission.
         cq.cacheable = kind.as_str() == "SelectStatement";
+        // RUST-5 sole-admission seal: recompute over the final stamped state
+        // so eval can verify the query came through this compile path.
+        cq.reseal();
         cq
     })?;
     // Charter-A04 memoization store: only cacheable-class (SelectStatement)
     // compiles enter the memo. Flush-on-overflow at the pinned capacity so
     // the memo never grows unbounded.
-    if kind.as_str() == "SelectStatement" {
-        if let Ok(mut memo) = ast_compile_memo().lock() {
-            if memo.len() >= AST_COMPILE_MEMO_CAPACITY && !memo.contains_key(&h_ast) {
-                memo.clear();
-            }
-            memo.insert(h_ast, std::sync::Arc::new(compiled.clone()));
+    if kind.as_str() == "SelectStatement"
+        && let Ok(mut memo) = ast_compile_memo().lock()
+    {
+        if memo.len() >= AST_COMPILE_MEMO_CAPACITY && !memo.contains_key(&h_ast) {
+            memo.clear();
         }
+        memo.insert(h_ast, std::sync::Arc::new(compiled.clone()));
     }
     Ok(compiled)
 }
@@ -2115,7 +1271,10 @@ struct DatasetReader {
 #[derive(Clone)]
 enum RdfTerm {
     Iri(String),
-    Literal { lexical: String, datatype: Option<String> },
+    Literal {
+        lexical: String,
+        datatype: Option<String>,
+    },
 }
 
 impl DatasetReader {
@@ -2138,13 +1297,22 @@ impl DatasetReader {
                 purrdf::TermValue::Blank { label, scope } => {
                     RdfTerm::Iri(format!("_:{label}_{}", scope.0))
                 }
-                purrdf::TermValue::Literal { lexical_form, datatype, .. } => RdfTerm::Literal {
+                purrdf::TermValue::Literal {
+                    lexical_form,
+                    datatype,
+                    ..
+                } => RdfTerm::Literal {
                     lexical: lexical_form,
                     datatype: Some(datatype),
                 },
                 _ => continue,
             };
-            outgoing.entry(subj).or_default().entry(pred).or_default().push(term);
+            outgoing
+                .entry(subj)
+                .or_default()
+                .entry(pred)
+                .or_default()
+                .push(term);
         }
         Ok(Self {
             outgoing,
@@ -2173,11 +1341,12 @@ impl DatasetReader {
             let Some(objs) = preds.get(ty) else { continue };
             for term in objs {
                 let RdfTerm::Iri(iri) = term else { continue };
-                if let Some(kind) = iri.strip_prefix(prefix) {
-                    if kind.ends_with("Statement") && !is_object.contains(subj) {
-                        candidates.push((subj.clone(), kind.to_string()));
-                    }
-    }
+                if let Some(kind) = iri.strip_prefix(prefix)
+                    && kind.ends_with("Statement")
+                    && !is_object.contains(subj)
+                {
+                    candidates.push((subj.clone(), kind.to_string()));
+                }
             }
         }
         candidates.sort();
@@ -2189,17 +1358,17 @@ impl DatasetReader {
 
     fn ident(&self, node: &str, pred: &str) -> Result<String, AstError> {
         let node = node.to_string();
-        let (lex, _) = self.get_datatype_literal(&node, pred).ok_or_else(|| {
-            AstError::MissingProperty(pred.into(), node.into())
-        })?;
+        let (lex, _) = self
+            .get_datatype_literal(&node, pred)
+            .ok_or_else(|| AstError::MissingProperty(pred.into(), node))?;
         validate_identifier(&lex).map(str::to_string)
     }
 
     fn lit(&self, node: &str, pred: &str) -> Result<String, AstError> {
         let node = node.to_string();
-        let (lex, dtype) = self.get_datatype_literal(&node, pred).ok_or_else(|| {
-            AstError::MissingProperty(pred.into(), node.into())
-        })?;
+        let (lex, dtype) = self
+            .get_datatype_literal(&node, pred)
+            .ok_or_else(|| AstError::MissingProperty(pred.into(), node))?;
         let numeric = dtype
             .as_deref()
             .is_some_and(|d| d.ends_with("integer") || d.ends_with("double"))
@@ -2245,13 +1414,11 @@ impl DatasetReader {
                     .get_datatype_literal(&target, &p("ifExists"))
                     .map(|(v, _)| v == "true" || v == "1")
                     .unwrap_or(false);
-                Ok(Some(
-                    if if_exists {
-                        format!("DROP TABLE IF EXISTS {table}")
-                    } else {
-                        format!("DROP TABLE {table}")
-                    },
-                ))
+                Ok(Some(if if_exists {
+                    format!("DROP TABLE IF EXISTS {table}")
+                } else {
+                    format!("DROP TABLE {table}")
+                }))
             }
             "AlterStatement" => {
                 let Some(action) = self.get_single_object(&node, &p("alterAction")) else {
@@ -2260,9 +1427,7 @@ impl DatasetReader {
                 let table = self.ident(&action, &p("tableName"))?;
                 let col = self.ident(&action, &p("columnName"))?;
                 let ty = self.column_type(&action)?;
-                Ok(Some(format!(
-                    "ALTER TABLE {table} ADD COLUMN {col} {ty}"
-                )))
+                Ok(Some(format!("ALTER TABLE {table} ADD COLUMN {col} {ty}")))
             }
             "TruncateStatement" => {
                 let Some(target) = self.get_single_object(&node, &p("truncateTarget")) else {
@@ -2284,7 +1449,9 @@ impl DatasetReader {
                 };
                 let object = self
                     .get_single_object(&comment, &p("commentObject"))
-                    .ok_or_else(|| AstError::MissingProperty(p("commentObject"), comment.clone()))?;
+                    .ok_or_else(|| {
+                        AstError::MissingProperty(p("commentObject"), comment.clone())
+                    })?;
                 let object = match object.as_str() {
                     "http://graphlaw.org/sql#Table" => "TABLE",
                     other => {
@@ -2507,12 +1674,8 @@ impl DatasetReader {
             .ok_or_else(|| AstError::MissingProperty(ty.to_string(), node.to_string()))?;
         let upper = lex.to_ascii_uppercase();
         match upper.as_str() {
-            "INTEGER" | "BIGINT" | "VARCHAR" | "DOUBLE" | "BOOLEAN" | "DATE" => {
-                Ok(upper)
-            }
-            other => Err(AstError::UnsupportedTerm(format!(
-                "column type {other}"
-            ))),
+            "INTEGER" | "BIGINT" | "VARCHAR" | "DOUBLE" | "BOOLEAN" | "DATE" => Ok(upper),
+            other => Err(AstError::UnsupportedTerm(format!("column type {other}"))),
         }
     }
 
@@ -2589,12 +1752,20 @@ impl DatasetReader {
         self.inline_expr_node(&expr)
     }
 
-    fn write_inline_expr(&self, expr: &SqlExpr, sql: &mut String, depth: usize) -> Result<(), AstError> {
+    fn write_inline_expr(
+        &self,
+        expr: &SqlExpr,
+        sql: &mut String,
+        depth: usize,
+    ) -> Result<(), AstError> {
         if depth > 32 {
             return Err(AstError::RecursionLimitExceeded(32));
         }
         match expr {
-            SqlExpr::ColumnRef { column, table_alias } => {
+            SqlExpr::ColumnRef {
+                column,
+                table_alias,
+            } => {
                 validate_identifier(column)?;
                 if let Some(alias) = table_alias {
                     validate_identifier(alias)?;
@@ -2641,7 +1812,7 @@ impl DatasetReader {
 
     fn compile_command(&self, node: &str, kind: &str) -> Result<CompiledQuery, AstError> {
         if let Some(sql) = self.compile_expression_form(node, kind)? {
-            return Ok(CompiledQuery { sql, params: Vec::new(), ast_graph_turtle: None, canon_graph_bytes: None, receipt_state: None, cacheable: false });
+            return Ok(CompiledQuery::raw_compiled(sql, Vec::new()));
         }
         let table = "http://graphlaw.org/sql#targetTable";
         let col = "http://graphlaw.org/sql#assignColumn";
@@ -2719,7 +1890,9 @@ impl DatasetReader {
                 let t = self.ident(node, table)?;
                 let c = self.ident(node, col)?;
                 let v = self.lit(node, val)?;
-                format!("MERGE INTO {t} USING (SELECT {v} AS {c}) s ON {t}.{c} = s.{c} WHEN MATCHED THEN UPDATE SET {c} = s.{c}")
+                format!(
+                    "MERGE INTO {t} USING (SELECT {v} AS {c}) s ON {t}.{c} = s.{c} WHEN MATCHED THEN UPDATE SET {c} = s.{c}"
+                )
             }
             "VacuumStatement" => "VACUUM".into(),
             "CheckpointStatement" => "CHECKPOINT".into(),
@@ -2779,10 +1952,10 @@ impl DatasetReader {
             other => {
                 return Err(AstError::UnsupportedTerm(format!(
                     "compile refusal: {other} has no SQL template"
-                )))
+                )));
             }
         };
-        Ok(CompiledQuery { sql, params: Vec::new(), ast_graph_turtle: None, canon_graph_bytes: None, receipt_state: None, cacheable: false })
+        Ok(CompiledQuery::raw_compiled(sql, Vec::new()))
     }
 }
 
@@ -2812,14 +1985,22 @@ impl RdfAstGraphReader for DatasetReader {
             .get(node)
             .and_then(|preds| preds.get(predicate))
             .map_or(0, |terms| {
-                terms.iter().filter(|t| matches!(t, RdfTerm::Iri(_))).count()
+                terms
+                    .iter()
+                    .filter(|t| matches!(t, RdfTerm::Iri(_)))
+                    .count()
             })
     }
 
-    fn get_single_object(&self, subject: &Self::Node, predicate: &str) -> Option<Self::Node> {        self.outgoing.get(subject)?.get(predicate)?.first().and_then(|term| match term {
-            RdfTerm::Iri(i) => Some(i.clone()),
-            _ => None,
-        })
+    fn get_single_object(&self, subject: &Self::Node, predicate: &str) -> Option<Self::Node> {
+        self.outgoing
+            .get(subject)?
+            .get(predicate)?
+            .first()
+            .and_then(|term| match term {
+                RdfTerm::Iri(i) => Some(i.clone()),
+                _ => None,
+            })
     }
 
     fn get_datatype_literal(
@@ -2827,10 +2008,14 @@ impl RdfAstGraphReader for DatasetReader {
         subject: &Self::Node,
         predicate: &str,
     ) -> Option<(String, Option<String>)> {
-        self.outgoing.get(subject)?.get(predicate)?.first().and_then(|term| match term {
-            RdfTerm::Literal { lexical, datatype } => Some((lexical.clone(), datatype.clone())),
-            _ => None,
-        })
+        self.outgoing
+            .get(subject)?
+            .get(predicate)?
+            .first()
+            .and_then(|term| match term {
+                RdfTerm::Literal { lexical, datatype } => Some((lexical.clone(), datatype.clone())),
+                _ => None,
+            })
     }
 
     fn get_iri(&self, node: &Self::Node) -> Option<String> {
@@ -2919,8 +2104,9 @@ mod tests {
 #[cfg(test)]
 mod r1_canon_once_tests {
     use super::*;
-    fn count() -> usize { CANONICALIZATION_COUNT.get() }
-
+    fn count() -> usize {
+        CANONICALIZATION_COUNT.get()
+    }
 
     /// A minimal valid section-5 SELECT graph (real compile, real purrdf
     /// canonicalization — Chicago, no mocks). Single test owns the global
@@ -2937,14 +2123,23 @@ mod r1_canon_once_tests {
         let before = count();
         let compiled = compile_turtle(&select_graph()).expect("graph must compile");
         let after_compile = count();
-        assert_eq!(after_compile, before + 1, "canonicalization must run exactly once per compile_turtle");
-        assert!(compiled.canon_graph_bytes.is_some(), "compile_turtle must carry Canon(G_AST) bytes");
+        assert_eq!(
+            after_compile,
+            before + 1,
+            "canonicalization must run exactly once per compile_turtle"
+        );
+        assert!(
+            compiled.canon_graph_bytes.is_some(),
+            "compile_turtle must carry Canon(G_AST) bytes"
+        );
 
         // Bit-identity: carried canon bytes equal an independent RDFC-1.0
         // canonical form computed outside the compile path.
         let dataset =
             purrdf::parse_dataset(select_graph().as_bytes(), "text/turtle", None).expect("parse");
-        let independent = purrdf::try_canonicalize(&dataset).expect("canonicalize").nquads;
+        let independent = purrdf::try_canonicalize(&dataset)
+            .expect("canonicalize")
+            .nquads;
         assert_eq!(
             compiled.canon_graph_bytes.as_deref(),
             Some(independent.as_bytes()),
@@ -2956,5 +2151,188 @@ mod r1_canon_once_tests {
         compile_turtle(&select_graph()).expect("compile 2");
         compile_turtle(&select_graph()).expect("compile 3");
         assert_eq!(count(), after_compile + 2);
+    }
+}
+
+// ===========================================================================
+// Lane L4 (v26.10.22) courts: typed literal refusals (LITERAL_NOT_INT /
+// LITERAL_NOT_FLOAT), join-type refusal/Default pinning, and the RUST-5
+// CompiledQuery admission seal. Chicago: real compile_turtle compiles over
+// real Turtle graphs, no mocks, no sleeps. Anti-vacuity is INLINED: every
+// court carries its own mutation twin (the mutated form asserts the flipped
+// outcome), so deleting the refusal makes the twin fail.
+// ===========================================================================
+#[cfg(test)]
+mod literal_join_seal_courts {
+    use super::*;
+
+    const SELECT_HEAD: &str = concat!(
+        "@prefix sql: <http://graphlaw.org/sql#> .\n",
+        "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n",
+        "@prefix ex: <urn:lit:q#> .\n",
+        "ex:Q a sql:SelectStatement ;\n",
+        "    sql:statementIndex 1 ;\n",
+        "    sql:fromTable [ sql:tableName \"t\" ] ;\n",
+        "    sql:selectList ( [ sql:columnName \"v\" ] ) ;\n",
+        "    sql:whereClause [ sql:operator sql:GreaterThan ;\n",
+        "        sql:leftOperand [ sql:columnName \"n\" ] ;\n",
+    );
+
+    fn lit_graph(lexical: &str, dtype: &str) -> String {
+        format!(
+            "{}        sql:rightOperand [ sql:literalValue \"{}\"^^{} ] ] .",
+            SELECT_HEAD, lexical, dtype
+        )
+    }
+
+    /// LITERAL_NOT_INT (RefusalCode = 36): an xsd:integer-typed
+    /// sql:literalValue that does not parse refuses typed — it is never
+    /// silently coerced to 0 (the legacy `unwrap_or(0)` behavior).
+    #[test]
+    fn literal_not_int_refuses_typed() {
+        let err = compile_turtle(&lit_graph("not-a-number", "xsd:integer"))
+            .expect_err("non-integer lexical must refuse");
+        assert_eq!(err.code, RefusalCode::LiteralNotInt);
+        let msg = err.to_string();
+        assert!(
+            msg.contains(REFUSAL_01_MALFORMED_AST) && msg.contains("not-a-number"),
+            "message carries the REFUSAL-01 marker and the offending lexical: {msg}"
+        );
+
+        // ANTI-VACUITY MUTATION TWIN: the same graph with a VALID integer
+        // lexical compiles — the court flips exactly on the refusal path.
+        let ok = compile_turtle(&lit_graph("42", "xsd:integer")).expect("valid integer compiles");
+        assert_eq!(ok.params, vec![SqlLiteral::Integer(42)]);
+    }
+
+    /// LITERAL_NOT_FLOAT (RefusalCode = 37): an xsd:double-typed
+    /// sql:literalValue that does not parse refuses typed (never 0.0).
+    #[test]
+    fn literal_not_float_refuses_typed() {
+        let err = compile_turtle(&lit_graph("1.2.3 garbage", "xsd:double"))
+            .expect_err("non-double lexical must refuse");
+        assert_eq!(err.code, RefusalCode::LiteralNotFloat);
+        let msg = err.to_string();
+        assert!(
+            msg.contains(REFUSAL_01_MALFORMED_AST) && msg.contains("1.2.3 garbage"),
+            "message carries the REFUSAL-01 marker and the offending lexical: {msg}"
+        );
+
+        // ANTI-VACUITY MUTATION TWIN: valid double compiles to a Float param.
+        let ok = compile_turtle(&lit_graph("2.5", "xsd:double")).expect("valid double compiles");
+        assert_eq!(ok.params, vec![SqlLiteral::Float(2.5)]);
+    }
+
+    fn join_graph(join_type: Option<&str>) -> String {
+        let type_clause = match join_type {
+            Some(iri) => format!("    sql:joinType <{}> ;\n", iri),
+            None => String::new(),
+        };
+        format!(
+            concat!(
+                "@prefix sql: <http://graphlaw.org/sql#> .\n",
+                "@prefix ex: <urn:join:q#> .\n",
+                "ex:Q a sql:SelectStatement ;\n",
+                "    sql:statementIndex 1 ;\n",
+                "    sql:fromTable [ sql:tableName \"a\" ] ;\n",
+                "    sql:selectList ( [ sql:columnName \"v\" ] ) ;\n",
+                "    sql:joinClause [\n",
+                "{type_clause}",
+                "        sql:joinTable [ sql:tableName \"b\" ] ;\n",
+                "        sql:joinCondition [ sql:operator sql:Equals ;\n",
+                "            sql:leftOperand [ sql:columnName \"id\" ] ;\n",
+                "            sql:rightOperand [ sql:columnName \"a_id\" ] ] ] ."
+            ),
+            type_clause = type_clause
+        )
+    }
+
+    /// Unknown join-type IRI refuses typed (REFUSAL-01, arm JOIN_TYPE_IRI).
+    #[test]
+    fn unknown_join_type_iri_refuses_typed() {
+        let err = compile_turtle(&join_graph(Some("http://graphlaw.org/sql#FullJoin")))
+            .expect_err("unknown join-type IRI must refuse");
+        assert_eq!(err.code, RefusalCode::MalformedAst);
+        let msg = err.to_string();
+        assert!(
+            msg.contains("sql:joinType IRI") && msg.contains("FullJoin"),
+            "message names the offending IRI: {msg}"
+        );
+
+        // ANTI-VACUITY MUTATION TWIN: the known join-type IRIs compile and pin
+        // their exact SQL rendering — the court flips on the refusal path.
+        let inner = compile_turtle(&join_graph(Some("http://graphlaw.org/sql#InnerJoin")))
+            .expect("InnerJoin compiles");
+        assert!(
+            inner.sql.contains(" JOIN "),
+            "InnerJoin renders JOIN: {}",
+            inner.sql
+        );
+        let left = compile_turtle(&join_graph(Some("http://graphlaw.org/sql#LeftJoin")))
+            .expect("LeftJoin compiles");
+        assert!(
+            left.sql.contains(" LEFT JOIN "),
+            "LeftJoin renders LEFT JOIN: {}",
+            left.sql
+        );
+    }
+
+    /// MISSING sql:joinType stays Inner (pinning court for the default).
+    #[test]
+    fn missing_join_type_defaults_to_inner() {
+        let compiled = compile_turtle(&join_graph(None)).expect("missing joinType compiles");
+        assert!(
+            compiled.sql.contains(" JOIN ") && !compiled.sql.contains(" LEFT JOIN "),
+            "missing joinType must default to Inner, got: {}",
+            compiled.sql
+        );
+    }
+
+    /// RUST-5 admission seal: compile_turtle products carry a valid seal;
+    /// mutating any sealed field (sql, cacheable, canon bytes, receipt
+    /// anchor) invalidates `verify_seal`. Params are unsealed (lawful
+    /// re-binding).
+    #[test]
+    fn admission_seal_valid_on_compile_and_flips_on_mutation() {
+        let compiled = compile_turtle(&lit_graph("42", "xsd:integer")).expect("compile");
+        assert!(
+            compiled.verify_seal(),
+            "fresh compile_turtle product verifies"
+        );
+        assert_eq!(compiled.admission_seal, compiled.seal_bytes());
+
+        // Mutation twin 1: sql text mutation flips the seal.
+        let mut m = compiled.clone();
+        m.sql = m.sql.replace("SELECT", "SELECT ALL");
+        assert!(!m.verify_seal(), "sql mutation must flip the seal");
+
+        // Mutation twin 2: canon-graph mutation flips the seal.
+        let mut m2 = compiled.clone();
+        if let Some(c) = m2.canon_graph_bytes.as_mut() {
+            c[0] ^= 0xFF;
+        }
+        assert!(!m2.verify_seal(), "canon bytes mutation must flip the seal");
+
+        // Mutation twin 3: receipt_state mutation flips the seal.
+        let mut m3 = compiled.clone();
+        m3.receipt_state = Some([7u8; 32]);
+        assert!(
+            !m3.verify_seal(),
+            "receipt_state mutation must flip the seal"
+        );
+
+        // Mutation twin 4: reseal() restores validity after a mutation
+        // (the seal is a function of state, and reseal is the only writer).
+        let mut m4 = m.clone();
+        m4.reseal();
+        assert!(
+            m4.verify_seal(),
+            "reseal over the mutated state re-validates"
+        );
+
+        // Params are unsealed: mutating params keeps the seal valid.
+        let mut p = compiled.clone();
+        p.params.push(SqlLiteral::Integer(1));
+        assert!(p.verify_seal(), "param re-binding is lawful and unsealed");
     }
 }

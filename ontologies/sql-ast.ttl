@@ -237,6 +237,32 @@ sql:aliasName a owl:DatatypeProperty ;
     rdfs:domain sql:Alias ;
     rdfs:range xsd:string .
 
+# Identifiers may carry an optional schema qualifier (rec 3.3) and a dotted
+# qualifier spelling; the compiler reads these as datatype literals.
+sql:schemaName a owl:DatatypeProperty ;
+    rdfs:domain sql:TableRef ;
+    rdfs:range xsd:string .
+
+sql:qualifier a owl:DatatypeProperty ;
+    rdfs:domain sql:ASTNode ;
+    rdfs:range xsd:string .
+
+# Function calls (rec section 7 literal form): functionName + ordered
+# sql:arguments rdf:List.
+sql:functionName a owl:DatatypeProperty ;
+    rdfs:domain sql:ASTNode ;
+    rdfs:range xsd:string .
+
+sql:arguments a rdf:Property ;
+    rdfs:domain sql:ASTNode ;
+    rdfs:range rdf:List .
+
+# Order-by direction token ("ASC" | "DESC", ASC default; malformed is
+# REFUSAL-01, never a silent fold).
+sql:direction a owl:DatatypeProperty ;
+    rdfs:domain sql:ASTNode ;
+    rdfs:range xsd:string .
+
 # Section 3.3/7 attribute spellings read by the compiler (rec section 7 uses
 # sql:alias on projection expressions and sql:value on literal expressions).
 sql:alias a owl:DatatypeProperty ;
@@ -255,6 +281,7 @@ sql:literalValue a owl:DatatypeProperty ;
 # =============================================================================
 
 sql:Equals          a sql:Operator ; rdfs:label "=" .
+# label = compiled SQL surface; normative admission token is "!=" (rec section 4).
 sql:NotEquals       a sql:Operator ; rdfs:label "<>" .
 sql:GreaterThan     a sql:Operator ; rdfs:label ">" .
 sql:GreaterThanOrEq a sql:Operator ; rdfs:label ">=" .
@@ -334,6 +361,23 @@ sql:SelectStatementShape a sh:NodeShape ;
         sh:maxCount 1 ;
         sh:severity sh:Violation ;
         sh:message "At most one sql:where expression." ;
+    ] ;
+    # Section 3.3 closed-world closure: groupBy/orderBy, when present, MUST each
+    # be a single ordered rdf:List (mirrors the sql:from normative branch).
+    # Both clauses are optional per section 3.3 — no minCount.
+    sh:property [
+        sh:path sql:groupBy ;
+        sh:maxCount 1 ;
+        sh:node sql:OrderedListShape ;
+        sh:severity sh:Violation ;
+        sh:message "At most one sql:groupBy clause, and it MUST be an ordered list (rec sections 3.3/4)." ;
+    ] ;
+    sh:property [
+        sh:path sql:orderBy ;
+        sh:maxCount 1 ;
+        sh:node sql:OrderedListShape ;
+        sh:severity sh:Violation ;
+        sh:message "At most one sql:orderBy clause, and it MUST be an ordered list (rec sections 3.3/4)." ;
     ] .
 
 sql:BinaryExpressionShape a sh:NodeShape ;
@@ -375,7 +419,8 @@ sql:BinaryExpressionShape a sh:NodeShape ;
           sh:in ( "=" "!=" "<" "<=" ">" ">=" "AND" "OR" "+" "-" "*" "/" "%" "LIKE" "ILIKE" ) ;
           sh:severity sh:Violation ;
           sh:message "Expression operator MUST be an approved comparison, logical, or arithmetic token." ; ]
-        # Legacy alias form: an operator IRI.
+        # Legacy alias form: an operator IRI — the alias-window form of the
+        # rec section 4 string-token enum above.
         [ sh:path sql:operator ;
           sh:minCount 1 ;
           sh:maxCount 1 ;
@@ -420,3 +465,82 @@ sql:ColumnRefShape a sh:NodeShape ;
         sh:maxCount 1 ;
         sh:pattern "^[a-zA-Z_][a-zA-Z0-9_]*$" ;
     ] .
+
+# =============================================================================
+# Section 7 — Analytical MERGE (closed-world structural shapes)
+# =============================================================================
+# Normative vocabulary per rec section 7 (and the compiler's accepted
+# predicates, src/sql_ast.rs extract_merge_statement): sql:targetTable,
+# sql:usingSource, sql:mergeOn, sql:whenMatched, sql:setAssignments,
+# sql:targetColumn, sql:valueExpression. All four top-level clauses are
+# REQUIRED by the compiler (MissingProperty refusals), hence minCount 1.
+# sql:targetTable is NOT re-declared here: it already exists in the ggen
+# dialect pack (ggen/sql-dialect/statement_classes.ttl).
+
+sql:MergeIntoStatement a owl:Class ;
+    rdfs:subClassOf sql:Statement ;
+    rdfs:label "Merge Into Statement" ;
+    rdfs:comment "Section 7 analytical upsert: target table, USING source select, ON condition, WHEN MATCHED update assignments." .
+
+sql:MergeUpdateAction a owl:Class ;
+    rdfs:subClassOf sql:ASTNode ;
+    rdfs:label "Merge Update Action" ;
+    rdfs:comment "The WHEN MATCHED action of a section 7 MERGE: exactly one ordered sql:setAssignments list (rec section 7)." .
+
+sql:MergeStatementShape a sh:NodeShape ;
+    sh:targetClass sql:MergeIntoStatement ;
+    # Exactly one target table reference (compiler: MissingProperty(targetTable)).
+    sh:property [
+        sh:path sql:targetTable ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node sql:TableRefShape ;
+        sh:severity sh:Violation ;
+        sh:message "A MergeIntoStatement MUST carry exactly one sql:targetTable table reference (rec section 7)." ;
+    ] ;
+    # Exactly one USING source, itself a full SelectStatement (compiler:
+    # MissingProperty(usingSource); the sub-select re-enters SelectStatementShape).
+    sh:property [
+        sh:path sql:usingSource ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node sql:SelectStatementShape ;
+        sh:severity sh:Violation ;
+        sh:message "A MergeIntoStatement MUST carry exactly one sql:usingSource SelectStatement (rec section 7)." ;
+    ] ;
+    # Exactly one ON condition, a well-formed binary expression (compiler:
+    # MissingProperty(mergeOn)).
+    sh:property [
+        sh:path sql:mergeOn ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node sql:BinaryExpressionShape ;
+        sh:severity sh:Violation ;
+        sh:message "A MergeIntoStatement MUST carry exactly one sql:mergeOn binary condition (rec section 7)." ;
+    ] ;
+    # Exactly one WHEN MATCHED action (compiler: MissingProperty(whenMatched)).
+    sh:property [
+        sh:path sql:whenMatched ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node sql:MergeUpdateActionShape ;
+        sh:severity sh:Violation ;
+        sh:message "A MergeIntoStatement MUST carry exactly one sql:whenMatched update action (rec section 7)." ;
+    ] .
+
+sql:MergeUpdateActionShape a sh:NodeShape ;
+    sh:targetClass sql:MergeUpdateAction ;
+    # Exactly one ordered assignment list (compiler: MissingProperty(setAssignments);
+    # unrolled as an rdf:List, mirroring the section 4 collection shapes).
+    sh:property [
+        sh:path sql:setAssignments ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node sql:OrderedListShape ;
+        sh:severity sh:Violation ;
+        sh:message "A MergeUpdateAction MUST contain exactly one ordered sql:setAssignments list (rec section 7)." ;
+    ] .
+# Per-assignment sql:targetColumn/sql:valueExpression cardinality (exactly one
+# of each, compiler MissingProperty) is enforced at the compiler arm; a list-
+# item shape is not expressible against the rdf:List head under the section 4
+# collection-shape pattern used by this file.

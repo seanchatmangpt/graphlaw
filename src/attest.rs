@@ -59,11 +59,26 @@ impl fmt::Display for AttestError {
 impl std::error::Error for AttestError {}
 
 /// Lowercase hex encoding.
+///
+/// ```
+/// use graphlaw::attest::{hex_decode, hex_encode};
+///
+/// assert_eq!(hex_encode(&[0x0f, 0xa0]), "0fa0");
+/// assert_eq!(hex_decode(&hex_encode(&[0xde, 0xad])), Some(vec![0xde, 0xad]));
+/// ```
 pub fn hex_encode(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 /// Hex decoding (either case); `None` on odd length or a non-hex digit.
+///
+/// ```
+/// use graphlaw::attest::hex_decode;
+///
+/// assert_eq!(hex_decode("0Fa0"), Some(vec![0x0f, 0xa0]));
+/// assert_eq!(hex_decode("abc"), None); // odd length
+/// assert_eq!(hex_decode("zz"), None); // not hex
+/// ```
 pub fn hex_decode(s: &str) -> Option<Vec<u8>> {
     if !s.len().is_multiple_of(2) || !s.is_ascii() {
         return None;
@@ -93,11 +108,41 @@ impl fmt::Debug for SigningKey {
 
 impl SigningKey {
     /// Build a signing key from a caller-supplied 32-byte seed (no RNG is used).
+    ///
+    /// ```
+    /// use graphlaw::attest::SigningKey;
+    ///
+    /// let key = SigningKey::from_seed([7; 32]);
+    /// // Ed25519 signing is deterministic: same seed, same public half.
+    /// assert_eq!(
+    ///     key.verifying_key().to_hex(),
+    ///     SigningKey::from_seed([7; 32]).verifying_key().to_hex()
+    /// );
+    /// // Debug output never shows the seed bytes.
+    /// assert!(!format!("{key:?}").contains("070707"));
+    /// ```
     pub fn from_seed(seed: [u8; 32]) -> Self {
         SigningKey(DalekSigning::from_bytes(&seed))
     }
 
     /// Build a signing key from a 64-character hex seed.
+    ///
+    /// ```
+    /// use graphlaw::attest::SigningKey;
+    ///
+    /// let hex = "ab".repeat(32);
+    /// let key = SigningKey::from_seed_hex(&hex)?;
+    /// // Same key as building from the equivalent raw seed bytes.
+    /// let raw: [u8; 32] = hex.as_str().as_bytes().chunks(2)
+    ///     .map(|c| u8::from_str_radix(std::str::from_utf8(c).unwrap(), 16).unwrap())
+    ///     .collect::<Vec<u8>>()
+    ///     .try_into()
+    ///     .unwrap();
+    /// assert_eq!(key.verifying_key(), SigningKey::from_seed(raw).verifying_key());
+    /// assert!(SigningKey::from_seed_hex("zz").is_err()); // not hex
+    /// assert!(SigningKey::from_seed_hex("ab").is_err()); // too short
+    /// # Ok::<(), graphlaw::attest::AttestError>(())
+    /// ```
     pub fn from_seed_hex(hex: &str) -> Result<Self, AttestError> {
         let bytes = hex_decode(hex).ok_or_else(|| malformed("seed is not hex"))?;
         let seed: [u8; 32] = bytes
@@ -107,6 +152,16 @@ impl SigningKey {
     }
 
     /// The public half of this signing key.
+    ///
+    /// ```
+    /// use graphlaw::attest::SigningKey;
+    ///
+    /// let key = SigningKey::from_seed([1; 32]);
+    /// assert_eq!(
+    ///     key.verifying_key().to_hex(),
+    ///     SigningKey::from_seed([1; 32]).verifying_key().to_hex()
+    /// );
+    /// ```
     pub fn verifying_key(&self) -> VerifyingKey {
         VerifyingKey(self.0.verifying_key())
     }
@@ -118,6 +173,15 @@ pub struct VerifyingKey(DalekVerifying);
 
 impl VerifyingKey {
     /// Parse a verifying key from its 32 raw bytes.
+    ///
+    /// ```
+    /// use graphlaw::attest::{hex_decode, SigningKey, VerifyingKey};
+    ///
+    /// let vk = SigningKey::from_seed([3; 32]).verifying_key();
+    /// let raw: [u8; 32] = hex_decode(&vk.to_hex()).unwrap().try_into().unwrap();
+    /// assert_eq!(VerifyingKey::from_bytes(&raw)?.to_hex(), vk.to_hex());
+    /// # Ok::<(), graphlaw::attest::AttestError>(())
+    /// ```
     pub fn from_bytes(bytes: &[u8; 32]) -> Result<Self, AttestError> {
         DalekVerifying::from_bytes(bytes)
             .map(VerifyingKey)
@@ -125,6 +189,15 @@ impl VerifyingKey {
     }
 
     /// Parse a verifying key from 64 hex characters.
+    ///
+    /// ```
+    /// use graphlaw::attest::{SigningKey, VerifyingKey};
+    ///
+    /// let vk = SigningKey::from_seed([3; 32]).verifying_key();
+    /// assert_eq!(VerifyingKey::from_hex(&vk.to_hex())?.to_hex(), vk.to_hex());
+    /// assert!(VerifyingKey::from_hex("zz").is_err());
+    /// # Ok::<(), graphlaw::attest::AttestError>(())
+    /// ```
     pub fn from_hex(hex: &str) -> Result<Self, AttestError> {
         let bytes = hex_decode(hex).ok_or_else(|| malformed("public key is not hex"))?;
         let arr: [u8; 32] = bytes
@@ -134,11 +207,27 @@ impl VerifyingKey {
     }
 
     /// Lower-case hex of the 32 raw key bytes.
+    ///
+    /// ```
+    /// use graphlaw::attest::SigningKey;
+    ///
+    /// let hex = SigningKey::from_seed([4; 32]).verifying_key().to_hex();
+    /// assert_eq!(hex.len(), 64);
+    /// assert!(hex.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase()));
+    /// ```
     pub fn to_hex(&self) -> String {
         hex_encode(self.0.as_bytes())
     }
 
     /// BLAKE3 of the public key bytes, lowercase hex.
+    ///
+    /// ```
+    /// use graphlaw::attest::SigningKey;
+    ///
+    /// let vk = SigningKey::from_seed([5; 32]).verifying_key();
+    /// assert_eq!(vk.key_id().len(), 64);
+    /// assert_eq!(vk.key_id(), SigningKey::from_seed([5; 32]).verifying_key().key_id());
+    /// ```
     pub fn key_id(&self) -> String {
         blake3_hex(self.0.as_bytes())
     }
@@ -155,11 +244,30 @@ impl TrustedKeys {
     }
 
     /// Trust `key`.
+    ///
+    /// ```
+    /// use graphlaw::attest::{SigningKey, TrustedKeys};
+    ///
+    /// let mut trusted = TrustedKeys::new();
+    /// assert!(trusted.is_empty());
+    /// trusted.insert(SigningKey::from_seed([6; 32]).verifying_key());
+    /// assert_eq!(trusted.len(), 1);
+    /// ```
     pub fn insert(&mut self, key: VerifyingKey) {
         self.0.insert(key.key_id(), key);
     }
 
     /// Build from hex public keys.
+    ///
+    /// ```
+    /// use graphlaw::attest::{SigningKey, TrustedKeys};
+    ///
+    /// let hex = SigningKey::from_seed([6; 32]).verifying_key().to_hex();
+    /// let trusted = TrustedKeys::from_hex([hex])?;
+    /// assert_eq!(trusted.len(), 1);
+    /// assert!(TrustedKeys::from_hex(["zz"]).is_err());
+    /// # Ok::<(), graphlaw::attest::AttestError>(())
+    /// ```
     pub fn from_hex<I, S>(keys: I) -> Result<Self, AttestError>
     where
         I: IntoIterator<Item = S>,
@@ -173,6 +281,16 @@ impl TrustedKeys {
     }
 
     /// Look up a trusted key by its key id.
+    ///
+    /// ```
+    /// use graphlaw::attest::{SigningKey, TrustedKeys};
+    ///
+    /// let key = SigningKey::from_seed([6; 32]);
+    /// let mut trusted = TrustedKeys::new();
+    /// trusted.insert(key.verifying_key());
+    /// assert!(trusted.get(&key.verifying_key().key_id()).is_some());
+    /// assert!(trusted.get("deadbeef").is_none());
+    /// ```
     pub fn get(&self, key_id: &str) -> Option<&VerifyingKey> {
         self.0.get(key_id)
     }
@@ -218,6 +336,16 @@ pub struct Attestation {
 
 impl Attestation {
     /// Canonical JSON: `{"key_id":..,"payload_blake3":..,"signature":..}`.
+    ///
+    /// ```
+    /// use graphlaw::attest::{sign_bytes, Attestation, SigningKey};
+    ///
+    /// let att = sign_bytes(&SigningKey::from_seed([9; 32]), b"payload");
+    /// let text = att.to_json();
+    /// assert!(text.starts_with("{\"key_id\":\""));
+    /// assert_eq!(Attestation::from_json(&text)?, att);
+    /// # Ok::<(), graphlaw::attest::AttestError>(())
+    /// ```
     pub fn to_json(&self) -> String {
         format!(
             "{{\"key_id\":\"{}\",\"payload_blake3\":\"{}\",\"signature\":\"{}\"}}",
@@ -226,6 +354,16 @@ impl Attestation {
     }
 
     /// Strict inverse of [`Attestation::to_json`] (the exact canonical form).
+    ///
+    /// ```
+    /// use graphlaw::attest::{sign_bytes, Attestation, SigningKey};
+    ///
+    /// let att = sign_bytes(&SigningKey::from_seed([9; 32]), b"payload");
+    /// assert_eq!(Attestation::from_json(&att.to_json())?, att);
+    /// // Anything that is not the exact canonical shape is refused.
+    /// assert!(Attestation::from_json("{\"key_id\":\"x\"}").is_err());
+    /// # Ok::<(), graphlaw::attest::AttestError>(())
+    /// ```
     pub fn from_json(text: &str) -> Result<Self, AttestError> {
         let rest = text
             .strip_prefix("{\"key_id\":\"")
@@ -264,6 +402,18 @@ impl Attestation {
 }
 
 /// Sign arbitrary payload bytes.
+///
+/// ```
+/// use graphlaw::attest::{sign_bytes, verify_bytes, SigningKey, TrustedKeys};
+///
+/// let key = SigningKey::from_seed([9; 32]);
+/// let mut trusted = TrustedKeys::new();
+/// trusted.insert(key.verifying_key());
+/// let att = sign_bytes(&key, b"law payload");
+/// assert!(verify_bytes(b"law payload", &att, &trusted).is_ok());
+/// // Any other payload fails verification.
+/// assert!(verify_bytes(b"OTHER", &att, &trusted).is_err());
+/// ```
 pub fn sign_bytes(key: &SigningKey, payload: &[u8]) -> Attestation {
     let sig = key.0.sign(payload);
     Attestation {
@@ -275,6 +425,21 @@ pub fn sign_bytes(key: &SigningKey, payload: &[u8]) -> Attestation {
 
 /// Verify `att` over `payload` against `trusted`. Order: shape, payload
 /// digest (`BadSignature`), key trust (`UnknownKey`), signature (`BadSignature`).
+///
+/// ```
+/// use graphlaw::attest::{sign_bytes, verify_bytes, SigningKey, TrustedKeys};
+///
+/// let key = SigningKey::from_seed([9; 32]);
+/// let mut trusted = TrustedKeys::new();
+/// trusted.insert(key.verifying_key());
+/// let att = sign_bytes(&key, b"payload");
+/// assert!(verify_bytes(b"payload", &att, &trusted).is_ok());
+/// // A key outside the trust set is refused even with a valid signature.
+/// assert_eq!(
+///     verify_bytes(b"payload", &att, &TrustedKeys::new()),
+///     Err(graphlaw::attest::AttestError::UnknownKey)
+/// );
+/// ```
 pub fn verify_bytes(
     payload: &[u8],
     att: &Attestation,
@@ -359,6 +524,28 @@ impl<'a> From<&'a Receipt> for ReceiptFields<'a> {
 }
 
 /// Canonical receipt payload: keys sorted, no whitespace, absent options `null`.
+///
+/// ```
+/// use graphlaw::attest::{receipt_payload, ReceiptFields};
+///
+/// let f = ReceiptFields {
+///     parent: "p",
+///     child: "c",
+///     step: "derive:rdfs",
+///     authority: "duckdb",
+///     revision: "v1",
+///     added: 2,
+///     lease_id: None,
+///     plan_blake3: None,
+///     subject_blake3: Some("blake3:abc"),
+/// };
+/// assert_eq!(
+///     receipt_payload(&f),
+///     "{\"added\":2,\"authority\":\"duckdb\",\"child\":\"c\",\"lease_id\":null,\
+///      \"parent\":\"p\",\"plan_blake3\":null,\"revision\":\"v1\",\
+///      \"step\":\"derive:rdfs\",\"subject_blake3\":\"blake3:abc\"}"
+/// );
+/// ```
 pub fn receipt_payload(f: &ReceiptFields<'_>) -> String {
     format!(
         "{{\"added\":{},\"authority\":{},\"child\":{},\"lease_id\":{},\"parent\":{},\"plan_blake3\":{},\"revision\":{},\"step\":{},\"subject_blake3\":{}}}",
@@ -375,11 +562,19 @@ pub fn receipt_payload(f: &ReceiptFields<'_>) -> String {
 }
 
 /// Sign a receipt.
+///
+/// Documented reason for no standalone doctest: exercising this needs a real
+/// [`crate::law::Receipt`] from a [`crate::law::LawState`] transition, which the
+/// struct-level example on [`Attestation`] already runs end to end — it calls
+/// [`sign_receipt`] and [`verify_receipt`] together and asserts the forged-receipt
+/// refusal.
 pub fn sign_receipt(key: &SigningKey, receipt: &Receipt) -> Attestation {
     sign_bytes(key, receipt_payload(&receipt.into()).as_bytes())
 }
 
-/// Verify a receipt's attestation against `trusted`.
+/// Verify a receipt's attestation against `trusted`. See [`Attestation`]'s
+/// struct-level example, which exercises this against [`sign_receipt`],
+/// including the tampered-receipt refusal.
 pub fn verify_receipt(
     receipt: &Receipt,
     att: &Attestation,
@@ -389,6 +584,25 @@ pub fn verify_receipt(
 }
 
 /// Canonical lease payload (sorted keys, no whitespace; `scope` order preserved).
+///
+/// ```
+/// use graphlaw::attest::lease_payload;
+/// use graphlaw::law::{Ceiling, Lease};
+///
+/// let lease = Lease {
+///     id: "l1".into(),
+///     holder: "agent".into(),
+///     ceiling: Ceiling::Construct,
+///     scope: vec!["derive:rdfs".into()],
+///     expires_unix: 2_000,
+///     issued_unix: 1_000,
+/// };
+/// assert_eq!(
+///     lease_payload(&lease),
+///     "{\"ceiling\":\"construct\",\"expires_unix\":2000,\"holder\":\"agent\",\
+///      \"id\":\"l1\",\"issued_unix\":1000,\"scope\":[\"derive:rdfs\"]}"
+/// );
+/// ```
 pub fn lease_payload(l: &Lease) -> String {
     let scope = l
         .scope
@@ -413,6 +627,26 @@ pub fn sign_lease(key: &SigningKey, lease: Lease) -> SignedLease {
 }
 
 /// Verify a signed lease's signature (not its expiry: expiry needs a clock).
+///
+/// ```
+/// use graphlaw::attest::{sign_lease, verify_lease, SigningKey, TrustedKeys};
+/// use graphlaw::law::{Ceiling, Lease};
+///
+/// let key = SigningKey::from_seed([8; 32]);
+/// let mut trusted = TrustedKeys::new();
+/// trusted.insert(key.verifying_key());
+/// let signed = sign_lease(&key, Lease {
+///     id: "l".into(),
+///     holder: "h".into(),
+///     ceiling: Ceiling::Construct,
+///     scope: vec!["derive:rdfs".into()],
+///     expires_unix: 2_000,
+///     issued_unix: 1_000,
+/// });
+/// assert!(verify_lease(&signed, &trusted).is_ok());
+/// // An untrusted issuer key is refused.
+/// assert!(verify_lease(&signed, &TrustedKeys::new()).is_err());
+/// ```
 pub fn verify_lease(signed: &SignedLease, trusted: &TrustedKeys) -> Result<(), AttestError> {
     verify_bytes(
         lease_payload(&signed.lease).as_bytes(),

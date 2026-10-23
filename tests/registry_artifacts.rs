@@ -902,7 +902,7 @@ fn receipt_surface_pin_matches_live_files_and_refuses_drift() {
     let surface = json_doc()["receipt_surface"].clone();
     assert_eq!(surface["schema"], json!("graphlaw.receipt-surface/1"));
     let files = surface["files"].as_array().expect("files array");
-    assert_eq!(files.len(), 2, "duckdb_eval + sql_ast pinned");
+    assert_eq!(files.len(), 6, "receipt-surface pins six sources");
     for f in files {
         let path = f["path"].as_str().expect("path");
         let bytes = std::fs::read(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(path))

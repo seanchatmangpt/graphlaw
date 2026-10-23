@@ -29,14 +29,11 @@ cargo run --example receipt_feedback
 # before record: receipt required: no recorded receipt for step `derive:rdfs`
 # after record:  admitted by `admit:require-receipt`
 
-cargo run --example sql_in_rdf_duckdb
-# compiles declarative Turtle AST -> runs vectorized pushdown in embedded DuckDB
-# emitted 2 rows in 3.806ms, sealed by query hash blake3:8901beb8…
-
 cargo test --test differential
 # N3 (Eyeron), Datalog and OWL-RL (PurRDF) must agree on a transitive closure
 
-cargo test --test wasm_abi          # builds the WASI module and drives all 14 ops
+cargo test --test wasm_abi          # builds the WASI module and drives the hashed 14-op table (`duckdb` is dispatched by the module and omitted from that table until a digest bump)
+                                    #   prerequisite: WASI_SDK_PATH must point at a wasi-sdk root (CI uses wasi-sdk 34) — frozen-duckdb-sys links libc++ into the wasm32-wasip1 build and panics without it (all 25 tests then fail loudly). Alternatively point GRAPHLAW_WASM at a prebuilt module. Recipe: docs/WASM.md.
 
 cargo test --test sql_rdf_dialect   # SQL-in-RDF compile + admission courts
 cargo test --test chicago_validation  # Chicago receipt/execution courts
@@ -49,6 +46,7 @@ Organized Diataxis-style; the hub is [docs/index.md](docs/index.md).
 
 | | |
 |---|---|
+| **Index** | [docs/INDEX.md](docs/INDEX.md) |
 | **Tutorial** | [Quickstart](docs/quickstart.md) |
 | **How-to** | [Run the WASM module](docs/how-to/run-the-wasm-module.md) · [Signed leases](docs/how-to/authorize-with-signed-leases.md) · [Offline verification](docs/how-to/verify-without-trusting-the-operator.md) · [Knowledge hooks](docs/how-to/use-knowledge-hooks.md) · [Edge Ingestion & Compaction](docs/how-to/how-to-edge-ingestion-and-compaction.md) · [Use from JavaScript](docs/how-to/use-from-javascript.md) |
 | **Reference** | [ABI reference](docs/abi-reference.md) · [Capability registry](docs/capability-registry.md) · [Refusals](docs/refusals.md) · [API stability](docs/api-stability.md) · [WASM integration](docs/wasm-integration.md) · [WASM runbook](docs/WASM.md) · [Dialects](docs/DIALECTS.md) · [Full generated reference](docs/reference-generated/reference.md) |
@@ -64,7 +62,7 @@ GraphLaw unconditionally embeds the **`frozen-duckdb 2.0`** analytical engine, u
   compilation for SELECT and the command classes, typed `REFUSAL-01..04` refusals, and
   BLAKE3 receipts binding the canonical AST graph + parameters.
 * **Signed Semantic Compaction**: Massive event bursts reduce to minimal, cryptographically verifiable RDF facts sealed with BLAKE3 execution receipts. A 500,000-event telemetry burst compresses to ~1 KB of signed triples before syncing across intermittent/DDIL networks.
-* **Under the 25 MiB WASM Ceiling**: The core `graphlaw.wasm` artifact is **~6.3 MiB** (6,654,496 bytes, pinned by `registry/ARTIFACTS.blake3`), enforced by a 25 MiB court ceiling (`tests/wasm_size_court.rs`) — comfortably inside tight browser/WASM runtime memory arenas without dynamic swapping or memory fragmentation. (The DuckDB engine executes host-side; the wasm boundary refuses SQL by typed `REFUSAL-04` capability refusal, not by embedding the engine.)
+* **WASM size**: The pinned artifact in `registry/ARTIFACTS.blake3` is **6,793,617 bytes** (blake3 `332ea218…`), byte-identical to `priv/graphlaw.wasm` on this tree. The size court ceiling is the 64 MiB sandbox wall (`tests/wasm_size_court.rs`). SQL-in-RDF admits inside the module through `compile_turtle`. `REFUSAL-04` is the non-document-backed builtin reader, not a missing engine.
 * **Disconnected Fail-Closed Operations**: Missing filter bounds or excursion breaches trigger immediate local actuator lockouts and quarantined states without requiring an upstream cloud coordinator.
 
 See [docs/how-to/how-to-edge-ingestion-and-compaction.md](docs/how-to/how-to-edge-ingestion-and-compaction.md) and [docs/explanation/edge-sovereignty-and-zero-trust-compaction.md](docs/explanation/edge-sovereignty-and-zero-trust-compaction.md).
@@ -131,7 +129,7 @@ Capability | Authority
 ---|---
 RDF 1.2, codecs, SPARQL 1.1/1.2, SHACL, ShEx 2.1, Datalog/stratified fixpoint, RDF/RDFS/OWL-RL entailment | PurRDF 2.0.2 (`purrdf = "=2.0.2"`)
 Notation3 parsing/reasoning/proofs | Eyeron 0.7.8 (vendored `crates/graphlaw-eyeron` from upstream 0.7.7 @ `eyereasoner/eyeron@d6568f65`; see its `UPSTREAM.md`)
-Vectorized columnar execution, Parquet scan pipelines, SIMD aggregations | DuckDB 2.0 (`frozen-duckdb = "2.0.0-dev"`)
+Vectorized columnar execution, Parquet scan pipelines, SIMD aggregations | DuckDB 2.0 (`frozen-duckdb = "2.0"`)
 
 GraphLaw owns the composition boundary and semantic assets (ontologies, packs,
 queries) and the decision about which upstream implementation has standing.
@@ -157,11 +155,11 @@ every Ed25519 attestation — offline, no sockets. `ADMITTED` (0) or
 
 ## License
 
-Code is MIT ([LICENSE](LICENSE)); execution/use of the kernel is governed by the P28 Sovereign Invariant License v2.1.0, `urn:graphlaw:license:p28-sil:v2.1.0-sovereign` ([LICENSE-P28-SIL.md](LICENSE-P28-SIL.md)) — statutory metric classifications with the $50M Class-I safe harbor, anti-circumvention ratchet, harmonic regularization, and zero hot-path drag invariant, with its implementation-status appendix non-normative.
+Execution/use of the kernel is governed by the P28 Sovereign Invariant License v2.1.0, `urn:graphlaw:license:p28-sil:v2.1.0-sovereign` ([LICENSE.md](LICENSE.md)) — statutory metric classifications with the $50M Class-I safe harbor, anti-circumvention ratchet, harmonic regularization, and zero hot-path drag invariant, with its implementation-status appendix non-normative.
 
 ## Releasing
 
-CI (`.github/workflows/release.yml`) builds and tests, tags `vX.Y.Z`, and creates the GitHub release with `graphlaw.wasm` (plus checksum) whenever a change that bumps the version in `Cargo.toml` reaches `main`. It never publishes to crates.io: publishing is local-only — from a logged-in machine run `cargo cicd publish run` (gated on doc-claims verification and a `cargo publish --dry-run` fence), then `cargo publish -p graphlaw` (the registry credential is the machine's own cargo login, never a repository secret). Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
+CI (`.github/workflows/release.yml`) builds and tests, tags `vX.Y.Z`, and creates the GitHub release with `graphlaw.wasm` (plus checksum) whenever a change that bumps the version in `Cargo.toml` reaches `main`. It never publishes to crates.io: publishing is local-only — from a logged-in machine run `cargo publish -p graphlaw` (the registry credential is the machine's own cargo login, never a repository secret). Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
 
 ## Production rule
 

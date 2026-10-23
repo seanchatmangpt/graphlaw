@@ -9,10 +9,13 @@ permissions:
   contents: read
 
 jobs:
+  # Local equivalent: cargo fmt --check && cargo clippy --all-targets
+  # --features pack-tools,abi,wasi-patched-deps,evidentiary-ring,runner -- -D warnings
+  # && cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring,runner
   native:
-    name: library-backed native
+    name: native (fmt + clippy + full host suite + registry check)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
@@ -20,13 +23,96 @@ jobs:
           toolchain: 1.96.0
           components: rustfmt, clippy
           targets: wasm32-wasip1
+      # WASI setup (L113): the wasm link REQUIRES a staged toolchain
+      # (WASI_SDK_PATH with bin/clang + libc++ for wasm32-wasip1) AND the
+      # compiled DuckDB wasm archives in ~/.frozen-duckdb/cache
+      # (frozen-duckdb-sys/build.rs + frozen-duckdb-builder compile_wasip1_static
+      # recipe). Only the DuckDB engine archives are restored from the cache
+      # (~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1 is the engine archive,
+      # NOT the SDK); the cache key hashes this workflow file (source pin +
+      # SDK version) and the recipe hash. The SDK itself is wasi-sdk 34
+      # installed fresh at /opt/wasi-sdk, never cached.
+      # PATCH-ON-L109-LANDING: swap this inline recipe for
+      # frozen-duckdb scripts/build_wasi_duckdb.sh (L109) once it lands.
+      - name: Restore staged WASI SDK + duckdb wasm archives
+        uses: actions/cache@0c907a75c2c80ebcb7f088228285e798b750cf8f # v4
+        with:
+          path: ~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1
+          key: wasi-duckdb-v2.0.0-dev-b6013f7a-${{ hashFiles('.github/workflows/ci.yml') }}
+      - name: Stage WASI SDK + duckdb wasm archives (WASI_SDK_PATH)
+        run: |
+          set -euo pipefail
+          CACHE="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1"
+          # Fail-closed admission of a cached archive: it must be an ar archive
+          # of wasm32 objects — mirrors frozen-duckdb-builder archive_is_wasm32
+          # (ar magic + \0asm wasm magic, and REFUSES Mach-O/ELF magics; a host
+          # archive or binary is the historical false-pass).
+          is_wasm32_ar() { # exact port of frozen-duckdb-builder archive_is_wasm32
+            python3 - "$1" <<'PY'
+          import sys
+          b = open(sys.argv[1], "rb").read(64 * 1024 * 1024)
+          ok = (b.startswith(b"!<arch>\n") and b"\0asm" in b
+                and not any(m in b for m in (b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\x7fELF")))
+          sys.exit(0 if ok else 1)
+          PY
+          }
+          # WASI_SDK_PATH is a wasi-sdk root. Install it even when the DuckDB
+          # archive is already cached; the cache directory is not a wasi-sdk.
+          if [ ! -x /opt/wasi-sdk/bin/clang ] || [ ! -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake ]; then
+            curl -fsSL -o /tmp/wasi-sdk.tar.gz \
+              https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz
+            sudo mkdir -p /opt/wasi-sdk
+            sudo tar -xzf /tmp/wasi-sdk.tar.gz -C /opt/wasi-sdk --strip-components=1
+          fi
+          test -x /opt/wasi-sdk/bin/clang
+          test -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake
+          if [ -f "$CACHE/libduckdb.a" ] && is_wasm32_ar "$CACHE/libduckdb.a"; then
+            echo "cached duckdb wasm32 archive admitted: $CACHE/libduckdb.a"
+          else
+            rm -f "$CACHE/libduckdb.a"
+            if ! command -v cmake >/dev/null; then
+              sudo apt-get update
+              sudo apt-get install -y cmake
+            fi
+            # 2. Compile the pinned DuckDB source to the wasm32-wasip1 static
+            #    archive (frozen-duckdb-builder compile_wasip1_static recipe).
+            DUCKDB_PIN=b6013f7aa2f36caabb9466ce1791667ea8a280bb
+            TMP="$(mktemp -d)"
+            git clone --quiet https://github.com/duckdb/duckdb.git "$TMP/duckdb"
+            git -C "$TMP/duckdb" checkout --quiet "$DUCKDB_PIN"
+            # DuckDB root CMakeLists sets POSITION_INDEPENDENT_CODE ON, which
+            # compiles wasm objects as -fPIC (env.__memory_base); patch before
+            # configure (same patch the builder applies; refuse if absent).
+            grep -q 'set(CMAKE_POSITION_INDEPENDENT_CODE ON)' "$TMP/duckdb/CMakeLists.txt"
+            sed -i 's/set(CMAKE_POSITION_INDEPENDENT_CODE ON)/set(CMAKE_POSITION_INDEPENDENT_CODE OFF)/' "$TMP/duckdb/CMakeLists.txt"
+            cmake -S "$TMP/duckdb" -B "$TMP/duckdb/build-wasip1" \
+              -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_SHARED_LIBS=OFF -DBUILD_EXTENSIONS= -DBUILD_SHELL=OFF \
+              -DBUILD_UNITTESTS=OFF -DENABLE_EXTENSION_AUTOLOADING=OFF \
+              -DENABLE_EXTENSION_AUTOINSTALL=OFF -DBUILD_HTTPFS=OFF \
+              -DBUILD_JEMALLOC=OFF -DDISABLE_THREADS=ON
+            cmake --build "$TMP/duckdb/build-wasip1" --target duckdb_static -j "$(nproc)" \
+              || cmake --build "$TMP/duckdb/build-wasip1" --target duckdb -j "$(nproc)"
+            mkdir -p "$CACHE"
+            AR="$TMP/duckdb/build-wasip1/src/libduckdb_static.a"
+            [ -f "$AR" ] || AR="$TMP/duckdb/build-wasip1/src/libduckdb.a"
+            is_wasm32_ar "$AR" || { echo "REFUSED: built archive is not wasm32 ar" >&2; exit 1; }
+            cp "$AR" "$CACHE/libduckdb.a"
+            # Extension archives staged alongside the core (copy_extension_archives).
+            find "$TMP/duckdb/build-wasip1" -name 'lib*_extension.a' -exec cp -n {} "$CACHE/" \;
+          fi
+          echo "WASI_SDK_PATH=/opt/wasi-sdk" >> "$GITHUB_ENV"
+          echo "staged: $(ls "$CACHE")"
       - name: Resolve dependency graph
         run: cargo metadata --format-version 1
       - name: Format
         run: cargo fmt --check
       - name: Clippy
         # castle-diff excluded: pulls nightly-only wasm4pm-compat (E0554 on stable).
-        run: cargo clippy --all-targets --features pack-tools,abi,wasi-patched-deps -- -D warnings
+        # evidentiary-ring (native SPSC ring) and runner (host-only wasmi runner)
+        # are host-buildable and must not dodge the gate (RUST-8 lane L7).
+        run: cargo clippy --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring,runner -- -D warnings
       - name: Build WASI module
         run: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
       - name: Capability registry is current (graphlaw-registry --check)
@@ -34,7 +120,7 @@ jobs:
       - name: Test backend authorities
         env:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
-        run: cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps
+        run: cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring,runner
       - name: Upload WASI module
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -49,6 +135,7 @@ jobs:
   # because ggen-engine -> wasm4pm-compat 26.8.7 is nightly-only (E0554 on
   # stable) and a git dep in the root manifest would trip the publishability
   # manifest check (tests/authority_manifest.rs).
+  # Local equivalent (nightly toolchain required): cd courts/castle-diff && cargo +nightly test
   castle-diff:
     name: castle hash-unification court (nightly)
     runs-on: ubuntu-latest
@@ -62,16 +149,95 @@ jobs:
         working-directory: courts/castle-diff
         run: cargo +nightly test
 
+  # All 8 loud-skip suites (wasm_size_court, abi_manifest_court, abi_bounds_court,
+  # canonical_cross_dialect, parse_refusal_court, tier_court,
+  # parser_capability_probe, wasm_native_differential) are LANDED on disk —
+  # this job should be GREEN. A "[SKIP-loud]" line here means a suite file was
+  # deleted; that is the only acceptable skip. Not an expected-red job.
+  # History: this job was red while the WASI link had no staged SDK — the
+  # "missing link" era (rust-lld: unable to find library -lduckdb). That link
+  # now lands via the staged-toolchain step below (WASI_SDK_PATH + compiled
+  # duckdb wasm32 archives). RED here now means the SDK setup broke, not the
+  # historical link gap.
+  # Local equivalent: cargo build --locked -p graphlaw-wasm --target
+  # wasm32-wasip1 --profile wasm, then per-suite cargo test --locked --test <name>.
   wasm-court:
-    name: wasm court (WASI + ABI courts)
+    name: wasm courts (WASI ABI + landed wasm suites)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.96.0 # pinned: matches rust-toolchain.toml
           targets: wasm32-wasip1, wasm32-unknown-unknown
+      # WASI setup (L113) — same staged-SDK + duckdb-archive recipe as the
+      # native job above. PATCH-ON-L109-LANDING: swap for frozen-duckdb
+      # scripts/build_wasi_duckdb.sh when L109 lands.
+      - name: Restore staged WASI SDK + duckdb wasm archives
+        uses: actions/cache@0c907a75c2c80ebcb7f088228285e798b750cf8f # v4
+        with:
+          path: ~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1
+          key: wasi-duckdb-v2.0.0-dev-b6013f7a-${{ hashFiles('.github/workflows/ci.yml') }}
+      - name: Stage WASI SDK + duckdb wasm archives (WASI_SDK_PATH)
+        run: |
+          set -euo pipefail
+          CACHE="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1"
+          # Fail-closed admission of a cached archive: it must be a wasm32 ar
+          # archive (a host archive shares the !<arch> magic and is the
+          # historical false-pass; frozen-duckdb-builder archive_is_wasm32).
+          is_wasm32_ar() { # exact port of frozen-duckdb-builder archive_is_wasm32
+            python3 - "$1" <<'PY'
+          import sys
+          b = open(sys.argv[1], "rb").read(64 * 1024 * 1024)
+          ok = (b.startswith(b"!<arch>\n") and b"\0asm" in b
+                and not any(m in b for m in (b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\x7fELF")))
+          sys.exit(0 if ok else 1)
+          PY
+          }
+          # WASI_SDK_PATH is a wasi-sdk root. Install it even when the DuckDB
+          # archive is already cached; the cache directory is not a wasi-sdk.
+          if [ ! -x /opt/wasi-sdk/bin/clang ] || [ ! -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake ]; then
+            curl -fsSL -o /tmp/wasi-sdk.tar.gz \
+              https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz
+            sudo mkdir -p /opt/wasi-sdk
+            sudo tar -xzf /tmp/wasi-sdk.tar.gz -C /opt/wasi-sdk --strip-components=1
+          fi
+          test -x /opt/wasi-sdk/bin/clang
+          test -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake
+          if [ -f "$CACHE/libduckdb.a" ] && is_wasm32_ar "$CACHE/libduckdb.a"; then
+            echo "cached duckdb wasm32 archive admitted: $CACHE/libduckdb.a"
+          else
+            if ! command -v cmake >/dev/null; then
+              sudo apt-get update
+              sudo apt-get install -y cmake
+            fi
+            # 2. Compile the pinned DuckDB source to the wasm32-wasip1 static
+            #    archive (frozen-duckdb-builder compile_wasip1_static recipe).
+            DUCKDB_PIN=b6013f7aa2f36caabb9466ce1791667ea8a280bb
+            TMP="$(mktemp -d)"
+            git clone --quiet https://github.com/duckdb/duckdb.git "$TMP/duckdb"
+            git -C "$TMP/duckdb" checkout --quiet "$DUCKDB_PIN"
+            grep -q 'set(CMAKE_POSITION_INDEPENDENT_CODE ON)' "$TMP/duckdb/CMakeLists.txt" # PIC patch pre-check
+            sed -i 's/set(CMAKE_POSITION_INDEPENDENT_CODE ON)/set(CMAKE_POSITION_INDEPENDENT_CODE OFF)/' "$TMP/duckdb/CMakeLists.txt"
+            cmake -S "$TMP/duckdb" -B "$TMP/duckdb/build-wasip1" \
+              -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_SHARED_LIBS=OFF -DBUILD_EXTENSIONS= -DBUILD_SHELL=OFF \
+              -DBUILD_UNITTESTS=OFF -DENABLE_EXTENSION_AUTOLOADING=OFF \
+              -DENABLE_EXTENSION_AUTOINSTALL=OFF -DBUILD_HTTPFS=OFF \
+              -DBUILD_JEMALLOC=OFF -DDISABLE_THREADS=ON
+            cmake --build "$TMP/duckdb/build-wasip1" --target duckdb_static -j "$(nproc)" \
+              || cmake --build "$TMP/duckdb/build-wasip1" --target duckdb -j "$(nproc)"
+            mkdir -p "$CACHE"
+            AR="$TMP/duckdb/build-wasip1/src/libduckdb_static.a"
+            [ -f "$AR" ] || AR="$TMP/duckdb/build-wasip1/src/libduckdb.a"
+            is_wasm32_ar "$AR" || { echo "REFUSED: built archive is not wasm32 ar" >&2; exit 1; }
+            cp "$AR" "$CACHE/libduckdb.a"
+            find "$TMP/duckdb/build-wasip1" -name 'lib*_extension.a' -exec cp -n {} "$CACHE/" \;
+          fi
+          echo "WASI_SDK_PATH=/opt/wasi-sdk" >> "$GITHUB_ENV"
+          echo "staged: $(ls "$CACHE")"
       - name: Compile facade for wasm32-unknown-unknown
         run: cargo check --lib --target wasm32-unknown-unknown
       - name: Build WASI module
@@ -93,8 +259,45 @@ jobs:
             fi
           done
 
+  # RUST-8 (lane L7): every workspace member gets its own clippy+test gate.
+  # Plain `cargo test` is the gate — frozen-duckdb is a normal dependency;
+  # no job may pass --features duckdb or --no-default-features to dodge it.
+  # Local equivalent: cargo test --locked (whole workspace, incl. frozen-duckdb).
+  workspace-members:
+    name: per-member clippy+test gate (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: graphlaw
+            features: pack-tools,abi,wasi-patched-deps,evidentiary-ring,runner
+          - package: graphlaw-wasm
+            features: ""
+          - package: graphlaw-eyeron
+            features: ""
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.96.0
+          components: clippy
+      - name: Clippy
+        if: matrix.features != ''
+        run: cargo clippy --locked -p ${{ matrix.package }} --all-targets --features ${{ matrix.features }} -- -D warnings
+      - name: Clippy (no features)
+        if: matrix.features == ''
+        run: cargo clippy --locked -p ${{ matrix.package }} --all-targets -- -D warnings
+      # Plain cargo test = the gate; the whole workspace (incl. frozen-duckdb
+      # engine) compiles and runs for every member row.
+      - name: Test (workspace gate)
+        run: cargo test --locked
+
+  # Local equivalent: cargo install cargo-semver-checks --locked, then
+  # cargo semver-checks --package graphlaw (needs a published baseline).
   semver:
-    name: semver (cargo-semver-checks)
+    name: semver compatibility (cargo-semver-checks vs published baseline)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -106,8 +309,10 @@ jobs:
         with:
           package: graphlaw
 
+  # Local equivalent: cargo install cargo-deny --locked, then
+  # cargo deny check advisories licenses bans sources.
   deny:
-    name: cargo-deny (advisories licenses bans sources)
+    name: "dependency policy (cargo-deny: advisories, licenses, bans, sources)"
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -116,8 +321,11 @@ jobs:
         with:
           command: check advisories licenses bans sources
 
+  # Local equivalent: cargo install cargo-audit --locked, then cargo audit.
+  # NOTE: no rust cache on this job (fresh cargo install ~1-2 min, acceptable);
+  # if a shared-cache lane lands, every rust job here should adopt it at once.
   audit:
-    name: cargo-audit (RustSec)
+    name: RustSec advisory audit (cargo-audit)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:

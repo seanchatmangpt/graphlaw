@@ -2,7 +2,7 @@
 @prefix dcterms: <http://purl.org/dc/terms/> .
 
 sql: a dcterms:source .
-sql:grammarSource dcterms:source "/Users/sac/frozen-duckdb/target/wasm-build/duckdb/src/parser/peg/grammar/statements/common.gram" .
+sql:grammarSource dcterms:source "src/parser/peg/grammar/statements/common.gram" .
 
 sql:ExternalResourceStatement a sql:StatementKind ;
     sql:name "ExternalResourceStatement" ;
@@ -179,7 +179,7 @@ sql:DisconnectStatement a sql:StatementKind ;
     sql:example "DISCONNECT" ;
     sql:order 35 .
 
-sql:extensionRoot dcterms:source "/Users/sac/frozen-duckdb/target/wasm-build/duckdb/extension" .
+sql:extensionRoot dcterms:source "extension" .
 
 sql:ext_autocomplete a sql:Extension ;
     sql:name "autocomplete" ;

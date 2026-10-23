@@ -17,6 +17,13 @@
 //!    table: `M[k][j] := M[k][j] INTERSECT (M[k][i] o M[i][j])`, queue-based like the
 //!    breed. Vectors emitted as `derived:{i}:{j}` facts with `|`-joined masks.
 //!
+//! Run (from /Users/sac/graphlaw): cargo run --example allen_datalog
+//! Output: per-case refinement lines ending in `RESULT: exit 0` on success; exits 1
+//! listing every table mismatch otherwise. Side effect: rewrites
+//! examples/allen_comp_table.n3.
+//! Court: tests/corpus_conformance.rs (transcription-vs-oracle + committed
+//! allen_comp_table.n3 byte-currency tests).
+//!
 //! Rule-shape note: forward-chained N3 is monotone (adds facts only); Allen refinement is
 //! an intersection (removal), so the transitive refinement rules are applied by this
 //! harness's fixpoint loop over the emitted Datalog facts; the rule shape is documented

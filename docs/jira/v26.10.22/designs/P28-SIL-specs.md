@@ -19,19 +19,20 @@ domain-separates. Harmonization notes filed in LICENSE-P28-SIL.md §1.5,
 PRD-P28-SIL.md §3.1.2, sql-rdf-rec.md §1.4.
 
 ## §3.1 incremental receipt fold (0.15µs path)
-Current state: R1 carries canon bytes but `admitted_statement_hash` still
-re-absorbs full canon per receipt (O(|Canon|) each call), and
-`eval_admitted_ast` clones the Vec AND hashes canon TWICE (redundant override
-at src/duckdb_eval.rs:371-385). Design: `receipt_state: Option<blake3::Hasher>`
-on CompiledQuery — canon pre-absorbed once at compile; per receipt =
-state.clone() (~200B memcpy, blake3 Hasher is a flat POD) + params fold +
-finalize, bit-identical by BLAKE3 streaming law (property test: clone path ≡
-reference hash). Drop the redundant second hash + the clone (Cow<[u8]> on the
-divergent path only). §3.1.1 static-slice: the Hasher IS the static form;
-bytes need not live in static memory. Refusal fast path (≤0.10µs):
-`RefusalMessage::Static(&'static str)` enum — most refusal messages are
-literals already; heap alloc only for genuinely dynamic diagnostics.
-UNVERIFIED until the TC-HOT bench lands.
+Landed: `CompiledQuery.receipt_state` is a 32-byte `h_ast`, not a
+`blake3::Hasher`. `fold_params_anchored` copies `h_ast` and the inline param
+bytes into one `[u8; 96]` and calls `Hasher::update` once. Bit-identical to
+`admitted_statement_hash`
+(`receipt_state_clone_path_bit_identical_to_reference`, exit 0,
+2026-10-22). `admitted_statement_hash` still re-absorbs the canon; that is
+the baseline leg, not the receipt path. The 150 ns §2 row stays a phase-2
+target with no gate. TC-HOT-01 full 10M (exit 1): clone-path p99 209 ns
+(inside 250), variance 26.91% FAIL. The timed refusal leg is two `write_str`
+copies of a static class label and `RefusalMessage::Static` (p50 41 ns /
+p99 42 ns, PASS). `Display` stays outside that leg. SPC smoke Cpk 0.001
+FAIL (`receipts/spc-2026-10-22T191548.json`); p99 209 ns is inside the
+250 ns USL. The miss is the scheduler tail (max 21,413,887 ns).
+Receipt: `designs/tc-hot-01-errc-receipt.md`.
 
 ## §3.2 SPSC evidentiary ring (Phase 2)
 - `RingDescriptor` — exactly 64B `#[repr(C)]`: h_query[32], rows_emitted u64,
@@ -51,8 +52,11 @@ UNVERIFIED until the TC-HOT bench lands.
   refused_at_ms }`, overflow events chained as ledger lines, counter surfaced
   in capabilities.
 - Seam: end of `eval_ast_query`, `#[cfg(feature = "evidentiary-ring")]`
-  (default OFF until TC-HOT-01/02 bench it; native-only, no drainer on
-  wasm32; explicit init(dir), no surprise-I/O OnceLock).
+  (default OFF until TC-HOT-01/02 bench it; the drainer is native-side
+  (std fsync) and not wired into the wasm32 path — frozen-duckdb itself is a
+  normal dependency of the `graphlaw` crate with no feature gate, dispatched
+  by the wasm module itself, so no separate duckdb target exists; explicit
+  init(dir), no surprise-I/O OnceLock).
 - Courts: chain integrity under 100k push/drain, zero-loss happy path,
   torn-slot typed refusal, pad-zero detector, THE no-blocking property test
   (1M pushes against a stalled drainer: max push latency <10µs, drops

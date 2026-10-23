@@ -5,65 +5,9 @@
 //! 4. Deterministic memory budgeting & bounded execution.
 
 use graphlaw::duckdb_eval::GraphLawDuckDB;
-use graphlaw::rules::builtins::{builtin_eval_sql, BuiltinContext};
-use graphlaw::sql_ast::{compile_turtle, RdfAstGraphReader};
+use graphlaw::sql_ast::compile_turtle;
 use purrdf::TermValue;
-use std::collections::HashMap;
 use std::fs;
-
-// =============================================================================
-// Document-backed AST reader fixture (SQLRDF-17): supplies the admitted
-// Turtle AST document so builtin eval compiles it via `compile_turtle`
-// (hand-built ASTs are a typed REFUSAL-04 at eval).
-// =============================================================================
-
-struct EdgeAstReaderFixture {
-    docs: HashMap<String, String>,
-}
-
-impl EdgeAstReaderFixture {
-    fn new() -> Self {
-        Self {
-            docs: HashMap::new(),
-        }
-    }
-
-    fn register(&mut self, iri: &str, doc: &str) {
-        self.docs.insert(iri.to_string(), doc.to_string());
-    }
-}
-
-impl RdfAstGraphReader for EdgeAstReaderFixture {
-    type Node = String;
-
-    fn get_single_object(&self, _subject: &Self::Node, _predicate: &str) -> Option<Self::Node> {
-        None
-    }
-
-    fn get_datatype_literal(
-        &self,
-        _subject: &Self::Node,
-        _predicate: &str,
-    ) -> Option<(String, Option<String>)> {
-        None
-    }
-
-    fn get_iri(&self, node: &Self::Node) -> Option<String> {
-        Some(node.clone())
-    }
-
-    fn query_document_turtle(&self) -> Option<String> {
-        self.docs.values().next().cloned()
-    }
-
-    fn object_count(&self, _node: &Self::Node, _predicate: &str) -> usize {
-        0
-    }
-
-    fn iri_object_count(&self, _node: &Self::Node, _predicate: &str) -> usize {
-        0
-    }
-}
 
 /// Shared prefix for the admitted AST graph documents in this court file.
 const DOC_PREFIX: &str = r#"@prefix sql: <http://graphlaw.org/sql#> .
@@ -215,55 +159,47 @@ ex:Q a sql:SelectStatement ;
         sql:leftOperand  [ sql:columnName "metric_type" ] ;
         sql:rightOperand [ sql:literalValue "vibration_g" ]
     ] ;
+    sql:havingClause [
+        sql:operator sql:GreaterThan ;
+        sql:leftOperand  [
+            sql:function fn:MAX ;
+            sql:argument [ sql:columnName "value_float" ]
+        ] ;
+        sql:rightOperand [ sql:literalValue "3.0"^^xsd:double ]
+    ] ;
     sql:groupBy ( [ sql:columnName "device_id" ] ) .
 "#;
 
-    let query_iri = "http://graphlaw.org/queries/LocalSafetyCheck";
-    let mut reader = EdgeAstReaderFixture::new();
-    reader.register(query_iri, &doc);
+    // Real production decision path: the 3.0g invariant lives IN the admitted
+    // AST document (sql:havingClause), not in test-local code. Compile + eval
+    // on the real frozen-duckdb connection; the returned rows ARE the lockout
+    // set (devices whose max vibration exceeded the threshold).
+    let compiled = compile_turtle(&doc).expect("admitted AST graph must compile");
+    let receipt = db
+        .eval_ast_query(
+            "http://graphlaw.org/queries/LocalSafetyCheck",
+            &compiled,
+            "http://edge.device/data",
+            "http://edge.device/vocab",
+        )
+        .expect("production eval must succeed");
 
-    let ctx = BuiltinContext { db: &db };
-
-    // Autonomous edge decision function without cloud connectivity
-    let local_safety_decision = |device_id: &str| -> Result<&'static str, &'static str> {
-        let args = [query_iri, "http://edge.device/data", "http://edge.device/vocab"];
-        let out_vars = ["receipt", "rows", "hash"];
-
-        let res = builtin_eval_sql(&args, &out_vars, &ctx, &reader).map_err(|_| "EvalFailed")?;
-
-        let mut row_subj = None;
-        for t in &res.derived_triples {
-            if t.predicate == "http://edge.device/vocab/device_id" {
-                if let TermValue::Literal { lexical_form, .. } = &t.object {
-                    if lexical_form == device_id {
-                        row_subj = Some(t.subject.clone());
-                        break;
-                    }
-                }
+    let mut locked_out = Vec::new();
+    for t in &receipt.result_triples {
+        if t.predicate == "http://edge.device/vocab/device_id" {
+            if let TermValue::Literal { lexical_form, .. } = &t.object {
+                locked_out.push(lexical_form.clone());
             }
         }
+    }
+    locked_out.sort();
 
-        let subj = row_subj.ok_or("NotFound")?;
-        let mut max_vib = 0.0f64;
-        for t in &res.derived_triples {
-            if t.subject == subj && t.predicate == "http://edge.device/vocab/max_vibration" {
-                if let TermValue::Literal { lexical_form, .. } = &t.object {
-                    max_vib = lexical_form.parse().unwrap_or(0.0);
-                }
-            }
-        }
-
-        // Invariant threshold: vibration must not exceed 3.0g
-        if max_vib <= 3.0 {
-            Ok("ADMITTED_OPERATIONAL_CYCLE")
-        } else {
-            Err("FAIL_CLOSED_DEVICE_LOCKOUT")
-        }
-    };
-
-    // Device 1 operates normally (1.5g <= 3.0g) -> Autonomously admitted locally
-    assert_eq!(local_safety_decision("DEV-001"), Ok("ADMITTED_OPERATIONAL_CYCLE"));
-
-    // Device 2 has critical excursion (5.8g > 3.0g) -> Autonomous fail-closed lockout
-    assert_eq!(local_safety_decision("DEV-002"), Err("FAIL_CLOSED_DEVICE_LOCKOUT"));
+    // Device 1 (max 1.5g <= 3.0g) is admitted: absent from the lockout set.
+    // Device 2 (max 5.8g > 3.0g) is fail-closed locked out: the only member.
+    assert_eq!(
+        locked_out,
+        vec!["DEV-002".to_string()],
+        "only the excursion device must be fail-closed locked out"
+    );
+    assert_eq!(receipt.rows_emitted, 1);
 }

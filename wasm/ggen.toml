@@ -1,0 +1,37 @@
+# Committed sync pin (Lane L49 decision, 2026-10-22): renders wasm/src/ffi.rs
+# (side-table FFI contract) from ontologies/graphlaw-wasm.ttl through the
+# rust-wasi-wasmex-pack ffi rule. ffi rule only; abi_meta.rs is NOT generated
+# here. Regenerate: `cd wasm && ggen sync run` (ggen >= 26.10.11).
+# Determinism receipt: two consecutive `ggen sync run` invocations (plus a
+# delete-and-regen) yield b3sum 9dcab4e4099ede0e605b2f619c8791e8f19bf656f3c
+# 6a8bd552eeade6d9e46a9 for src/ffi.rs; graph_hash_hex
+# 8821e277608452cd44baac350c850e4d96759b17a64bec9b08f2b644b0c07ae2.
+# Templates pinned via ggen-marketplace rust-wasi-wasmex-pack (ontology.ttl
+# ed1e1070..., queries/ffi.rq b1ed5354..., templates/abi/ffi.rs.tmpl
+# cace92e2...).
+#
+# L160 normalization (2026-10-22): all paths relative to wasm/ (the ggen.toml
+# directory = ggen's project root, joined by ggen-engine's root.join(...)).
+# The marketplace pack is resolved relative to the canonical sibling-checkout
+# layout (~/ggen-marketplace adjacent to ~/graphlaw). No env-var interpolation
+# exists in ggen 26.10.11 config (only [env.NAME] override tables keyed by
+# named environments, not ${VAR} expansion), so relative paths are the native
+# portable mechanism. Proof: `ggen sync run` from wasm/ reproduces the
+# known-good b3sum above.
+[project]
+name = "graphlaw-wasm-ffi-sync"
+version = "26.10.22"
+
+[ontology]
+source = "../ontologies/graphlaw-wasm.ttl"
+imports = ["../../ggen-marketplace/packs/rust-wasi-wasmex-pack/ontology.ttl"]
+
+[generation]
+output_dir = "src"
+
+[[generation.rules]]
+name = "ffi"
+mode = "Overwrite"
+query = { file = "../../ggen-marketplace/packs/rust-wasi-wasmex-pack/queries/ffi.rq" }
+template = { file = "../../ggen-marketplace/packs/rust-wasi-wasmex-pack/templates/abi/ffi.rs.tmpl" }
+output_file = "ffi.rs"

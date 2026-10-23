@@ -1,14 +1,16 @@
 # API stability
 
-GraphLaw's workspace version is 26.10.21 (latest released); the capability-registry schema
-`graphlaw.capability-registry/1` and `ABI_VERSION = 1` were frozen at v26.9.29 and remain additive-only.
-This page states what downstream crates and JSON-ABI hosts may
+GraphLaw's workspace version is 26.10.21 (latest released); the capability-registry
+schema `graphlaw.capability-registry/1` and `ABI_VERSION = 1` were frozen at v26.9.29 and
+remain additive-only. This page states what downstream crates and JSON-ABI hosts may
 rely on, how deprecations work, and how the minimum supported Rust version moves.
 
 ## What is stable
 
-- **Public types and functions** in `graphlaw::{law, plan, policy, receipt, receipt_store, attest,
-  dialect, hooks, capability_intake, qualification, receipt_chain, registry, smon}` and, with
+- **Public types and functions** in `graphlaw::{abi_manifest, attest, datalog, dialect,
+  duckdb_eval, duckdb_op, entailment, evidence_ring, events, hooks, law, n3, plan, policy,
+  qualification, query_cache, query_ledger, receipt, receipt_chain, receipt_store, rdf, rules,
+  registry, shacl, shacl_guard, shex, smon, sparql, sql_ast, sql_statement_kinds, tier}` and, with
   `--features abi`, `graphlaw::abi`. Removing or changing the signature
   of any of them requires a semver-major release (`26.x` calendar versions: a change of the
   first component or an explicit CHANGELOG "Breaking" entry).
@@ -25,8 +27,9 @@ rely on, how deprecations work, and how the minimum supported Rust version moves
   `PlanRefused`, `ReceiptRequired`, `LeaseRefused`) and the stable `as_str()` names of
   `LeaseReason` and `ReceiptReason` never change meaning. New codes may be added; hosts must treat
   an unknown code as a refusal.
-- **Re-exports** `graphlaw::purrdf`, `graphlaw::eyeron`, and `graphlaw::duckdb_eval` (with `frozen_duckdb`) are escape hatches; their
-  API is that of the pinned upstream version (`purrdf =2.0.2`, `frozen-duckdb 2.0`).
+- **Re-exports** `graphlaw::purrdf`, `graphlaw::eyeron`, and `graphlaw::duckdb_eval` (with
+  `frozen_duckdb`) are escape hatches; their API is that of the pinned upstream version
+  (`purrdf =2.0.2`, `frozen-duckdb 2.0.2`).
 
 ## Deprecation policy
 
@@ -43,8 +46,8 @@ a CHANGELOG line ("MSRV: 1.96 -> 1.9x"). CI builds on the pinned toolchain in
 
 ## ABI_VERSION contract
 
-`graphlaw::abi::ABI_VERSION` (currently `1`) is reported in every `capabilities` response as `abi` and
-`abi_version`.
+`graphlaw::abi::ABI_VERSION` (currently `1`) is reported in every `capabilities` response as
+`abi` and `abi_version`.
 
 - It is bumped on any incompatible request or response change (removed or retyped field, changed
   meaning of an existing code).
@@ -85,13 +88,17 @@ crate versions move on independent axes:
   bump.** Rebuild the wasm artifact, then the coordinator re-pins both `registry/ARTIFACTS.blake3`
   and `priv/graphlaw.wasm.blake3` in the same commit as the version bump.
 - **Never ship a crate release whose digest pin predates its own version.** If the pins carry
-  `pin-source=<older>` (as the current header does: minted at 26.10.5, crate now 26.10.21), the
-  release is blocked until a rebuild produces a fresh digest at the released source state.
+  `pin-source=<older>` than the crate version (as of 2026-10-22 the header reads
+  `pin-source=26.10.21` with the crate also at 26.10.21, but the wasm32-wasip1 link is red, so the
+  pins are historical rather than current — see [WASM.md](WASM.md)), the release is blocked until
+  a rebuild produces a fresh digest at the released source state.
 
 ## Checks
 
-- `cargo semver-checks` runs in CI on every push and PR (job `semver` in
-  `.github/workflows/ci.yml`).
-- `#![deny(missing_docs)]` and `cargo doc -D warnings` keep every public item documented.
+- `cargo-semver-checks` is the intended mechanical gate and is wired to CI: job `semver` in
+  `.github/workflows/ci.yml` runs `obi1kenobi/cargo-semver-checks-action@v2` (pinned) with
+  `package: graphlaw` on every push and PR.
+- Missing-docs status: `#![deny(missing_docs)]` is active at crate root (`src/lib.rs:33`), so an
+  undocumented public item is a compile error, not a warning.
 - `graphlaw-registry --check` keeps the committed registry files equal to the Rust table.
 - `cargo deny check` and `cargo audit` gate the dependency tree (`deny.toml`).

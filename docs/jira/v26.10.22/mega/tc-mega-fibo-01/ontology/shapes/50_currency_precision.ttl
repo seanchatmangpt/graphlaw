@@ -1,0 +1,310 @@
+# GENERATED FILE -- do not hand-edit.
+# Generator: gen_shapes.py (TC-MEGA-FIBO-01, lane L38, ontology surface)
+# Regenerate: python3 gen_shapes.py
+#
+# NAMESPACE DECLARATION (reconciliation decision, WO-13): reg:
+# (<http://graphlaw.org/ns/mega/fibo/reg#>) is a FIRST-CLASS namespace of this
+# self-contained scenario ontology. Its terms (RegulatedParty,
+# LegalEntityIdentifier, MarginAgreement, MoneyAmount_*, jurisdiction,
+# marginThreshold, floatingCurve, ...) are SCENARIO-LOCAL vocabulary of the
+# regulatory rule layer, deliberately NOT mapped onto or renamed under repo-
+# canonical surfaces (ontologies/sql-ast.ttl, ggen/sql-dialect/). Only the
+# sh:/xsd:/rdf: terms are standard shared vocabulary.
+# Repo-surface grounding and per-term reconciliation decisions: README.md
+# (section "Vocabulary grounding and RECONCILIATION-REQUIRED").
+
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix reg: <http://graphlaw.org/ns/mega/fibo/reg#> .
+
+### 5. Currency decimal-precision shapes (parametric over 26 currencies)
+# NOTE: the #41209 mutation twin violates the USD precision pattern in
+# shapes/51_precision_anchor_41209.ttl. The per-currency shapes here carry the
+# same closed-world pattern family at full scale.
+reg:MoneyPrecision_USD a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_USD ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "USD amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_EUR a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_EUR ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "EUR amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_GBP a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_GBP ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "GBP amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_JPY a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_JPY ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "JPY amounts carry at most 0 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_CHF a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_CHF ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "CHF amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_CAD a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_CAD ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "CAD amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_AUD a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_AUD ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "AUD amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_NZD a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_NZD ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "NZD amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_SEK a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_SEK ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "SEK amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_NOK a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_NOK ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "NOK amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_DKK a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_DKK ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "DKK amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_PLN a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_PLN ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "PLN amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_CZK a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_CZK ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "CZK amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_HUF a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_HUF ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "HUF amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_MXN a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_MXN ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "MXN amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_BRL a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_BRL ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "BRL amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_CLP a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_CLP ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "CLP amounts carry at most 0 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_COP a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_COP ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "COP amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_PEN a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_PEN ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "PEN amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_ZAR a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_ZAR ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "ZAR amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_TRY a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_TRY ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "TRY amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_ILS a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_ILS ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "ILS amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_INR a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_INR ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "INR amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_KRW a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_KRW ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "KRW amounts carry at most 0 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_SGD a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_SGD ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "SGD amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+
+reg:MoneyPrecision_HKD a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_HKD ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "HKD amounts carry at most 2 decimal place(s) (ISO 4217 minor units)" ;
+    ] .
+

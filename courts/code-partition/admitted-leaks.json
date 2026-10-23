@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "note": "Typed admissions for handwritten COMPILED-PROJECTION files. First run: empty by design — the unadmitted leak list is the codegen roadmap.",
+  "leaks": []
+}

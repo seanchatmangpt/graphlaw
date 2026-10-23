@@ -20,7 +20,7 @@
  * | hooks_max_state_quads        | 1000000   |
  * | max_atoms_per_field          | 10000     |
  * | max_json_depth               | 64        |
- * | max_outstanding_alloc_bytes  | 268435456 |
+ * | max_outstanding_alloc_bytes  | 16777216  |
  * | max_plan_actions             | 1000      |
  * | max_plan_total_atoms         | 100000    |
  * | max_policy_entries           | 100000    |
@@ -40,7 +40,7 @@ export const LIMITS = {
   hooks_max_state_quads: 1000000,
   max_atoms_per_field: 10000,
   max_json_depth: 64,
-  max_outstanding_alloc_bytes: 268435456,
+  max_outstanding_alloc_bytes: 16777216,
   max_plan_actions: 1000,
   max_plan_total_atoms: 100000,
   max_policy_entries: 100000,

@@ -1,0 +1,3142 @@
+# GENERATED FILE -- do not hand-edit.
+# Generator: gen_shapes.py (TC-MEGA-FIBO-01, lane L38, ontology surface)
+# Regenerate: python3 gen_shapes.py
+#
+# NAMESPACE DECLARATION (reconciliation decision, WO-13): reg:
+# (<http://graphlaw.org/ns/mega/fibo/reg#>) is a FIRST-CLASS namespace of this
+# self-contained scenario ontology. Its terms (RegulatedParty,
+# LegalEntityIdentifier, MarginAgreement, MoneyAmount_*, jurisdiction,
+# marginThreshold, floatingCurve, ...) are SCENARIO-LOCAL vocabulary of the
+# regulatory rule layer, deliberately NOT mapped onto or renamed under repo-
+# canonical surfaces (ontologies/sql-ast.ttl, ggen/sql-dialect/). Only the
+# sh:/xsd:/rdf: terms are standard shared vocabulary.
+# Repo-surface grounding and per-term reconciliation decisions: README.md
+# (section "Vocabulary grounding and RECONCILIATION-REQUIRED").
+
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix reg: <http://graphlaw.org/ns/mega/fibo/reg#> .
+
+### 7. Per-(holder, currency) notional precision at full scale.
+### 12 holders x 26 currencies x 4 constraint components = 1,248.
+reg:HolderPrecision_H01_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H01_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H02_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H03_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H04_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H05_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H06_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H07_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H08_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H09_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H10_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H11_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_USD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_EUR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_GBP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_JPY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_CHF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_CAD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_AUD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_NZD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_SEK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_NOK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_DKK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_PLN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_CZK a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_HUF a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_MXN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_BRL a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_CLP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_COP a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_PEN a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_ZAR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_TRY a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_ILS a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_INR a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_KRW a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_SGD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:HolderPrecision_H12_HKD a sh:NodeShape ;
+    sh:targetObjectsOf reg:nettingSetRef ;
+    sh:property [
+        sh:path reg:amount ;
+        sh:datatype xsd:decimal ;
+        sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+

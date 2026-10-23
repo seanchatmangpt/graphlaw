@@ -229,3 +229,45 @@ fn usage_and_io_errors_exit_two() {
     assert_eq!(f.verify().status.code(), Some(2));
     let _ = fs::remove_dir_all(&f.dir);
 }
+
+/// --help is a real exit-0 stdout surface naming every flag it documents.
+#[test]
+fn help_exits_zero_and_names_trusted_key() {
+    let o = Command::new(env!("CARGO_BIN_EXE_graphlaw-verify"))
+        .arg("--help")
+        .output()
+        .expect("binary runs");
+    assert_eq!(o.status.code(), Some(0), "--help must exit 0");
+    let so = String::from_utf8_lossy(&o.stdout);
+    assert!(
+        so.contains("--trusted-key"),
+        "--help output must document --trusted-key, got:\n{so}"
+    );
+
+    // Anti-vacuity (negative twin): the unknown-flag path must NOT print the
+    // help text on stdout — it exits 2 and points at --help instead.
+    let bad = Command::new(env!("CARGO_BIN_EXE_graphlaw-verify"))
+        .arg("--wat")
+        .output()
+        .expect("binary runs");
+    assert_eq!(
+        bad.status.code(),
+        Some(2),
+        "unknown flag must exit 2, stdout={} stderr={}",
+        String::from_utf8_lossy(&bad.stdout),
+        String::from_utf8_lossy(&bad.stderr)
+    );
+    let combined = format!(
+        "{}{}",
+        String::from_utf8_lossy(&bad.stdout),
+        String::from_utf8_lossy(&bad.stderr)
+    );
+    assert!(
+        combined.contains("--help"),
+        "unknown-flag output must mention --help, got:\n{combined}"
+    );
+    assert!(
+        !String::from_utf8_lossy(&bad.stdout).contains("Exit codes: 0 admitted"),
+        "help text must not leak onto the unknown-flag path's stdout"
+    );
+}

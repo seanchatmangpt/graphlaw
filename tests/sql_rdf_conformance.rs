@@ -69,9 +69,7 @@ fn section3_2_inventory_is_35_classes_with_typed_engine_refusals() {
         );
         // FLIP: the same document shaped as a SelectStatement must compile —
         // the refusal is attributable to the statement class, not the shape.
-        let benign = format!(
-            "@prefix sql: <http://graphlaw.org/sql#> .\n@prefix ex: <http://example.org/queries#> .\nex:S a sql:SelectStatement ; sql:statementIndex 1 ; sql:fromTable [ sql:tableName \"t\" ] ; sql:selectList ( [ sql:columnName \"c\" ] ) .\n"
-        );
+        let benign = "@prefix sql: <http://graphlaw.org/sql#> .\n@prefix ex: <http://example.org/queries#> .\nex:S a sql:SelectStatement ; sql:statementIndex 1 ; sql:fromTable [ sql:tableName \"t\" ] ; sql:selectList ( [ sql:columnName \"c\" ] ) .\n".to_string();
         assert!(
             compile_turtle(&benign).is_ok(),
             "{kind} flip: benign SelectStatement twin must compile"
@@ -210,6 +208,19 @@ fn section5_refusal_codes_in_register_and_in_src() {
     assert!(REFUSAL_03_SCOPE_INTEGRITY.contains("REFUSAL-03"));
     assert!(REFUSAL_03_SCOPE_INTEGRITY.contains("ScopeIntegrityRefusal"));
     assert_eq!(REFUSAL_04_CAPABILITY_REFUSAL, "REFUSAL-04");
+    let rec = include_str!("../docs/reference/sql-rdf-rec.md");
+    assert!(
+        rec.contains("not document-backed"),
+        "rec §5 REFUSAL-04 trigger must be the non-document-backed reader"
+    );
+    assert!(
+        !rec.contains("calling DuckDB in WASM"),
+        "rec §5 must not describe REFUSAL-04 as DuckDB-in-WASM"
+    );
+    assert!(
+        REFUSALS_MD.contains("not document-backed"),
+        "refusals.md REFUSAL-04 trigger must be the non-document-backed reader"
+    );
 
     // REFUSAL-03 fires through the real compiler: aggregate in a WHERE
     // position (rec §5 trigger example).
@@ -552,3 +563,114 @@ fn report_emission_is_additive_and_clause_inventory_is_exhaustive() {
 
 // Every court above registers its clause as witnessed by appending
 // emit_conformance_report() at its end; the Once makes emission idempotent.
+// ---------------------------------------------------------------------------
+// Rec §7 — Analytical MERGE execution court (3-step: ADMIT / REFUSE / FLIP).
+// The compiler-side leg the pyshacl gate cannot cover: a §7-shaped MERGE
+// document is admitted by the real compiler, executed against a real
+// frozen-duckdb in-memory database (Chicago: real collaborators, real table
+// readbacks, no mocks/sleeps), a document missing sql:mergeOn refuses with
+// the compiler's typed MissingProperty code, and adding sql:mergeOn back
+// flips refuse → admit (anti-vacuity inline flip).
+// ---------------------------------------------------------------------------
+
+/// The §7 graph with the sql:mergeOn block excised (the REFUSE step).
+fn section7_merge_graph_missing_mergeon() -> String {
+    section7_merge_graph().replace(
+        r#"    sql:mergeOn [
+        a sql:BinaryExpression ;
+        sql:left [ a sql:ColumnIdentifier ; sql:qualifier "main.regional_sales" ; sql:columnName "region_id" ; sql:scope sql:ProcessScope ] ;
+        sql:operator "=" ;
+        sql:right [ a sql:ColumnIdentifier ; sql:qualifier "src" ; sql:columnName "region_id" ; sql:scope sql:ProcessScope ]
+    ] ;
+"#,
+        "",
+    )
+}
+
+#[test]
+fn section7_merge_admit_refuse_flip_on_real_duckdb() {
+    use graphlaw::duckdb_eval::GraphLawDuckDB;
+
+    // --- STEP 1: ADMIT + EXECUTE + RECEIPT -----------------------------------
+    let compiled = compile_turtle(&section7_merge_graph())
+        .expect("§7 MERGE document must be admitted by compile_turtle");
+    let db = GraphLawDuckDB::open_in_memory().expect("open in-memory frozen-duckdb");
+    db.raw_connection()
+        .execute_batch(
+            "CREATE SCHEMA staging;
+             CREATE TABLE staging.invoices (region_id VARCHAR, amount BIGINT, status VARCHAR);
+             INSERT INTO staging.invoices VALUES ('east', 100, 'SETTLED'), ('east', 50, 'OPEN'), ('west', 70, 'SETTLED');
+             CREATE TABLE main.regional_sales (region_id VARCHAR, revenue BIGINT);
+             INSERT INTO main.regional_sales VALUES ('east', 1000), ('west', 2000);",
+        )
+        .expect("seed tables");
+    let receipt = db
+        .eval_ast_query("ex:mergeStatement", &compiled, "ex:row", "ex:cell")
+        .expect("admitted MERGE must execute through the receipt-bearing eval path");
+    // Receipt assertions: frozen-duckdb's MERGE INTO emits exactly one
+    // summary row (the merged-row count), so rows_emitted is the typed 1,
+    // and the admitted-statement receipt hash is nonzero.
+    assert_eq!(
+        receipt.rows_emitted, 1,
+        "MERGE receipt: one engine summary row"
+    );
+    assert_ne!(
+        receipt.query_hash, [0u8; 32],
+        "admitted-statement receipt hash must be nonzero"
+    );
+    assert!(receipt.execution_ms >= 0.0);
+    assert!(
+        receipt.sql_statement.starts_with("MERGE INTO main.regional_sales"),
+        "receipt must carry the executed parameterized MERGE: {}",
+        receipt.sql_statement
+    );
+    // Real table readback — only SETTLED invoices merge.
+    let revenue = |region: &str| -> i64 {
+        db.raw_connection()
+            .query_row(
+                "SELECT revenue FROM main.regional_sales WHERE region_id = ?",
+                [region],
+                |r| r.get::<_, i64>(0),
+            )
+            .expect("revenue readback")
+    };
+    assert_eq!(revenue("east"), 1100, "east: 1000 + settled 100");
+    assert_eq!(revenue("west"), 2070, "west: 2000 + settled 70");
+
+    // --- STEP 2: REFUSE (missing sql:mergeOn) --------------------------------
+    let missing_mergeon = section7_merge_graph_missing_mergeon();
+    let err = compile_turtle(&missing_mergeon).unwrap_err().to_string();
+    // The shape gate fires first: the closed-world MergeStatementShape
+    // (ontologies/sql-ast.ttl, sh:path sql:mergeOn minCount 1) refuses with
+    // its typed SHACL violation carrying the shape's own message — the
+    // compiler's MissingProperty(mergeOn) is the backstop behind it.
+    assert!(
+        err.contains("SHACL AST structural violation")
+            && err.contains("A MergeIntoStatement MUST carry exactly one sql:mergeOn"),
+        "missing sql:mergeOn must refuse with the shape gate's typed code: {err}"
+    );
+
+    // --- STEP 3: FLIP (inline benign twin: adding mergeOn flips refuse→admit)
+    // The twin of the refusing document is the original §7 graph — proven to
+    // admit and execute in STEP 1; the flip is re-derived syntactically:
+    // injecting the mergeOn block into the refusing document must admit AND
+    // compile to the MERGE fragment.
+    let flipped = missing_mergeon.replace(
+        "    sql:whenMatched [",
+        r#"    sql:mergeOn [
+        a sql:BinaryExpression ;
+        sql:left [ a sql:ColumnIdentifier ; sql:qualifier "main.regional_sales" ; sql:columnName "region_id" ; sql:scope sql:ProcessScope ] ;
+        sql:operator "=" ;
+        sql:right [ a sql:ColumnIdentifier ; sql:qualifier "src" ; sql:columnName "region_id" ; sql:scope sql:ProcessScope ]
+    ] ;
+    sql:whenMatched ["#,
+    );
+    let flipped_compiled =
+        compile_turtle(&flipped).expect("FLIP: adding sql:mergeOn must flip refuse → admit");
+    assert!(
+        flipped_compiled.sql.starts_with("MERGE INTO main.regional_sales"),
+        "FLIP twin must compile to the MERGE fragment: {}",
+        flipped_compiled.sql
+    );
+    emit_conformance_report();
+}

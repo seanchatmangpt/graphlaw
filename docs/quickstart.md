@@ -29,16 +29,12 @@ is added, and the `goal` must hold at the end. Each action yields one receipt.
 cargo run --example quickstart_plan
 ```
 
-Expected output:
-
-```text
-plan-action -> blake3:8a0d0202d6e32b655448bbcd6ea3e9df0282d5ab75fc866d2370ad8d169561dd
-plan-action -> blake3:c66ea90e01dd620a1678cbb36b8d7ed8a719beefd1b7fe6b1b163eb033169cb5
-plan-action -> blake3:3be6530bdf3597afdcc5f60a2a7a0c15a952a1e8f8dd440e0a0bf49082e05896
-final state: blake3:3be6530bdf3597afdcc5f60a2a7a0c15a952a1e8f8dd440e0a0bf49082e05896
-```
-
-Each line is a receipt's child state id; the last equals the final state id.
+Expected output: four deterministic receipt-state hashes — three
+`plan-action -> blake3:<64-hex>` lines followed by a matching
+`final state: blake3:<64-hex>` line, where the final-state hash equals the
+last plan-action hash. These are runtime receipt hashes, not build artifacts,
+so they are not rows in `registry/ARTIFACTS.blake3`; they are reproducible
+byte-exact by running the example (verified 2026-10-22).
 
 ## Tabular & Edge Compaction Quickstart (frozen-duckdb 2.0)
 
@@ -54,21 +50,28 @@ Expected output:
   -> Ingested seed telemetry into 'telemetry_events' table.
 
 === 2. Parsing Declarative SQL AST Turtle Subgraph ===
-  -> Parsed Turtle dataset successfully into RdfDatasetReader.
-=== 3. Extracting and Validating AST in GraphLaw ===
+=== 3. Admitting the AST graph through compile_turtle ===
+  -> Admitted Turtle document (canon bytes pinned at compile).
   -> Validated AST conformance (identifiers safe from injection).
   -> Serialized SQL : SELECT batch_id, SUM(cost) AS total_cost FROM telemetry_events t WHERE (latency_ms > $1) GROUP BY batch_id LIMIT 10
   -> Bound Params   : [Integer(400)]
 
 === 4. Executing via frozen-duckdb & Producing ExecutionReceipt ===
   -> Rows Emitted    : 2
-  -> Execution Time  : 3.806 ms
-  -> Query Hash (BLAKE3): [89, 01, be, b8, 78, c2, 45, 1a]
+  -> Execution Time  : 0.000 ms
+  -> Query Hash (BLAKE3): [fe, 54, 67, 48, 9a, a6, 64, 48]
 
 === 5. Materialized RDF Statements (Grounding Tabular State) ===
   <http://example.org/data/row_1> <http://example.org/vocab/batch_id> Literal { lexical_form: "batch-beta", datatype: "http://www.w3.org/2001/XMLSchema#string", language: None, direction: None }
   <http://example.org/data/row_1> <http://example.org/vocab/total_cost> Literal { lexical_form: "310", datatype: "http://www.w3.org/2001/XMLSchema#integer", language: None, direction: None }
+  <http://example.org/data/row_2> <http://example.org/vocab/batch_id> Literal { lexical_form: "batch-alpha", datatype: "http://www.w3.org/2001/XMLSchema#string", language: None, direction: None }
+  <http://example.org/data/row_2> <http://example.org/vocab/total_cost> Literal { lexical_form: "225", datatype: "http://www.w3.org/2001/XMLSchema#integer", language: None, direction: None }
 ```
+
+`Execution Time` and the `Query Hash (BLAKE3)` bytes vary per machine and run; every
+other line is deterministic. If section 3 prints a `REFUSED-01..04` code instead of
+the admit line, the AST graph failed the fail-closed pre-flight gate — see
+`docs/refusals.md`.
 
 ## A refused plan
 
@@ -104,7 +107,10 @@ cargo run --example policy_admission --features abi
 ADMITTED reachable=["g", "s0"] goals=["g"] entries=[("s0", "flip")]
 ```
 
-Without `--features abi` the example prints a hint and exits.
+`abi` is a default feature (Cargo.toml), so the plain `cargo run --example
+policy_admission` above already admits. The hint path
+(`policy_admission needs: ... --features abi`) only fires under
+`--no-default-features`.
 
 ## See also
 

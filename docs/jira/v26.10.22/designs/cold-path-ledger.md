@@ -4,6 +4,15 @@ Condensed from the cold-ledger spec lane (PRD §3.2.2; companion to C1-cache).
 No SPSC ring exists in src/ yet — this fixes the descriptor format the ring
 will carry plus the ledger contract behind it.
 
+Module split on disk (2026-10-22): `src/query_ledger.rs` is the 29-line
+facade. `src/query_ledger/batch.rs` (459 lines) holds the in-memory batch,
+Blake3 parent chaining, and encode/parse. `src/query_ledger/storage.rs`
+(564 lines) holds the atomic temp+rename writer, `.agg` sidecar, and gap
+recovery. The operator brief's further cut — a `LedgerBatch::fold_entry`
+with zero filesystem imports in `batch.rs` — was not enacted. `batch.rs`
+is the pure side of the split only in the sense that the POSIX writer
+lives in `storage.rs`.
+
 ## Descriptor (64B, hot path)
 h_query[32] · rows_emitted u32 (saturating) · flags u8 (bit0 cached, bit1
 cacheable-class) · pad · ts_unix_ms u64 · epoch u64. Deliberately excludes
@@ -55,10 +64,11 @@ gaps=`[]` and `complete=true` — the fresh drainer silently renumbered its
 records onto the persisted ledger head, laundering crash loss into a
 complete ledger.
 
-**Fix (landed)**: the drainer (`src/evidence_ring.rs:473-527`,
-`drain_loop` start) extracts a restart watermark from the resumed NDJSON
-ledger's last line (`"seq":` coverage watermark) and opens the query ledger
-via `QueryLedger::open_with_producer` (`src/query_ledger.rs:498`) with
+**Fix (landed)**: the drainer (`src/evidence_ring.rs:553`, `drain_loop`;
+watermark read at 584–595) extracts a restart watermark from the resumed
+NDJSON ledger's last line (`"seq":` coverage watermark) and opens the query
+ledger via `QueryLedger::open_with_producer` (defined at
+`src/query_ledger/storage.rs:65`, called at `src/evidence_ring.rs:619`) with
 `restart_seq.max(producer_attempted)`. Crash loss now persists as gap
 markers with `complete: false`; never backfilled.
 
@@ -66,7 +76,7 @@ markers with `complete: false`; never backfilled.
 coverage), NOT the live `seq` counter. The prescribed live-counter form
 double-covered 911 buffered sequences — the joint court's gap coverage
 exceeded `dropped_total` by exactly 911 when the live counter was used
-(witness comment, src/evidence_ring.rs:505-512). Regression court:
+(witness comment, `src/evidence_ring.rs:617`). Regression court:
 `restart_mid_stream_persists_gap_not_silent_renumber`
 (tests/evidentiary_ring_court.rs:329), receipt:
 

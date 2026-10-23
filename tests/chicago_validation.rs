@@ -29,7 +29,9 @@ fn turtle(kind: &str) -> String {
         "AnalyzeStatement" => r#"<http://example.org/s> a sql:AnalyzeStatement ; sql:targetTable "t" ."#.into(),
         "CopyStatement" => r#"<http://example.org/s> a sql:CopyStatement ; sql:targetTable "t" ."#.into(),
         "ExplainStatement" => r#"<http://example.org/s> a sql:ExplainStatement ; sql:targetTable "t" ; sql:assignColumn "id" ."#.into(),
-        "MergeIntoStatement" => r#"<http://example.org/s> a sql:MergeIntoStatement ; sql:targetTable "t" ; sql:assignColumn "id" ; sql:assignValue "1"^^xsd:integer ."#.into(),
+        // §7-legal MERGE: usingSource SelectStatement + mergeOn + whenMatched
+        // (rec section 7; compiler-MissingProperty and shape-104 both require them).
+        "MergeIntoStatement" => r#"<http://example.org/s> a sql:MergeIntoStatement ; sql:targetTable [ a sql:TableIdentifier ; sql:tableName "t" ] ; sql:usingSource [ a sql:SelectStatement ; sql:statementIndex 1 ; sql:select ( [ a sql:ColumnIdentifier ; sql:columnName "id" ; sql:scope sql:ViewScope ] ) ; sql:from ( [ a sql:TableIdentifier ; sql:tableName "t" ] ) ] ; sql:mergeOn [ a sql:BinaryExpression ; sql:left [ a sql:ColumnIdentifier ; sql:qualifier "t" ; sql:columnName "id" ; sql:scope sql:ProcessScope ] ; sql:operator "=" ; sql:right [ a sql:ColumnIdentifier ; sql:qualifier "src" ; sql:columnName "id" ; sql:scope sql:ProcessScope ] ] ; sql:whenMatched [ a sql:MergeUpdateAction ; sql:setAssignments ( [ a sql:Assignment ; sql:targetColumn "id" ; sql:valueExpression [ a sql:ColumnIdentifier ; sql:qualifier "src" ; sql:columnName "id" ; sql:scope sql:ProcessScope ] ] ) ] ."#.into(),
         "CommentStatement" => r#"<http://example.org/s> a sql:CommentStatement ; sql:targetTable "t" ; sql:assignValue "graphlaw" ."#.into(),
         "SetStatement" => r#"<http://example.org/s> a sql:SetStatement ; sql:targetTable "threads" ; sql:assignValue "1"^^xsd:integer ."#.into(),
         "ResetStatement" => r#"<http://example.org/s> a sql:ResetStatement ; sql:targetTable "threads" ."#.into(),
@@ -415,8 +417,7 @@ const PLAIN_WHERE: &str =
 
 fn refusal03(graph: &str) {
     let err = compile_turtle(graph)
-        .err()
-        .expect("scope violation must be refused at compile time, before any engine call");
+        .expect_err("scope violation must be refused at compile time, before any engine call");
     let msg = err.to_string();
     assert!(
         msg.contains("REFUSAL-03") || msg.contains("ScopeIntegrity"),

@@ -1,0 +1,93 @@
+# GENERATED FILE -- do not hand-edit.
+# Generator: gen_shapes.py (TC-MEGA-FIBO-01, lane L38, ontology surface)
+# Regenerate: python3 gen_shapes.py
+#
+# NAMESPACE DECLARATION (reconciliation decision, WO-13): reg:
+# (<http://graphlaw.org/ns/mega/fibo/reg#>) is a FIRST-CLASS namespace of this
+# self-contained scenario ontology. Its terms (RegulatedParty,
+# LegalEntityIdentifier, MarginAgreement, MoneyAmount_*, jurisdiction,
+# marginThreshold, floatingCurve, ...) are SCENARIO-LOCAL vocabulary of the
+# regulatory rule layer, deliberately NOT mapped onto or renamed under repo-
+# canonical surfaces (ontologies/sql-ast.ttl, ggen/sql-dialect/). Only the
+# sh:/xsd:/rdf: terms are standard shared vocabulary.
+# Repo-surface grounding and per-term reconciliation decisions: README.md
+# (section "Vocabulary grounding and RECONCILIATION-REQUIRED").
+
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix reg: <http://graphlaw.org/ns/mega/fibo/reg#> .
+
+### 3. ISDA margin / threshold fields
+reg:ISDAMarginShape a sh:NodeShape ;
+    sh:targetClass reg:MarginAgreement ;
+    sh:property [
+        sh:path reg:initialMargin ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path reg:variationMargin ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path reg:marginThreshold ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path reg:minimumTransferAmount ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path reg:independentAmount ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path reg:marginCallDate ;
+        sh:datatype xsd:date ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path reg:collateralHaircut ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path reg:netIndependentCollateralAmount ;
+        sh:datatype xsd:decimal ;
+        sh:minCount 0 ;
+        sh:maxCount 1 ;
+    ] .
+
+reg:MarginThresholdCap_US a sh:NodeShape ;
+    sh:targetClass reg:MarginAgreement ;
+    sh:property [
+        sh:path reg:marginThreshold ;
+        sh:hasValue "50000000" ;
+    ] .
+
+reg:MarginThresholdCap_UK a sh:NodeShape ;
+    sh:targetClass reg:MarginAgreement ;
+    sh:property [
+        sh:path reg:marginThreshold ;
+        sh:hasValue "40000000" ;
+    ] .
+
+reg:MarginThresholdCap_EU a sh:NodeShape ;
+    sh:targetClass reg:MarginAgreement ;
+    sh:property [
+        sh:path reg:marginThreshold ;
+        sh:hasValue "45000000" ;
+    ] .
+

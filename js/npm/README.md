@@ -1,4 +1,4 @@
-# graphlaw
+# @seanchatmangpt/graphlaw
 
 GraphLaw is an RDF law-state composition engine compiled to WebAssembly: parse 9 RDF
 dialects, run SPARQL queries, validate with SHACL and ShEx, reason in N3, apply
@@ -11,15 +11,19 @@ Every op returns a typed result or a typed refusal over a versioned JSON ABI
 ## Install
 
 ```sh
-npm i graphlaw
+npm i @seanchatmangpt/graphlaw
 ```
 
 Node >= 20.
 
+**Publish state**: the latest published version on npm is `26.10.14`. The sources in
+this directory are version `26.10.21` and are **not yet published**; `npm i` today
+gets the older `26.10.14` artifact.
+
 ## Quickstart
 
 ```js
-import { createClient } from 'graphlaw';
+import { createClient } from '@seanchatmangpt/graphlaw';
 
 const gl = await createClient();
 
@@ -50,7 +54,7 @@ Refusals from the engine are thrown as typed error subclasses of `GraphlawError`
 refusals that carry a machine-readable code surface as `GraphlawRefusalError`.
 
 ```js
-import { createClient, GraphlawRefusalError } from 'graphlaw';
+import { createClient, GraphlawRefusalError } from '@seanchatmangpt/graphlaw';
 
 const gl = await createClient();
 
@@ -77,10 +81,10 @@ WASM module speaks. Useful when you want the raw refusal envelope instead of thr
 errors, or are driving the ABI from generated code.
 
 ```js
-import { callRaw } from 'graphlaw/raw';
+import { callRaw } from '@seanchatmangpt/graphlaw/raw';
 
 const res = await callRaw({ op: 'sniff', text: 'PREFIX : <http://ex/> :s :p :o .' });
-// { ok: true, dialect: 'turtle', ... }
+// { ok: true, dialect: 'Turtle', engine: 'PurRdf', ... }
 ```
 
 ## Runtimes
@@ -98,6 +102,39 @@ Both runtimes share the same WASM core and the same typed API surface.
 
 For custom artifacts or dev setups, `initGraphlaw()` accepts `wasmBytes` and
 `skipDigestCheck` options (see the type docs for `GraphlawInitOptions`).
+
+## WASM ABI contract
+
+The engine is a single cdylib exporting four C ABI functions (see
+`wasm/src/ffi.rs`, `docs/WASM.md`). The wrapper in this package drives them for
+you; if you drive them yourself, the discipline is:
+
+- `gl_alloc(len) -> ptr` — the host reserves `len` bytes and writes a UTF-8 JSON
+  request. A `null` return means the request hit a memory wall (below) and the
+  next `gl_call(0, 0)` on that null buffer yields a typed error response, never a
+  trap.
+- `gl_call(ptr, len) -> packed` — executes one request and **consumes** the input
+  buffer (a side-table entry, freed on the wasm side; do not reuse the pointer).
+  Returns `(out_ptr << 32) | out_len`.
+- `gl_free(ptr, len)` — releases a buffer this module handed out, **once**, with
+  the exact declared length. Unknown pointers or wrong lengths are ignored;
+  a second free is ignored. Safe against a hostile `(ptr, len)`.
+- **Memory walls**: `gl_alloc` refuses (returns `null`) when `len` exceeds the
+  per-request JSON limit or the outstanding-byte cap (see `LIMITS` from the main
+  entry point). Refusal is typed, not a trap.
+- **Receipts**: receipts returned by law/policy ops carry a 64-byte Ed25519
+  signature over the payload bytes; verify with `graphlaw-verify` or the
+  Ed25519 API of your choice.
+
+## WASM artifact state
+
+The shipped `wasm/graphlaw.wasm` is pinned by BLAKE3
+`332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`
+(`src/generated/artifact-meta.ts`; the digest is re-pinned on every
+`npm run build`). This pin reflects the **last linked** cdylib — it is **not**
+a claim that the Rust workspace is currently link-green. The artifact is
+re-synced from a link-green `cargo build -p graphlaw-wasm --target
+wasm32-wasip1` of the workspace on the next link-green sync.
 
 ## Resources
 

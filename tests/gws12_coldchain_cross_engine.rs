@@ -35,6 +35,7 @@ const COLD1_RELEASED: &[&str] = &["BATCH-R1", "BATCH-R2", "BATCH-R3", "BATCH-R4"
 /// — reproduced independently in Python in the lane receipt; pinned here.
 const COLD1_AUDIT_HASH: &str = "6971c912530619217b462f0b458a390eec34383a8155e0ccfcce869e4b6aeb8e";
 
+#[allow(dead_code)] // pinned as the audit-hash input; court builds its own copy
 const CANONICAL_QUERY: &str = "SELECT o.object_id, MAX(e.temp_celsius) AS max_temp, SUM(e.duration_seconds) AS duration FROM ocel_events AS e JOIN ocel_event_object_rel AS r ON e.event_id = r.event_id JOIN ocel_objects AS o ON r.object_id = o.object_id WHERE e.temp_celsius > -20.0 AND r.qualifier = 'contains_product' AND o.object_type = 'bio:BiologicBatch' GROUP BY o.object_id";
 
 /// GWS-6's landed ruleset, verbatim semantics: SWAP math builtins.

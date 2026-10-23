@@ -1,4 +1,10 @@
 //! A plan whose second action needs a triple that no earlier action produced.
+//!
+//! Run: cargo run --example refused_plan
+//! Output: typed `REFUSED at index 1, action ` + backticked `paint`, naming the
+//! unmet triple `unmet: <urn:d:door> <urn:p:has> <urn:v:key> .` (exit 0 —
+//! refusal is the demonstrated value, not a crash).
+//! Court: tests/readme_first_ten_minutes.rs::refused_plan_matches_readme_text.
 use graphlaw::{
     dialect::Dialect,
     law::{LawError, LawState},

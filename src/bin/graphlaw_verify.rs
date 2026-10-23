@@ -28,12 +28,31 @@ struct Args {
     keys: Vec<String>,
 }
 
+const HELP: &str = "\
+graphlaw-verify — offline third-party replay + attestation check of an admitted plan.
+
+Usage:
+  graphlaw-verify --start <state.nq|.nt|.ttl|.trig> --plan <plan.json> --receipts <dir>
+                  [--subject <key>] --trusted-key <hex> [--trusted-key <hex>...]
+
+Flags:
+  --start <path>        Start state (dialect chosen by extension; default N-Quads)
+  --plan <path>         Plan JSON to replay via Plan::admit
+  --receipts <dir>      Receipt store root; defaults subject discovery to its only
+                        subdirectory unless --subject is given
+  --subject <key>       Subject key within the receipt store
+  --trusted-key <hex>   Ed25519 public key, 64 hex chars (32 bytes); repeatable
+
+Output: `ADMITTED` or `REFUSED: <code>: <detail>` on stdout.
+Exit codes: 0 admitted, 1 refused, 2 usage or I/O error.";
+
 fn usage(msg: &str) -> ExitCode {
     eprintln!("graphlaw-verify: {msg}");
     eprintln!(
         "usage: graphlaw-verify --start <state.nq> --plan <plan.json> --receipts <dir> \
          [--subject <key>] --trusted-key <hex> [--trusted-key <hex>...]"
     );
+    eprintln!("run `graphlaw-verify --help` for flag details");
     ExitCode::from(2)
 }
 
@@ -49,7 +68,8 @@ fn parse_args() -> Result<Args, String> {
             "--receipts" => receipts = Some(PathBuf::from(val()?)),
             "--subject" => subject = Some(val()?),
             "--trusted-key" => keys.push(val()?),
-            other => return Err(format!("unknown argument `{other}`")),
+            "--help" | "-h" => return Err(HELP.to_string()),
+            other => return Err(format!("unknown argument `{other}` (try --help)")),
         }
     }
     if keys.is_empty() {
@@ -176,6 +196,12 @@ fn run(a: Args) -> Result<ExitCode, String> {
 
 fn main() -> ExitCode {
     match parse_args() {
+        // The help text is routed through the error channel by the parser and
+        // printed to stdout with exit 0 here.
+        Err(m) if m == HELP => {
+            println!("{HELP}");
+            ExitCode::SUCCESS
+        }
         Err(m) => usage(&m),
         Ok(a) => run(a).unwrap_or_else(|m| usage(&m)),
     }

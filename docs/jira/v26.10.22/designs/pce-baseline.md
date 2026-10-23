@@ -12,7 +12,8 @@ literal-inlined query_row and compared p50s — not a fair floor).
 - **PCE = 70.36%** (engine 8714 ÷ pipeline 12384)
 - **Substrate overhead = 42.12%** — charter's "<2.8%" REFUTED at this
   operating point
-- Scanned throughput ~1.92B rows/s (read side massively over budget; the
+- Scanned throughput ~1.92B rows/s vs the TC-HOT-02 budget of >12M rows/s
+  (~160x the budget floor; the
   overhead is in the substrate's receipt + triple projection + row
   materialization, none of which the raw path does)
 

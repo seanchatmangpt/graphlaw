@@ -1,6 +1,7 @@
 //! C1 compiled-plan cache (designs/C1-cache.md, moonshot C1).
 //!
-//! An in-process, epoch-invalidated cache of [`ExecutionReceipt`]s keyed by
+//! An in-process, epoch-invalidated cache of execution receipts
+//! (`crate::duckdb_eval::ExecutionReceipt`) keyed by
 //! the admitted-statement receipt hash `H_query = BLAKE3(Canon(G_AST) ||
 //! P_params)` (sql-rdf Rec. section 1.4, first formula). Only statements the
 //! compiler classified `cacheable` (SelectStatement arm of `compile_turtle`,
@@ -15,7 +16,7 @@
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::duckdb_eval::ExecutionReceipt;
@@ -41,12 +42,29 @@ pub struct CacheEntry {
 }
 
 /// Epoch-invalidated concurrent cache keyed by the admitted-statement hash.
+// Debug is derived: all fields (Mutex<HashMap>, AtomicU64) implement Debug;
+// no field needs exclusion.
+#[derive(Debug)]
 pub struct QueryCache {
     entries: Mutex<HashMap<[u8; 32], CacheEntry>>,
     epoch: AtomicU64,
 }
 
 impl QueryCache {
+    /// Locks the entry map, recovering the inner guard on a poisoned mutex
+    /// (SPOF Tier-1 #3). The map contents are structurally valid even after
+    /// a panic in a holder — `PoisonError::into_inner` yields the guard — so
+    /// a panic in any holder must not permanently brick a process-wide,
+    /// Arc-shared cache. The panicking operation itself is lost (its
+    /// mutation may be partial); every subsequent operation is served from
+    /// the recovered map.
+    fn lock_entries(&self) -> MutexGuard<'_, HashMap<[u8; 32], CacheEntry>> {
+        match self.entries.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        }
+    }
+
     /// Creates an empty cache at epoch 0.
     pub fn new() -> Self {
         Self {
@@ -62,7 +80,7 @@ impl QueryCache {
 
     /// Live entry count.
     pub fn len(&self) -> usize {
-        self.entries.lock().expect("query cache poisoned").len()
+        self.lock_entries().len()
     }
 
     /// True when the cache holds no entries.
@@ -76,7 +94,7 @@ impl QueryCache {
     /// are treated as absent (and evicted).
     pub fn consult(&self, h_query: [u8; 32], grounding: Option<&[u8]>) -> Option<(ExecutionReceipt, u64)> {
         let start = Instant::now();
-        let mut entries = self.entries.lock().expect("query cache poisoned");
+        let mut entries = self.lock_entries();
         let hit = entries
             .get(&h_query)
             .filter(|entry| {
@@ -113,10 +131,20 @@ impl QueryCache {
     /// Stores a successful miss. The C1-a classification bit must already be
     /// `true` (caller gates); the entry is stamped with the live epoch.
     pub fn store(&self, entry: CacheEntry) {
-        self.entries
-            .lock()
-            .expect("query cache poisoned")
-            .insert(entry.h_query, entry);
+        self.lock_entries().insert(entry.h_query, entry);
+    }
+
+    /// Runs `f` with exclusive access to the entry map, under the same
+    /// poison-recovering lock as every other accessor. Callers that need a
+    /// multi-step atomic mutation of the map (auditors, maintenance tools)
+    /// go through here; a panic inside `f` poisons the mutex but is
+    /// recovered by the next `lock_entries`, so the panic loses at most the
+    /// in-flight mutation — never the cache itself.
+    pub fn with_entries<R>(
+        &self,
+        f: impl FnOnce(&mut HashMap<[u8; 32], CacheEntry>) -> R,
+    ) -> R {
+        f(&mut self.lock_entries())
     }
 
     /// Bumps the epoch and drops all entries. Wired at every stored-data
@@ -126,7 +154,7 @@ impl QueryCache {
     /// (wiring point noted in the report; see
     /// `GraphLawDuckDB::shared_cache`).
     pub fn bump(&self) -> u64 {
-        self.entries.lock().expect("query cache poisoned").clear();
+        self.lock_entries().clear();
         self.epoch.fetch_add(1, Ordering::AcqRel) + 1
     }
 }

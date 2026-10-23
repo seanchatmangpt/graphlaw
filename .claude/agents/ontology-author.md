@@ -22,3 +22,7 @@ Laws:
   `cargo test --test sql_rdf_dialect` (report output; if another lane owns a
   failing file, disclose instead of fixing).
 - Do not commit; the coordinator owns git.
+- Lithography: the repo path is `/Users/sac/graphlaw`.
+- Lithography: edit only the files this agent owns.
+- Lithography: a typed refusal stops the turn. Do not rephrase the refused tool into a second attempt.
+- Lithography: `court-runner` stays read-only.

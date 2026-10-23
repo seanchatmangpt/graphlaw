@@ -30,6 +30,28 @@ enum Mode {
     Pubkey,
 }
 
+const HELP: &str = "\
+graphlaw-attest — sign or verify an arbitrary file with Ed25519 attestations.
+
+Usage:
+  graphlaw-attest sign   --key-seed-hex <hex> --in <file> [--out <attestation.json>]
+  graphlaw-attest verify --in <file> --attestation <json> --trusted-key <hex> [...]
+  graphlaw-attest pubkey --key-seed-hex <hex>
+
+Commands:
+  sign    Sign the file; writes (or prints) the canonical attestation JSON
+  verify  Re-read the file and attestation; prints `VERIFIED` or `REFUSED: <error>`
+  pubkey  Print the Ed25519 public key derived from the 32-byte seed
+
+Flags:
+  --key-seed-hex <hex>  Signing seed, 64 hex chars (32 bytes)
+  --in <file>           Payload file to sign or verify
+  --out <file>          Where `sign` writes the attestation (default: stdout)
+  --attestation <file>  Attestation JSON for `verify`
+  --trusted-key <hex>   Ed25519 public key, 64 hex chars (32 bytes); repeatable
+
+Exit codes: 0 ok, 1 refused (signature/verification failure), 2 usage or I/O error.";
+
 fn usage(msg: &str) -> ExitCode {
     eprintln!("graphlaw-attest: {msg}");
     eprintln!(
@@ -37,6 +59,7 @@ fn usage(msg: &str) -> ExitCode {
          graphlaw-attest verify --in <file> --attestation <json> --trusted-key <hex> [...]\n       \
          graphlaw-attest pubkey --key-seed-hex <hex>"
     );
+    eprintln!("run `graphlaw-attest --help` for flag details");
     ExitCode::from(2)
 }
 
@@ -46,7 +69,8 @@ fn parse_args() -> Result<Args, String> {
         Some("sign") => Mode::Sign,
         Some("verify") => Mode::Verify,
         Some("pubkey") => Mode::Pubkey,
-        _ => return Err("first argument must be `sign`, `verify` or `pubkey`".into()),
+        Some("--help" | "-h") => return Err(HELP.to_string()),
+        _ => return Err("first argument must be `sign`, `verify` or `pubkey` (try --help)".into()),
     };
     let (mut seed_hex, mut input, mut out, mut attestation_path) = (None, None, None, None);
     let mut keys = Vec::new();
@@ -58,7 +82,7 @@ fn parse_args() -> Result<Args, String> {
             "--out" => out = Some(PathBuf::from(val()?)),
             "--attestation" => attestation_path = Some(PathBuf::from(val()?)),
             "--trusted-key" => keys.push(val()?),
-            other => return Err(format!("unknown argument `{other}`")),
+            other => return Err(format!("unknown argument `{other}` (try --help)")),
         }
     }
     match mode {
@@ -83,17 +107,20 @@ fn read(p: &std::path::Path) -> Result<Vec<u8>, String> {
 
 fn run(a: Args) -> Result<ExitCode, String> {
     if let Mode::Pubkey = a.mode {
-        let seed = graphlaw::attest::hex_decode(a.seed_hex.as_deref().unwrap())
+        let seed_hex = a.seed_hex.as_deref().ok_or("pubkey needs --key-seed-hex")?;
+        let seed = graphlaw::attest::hex_decode(seed_hex)
             .ok_or("--key-seed-hex: not hex")?;
         let seed: [u8; 32] = seed.try_into().map_err(|_| "--key-seed-hex: need 32 bytes")?;
         println!("{}", SigningKey::from_seed(seed).verifying_key().to_hex());
         return Ok(ExitCode::SUCCESS);
     }
-    let payload = read(a.input.as_deref().unwrap())?;
+    let input = a.input.as_deref().ok_or("missing --in")?;
+    let payload = read(input)?;
     match a.mode {
         Mode::Pubkey => unreachable!("handled above"),
         Mode::Sign => {
-            let seed = graphlaw::attest::hex_decode(a.seed_hex.as_deref().unwrap())
+            let seed_hex = a.seed_hex.as_deref().ok_or("sign needs --key-seed-hex")?;
+            let seed = graphlaw::attest::hex_decode(seed_hex)
                 .ok_or("--key-seed-hex: not hex")?;
             let seed: [u8; 32] = seed.try_into().map_err(|_| "--key-seed-hex: need 32 bytes")?;
             let key = SigningKey::from_seed(seed);
@@ -129,6 +156,12 @@ fn run(a: Args) -> Result<ExitCode, String> {
 
 fn main() -> ExitCode {
     match parse_args() {
+        // Help is routed through the error channel by the parser and printed
+        // to stdout with exit 0 here.
+        Err(m) if m == HELP => {
+            println!("{m}");
+            ExitCode::SUCCESS
+        }
         Err(m) => usage(&m),
         Ok(a) => run(a).unwrap_or_else(|m| usage(&m)),
     }

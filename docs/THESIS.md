@@ -1,3 +1,5 @@
+> **[ARCHIVED-SNAPSHOT — 2026-10-22]** This document is a 2026-10 essay preserved for provenance only. It is superseded by the adjudicated, receipt-cited text at `docs/jira/v26.10.22/THESIS.md` (v26.10.22 milestone window); that file carries the conformance-adjudicated version, and this snapshot is retained unmodified so historical links remain resolvable. Do not cite this file for current claims.
+
 # Geometric Semantics, Sheaf Cohomology, and Variational Law Calculus on Graph Substrates
 
 **Author:** Sean Chatman  

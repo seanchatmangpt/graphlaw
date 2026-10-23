@@ -5,16 +5,41 @@
 //!
 //! usage: gws8_shacl_native <request.json> <n>
 //!
+//! The repo ships a checked-in fixture exercising the real `op_shacl` path
+//! (data spec + shapes text):
+//!
+//!   cargo run --example gws8_shacl_native -- examples/fixtures/gws8_request.json 5
+//!
 //! This is a bench harness, not a lane: it writes no jsonl. Output is one
-//! JSON object on stdout.
+//! JSON object on stdout:
+//! `{"engine":"native","n":5,"ops_per_sec":...,"response_blake3":"<64hex>","response_bytes":40,...}`
+//! Bare run (no args): usage line + fixture path on stderr, exit 2 (no panic).
+//! Court: no dedicated test executes this file; the same `shacl` op with
+//! injected input is refused-by-design in tests/gws4_ipc_injection_court.rs.
 
 use std::io::Read;
 use std::time::Instant;
 
 fn main() {
     let mut args = std::env::args().skip(1);
-    let path = args.next().expect("usage: gws8_shacl_native <request.json> <n>");
-    let n: u32 = args.next().expect("n").parse().expect("n integer");
+    let path = args
+        .next()
+        .unwrap_or_else(|| {
+            eprintln!("usage: cargo run --example gws8_shacl_native -- <request.json> <n>");
+            eprintln!("fixture: examples/fixtures/gws8_request.json");
+            std::process::exit(2);
+        });
+    let n: u32 = args
+        .next()
+        .unwrap_or_else(|| {
+            eprintln!("usage: cargo run --example gws8_shacl_native -- <request.json> <n>");
+            std::process::exit(2);
+        })
+        .parse()
+        .unwrap_or_else(|_| {
+            eprintln!("error: <n> must be an integer");
+            std::process::exit(2);
+        });
 
     let mut request = Vec::new();
     std::fs::File::open(&path)

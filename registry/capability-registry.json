@@ -2100,19 +2100,39 @@
   "receipt_surface": {
     "files": [
       {
-        "blake3": "blake3:96e374587ffeab339d74b8947f393536deb9ae10631429c6f9569b6c916935da",
-        "bytes": 62030,
+        "blake3": "blake3:3c52e1af3f712c7991f92001b158b29ae21872d068cf201dd2d6a09cd19907f6",
+        "bytes": 74573,
         "path": "src/duckdb_eval.rs"
       },
       {
-        "blake3": "blake3:6a99baa75cfed58186c25c309bfde0829655aab269d64426beaeca4dab5a884b",
-        "bytes": 132918,
+        "blake3": "blake3:9f2822c0db33e84b5f3d5d9ddb795ac3e714746f7e8ab3766777de46df11f819",
+        "bytes": 100074,
         "path": "src/sql_ast.rs"
+      },
+      {
+        "blake3": "blake3:c644b87aa5e349cfac550c5639347868fc2a10339d14ff1d14ce0a49b3a21051",
+        "bytes": 19098,
+        "path": "src/sql_ast/ast.rs"
+      },
+      {
+        "blake3": "blake3:a0857eceb037a03a3d60d1f296eaac4ceb74f0677ebd57f3c1a5b7103104f9a2",
+        "bytes": 28243,
+        "path": "src/sql_ast/refusals.rs"
+      },
+      {
+        "blake3": "blake3:99362c3d727e40080a68d00c53501e040a65f9f9b55ef48fbff268fb445ff934",
+        "bytes": 8348,
+        "path": "src/sql_ast/serializer.rs"
+      },
+      {
+        "blake3": "blake3:c6d560af2c7cb972b079436a767329507fa89bcf15812113ceb8ee4ff7b60034",
+        "bytes": 20394,
+        "path": "ontologies/sql-ast.ttl"
       }
     ],
     "schema": "graphlaw.receipt-surface/1"
   },
-  "receipt_surface_blake3": "blake3:78ebb149bb6712049fabbefc8b17cb72dcb6461b66422e1ea04e106e2b63f96e",
+  "receipt_surface_blake3": "blake3:ba11052d068da19d848c0dd56e81a5a688dd2f3f7b85e9b221f9cf59f3f5a36a",
   "refusal_codes": [
     {
       "code": "Refused",
@@ -2329,7 +2349,7 @@
       "fields": [
         {
           "default": null,
-          "doc": "Diagnostic text from the embedded DuckDB substrate (op `duckdb`, feature `duckdb`, native-only).",
+          "doc": "Diagnostic text from the embedded DuckDB substrate (ABI op `duckdb`, linked into the wasm module).",
           "enum": null,
           "name": "message",
           "nullable": false,
@@ -2405,7 +2425,7 @@
     "owl-rl",
     "d"
   ],
-  "registry_blake3": "blake3:7db561aa315e86f3f21022697276ef3382b808ea1bcef4e4245159b755f819b4",
+  "registry_blake3": "blake3:e227367e13ce8110d97fe29f252bdb69e22e872a5be4117ccbce4bbc9c6477d7",
   "schema": "graphlaw.capability-registry/1",
   "surface_blake3": "blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9"
 }

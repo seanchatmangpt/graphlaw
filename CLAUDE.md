@@ -16,14 +16,19 @@ and a lane file-ownership list.
 
 ```bash
 cargo check                                     # fastest compile gate
-cargo test                                      # full host suite (abi+duckdb default features)
+cargo test                                      # full host suite (default feature: abi; DuckDB is a required dependency)
 cargo test --test chicago_validation            # Chicago receipt/execution courts
 cargo test --test sql_rdf_dialect               # SQL-in-RDF compile + admission courts
 cargo test --test duckdb_statement_kinds        # 35 PEG statement kinds on real frozen-duckdb
 cargo test --test trust_attest                  # Ed25519 attestation courts
 bash scripts/mutation_court.sh                  # anti-vacuity: gates must flip on mutation
 bash scripts/spc_court.sh                       # SPC gate: Cpk ≥ 1.33 on the receipt fold path (P28-SIL program)
-cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm   # wasm boundary
+# WASI_SDK_PATH (/opt/wasi-sdk) is a wasi-sdk root (bin/clang, share/cmake/wasi-sdk-p1.cmake);
+# CI installs wasi-sdk 34 there.
+# ~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1 is the engine archive, not a wasi-sdk.
+WASI_SDK_PATH="/opt/wasi-sdk" \
+cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm   # wasm boundary (env required; typed build.rs refusal without it)
+WASI_SDK_PATH="/opt/wasi-sdk" \
 cargo test -p graphlaw-wasm                     # host contract around wasm/src/lib.rs
 ./target/debug/graphlaw-verify                  # receipt verify CLI
 ```
@@ -62,7 +67,9 @@ cannot exit 1 is the failure.
   every refusal has a stable code + trigger + recovery; flips are receipt-gated
 - `docs/jira/v<version>/` — active milestone window (newest dir); tickets,
   receipts, INDEX.md
-- `receipts/` — durable receipts (BLAKE3-chained)
+- `receipts/` — durable receipts (per-file blake3 digests; inter-receipt chaining
+  is a pending decision — the chain rule lives in `src/receipt_chain.rs` for
+  in-memory OCEL frames, not yet serialized into `receipts/`)
 
 ## Generated artifacts (never hand-edit)
 
@@ -74,6 +81,19 @@ cannot exit 1 is the failure.
 
 ## Conventions
 
+- **DuckDB is not a feature**: frozen-duckdb is a normal dependency; never add a
+  `duckdb` feature or `#[cfg(target_arch)]`-gate the SQL surface out of any
+  target — graphlaw-wasm is one unit and must typecheck AND link it.
+  Refusal codes are append-only (`docs/refusals.md`); never renumber.
+- **Disk discipline**: check `df -h /` (≥20 GiB free) before full suites/benches;
+  lane `CARGO_TARGET_DIR=target-lane*` roots are leases — the coordinator deletes
+  every lane's build root at integration. ENOSPC has killed all-lane waves.
+- **Coordinator-owned files**: `Cargo.toml` and git transitions are
+  coordinator-only; lanes never edit the manifest (concurrent edits revert
+  each other — witnessed 3×).
+- **Mutation court runs solo**: `scripts/mutation_court.sh` mutates the tree in
+  place; serialize it against all lanes or its inversions false-red concurrent
+  lanes' compiles.
 - **Chicago (classicist) testing**: real frozen-duckdb connections
   (`GraphLawDuckDB::open_in_memory[_allowing_unsigned_extensions]`), assert on
   real table readbacks; mocks/stubs banned by default. Anti-vacuity: a court
@@ -97,3 +117,23 @@ cannot exit 1 is the failure.
 - **Conformance text**: the sql-rdf Recommendation lives at
   `docs/reference/sql-rdf-rec.md` — cite by section; its W3C status claims are
   document text, not facts asserted by this repo.
+
+## Lithography
+
+Loaded again on session start by `.claude/hooks/lithography_card.py`.
+
+- A pinned axiom is re-pinned only with a receipt. A generated projection
+  (`docs/reference-generated/`, `registry/ARTIFACTS.blake3`,
+  `registry/capability-registry.json`, `registry/capability-registry.ttl`)
+  is regenerated, never patched. A leaf edit names one owned path and one court.
+- Every dispatch carries `/Users/sac/graphlaw` and a disjoint file lease.
+- Tool refusals: `GENERIC_AGENT_REFUSED`, `REFUSED(topology)`,
+  `MANIFEST-REFUSED`, `DISK-REFUSED`,
+  `LITHO-REFUSED(generated|registry-artifact|pin-file|staging|unreadable)`.
+  Pin files are `courts/code-partition/axioms.blake3`,
+  `axioms.blake3.next`, and `manifest.json`. A path containing `_split/`
+  is staging. File tools refuse those; Bash remains the coordinator hatch.
+- Cheapest court rung first. A loud SKIP is not a pass. A deny is not a
+  receipt. Do not rephrase a refused tool into a second attempt.
+- `court-runner` stays read-only. Axiom `.rs` sources stay editable: the
+  partition manifest is not a live allow-list.

@@ -1,0 +1,638 @@
+{
+  "version": 1,
+  "generated_by": "lane L119 code-partition census",
+  "trees": [
+    "src",
+    "crates/graphlaw-eyeron/src",
+    "wasm/src",
+    "src/bin"
+  ],
+  "files": [
+    {
+      "path": "crates/graphlaw-eyeron/src/ast.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 474,
+      "mixed": {},
+      "reason": "N3/RDF AST primitive union tags: ground-truth term model.",
+      "blake3": "8a23531e251779879b909130d460e8cf00a4e2e3e4a57b8b0089bed70fda4927"
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/error.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 71,
+      "mixed": {},
+      "reason": "error type + Display (refusal/error surface)."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/lexer.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 586,
+      "mixed": {
+        "DELTA-SLAB": 35
+      },
+      "reason": "token relation over the N3 grammar: encoding ground truth (token->span); minority delta share in scanner mechanics.",
+      "blake3": "3cdf368aec5da83cd0d3b497fd2848c962932ad1878b36998307e8d4433b909e"
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/lib.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 197,
+      "mixed": {},
+      "reason": "crate root: module orchestration/re-exports."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/main.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 630,
+      "mixed": {},
+      "reason": "CLI bridge (argv/stdio)."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/parser.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 2236,
+      "mixed": {
+        "AXIOMATIC-KERNEL": 25
+      },
+      "reason": "grammar->AST leaf algorithms; minority axiom share is the term-construction relation."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/parser_split/cursor.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 424,
+      "mixed": {},
+      "reason": "cursor mechanics: pure leaf algorithm."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/parser_split/grammar.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 1481,
+      "mixed": {},
+      "reason": "production rules as leaf parse functions."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/printing.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 698,
+      "mixed": {},
+      "reason": "N3/Turtle serializer."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/proof_check.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 246,
+      "mixed": {},
+      "reason": "proof verification: algebraic step-relation checking, provable by exhaustive court.",
+      "blake3": "270ce4f4fd5be5f46f086b63d9197b60125531868a1066cd54b99346eabcacb1"
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/proof_check_n3.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 594,
+      "mixed": {},
+      "reason": "N3 proof step-relation checking.",
+      "blake3": "3f196c95a20c3921027d1e80cf1e11fe76622d7774bccb3dc9d8dd9d8cfd7ed6"
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/proof_writer.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 776,
+      "mixed": {},
+      "reason": "proof serialization/emission."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/rdf_compat.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 38,
+      "mixed": {},
+      "reason": "format-family bridge over the core parser."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/reasoner.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 8195,
+      "mixed": {
+        "DELTA-SLAB": 40
+      },
+      "reason": "unification/backward-chaining resolution algebra: the ground-truth step relation; large minority delta share is inline builtin leaf slabs (migration roadmap).",
+      "blake3": "759de59bfbd4491cebc31412216391170aa353634800188298cec9e97b26b3dc"
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/reasoner_split/builtins/list.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 928,
+      "mixed": {},
+      "reason": "list builtin leaf algorithms."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/reasoner_split/builtins/log.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 895,
+      "mixed": {},
+      "reason": "log builtin leaf algorithms."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/reasoner_split/builtins/math.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 875,
+      "mixed": {},
+      "reason": "math builtin leaf algorithms."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/reasoner_split/builtins/mod.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 956,
+      "mixed": {},
+      "reason": "builtin dispatch + leaf comparison logic."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/reasoner_split/builtins/string.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 574,
+      "mixed": {},
+      "reason": "string builtin leaf algorithms."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/reasoner_split/limits.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 113,
+      "mixed": {},
+      "reason": "unwired extraction: resource-limit heuristics (depth/time/nonce budgets)."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/reasoner_split/solve_context.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 124,
+      "mixed": {},
+      "reason": "unwired design draft: parameter-bundling context."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/sudoku.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 151,
+      "mixed": {},
+      "reason": "backtracking search: the canonical pure leaf algorithm."
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/w3c_rdf.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 1293,
+      "mixed": {
+        "COMPILED-PROJECTION": 25
+      },
+      "reason": "RDF 1.1 term/dataset ground-truth encoding; minority projection share in emission helpers.",
+      "blake3": "5494b1d423e0142b97c988cc941cf66e96c6e5dbb33e7860f0c2449b31791410"
+    },
+    {
+      "path": "crates/graphlaw-eyeron/src/wasm.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 415,
+      "mixed": {},
+      "reason": "wasm binding bridge."
+    },
+    {
+      "path": "src/abi.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 1154,
+      "mixed": {
+        "AXIOMATIC-KERNEL": 15
+      },
+      "reason": "the JSON-over-ABI op dispatcher; minority axiom share is request-hash discipline."
+    },
+    {
+      "path": "src/abi_manifest.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 215,
+      "mixed": {},
+      "reason": "ABI manifest emission/serialization."
+    },
+    {
+      "path": "src/abi_split/lease.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 74,
+      "mixed": {},
+      "reason": "unwired dispatch-lease validation draft (router concern)."
+    },
+    {
+      "path": "src/abi_split/ops/governance.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 494,
+      "mixed": {},
+      "reason": "unwired verbatim abi.rs dispatch-arm slices (governance ops)."
+    },
+    {
+      "path": "src/abi_split/ops/meta.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 79,
+      "mixed": {},
+      "reason": "unwired verbatim abi.rs dispatch-arm slices (capabilities/sniff/canonical)."
+    },
+    {
+      "path": "src/abi_split/ops/mod.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 15,
+      "mixed": {},
+      "reason": "unwired ops module root (ABI router slices)."
+    },
+    {
+      "path": "src/abi_split/ops/parse_convert.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 35,
+      "mixed": {},
+      "reason": "unwired verbatim abi.rs dispatch-arm slices (parse/convert)."
+    },
+    {
+      "path": "src/abi_split/ops/query_engines.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 236,
+      "mixed": {},
+      "reason": "unwired verbatim abi.rs dispatch-arm slices (sparql/shacl/shex/n3/entail/datalog)."
+    },
+    {
+      "path": "src/attest.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 656,
+      "mixed": {},
+      "reason": "Ed25519 signing + BLAKE3 receipt identity: encoding ground truth over the receipt wire.",
+      "blake3": "d5d9f058790159f68ad5be22520a28089d23165b7a555d417bb4a46b683c23d7"
+    },
+    {
+      "path": "src/bin/dl_dualroute.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 448,
+      "mixed": {},
+      "reason": "CLI bridge: argv parsing, stdio emission, process exit plumbing."
+    },
+    {
+      "path": "src/bin/graphlaw_attest.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 165,
+      "mixed": {},
+      "reason": "CLI bridge: argv parsing, stdio emission, process exit plumbing."
+    },
+    {
+      "path": "src/bin/graphlaw_registry.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 292,
+      "mixed": {},
+      "reason": "CLI bridge: argv parsing, stdio emission, process exit plumbing."
+    },
+    {
+      "path": "src/bin/graphlaw_run.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 458,
+      "mixed": {},
+      "reason": "CLI bridge: argv parsing, stdio emission, process exit plumbing."
+    },
+    {
+      "path": "src/bin/graphlaw_verify.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 208,
+      "mixed": {},
+      "reason": "CLI bridge: argv parsing, stdio emission, process exit plumbing."
+    },
+    {
+      "path": "src/bin/sa2a_portability_verify.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 83,
+      "mixed": {},
+      "reason": "CLI bridge: argv parsing, stdio emission, process exit plumbing."
+    },
+    {
+      "path": "src/bin/sa2a_run14_verify.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 234,
+      "mixed": {},
+      "reason": "CLI bridge: argv parsing, stdio emission, process exit plumbing."
+    },
+    {
+      "path": "src/bin/smon_broaden_topic.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 89,
+      "mixed": {},
+      "reason": "CLI bridge: argv parsing, stdio emission, process exit plumbing."
+    },
+    {
+      "path": "src/bin/smon_transcript_to_turtle.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 135,
+      "mixed": {},
+      "reason": "CLI bridge: argv parsing, stdio emission, process exit plumbing."
+    },
+    {
+      "path": "src/dialect.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 1109,
+      "mixed": {
+        "DELTA-SLAB": 25
+      },
+      "reason": "sniff tables + refusal kinds + parse dispatch; minority delta share in sniff heuristics."
+    },
+    {
+      "path": "src/dialect_split/refusal.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 208,
+      "mixed": {},
+      "reason": "unwired verbatim extraction of the refusal enum + Display (a refusal table)."
+    },
+    {
+      "path": "src/dialect_split/sniff.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 331,
+      "mixed": {
+        "DELTA-SLAB": 30
+      },
+      "reason": "unwired verbatim extraction of the media-type sniff table; minority delta share in sniff heuristics."
+    },
+    {
+      "path": "src/duckdb_eval.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 1629,
+      "mixed": {
+        "COMPILED-PROJECTION": 30
+      },
+      "reason": "execution-receipt fold semantics over real frozen-duckdb: ground-truth eval law; minority projection share is statement plumbing.",
+      "blake3": "cc199cf615186a59f6ac4fe1f5493cb3368a070dec838f530c7557f91fb03317"
+    },
+    {
+      "path": "src/duckdb_op.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 405,
+      "mixed": {},
+      "reason": "AST->DuckDB operator translation: pure leaf algorithm."
+    },
+    {
+      "path": "src/evidence_ring.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 914,
+      "mixed": {
+        "COMPILED-PROJECTION": 35
+      },
+      "reason": "SPSC wait-free ring algorithm: pure leaf data structure.",
+      "io_justification": "evidence_ring.rs spawns the drainer thread and writes the NDJSON ledger; that I/O is the module's specified persistence seam (P28-SIL 3.2), not incidental side effect."
+    },
+    {
+      "path": "src/hooks.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 456,
+      "mixed": {
+        "COMPILED-PROJECTION": 30
+      },
+      "reason": "hook firing semantics: priority merge / verdict heuristics over query rows; minority projection share is orchestration."
+    },
+    {
+      "path": "src/law.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 1019,
+      "mixed": {},
+      "reason": "the one admission law: parse -> shape-validate -> entail -> step transitions; algebraic relations, provable by exhaustive court.",
+      "blake3": "3143efeda6c2f6f82e5fd7b5eddb16e70ffb919bc0a036af79c249839faaaac1"
+    },
+    {
+      "path": "src/lib.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 253,
+      "mixed": {
+        "DELTA-SLAB": 30
+      },
+      "reason": "crate root: module orchestration, re-exports, pipeline wiring; structurally a composition dispatcher."
+    },
+    {
+      "path": "src/plan.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 642,
+      "mixed": {},
+      "reason": "plan replay admission: precondition/effect algebra over content-addressed states.",
+      "blake3": "7287b986a2561a81be649aa020f672a4519f2f2bcbe3f62f555c4902bae68cce"
+    },
+    {
+      "path": "src/policy.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 474,
+      "mixed": {},
+      "reason": "STRONG-CYCLIC policy re-verification from the problem alone: provable graph algebra.",
+      "blake3": "d209d10bd75f1b09e365e522adf7481ced42572cad37d7f7e328e9589d82c6d2"
+    },
+    {
+      "path": "src/qualification.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 199,
+      "mixed": {},
+      "reason": "Chicago qualification algebra (standing lattice): pure leaf evidence logic."
+    },
+    {
+      "path": "src/query_cache.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 176,
+      "mixed": {},
+      "reason": "in-process epoch-invalidated cache: pure leaf logic, no fs/io/net."
+    },
+    {
+      "path": "src/query_ledger.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 1024,
+      "mixed": {
+        "DELTA-SLAB": 30
+      },
+      "reason": "NDJSON ledger plumbing; minority delta share in fold/batching logic."
+    },
+    {
+      "path": "src/query_ledger_split/batch.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 442,
+      "mixed": {},
+      "reason": "ledger batch-write plumbing (fs)."
+    },
+    {
+      "path": "src/query_ledger_split/storage.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 534,
+      "mixed": {},
+      "reason": "ledger storage plumbing (fs)."
+    },
+    {
+      "path": "src/receipt.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 256,
+      "mixed": {},
+      "reason": "receipt identity and digest folding: BLAKE3(Canon(G_AST)||P_params) ground truth.",
+      "blake3": "d34cd2edc803ef037c26d96217f51ee073d62a663562937a36f100915238c939"
+    },
+    {
+      "path": "src/receipt_chain.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 2370,
+      "mixed": {
+        "AXIOMATIC-KERNEL": 35
+      },
+      "reason": "dominantly canonical-JSON serialization, batch storage and chain-emission plumbing; minority axiom share is the parent->child fold law."
+    },
+    {
+      "path": "src/receipt_split/frame.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 389,
+      "mixed": {},
+      "reason": "packed object-ref wire frame: the receipt wire layout ground truth.",
+      "blake3": "32afdc69c395ff8ba6c4c522497f89623e9225f582fb574c8c572891d5ec1798"
+    },
+    {
+      "path": "src/receipt_split/record.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 840,
+      "mixed": {
+        "AXIOMATIC-KERNEL": 25
+      },
+      "reason": "serde record definitions + serializers; minority axiom share in packed-ref fields."
+    },
+    {
+      "path": "src/receipt_split/store.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 116,
+      "mixed": {},
+      "reason": "verbatim unwired slice of receipt_chain.rs storage plumbing (fs OpenOptions/Write)."
+    },
+    {
+      "path": "src/receipt_store.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 498,
+      "mixed": {},
+      "reason": "fs bridge: atomic writes, fsync cadence, torn-tail recovery plumbing."
+    },
+    {
+      "path": "src/registry.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 2063,
+      "mixed": {
+        "DELTA-SLAB": 20
+      },
+      "reason": "registry sync + artifact hashing flow; minority delta share in classification logic."
+    },
+    {
+      "path": "src/registry_split/definitions.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 901,
+      "mixed": {
+        "DELTA-SLAB": 25
+      },
+      "reason": "capability-registry surface data; minority delta share in derived fields."
+    },
+    {
+      "path": "src/registry_split/emit_json.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 742,
+      "mixed": {},
+      "reason": "JSON serializer (registry emission)."
+    },
+    {
+      "path": "src/registry_split/emit_ttl.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 345,
+      "mixed": {},
+      "reason": "TTL serializer (registry emission)."
+    },
+    {
+      "path": "src/rules/builtins.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 139,
+      "mixed": {
+        "COMPILED-PROJECTION": 35
+      },
+      "reason": "builtin evaluation leaf logic; minority projection share is the frozen-duckdb bridge."
+    },
+    {
+      "path": "src/rules/mod.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 3,
+      "mixed": {},
+      "reason": "module root re-export."
+    },
+    {
+      "path": "src/shacl_guard.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 199,
+      "mixed": {},
+      "reason": "bounded shape-nesting depth search: pure leaf algorithm, fail-closed cap."
+    },
+    {
+      "path": "src/smon.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 509,
+      "mixed": {
+        "COMPILED-PROJECTION": 25
+      },
+      "reason": "disclosed transcript-classification pattern heuristics; minority projection share is RDF plumbing.",
+      "io_justification": "smon.rs reads transcript files from disk (Path I/O) as its input contract."
+    },
+    {
+      "path": "src/sql_ast.rs",
+      "partition": "DELTA-SLAB",
+      "lines": 3273,
+      "mixed": {
+        "AXIOMATIC-KERNEL": 20
+      },
+      "reason": "AST->SQL operator translation (compile_turtle); minority axiom share is the canonical receipt-hash input shaping."
+    },
+    {
+      "path": "src/sql_split/ast.rs",
+      "partition": "AXIOMATIC-KERNEL",
+      "lines": 607,
+      "mixed": {
+        "COMPILED-PROJECTION": 40
+      },
+      "reason": "SQL AST union tags: primitive type ground truth for the projection target.",
+      "blake3": "748a957b9b358348f6aa8a7f24d8b545aa9dfe1dcb6dd951477f495d74dacb91"
+    },
+    {
+      "path": "src/sql_split/refusals.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 419,
+      "mixed": {},
+      "reason": "refusal table + Display for the sql surface."
+    },
+    {
+      "path": "src/sql_split/serializer.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 193,
+      "mixed": {},
+      "reason": "SQL text serializer: structurally derivable emission."
+    },
+    {
+      "path": "src/sql_statement_kinds.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 19,
+      "mixed": {},
+      "reason": "include! of ggen-generated 35 PEG statement kinds; pure projection of ontology/statements.ttl.",
+      "generator": "ggen sync run (ggen/sql-dialect/, rust ggen pack; ontology extracted from frozen-duckdb PEG b6013f7aa2)"
+    },
+    {
+      "path": "src/tier.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 265,
+      "mixed": {},
+      "reason": "document routing table: dialect->tier dispatch, refusal codes."
+    },
+    {
+      "path": "wasm/src/abi_meta.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 61,
+      "mixed": {},
+      "reason": "generated ABI metadata constants; header names its generator.",
+      "generator": "ggen sync run (rust-wasi-wasmex-pack, queries/meta.rq + templates/abi, from ontologies/graphlaw-wasm.ttl)"
+    },
+    {
+      "path": "wasm/src/ffi.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 365,
+      "mixed": {},
+      "reason": "generated FFI shell; header names its generator and forbids hand edits.",
+      "generator": "ggen sync run (rust-wasi-wasmex-pack, queries/ffi.rq + templates/abi, from ontologies/graphlaw-wasm.ttl)"
+    },
+    {
+      "path": "wasm/src/lib.rs",
+      "partition": "COMPILED-PROJECTION",
+      "lines": 104,
+      "mixed": {},
+      "reason": "wasm entry shell gluing the generated FFI to graphlaw::abi."
+    }
+  ]
+}

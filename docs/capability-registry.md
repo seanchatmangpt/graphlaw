@@ -10,7 +10,7 @@ Schema id: `graphlaw.capability-registry/1`. The schema is frozen for v26.9.29; 
 additive only. `ABI_VERSION` stays `1`.
 
 Status of this page: written against the v26.9.29 registry contract. The emitter
-(`src/registry.rs`, `src/bin/graphlaw_registry.rs`), the `registry/` directory and the
+(`src/registry/definitions.rs`, `src/bin/graphlaw_registry.rs`), the `registry/` directory and the
 registry-vs-dispatch tests (`tests/registry_dispatch.rs`, `tests/registry_artifacts.rs`,
 `tests/op_examples.rs`) are present and green on the current tree:
 `cargo run --features abi --bin graphlaw-registry -- --check` exits 0.
@@ -26,7 +26,8 @@ registry-vs-dispatch tests (`tests/registry_dispatch.rs`, `tests/registry_artifa
 | `registry/op-examples.json` | Runnable request examples per op (schema `graphlaw.op-examples/1`, see below). |
 | `registry/op-examples.schema.json` | JSON Schema for `op-examples.json`. |
 
-The source of truth is the static table in `src/registry.rs` (feature `abi`). The JSON and Turtle
+The source of truth is the static table in `src/registry/definitions.rs` (feature `abi`;
+`src/registry.rs` is a thin re-export shim over `src/registry::{definitions, emit_json, emit_ttl}`). The JSON and Turtle
 files are emitted from it and are never edited by hand.
 
 ## Regenerating and checking
@@ -58,7 +59,7 @@ with a `.blake3` file.
   "surface_blake3": "blake3:<64 lowercase hex>",
   "registry_blake3": "blake3:<64 lowercase hex>",
   "authorities": [{"capability": "...", "authority": "..."}],
-  "engines": ["PurRdf", "Eyeron"],
+  "engines": ["PurRdf", "Eyeron", "FrozenDuckdb"],
   "refusal_kinds": ["NotSemanticContent", "Ambiguous", "EngineRejected", "Unsupported", "ResourceLimit"],
   "rdf_dialects": [], "other_dialects": [],
   "regimes": ["simple", "rdf", "rdfs", "owl-rl", "d"],
@@ -83,7 +84,7 @@ with a `.blake3` file.
   first), `aliases`, `response_name`, `media_type` (null for non-RDF dialects) and `kind`
   (`rdf` or `other`).
 - `refusal_codes` lists the `details.code` values: `Refused`, `ResourceLimit`, `PlanRefused`,
-  `ReceiptRequired`, `ReceiptRefused`, `LeaseRefused`, `NotAdmitted`, `UnverifiedLeaseRefused`,
+  `ReceiptRequired`, `ReceiptRefused`, `LeaseRefused`, `NotAdmitted`, `DuckDb`, `UnverifiedLeaseRefused`,
   `PolicyRefused`, each with its `details` fields.
 - `law_steps` uses wire names (`owl-rl`, `record-receipts`, ...) with the lease ceiling a step
   needs, or null when it needs none.
@@ -137,7 +138,7 @@ The `capabilities` response gains three top-level string fields, additively; `ab
 
 Existing fields (`abi`, `abi_version`, `crate`, `authorities`, `rdf_dialects`, `other_dialects`,
 `ops`) keep their names and values. `ops`, `rdf_dialects` and `other_dialects` are built from
-`src/registry.rs`, not from a second literal.
+`src/registry/definitions.rs`, not from a second literal.
 
 Engines older than v26.9.29 (for example the v26.9.28 wasm pinned by `ash_graphlaw`) return none
 of the three fields. A consumer then computes `surface_blake3` host-side from the live response

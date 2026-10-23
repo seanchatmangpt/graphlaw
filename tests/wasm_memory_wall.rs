@@ -284,7 +284,7 @@ fn bulk_focus_node_injection_over_request_cap_is_typed_never_a_trap() {
     let small = padded_capabilities(64);
     let ptr = h.alloc(small.len() as u32).expect("small alloc");
     h.write_body(ptr, &small);
-    let (op, olen) = h.call_raw(ptr, (MAX_REQUEST_BYTES + 1) as u32); // hostile misreport
+    let (op, olen) = h.call_raw(ptr, MAX_REQUEST_BYTES + 1); // hostile misreport
     let out = h.read_out(op, olen);
     let r: Value = serde_json::from_slice(&out).expect("response is JSON");
     drop(h);

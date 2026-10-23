@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "70f2ca6c69f00ef7548a654f8172211cfc9ef683a1148f3747849fcc6ed6e333",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T051539Z-Edit-70f2ca6c.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/DISSERTATION.md",
+  "timestamp_utc": "2026-10-23T051539Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

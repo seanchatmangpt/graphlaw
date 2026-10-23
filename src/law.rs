@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 
-use crate::dialect::{Dialect, Refusal, RefusalKind, parse_rdf};
+use crate::dialect::{Dialect, Refusal, RefusalKind, RefusalMessage, parse_rdf};
 use crate::{BACKEND_AUTHORITIES, BackendAuthority};
 
 /// An immutable, content-addressed RDF dataset.
@@ -746,12 +746,40 @@ impl From<Refusal> for LawError {
     }
 }
 
+/// Stable refusal code (see `docs/refusals.md`): a step capability string with
+/// no entry in [`crate::BACKEND_AUTHORITIES`]. Append-only — never renumber or
+/// repurpose.
+pub const REFUSAL_UNKNOWN_STEP_CAPABILITY: &str = "UNKNOWN-STEP-CAPABILITY";
+
+/// Resolve a step capability to its declared backend authority, refusing typed
+/// instead of panicking when the capability has no `BACKEND_AUTHORITIES` entry.
+#[doc(hidden)]
+pub fn authority_for_capability(capability: &str) -> Result<BackendAuthority, LawError> {
+    BACKEND_AUTHORITIES
+        .iter()
+        .find(|a| a.capability == capability)
+        .copied()
+        .ok_or_else(|| {
+            LawError::Refused(Refusal {
+                kind: RefusalKind::Unsupported,
+                dialect: None,
+                engine: None,
+                message: RefusalMessage::Dynamic(format!(
+                    "[{}] UnknownStepCapability: capability {:?} has no BACKEND_AUTHORITIES \
+                     entry — add a declared authority for it in src/lib.rs, or fix the step's \
+                     capability mapping",
+                    REFUSAL_UNKNOWN_STEP_CAPABILITY, capability
+                )),
+            })
+        })
+}
+
 fn unsupported(dialect: Dialect, message: impl Into<String>) -> LawError {
     LawError::Refused(Refusal {
         kind: RefusalKind::Unsupported,
         dialect: Some(dialect),
         engine: Some(dialect.engine()),
-        message: message.into(),
+        message: RefusalMessage::Dynamic(message.into()),
     })
 }
 
@@ -769,7 +797,7 @@ impl LawState {
             kind: RefusalKind::EngineRejected,
             dialect: None,
             engine: Some(crate::dialect::Engine::PurRdf),
-            message: format!("canonicalization refused: {e:?}"),
+            message: format!("canonicalization refused: {e:?}").into(),
         })?;
         let digest = blake3::hash(canon.nquads.as_bytes());
         let id = format!(
@@ -782,7 +810,11 @@ impl LawState {
         Ok(LawState { dataset, id })
     }
 
-    /// Parse an RDF document of a known dialect.
+    /// Parse an RDF document of a known dialect into an immutable,
+    /// content-addressed [`LawState`]; execution semantics are delegated to
+    /// PurRDF. Returns the new state, or a typed
+    /// [`crate::law::Refusal`] on parse failure or an unsupported dialect —
+    /// see `docs/refusals.md` for the stable refusal codes.
     pub fn parse(bytes: &[u8], dialect: Dialect, base: Option<&str>) -> Result<Self, Refusal> {
         Self::from_dataset(parse_rdf(bytes, dialect, base)?)
     }
@@ -931,7 +963,7 @@ impl LawState {
                         kind: RefusalKind::TierMismatch,
                         dialect: Some(Dialect::N3),
                         engine: Some(Dialect::N3.engine()),
-                        message: format!("DeriveN3 rules failed N3 admission: {}", r.message),
+                        message: format!("DeriveN3 rules failed N3 admission: {}", r.message).into(),
                     }),
                 )?;
                 if validated.rule_count() != ruleset.rule_count() {
@@ -944,7 +976,8 @@ impl LawState {
                              admitted vs {} rules in the text",
                             ruleset.rule_count(),
                             validated.rule_count()
-                        ),
+                        )
+                        .into(),
                     }));
                 }
                 let base = self.nquads()?;
@@ -968,7 +1001,8 @@ impl LawState {
                         engine: Some(Dialect::N3.engine()),
                         message: format!(
                             "resource limit `{limit}` exceeded: {observed} > {max} ({summary})"
-                        ),
+                        )
+                        .into(),
                     },
                 })?;
                 let derived_ds = purrdf::parse_dataset(derived.as_bytes(), "text/turtle", None)
@@ -996,10 +1030,7 @@ impl LawState {
                 LawState::parse(merged.as_bytes(), Dialect::NQuads, None)?
             }
         };
-        let authority = *BACKEND_AUTHORITIES
-            .iter()
-            .find(|a| a.capability == step.capability())
-            .expect("every step maps to a declared authority");
+        let authority = authority_for_capability(step.capability())?;
         let receipt = Receipt {
             parent: self.id.clone(),
             child: child.id.clone(),

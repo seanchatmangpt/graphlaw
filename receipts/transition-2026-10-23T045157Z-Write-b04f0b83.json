@@ -1,0 +1,17 @@
+{
+  "artifact_blake3": "b04f0b8385d92804ae286326e8a82d2c300730bedc98eb9849fdfc494b5ae385",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": null,
+    "command": "graphlaw-attest sign --key-seed-hex <seed> --in <receipt> --out <receipt>.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/v2030_scratch.txt",
+  "timestamp_utc": "2026-10-23T045157Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

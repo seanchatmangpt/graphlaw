@@ -8,7 +8,7 @@
 
 ## Abstract
 
-For four decades, the interface between applications and relational engines has been an unverified string: SQL text crosses the execution boundary unaudited, is parsed by lexers that have historically been the richest attack surface in computing, produces effects that cannot be independently replayed, and carries no proof of what it was, what it touched, or whether it has executed before. This dissertation presents a substrate in which that interface is eliminated. Every relational operation is expressed as an RDF graph admitted through closed-world SHACL shapes; every admitted graph is canonicalized to a deterministic byte form and bound to its parameter buffer by a BLAKE3 digest that serves simultaneously as the receipt, the identity, the cache key, and the audit ledger entry; execution itself is off a lock-free ring into an evidentiary engine whose per-step overhead is bounded below the microsecond; and the wire speaks no format that has not already been admitted. The result is a system in which the entire class of injection exploits is unrepresentable, in which a compliance audit is the replay of a proof chain, and in which the compiler, the validator, and the documentation are projections of a single canonical graph. We give the admission calculus, its typed refusal taxonomy, the receipt algebra with its state-conservation invariant, the measured performance envelope (≤0.25 µs evidentiary overhead; >12M rows/sec sustained ingestion), and the court-based methodology by which each property was witnessed rather than asserted.
+For four decades, the interface between applications and relational engines has been an unverified string: SQL text crosses the execution boundary unaudited, is parsed by lexers that have historically been the richest attack surface in computing, produces effects that cannot be independently replayed, and carries no proof of what it was, what it touched, or whether it has executed before. This dissertation presents a substrate in which that interface is eliminated. Every relational operation is expressed as an RDF graph admitted through closed-world SHACL shapes; every admitted graph is canonicalized to a deterministic byte form and bound to its parameter buffer by a BLAKE3 digest that serves simultaneously as the receipt, the identity, the cache key, and the audit ledger entry; execution itself is off a lock-free ring into an evidentiary engine whose per-step overhead targets the 0.25 µs budget (smoke 0.19–0.22 µs; the SPC court verdict on the same path is FAIL — cpk −0.0018, p99 375 ns — `receipts/spc-2026-10-22.json`); and the wire speaks no format that has not already been admitted. The result is a system in which the entire class of injection exploits is unrepresentable, in which a compliance audit is the replay of a proof chain, and in which the compiler, the validator, and the documentation are projections of a single canonical graph. We give the admission calculus, its typed refusal taxonomy, the receipt algebra with its state-conservation invariant, the performance envelope (≤0.25 µs evidentiary-overhead budget, currently UNMET as gated; >12M rows/sec ingestion a design target, 500k-row smoke only), and the court-based methodology by which each property was witnessed rather than asserted.
 
 ---
 
@@ -27,12 +27,28 @@ Existing mitigations — parameterized queries, ORM escaping, stored procedures 
 ### 1.3 Contributions
 
 1. A graph-native relational calculus (`sql-rdf`) with a 35-class PEG-derived statement surface, closed-world SHACL admission, and a two-scope (view/process) semantic lattice.
-2. The admitted-statement receipt algebra: H_query = BLAKE3(Canon(G_AST) ‖ P_params), with replay determinism proven under all cosmetic RDF variation and sensitivity to all semantic variation.
+2. The admitted-statement receipt algebra: H_query = BLAKE3(Canon(G_AST) ‖ P_params), with replay determinism witnessed on a 5-variant cosmetic-invariance set
+(comment/whitespace/alias variants produce an identical receipt — receipt
+`SQLRDF-09`, `docs/jira/v26.10.22/RECEIPTS.md`); sensitivity to arbitrary
+semantic variation is the design intent, not a witnessed universal.
 3. A typed refusal taxonomy (REFUSAL-01..04) in which every rejection is a stable-coded object with a registered carrier, and refusal classes are subsequently *raised into the shape layer* so entire refusal categories become unconstructible.
 4. The shapes-as-single-description generation method: the compiler surface, its documentation, and the conformance report are all projections of one ontology, with drift made a build error.
 5. Content-addressed execution: the receipt digest as standing cache key, with a typed staleness boundary (catalog epoch), yielding global deduplication of analytical work.
-6. The zero-overhead evidentiary architecture: hot-path receipts under 0.25 µs via incremental BLAKE3 state folding over pre-carried canonical bytes, offloaded through an SPSC ring to an asynchronous append-only ledger.
-7. The court-based verification methodology: every property above is witnessed by an anti-vacuity execution court against a real engine, never by test doubles.
+6. The evidentiary architecture: incremental BLAKE3 state folding over
+   pre-carried canonical bytes, offloaded through an SPSC ring to an
+   asynchronous append-only ledger. Fold-path p99 targets the 0.25 µs budget
+   (smoke: 0.19–0.22 µs at n=1M, `designs/hot-path-baseline.md`) but the SPC
+   court verdict on the same path is FAIL (cpk −0.0018, p99 375 ns > 250 ns
+   USL — `receipts/spc-2026-10-22.json`, `scripts/spc_court.sh` receipt);
+   the budget is UNMET, not "zero-overhead".
+7. The court-based verification methodology: each architectural property is
+   paired with an anti-vacuity execution court against a real engine, never a
+   test double. Boundary, stated plainly: the aggregate mutation sweep aborted
+   pre-mutation in this window (cargo-mutants exit 4 at
+   `tests/test_cold_chain_ocel.rs:61`, zero mutants tested —
+   `docs/jira/v26.10.22/RECEIPTS.md` Blockers), so anti-vacuity rests on the
+   per-court inversions, not a completed whole-tree sweep; and the CTQ-3
+   latency budget above carries an SPC FAIL verdict, not a green gate.
 
 ---
 
@@ -46,9 +62,9 @@ The load-bearing design decision is that this ontology is *the* description. Cha
 
 ### 2.2 Closed-world admission
 
-Admission is fail-closed. A document is validated against closed-world shapes before any engine allocation: the `StatementBaseShape` demands exactly one integer `sql:statementIndex` per statement, the projection/source branches demand exactly one list of each, the operator enum admits only the fifteen normative string tokens, and malformed collections refuse at the shape layer. A shape failure is `REFUSAL-01` (`MalformedAstRefusal`), emitted in under a tenth of a microsecond, with zero engine bytes touched.
+Admission is fail-closed. A document is validated against closed-world shapes before any engine allocation: the `StatementBaseShape` demands exactly one integer `sql:statementIndex` per statement, the projection/source branches demand exactly one list of each, the operator enum admits only the fifteen normative string tokens, and malformed collections refuse at the shape layer. A shape failure is `REFUSAL-01` (`MalformedAstRefusal`) — a timed 0.10 µs figure exists for this path but is ungated and appears nowhere in code (`CHARTER-DFLSS.md` §1.2: UNVERIFIED) — with zero engine bytes touched.
 
-Recognized-but-unimplemented classes (CONNECT, DISCONNECT) refuse with `REFUSAL-02`; view/process boundary crossings with `REFUSAL-03`; capability-absent substrates (the wasm sandbox) with `REFUSAL-04`. Each code is a typed constant, registered with its carrier, and receipt-gated against renumbering.
+Recognized-but-unimplemented classes (CONNECT, DISCONNECT) refuse with `REFUSAL-02`; view/process boundary crossings with `REFUSAL-03`; a builtin SQL eval whose reader is not document-backed with `REFUSAL-04`. Each code is a typed constant, registered with its carrier, and receipt-gated against renumbering. The wasm module admits SQL-in-RDF through `compile_turtle`.
 
 ### 2.3 The scope lattice
 
@@ -64,7 +80,7 @@ Every admitted graph is canonicalized (RDFC-1.0) exactly once, at admission. The
 
   H_query = BLAKE3(Canon(G_AST) ‖ P_params)
 
-where P_params is a type-tagged parameter buffer in bind order. BLAKE3's streaming structure permits the canonical bytes to be absorbed into a hasher state once and *cloned* per execution; the per-execution cost is then a single incremental update over the parameter bytes alone — measured at the sub-0.15 µs budget.
+where P_params is a type-tagged parameter buffer in bind order. BLAKE3's streaming structure permits the canonical bytes to be absorbed into a hasher state once and *cloned* per execution; the per-execution cost is then a single incremental update over the parameter bytes alone. Measured (release-mode, `tests/p28_hot_path_bench.rs`, `designs/hot-path-baseline.md`): fold path 184–216 ns/op isolated, 250–300 ns under fan-out contention; the ≤250 ns budget is adjacent, and the SPC court verdict is FAIL (`receipts/spc-2026-10-22.json`) — the sub-0.15 µs figure once claimed here was never gated.
 
 Three properties are witnessed, not claimed:
 
@@ -84,9 +100,9 @@ The refusal taxonomy is part of the algebra, not error handling. A refusal is a 
 
 ## Chapter 4 — One Description: Shapes as the Single Source
 
-The deepest engineering result is the elimination of the second description. In the pre-consolidation system, SHACL shapes described what admits while hand-written extraction code described what compiles — and every defect of the era lived in the gap between them. The phase change is to generate from the shapes: a reader-hint annotation vocabulary (scope positions, cardinality discipline, recursion edges, literal typing) extends the ontology; the ggen pipeline emits the property-path reader, the coverage table, and the conformance documentation from the same bytes the validator embeds.
+A central engineering result is the elimination of the second description. In the pre-consolidation system, SHACL shapes described what admits while hand-written extraction code described what compiles — and every defect of the era lived in the gap between them. The phase change is to generate from the shapes: a reader-hint annotation vocabulary (scope positions, cardinality discipline, recursion edges, literal typing) extends the ontology; the ggen pipeline emits the property-path reader, the coverage table, and the conformance documentation from the same bytes the validator embeds.
 
-Three consequences follow. First, *grammar drift becomes a build error*: deleting a property from the shapes removes it from the generated reader and fails the coverage court; a hand-written residue reading an undeclared predicate fails the set-difference gate. Second, scope integrity migrates from Rust checks into shape data via entailment-closed positional classes (`ViewExpression`, `ProcessExpression`), computed in a validation-scoped throwaway closure so that canonical digests and state identity are untouched — six refusal courts shrink to shape consequences. Third, the alias window — the one-time dual-vocabulary compatibility shim — is deleted outright. With a single name per clause, the laundering attack family (validated name carries a decoy, executed name carries the payload) is not defended against; it is *unrepresentable*. The migration's falsifier court inverted live mid-program and caught a real kernel defect (literal-blind clause reads silently dropping LIMIT/OFFSET), which is the methodological point: the court for the phase change was worth landing before the phase change.
+Three consequences follow. First, *grammar drift becomes a build error*: deleting a property from the shapes removes it from the generated reader and fails the coverage court; a hand-written residue reading an undeclared predicate fails the set-difference gate. Second, scope integrity migrates from Rust checks into shape data via entailment-closed positional classes (`ViewExpression`, `ProcessExpression`), computed in a validation-scoped throwaway closure so that canonical digests and state identity are untouched — six refusal courts shrink to shape consequences. Third, the alias window — the one-time dual-vocabulary compatibility shim — is deleted: with a single name per clause, the laundering attack family (validated name carries a decoy, executed name carries the payload) is not defended against; it is *unrepresentable*. Standing as of 2026-10-22: this chapter is the designed phase change, not the landed one — E1 (alias elimination), A1, E2, and the Phase-1 generated gate are DESIGNED with specs on disk and queued behind the integration commit (`DFLSS-DOSSIER.md` §1 Develop, "Designed + queued"). The migration's falsifier court inverted live mid-program and caught a real kernel defect (literal-blind clause reads silently dropping LIMIT/OFFSET), which is the methodological point: the court for the phase change was worth landing before the phase change.
 
 ---
 
@@ -106,17 +122,17 @@ Because H_query is injective over (statement, parameters) — canonicalization c
 
 ### 6.2 The hot/cold split
 
-Execution splits across an asynchronous boundary. The hot path is: admitted artifact (canon pre-carried) → cloned BLAKE3 state → parameter fold → engine. The invariant check and receipt generation together measure ≤0.25 µs at p99 over ten-million-operation trials; the push is a single 64-byte descriptor onto a single-producer single-consumer lock-free ring; the transaction returns. The cold path — a dedicated drainer — batches descriptors into an append-only, content-addressed, hash-chained ledger, inheriting the established chain-verification discipline. Ring overflow is never blocking; it is counted, and the count is a queryable capability, so evidentiary loss is a bounded, visible quantity rather than a silent one.
+Execution splits across an asynchronous boundary. The hot path is: admitted artifact (canon pre-carried) → cloned BLAKE3 state → parameter fold → engine. The invariant check and receipt generation together were smoke-measured at 0.19–0.22 µs at n=1,000,000 (`designs/hot-path-baseline.md`), but the SPC court over the same path verdicts FAIL (p99 375 ns > 250 ns USL, cpk −0.0018 — `receipts/spc-2026-10-22.json`); the ≤0.25 µs p99 claim is a budget, not a witnessed result, and the ten-million-operation trial is unexecuted. The push is a single 64-byte descriptor onto a single-producer single-consumer lock-free ring (witnessed max push 292 ns vs a 10 µs fence); the transaction returns. The cold path — a dedicated drainer — batches descriptors into an append-only, content-addressed, hash-chained ledger, inheriting the established chain-verification discipline. Ring overflow is never blocking; it is counted, and the count is a queryable capability, so evidentiary loss is a bounded, visible quantity rather than a silent one.
 
 ### 6.3 Measured envelope
 
-On Apple Silicon, the substrate sustains memory-mapped columnar ingestion in excess of twelve million rows per second with analytical query p95 under twelve milliseconds — the engine's vectorized performance with the substrate's marginal cost confined to the microsecond-scale evidentiary fold. The numbers are produced by the same court discipline as correctness: release-mode benches, embedded in the verification ladder, with hardware variance disclosed.
+On Apple Silicon, the substrate targets memory-mapped columnar ingestion in excess of twelve million rows per second with analytical query p95 under twelve milliseconds. Status as of 2026-10-22: 12M rows/sec was printed by a 500k-row smoke bench and never gated; the 25M `TC_HOT_FULL=1` run is unexecuted (`CHARTER-DFLSS.md` §1.2, `designs/TC-HOT-benchmarks.md`); the p95 figure has no on-disk receipt. When these numbers are gated, they are produced by the same court discipline as correctness: release-mode benches, embedded in the verification ladder, with hardware variance disclosed.
 
 ---
 
 ## Chapter 7 — The Single Door
 
-The endgame phase change closes the wire: no unadmitted format crosses the execution boundary. The census court enumerates every entry point and asserts that no input path executes SQL that did not originate from the compiler or the trusted interior (compiler-emitted statements and validated-identifier interpolations executed before any caller bytes arrive). Bare-SQL skeletons receive a dedicated refusal class; the sniff layer routes Turtle-or-nothing. With the door closed, the receipt covers one hundred percent of mutations because one hundred percent of mutations are admitted graphs — and the property the whole program targets holds: **every execution in the system can prove what it is, what it touches, and that it obeyed the law before it started.**
+The endgame phase change closes the wire: no unadmitted format crosses the execution boundary. This chapter is the TARGET state, not the witnessed one — the closing tickets (SQLRDF-16/17/18, `docs/jira/v26.10.22/`) are Open and BLOCKED-BY the integration commit. The census court enumerates every entry point and asserts that no input path executes SQL that did not originate from the compiler or the trusted interior (compiler-emitted statements and validated-identifier interpolations executed before any caller bytes arrive). Bare-SQL skeletons receive a dedicated refusal class; the sniff layer routes Turtle-or-nothing. With the door closed, the receipt would cover one hundred percent of mutations because one hundred percent of mutations are admitted graphs — and the property the whole program targets is: **every execution in the system can prove what it is, what it touches, and that it obeyed the law before it started.**
 
 Engine plurality survives the closure as registry data: a capability route table lists which engines hold which admission tiers on which substrate, admission consults the table, and a future engine is a row — not a build flag and not a second admission path.
 
@@ -124,9 +140,12 @@ Engine plurality survives the closure as registry data: a capability route table
 
 ## Chapter 8 — Methodology: Courts, Not Confidence
 
-A methodological contribution stands equal to the architectural one. Every property in this dissertation — scope integrity, receipt determinism, shape admissibility, refusal typing, extension certification, conformance exhaustiveness — is witnessed by an *execution court*: a test that runs the real engine, asserts on real state, and carries an inline anti-vacuity mutation whose inversion must flip the court's outcome. A court that cannot fail is a failure. The discipline was load-bearing in production: the phase-change courts, landed *before* their phase changes, surfaced genuine kernel defects (a literal-blind clause reader, cardinality gaps, a validation/execution divergence) that design review had passed over. Generation is cheap; only execution closes the gap between what a system claims and what it does.
+A methodological contribution stands equal to the architectural one. The architectural properties above — scope integrity, receipt determinism, shape admissibility, refusal typing, extension certification, conformance exhaustiveness — are witnessed by *execution courts*: tests that run the real engine, assert on real state, and carry inline anti-vacuity mutations whose inversion must flip the court's outcome. The latency budgets of Contribution 6 are the exception: they carry an SPC FAIL verdict (`receipts/spc-2026-10-22.json`), recorded as such. A court that cannot fail is a failure. The discipline was load-bearing in production: the phase-change courts, landed *before* their phase changes, surfaced genuine kernel defects (a literal-blind clause reader, cardinality gaps, a validation/execution divergence) that design review had passed over. Generation is cheap; only execution closes the gap between what a system claims and what it does.
 
-The corollary governs scale: a fleet whose generation rate exceeds its execution rate accumulates unverified claims as entropy. The program therefore inverts the ratio — courts precede migrations, falsifiers precede features, and no property enters this document without its witnessing command and exit code.
+The corollary governs scale: a fleet whose generation rate exceeds its execution rate accumulates unverified claims as entropy. The program therefore inverts the ratio — courts precede migrations, falsifiers precede features, and no property enters this document without its witnessing command and exit
+code — or, where a budget is carried unmet, its failing receipt
+(`receipts/spc-2026-10-22.json` is in this document by that rule, not in
+spite of it).
 
 ---
 

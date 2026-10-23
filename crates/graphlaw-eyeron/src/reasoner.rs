@@ -3,23 +3,24 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::ast::*;
-use crate::parser::{parse_n3, MAX_TERM_NESTING_DEPTH};
-use num_bigint::BigInt;
-use regex::Regex;
+#[cfg(test)]
+use crate::parser::parse_n3;
+use crate::parser::MAX_TERM_NESTING_DEPTH;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
-use std::time::{SystemTime, UNIX_EPOCH};
-
-#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
-#[wasm_bindgen::prelude::wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen::prelude::wasm_bindgen(js_namespace = Date, js_name = now)]
-    fn javascript_date_now() -> f64;
-}
-
 use std::sync::Arc;
+
+mod builtins;
+mod limits;
+use builtins::list::*;
+use builtins::log::*;
+use builtins::math::*;
+use builtins::string::*;
+pub(crate) use builtins::verify_builtin_triple;
+use builtins::*;
+pub use limits::ReasonerLimit;
+use limits::*;
 
 pub type Bindings = BTreeMap<Name, Term>;
 
@@ -29,68 +30,16 @@ std::thread_local! {
 }
 
 #[cfg(test)]
-fn reset_test_broad_fact_scans() {
+pub(crate) fn reset_test_broad_fact_scans() {
     TEST_BROAD_FACT_SCANS.with(|count| count.set(0));
 }
 
 #[cfg(test)]
-fn test_broad_fact_scans() -> usize {
+pub(crate) fn test_broad_fact_scans() -> usize {
     TEST_BROAD_FACT_SCANS.with(|count| count.get())
 }
 
-const DEFAULT_MAX_BACKWARD_DEPTH: usize = 32;
-const DEFAULT_MAX_BACKWARD_SOLUTIONS_PER_GOAL: usize = 1024;
-const DEFAULT_MAX_MATCH_STEPS: usize = 200_000;
-/// Default cap on the term text a single derived fact may carry, in bytes.
-///
-/// A rule such as `{ :a :s ?x . (?x ?x) string:concatenation ?y } => { :a :s ?y }`
-/// doubles a literal on every firing, so it exhausts memory long before any
-/// step counter runs out.  Bounding the size of a derived fact turns that
-/// from an out-of-memory kill into an ordinary incomplete run.  16 MiB is far
-/// larger than any fact real rule sets build and small enough that rejecting
-/// one costs nothing.
-const DEFAULT_MAX_TERM_BYTES: usize = 16 * 1024 * 1024;
-const DEFAULT_MAX_TOTAL_BYTES: usize = 512 * 1024 * 1024;
-const DEFAULT_MAX_CLOSURE_FACTS: usize = 5_000_000;
-const DEFAULT_MAX_TOTAL_STEPS: usize = 500_000_000;
-/// Cap on search nodes visited, and on solutions kept, by one `log:includes` or
-/// `list:append` evaluation: both enumerate a cartesian space with no other bound.
-const MAX_BUILTIN_SEARCH_NODES: usize = 1_000_000;
-const MAX_BUILTIN_SOLUTIONS: usize = 10_000;
-const MAX_TABLED_BACKWARD_GOALS: usize = 100_000;
-/// Fixed cost charged per derived fact on top of its term text: the fact is held in the
-/// closure, the derived list and the dedup/index structures.
-const PER_FACT_OVERHEAD_BYTES: usize = 256;
-/// Longest integer lexical form parsed to an exact `BigInt` (parsing is quadratic).
-const MAX_EXACT_LITERAL_CHARS: usize = 100_000;
-/// Largest exact `math:product` result, in bits (about `MAX_EXACT_LITERAL_CHARS` digits), so a
-/// product never yields a literal the next operation would re-parse inexactly.
-const MAX_EXACT_PRODUCT_BITS: u64 = 330_000;
-// Multi-premise agenda matching is a win for small state-machine examples,
-// but on generated rule sets such as deep-taxonomy-100000 it makes every
-// broad subject/predicate fact probe unrelated multi-premise checks.  Keep
-// the original single-premise hot path for large programs.
-const MULTI_PREMISE_AGENDA_RULE_LIMIT: usize = 2048;
-
-#[derive(Debug, Clone)]
-struct SearchBudget {
-    steps: usize,
-    nested_match_steps: usize,
-    max_iterations: usize,
-    max_steps: usize,
-    max_backward_depth: usize,
-    max_backward_solutions_per_goal: usize,
-    max_term_bytes: usize,
-    max_total_bytes: usize,
-    max_closure_facts: usize,
-    max_total_steps: usize,
-    limits_reached: BTreeSet<ReasonerLimit>,
-    errors: Vec<ReasonerError>,
-    error_seen: HashSet<ReasonerError>,
-    completed_backward_goals: HashMap<String, Vec<Triple>>,
-    next_variable_scope: usize,
-}
-
+pub(crate) const DEFAULT_MAX_BACKWARD_SOLUTIONS_PER_GOAL: usize = 1024;
 impl SearchBudget {
     fn new(
         options: &ReasonerOptions,
@@ -186,7 +135,7 @@ impl SearchBudget {
 }
 
 #[derive(Debug)]
-struct RunReport {
+pub(crate) struct RunReport {
     limits_reached: BTreeSet<ReasonerLimit>,
     errors: Vec<ReasonerError>,
     error_seen: HashSet<ReasonerError>,
@@ -249,7 +198,7 @@ impl RunReport {
     }
 }
 
-fn blank_binding_name(name: &str) -> Name {
+pub(crate) fn blank_binding_name(name: &str) -> Name {
     format!("_:{}", name).into()
 }
 
@@ -257,7 +206,7 @@ fn blank_binding_name(name: &str) -> Name {
 /// matcher resolves is already ground, and walking one to find that out is far
 /// cheaper than the rebuild below, which allocates a fresh copy of every node
 /// and clones the cycle-guard set once per branch.
-fn term_has_var(term: &Term) -> bool {
+pub(crate) fn term_has_var(term: &Term) -> bool {
     match term {
         Term::Var(_) => true,
         Term::List(items) => items.iter().any(term_has_var),
@@ -270,7 +219,7 @@ fn term_has_var(term: &Term) -> bool {
 
 /// As `term_has_var`, for the pattern side, where a blank node is a local
 /// existential variable rather than a value.
-fn term_has_var_or_blank(term: &Term) -> bool {
+pub(crate) fn term_has_var_or_blank(term: &Term) -> bool {
     match term {
         Term::Var(_) | Term::Blank(_) => true,
         Term::List(items) => items.iter().any(term_has_var_or_blank),
@@ -290,7 +239,11 @@ pub(crate) fn resolve_pattern(term: &Term, bindings: &Bindings) -> Term {
     resolve_pattern_with_seen(term, bindings, &mut HashSet::new())
 }
 
-fn resolve_pattern_with_seen(term: &Term, bindings: &Bindings, seen: &mut HashSet<Name>) -> Term {
+pub(crate) fn resolve_pattern_with_seen(
+    term: &Term,
+    bindings: &Bindings,
+    seen: &mut HashSet<Name>,
+) -> Term {
     match term {
         Term::Var(name) => {
             if !seen.insert(name.clone()) {
@@ -392,18 +345,18 @@ impl ClosureSet {
 }
 
 /// (predicate, list length, bound positions) -> values at those positions -> fact indices.
-type DeepListIndex = HashMap<(Term, usize, Vec<usize>), HashMap<Vec<Term>, Vec<usize>>>;
+pub(crate) type DeepListIndex = HashMap<(Term, usize, Vec<usize>), HashMap<Vec<Term>, Vec<usize>>>;
 
 /// Which of a triple's terms a `ShapeIndex` groups by.
 #[derive(Debug, Clone, Copy)]
-enum Shape {
+pub(crate) enum Shape {
     P,
     Sp,
     Po,
 }
 
 /// The terms a shape groups by, borrowed from wherever they live.
-type Key<'a> = (&'a Term, Option<&'a Term>);
+pub(crate) type Key<'a> = (&'a Term, Option<&'a Term>);
 
 impl Shape {
     fn key<'a>(self, s: &'a Term, p: &'a Term, o: &'a Term) -> Key<'a> {
@@ -419,7 +372,7 @@ impl Shape {
     }
 }
 
-fn hash_key(key: Key<'_>) -> u64 {
+pub(crate) fn hash_key(key: Key<'_>) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     index_form(key.0).hash(&mut hasher);
@@ -428,7 +381,7 @@ fn hash_key(key: Key<'_>) -> u64 {
 }
 
 /// Whether two keys select the same bucket: the terms as an index sees them.
-fn keys_equal(a: Key<'_>, b: Key<'_>) -> bool {
+pub(crate) fn keys_equal(a: Key<'_>, b: Key<'_>) -> bool {
     index_form(a.0) == index_form(b.0)
         && match (a.1, b.1) {
             (Some(x), Some(y)) => index_form(x) == index_form(y),
@@ -447,7 +400,7 @@ fn keys_equal(a: Key<'_>, b: Key<'_>) -> bool {
 /// answers "is this the bucket I asked for?".  A 64-bit hash collision chains
 /// into a second bucket rather than mixing two shapes, so lookups stay exact.
 #[derive(Debug)]
-struct ShapeIndex {
+pub(crate) struct ShapeIndex {
     shape: Shape,
     chains: HashMap<u64, Vec<Vec<usize>>>,
 }
@@ -694,7 +647,7 @@ impl FactIndex {
 }
 
 #[derive(Debug, Clone)]
-struct AgendaEntry {
+pub(crate) struct AgendaEntry {
     rule_index: usize,
     premise_index: usize,
     goal: Triple,
@@ -704,7 +657,7 @@ struct AgendaEntry {
 }
 
 #[derive(Debug, Default, Clone)]
-struct AgendaIndex {
+pub(crate) struct AgendaIndex {
     entries: Vec<AgendaEntry>,
     by_p: HashMap<Term, Vec<usize>>,
     by_sp: HashMap<(Term, Term), Vec<usize>>,
@@ -765,22 +718,6 @@ impl AgendaIndex {
 
         out
     }
-}
-
-/// A safety limit that prevented the reasoner from proving a complete fixpoint.
-///
-/// Variants are added as new limits are introduced; downstream `match` needs a wildcard arm.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[non_exhaustive]
-pub enum ReasonerLimit {
-    Iterations,
-    MatchSteps,
-    BackwardDepth,
-    BackwardSolutionsPerGoal,
-    TermSize,
-    TermDepth,
-    ClosureSize,
-    ClosureFacts,
 }
 
 impl std::fmt::Display for ReasonerLimit {
@@ -1131,7 +1068,7 @@ pub fn reason(doc: &Document, options: &ReasonerOptions) -> ReasonerResult {
     reason_with_plan(doc, options, &query_rules, &active_rules, &agenda_index)
 }
 
-fn reason_with_plan(
+pub(crate) fn reason_with_plan(
     doc: &Document,
     options: &ReasonerOptions,
     query_rules: &[Rule],
@@ -1485,7 +1422,7 @@ fn reason_with_plan(
     }
 }
 
-fn is_deferred_scoped_premise(premise: &Triple) -> bool {
+pub(crate) fn is_deferred_scoped_premise(premise: &Triple) -> bool {
     matches!(
         &premise.p,
         Term::Iri(iri)
@@ -1497,7 +1434,7 @@ fn is_deferred_scoped_premise(premise: &Triple) -> bool {
 /// premises that matched -- so it is recorded the same way a forward
 /// conclusion is. Without this, an example whose whole printed result comes
 /// from a query had nothing to write a proof from.
-fn evaluate_query_rules(
+pub(crate) fn evaluate_query_rules(
     query_rules: &[Rule],
     closure: &[Triple],
     fact_index: Option<&FactIndex>,
@@ -1563,7 +1500,7 @@ fn evaluate_query_rules(
     out
 }
 
-fn emit_conclusions(
+pub(crate) fn emit_conclusions(
     rule: &Rule,
     bindings: &Bindings,
     closure: &mut Vec<Triple>,
@@ -1638,7 +1575,11 @@ fn emit_conclusions(
     rules_changed
 }
 
-fn derived_fact_record(fact: Triple, rule: &Arc<Rule>, bindings: &Bindings) -> DerivedFact {
+pub(crate) fn derived_fact_record(
+    fact: Triple,
+    rule: &Arc<Rule>,
+    bindings: &Bindings,
+) -> DerivedFact {
     DerivedFact {
         fact,
         rule: Arc::clone(rule),
@@ -1654,7 +1595,7 @@ fn derived_fact_record(fact: Triple, rule: &Arc<Rule>, bindings: &Bindings) -> D
     }
 }
 
-fn is_unquote_instruction(t: &Triple) -> bool {
+pub(crate) fn is_unquote_instruction(t: &Triple) -> bool {
     matches!((&t.s, &t.p), (Term::Iri(s), Term::Iri(p)) if s == EYERON_UNQUOTE && p == EYERON_UNQUOTE)
 }
 
@@ -1664,7 +1605,7 @@ fn is_unquote_instruction(t: &Triple) -> bool {
 /// per firing under a rule that wraps a term, and deep enough nesting
 /// overflows the stack in any recursive walk of the term, including this one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum TermOverflow {
+pub(crate) enum TermOverflow {
     Bytes,
     Depth,
 }
@@ -1682,7 +1623,7 @@ impl TermOverflow {
 /// ever walking further than the first breach: both checks short-circuit, so an
 /// oversized term costs no more to reject than a small one costs to accept.
 /// The byte count is exact unless the triple overflowed.
-fn triple_footprint(triple: &Triple, max_bytes: usize) -> (usize, Option<TermOverflow>) {
+pub(crate) fn triple_footprint(triple: &Triple, max_bytes: usize) -> (usize, Option<TermOverflow>) {
     let mut walk = TermWalk {
         bytes: 0,
         max_bytes,
@@ -1692,7 +1633,7 @@ fn triple_footprint(triple: &Triple, max_bytes: usize) -> (usize, Option<TermOve
     (walk.bytes, walk.overflow)
 }
 
-struct TermWalk {
+pub(crate) struct TermWalk {
     bytes: usize,
     max_bytes: usize,
     overflow: Option<TermOverflow>,
@@ -1747,7 +1688,7 @@ impl TermWalk {
     }
 }
 
-fn insert_materialized_triple(
+pub(crate) fn insert_materialized_triple(
     t: Triple,
     closure: &mut Vec<Triple>,
     fact_index: &mut FactIndex,
@@ -1819,7 +1760,7 @@ fn insert_materialized_triple(
     rules_changed
 }
 
-fn build_forward_agenda(rules: &[Rule]) -> AgendaIndex {
+pub(crate) fn build_forward_agenda(rules: &[Rule]) -> AgendaIndex {
     let allow_multi_premise_agenda = rules.len() <= MULTI_PREMISE_AGENDA_RULE_LIMIT;
     let mut backward_head_predicates = HashSet::<Term>::new();
     let mut has_wild_backward_head = false;
@@ -1852,7 +1793,7 @@ fn build_forward_agenda(rules: &[Rule]) -> AgendaIndex {
     agenda
 }
 
-fn agenda_entries_for_rule(
+pub(crate) fn agenda_entries_for_rule(
     rule_index: usize,
     rule: &Rule,
     backward_head_predicates: &HashSet<Term>,
@@ -1937,13 +1878,13 @@ fn agenda_entries_for_rule(
     entries
 }
 
-fn triple_contains_blank(triple: &Triple) -> bool {
+pub(crate) fn triple_contains_blank(triple: &Triple) -> bool {
     term_contains_blank(&triple.s)
         || term_contains_blank(&triple.p)
         || term_contains_blank(&triple.o)
 }
 
-fn term_contains_blank(term: &Term) -> bool {
+pub(crate) fn term_contains_blank(term: &Term) -> bool {
     match term {
         Term::Blank(_) => true,
         Term::List(items) => items.iter().any(term_contains_blank),
@@ -1952,95 +1893,12 @@ fn term_contains_blank(term: &Term) -> bool {
     }
 }
 
-fn is_builtin_premise(triple: &Triple) -> bool {
-    let Term::Iri(iri) = &triple.p else {
-        return false;
-    };
-    is_builtin_iri(iri)
-}
-
-fn is_builtin_iri(iri: &str) -> bool {
-    matches!(
-        iri,
-        LOG_EQUAL_TO
-            | LOG_NOT_EQUAL_TO
-            | LOG_COLLECT_ALL_IN
-            | LOG_FOR_ALL_IN
-            | LOG_CONCLUSION
-            | LOG_CONJUNCTION
-            | LOG_INCLUDES
-            | LOG_NOT_INCLUDES
-            | LOG_URI
-            | LOG_RAW_TYPE
-            | LOG_DTLIT
-            | LOG_LANGLIT
-            | LOG_CONTENT
-            | LOG_SEMANTICS
-            | LOG_SEMANTICS_OR_ERROR
-            | LOG_PARSED_AS_N3
-            | LOG_SKOLEM
-            | LOG_UUID
-            | CRYPTO_SHA
-            | DT_DATATYPE
-            | DT_LEXICAL_FORM
-            | EYELING_DT_DATATYPE
-            | EYELING_DT_LEXICAL_FORM
-            | RDF_FIRST
-            | RDF_REST
-            | LIST_FIRST
-            | LIST_REST
-            | LIST_APPEND
-            | LIST_ITERATE
-            | LIST_MAP
-            | LIST_FIRST_REST
-            | LIST_REVERSE
-            | LIST_SORT
-            | LIST_NOT_MEMBER
-            | MATH_SUM
-            | MATH_DIFFERENCE
-            | SUDOKU_SOLVE
-    ) || is_list_builtin(iri)
-        || is_math_operator(iri)
-        || is_math_comparison(iri)
-        || is_string_builtin(iri)
-        || is_time_builtin(iri)
-}
-
-fn is_agenda_safe_builtin_iri(iri: &str) -> bool {
-    // These builtins are pure tests or deterministic value constructors over
-    // their arguments.  They do not inspect the growing fact closure, so a rule
-    // containing them can still be driven by its ordinary fact premises.
-    matches!(
-        iri,
-        LOG_EQUAL_TO
-            | LOG_NOT_EQUAL_TO
-            | LOG_URI
-            | LOG_RAW_TYPE
-            | LOG_DTLIT
-            | LOG_LANGLIT
-            | LOG_CONTENT
-            | LOG_SKOLEM
-            | LOG_UUID
-            | CRYPTO_SHA
-            | DT_DATATYPE
-            | DT_LEXICAL_FORM
-            | EYELING_DT_DATATYPE
-            | EYELING_DT_LEXICAL_FORM
-            | MATH_SUM
-            | MATH_DIFFERENCE
-            | SUDOKU_SOLVE
-    ) || is_math_operator(iri)
-        || is_math_comparison(iri)
-        || is_string_builtin(iri)
-        || is_time_builtin(iri)
-}
-
-fn admissible_fact(t: &Triple) -> bool {
+pub(crate) fn admissible_fact(t: &Triple) -> bool {
     rule_from_triple(t).is_some()
         || (admissible_fact_term(&t.s) && admissible_fact_term(&t.p) && admissible_fact_term(&t.o))
 }
 
-fn admissible_fact_term(term: &Term) -> bool {
+pub(crate) fn admissible_fact_term(term: &Term) -> bool {
     match term {
         Term::Var(_) => false,
         // Variables inside quoted formulas are data, not unbound top-level fact variables.
@@ -2050,7 +1908,7 @@ fn admissible_fact_term(term: &Term) -> bool {
     }
 }
 
-fn rule_to_triple(rule: &Rule, prefix: &str) -> Triple {
+pub(crate) fn rule_to_triple(rule: &Rule, prefix: &str) -> Triple {
     // Rules are also visible as quoted implication triples, which lets examples
     // such as `rule-matching.n3` ask whether a rule exists.  Alpha-rename those
     // quoted rule variables before putting the rule-as-data in the fact closure;
@@ -2100,7 +1958,7 @@ pub(crate) fn is_boolean_false(term: &Term) -> bool {
 }
 
 /// The first fuse whose premise is provable against the closure so far.
-fn fired_fuse(
+pub(crate) fn fired_fuse(
     rules: &[Rule],
     closure: &[Triple],
     fact_index: &FactIndex,
@@ -2136,7 +1994,7 @@ fn fired_fuse(
     None
 }
 
-fn rule_from_triple(t: &Triple) -> Option<Rule> {
+pub(crate) fn rule_from_triple(t: &Triple) -> Option<Rule> {
     match (&t.s, &t.p, &t.o) {
         (Term::Formula(premise), Term::Iri(p), Term::Formula(conclusion)) if p == LOG_IMPLIES => {
             Some(Rule::new(premise.clone(), conclusion.clone(), true))
@@ -2151,7 +2009,7 @@ fn rule_from_triple(t: &Triple) -> Option<Rule> {
     }
 }
 
-fn match_premises(
+pub(crate) fn match_premises(
     premises: &[Triple],
     facts: &[Triple],
     fact_index: Option<&FactIndex>,
@@ -2181,7 +2039,7 @@ fn match_premises(
     out
 }
 
-fn match_premise_at(
+pub(crate) fn match_premise_at(
     premises: &[Triple],
     facts: &[Triple],
     fact_index: Option<&FactIndex>,
@@ -2211,7 +2069,7 @@ fn match_premise_at(
 /// `premises`. Carrying indices rather than a shrinking `Vec<Triple>` is what
 /// keeps the recursion cheap: a triple is 216 bytes and three heap strings, so
 /// cloning the list at every node of the search cost more than the search.
-fn match_premise_remaining(
+pub(crate) fn match_premise_remaining(
     premises: &[Triple],
     remaining: Vec<usize>,
     facts: &[Triple],
@@ -2450,7 +2308,7 @@ fn match_premise_remaining(
     }
 }
 
-fn premise_needs_broad_fact_scan(
+pub(crate) fn premise_needs_broad_fact_scan(
     premise: &Triple,
     fact_index: Option<&FactIndex>,
     bindings: &Bindings,
@@ -2475,7 +2333,7 @@ fn premise_needs_broad_fact_scan(
     !resolve_pattern(&premise.p, bindings).is_ground()
 }
 
-fn aggregate_waits_for_sibling_binding(
+pub(crate) fn aggregate_waits_for_sibling_binding(
     premise: &Triple,
     premises: &[Triple],
     remaining: &[usize],
@@ -2564,7 +2422,7 @@ fn aggregate_waits_for_sibling_binding(
         .any(|var| sibling_vars.contains(&var) && !bindings.contains_key(var.as_str()))
 }
 
-fn collect_sibling_context_var_names(
+pub(crate) fn collect_sibling_context_var_names(
     triple: &Triple,
     bindings: &Bindings,
     out: &mut HashSet<String>,
@@ -2584,7 +2442,7 @@ fn collect_sibling_context_var_names(
     collect_var_names_triple(triple, out);
 }
 
-fn premise_is_speculative_builtin(premise: &Triple, bindings: &Bindings) -> bool {
+pub(crate) fn premise_is_speculative_builtin(premise: &Triple, bindings: &Bindings) -> bool {
     let pred = resolve(&premise.p, bindings);
     let Term::Iri(iri) = pred else {
         return false;
@@ -2621,7 +2479,7 @@ fn premise_is_speculative_builtin(premise: &Triple, bindings: &Bindings) -> bool
     false
 }
 
-fn term_has_unresolved_var(term: &Term) -> bool {
+pub(crate) fn term_has_unresolved_var(term: &Term) -> bool {
     match term {
         Term::Var(_) => true,
         Term::List(items) => items.iter().any(term_has_unresolved_var),
@@ -2634,7 +2492,7 @@ fn term_has_unresolved_var(term: &Term) -> bool {
     }
 }
 
-fn bindings_progress(before: &Bindings, after: &Bindings) -> bool {
+pub(crate) fn bindings_progress(before: &Bindings, after: &Bindings) -> bool {
     if after.len() != before.len() {
         return true;
     }
@@ -2644,7 +2502,7 @@ fn bindings_progress(before: &Bindings, after: &Bindings) -> bool {
     })
 }
 
-fn premise_is_definitively_false(
+pub(crate) fn premise_is_definitively_false(
     premise: &Triple,
     facts: &[Triple],
     fact_index: Option<&FactIndex>,
@@ -2726,7 +2584,7 @@ fn premise_is_definitively_false(
     false
 }
 
-fn ordinary_fact_goal_is_ready(goal: &Triple) -> bool {
+pub(crate) fn ordinary_fact_goal_is_ready(goal: &Triple) -> bool {
     // Treat a fact goal as ready for contradiction pruning when the predicate
     // is concrete and at least one data position is concrete.  With only a
     // predicate (`?s :p ?o`), absence from the predicate index is still a true
@@ -2735,7 +2593,7 @@ fn ordinary_fact_goal_is_ready(goal: &Triple) -> bool {
         && (!matches!(goal.s, Term::Var(_)) || !matches!(goal.o, Term::Var(_)))
 }
 
-fn backward_rules_may_derive_predicate(predicate: &Term, rules: &[Rule]) -> bool {
+pub(crate) fn backward_rules_may_derive_predicate(predicate: &Term, rules: &[Rule]) -> bool {
     rules.iter().any(|rule| {
         !rule.is_forward
             && rule.conclusion.iter().any(|head| match &head.p {
@@ -2745,7 +2603,7 @@ fn backward_rules_may_derive_predicate(predicate: &Term, rules: &[Rule]) -> bool
     })
 }
 
-fn include_backward_alternatives_for_selected_premise(
+pub(crate) fn include_backward_alternatives_for_selected_premise(
     premise: &Triple,
     facts: &[Triple],
     fact_index: Option<&FactIndex>,
@@ -2785,7 +2643,7 @@ fn include_backward_alternatives_for_selected_premise(
     candidates
 }
 
-fn match_one_premise(
+pub(crate) fn match_one_premise(
     premise: &Triple,
     facts: &[Triple],
     fact_index: Option<&FactIndex>,
@@ -2850,7 +2708,7 @@ fn match_one_premise(
     out
 }
 
-fn may_match_rule_fact(pattern: &Triple, bindings: &Bindings) -> bool {
+pub(crate) fn may_match_rule_fact(pattern: &Triple, bindings: &Bindings) -> bool {
     // Expose rules as data only when the caller explicitly asks for implication
     // triples.  A broad wildcard pattern such as `{ ?S ?P ?O } log:query
     // { ?S ?P ?O }` must enumerate facts, not recursively materialize every
@@ -2861,7 +2719,7 @@ fn may_match_rule_fact(pattern: &Triple, bindings: &Bindings) -> bool {
     }
 }
 
-fn should_try_backward_goal(goal: &Triple, bindings: &Bindings) -> bool {
+pub(crate) fn should_try_backward_goal(goal: &Triple, bindings: &Bindings) -> bool {
     // Backward rules are goal-directed. Trying them too early can make
     // recursive rules explode.  In particular, hanoi.n3 has body goals such as
     // `(?N1 ?X ?Z ?Y) :moves ?M1` which must wait until `math:difference` has
@@ -2881,7 +2739,7 @@ fn should_try_backward_goal(goal: &Triple, bindings: &Bindings) -> bool {
         && backward_term_is_runnable(&goal.s, bindings)
 }
 
-fn backward_term_is_runnable(term: &Term, bindings: &Bindings) -> bool {
+pub(crate) fn backward_term_is_runnable(term: &Term, bindings: &Bindings) -> bool {
     match resolve(term, bindings) {
         // Top-level variables are ordinary pattern variables.
         Term::Var(_) => true,
@@ -2897,7 +2755,7 @@ fn backward_term_is_runnable(term: &Term, bindings: &Bindings) -> bool {
     }
 }
 
-fn has_unresolved_var(term: &Term, bindings: &Bindings) -> bool {
+pub(crate) fn has_unresolved_var(term: &Term, bindings: &Bindings) -> bool {
     match resolve(term, bindings) {
         Term::Var(_) => true,
         Term::List(items) => items.iter().any(|item| has_unresolved_var(item, bindings)),
@@ -2910,7 +2768,7 @@ fn has_unresolved_var(term: &Term, bindings: &Bindings) -> bool {
     }
 }
 
-fn backward_goal_key(goal: &Triple) -> String {
+pub(crate) fn backward_goal_key(goal: &Triple) -> String {
     fn term_key(term: &Term, vars: &mut BTreeMap<String, usize>) -> String {
         match term {
             Term::Var(name) => {
@@ -2955,7 +2813,7 @@ fn backward_goal_key(goal: &Triple) -> String {
     triple_key(goal, &mut BTreeMap::new())
 }
 
-fn solve_backward_goal(
+pub(crate) fn solve_backward_goal(
     goal: &Triple,
     facts: &[Triple],
     fact_index: Option<&FactIndex>,
@@ -3073,7 +2931,7 @@ fn solve_backward_goal(
     out
 }
 
-fn match_backward_premises_ordered(
+pub(crate) fn match_backward_premises_ordered(
     premises: &[Triple],
     remaining: Vec<usize>,
     facts: &[Triple],
@@ -3178,7 +3036,7 @@ fn match_backward_premises_ordered(
     }
 }
 
-fn rule_may_prove_goal(rule: &Rule, goal: &Triple) -> bool {
+pub(crate) fn rule_may_prove_goal(rule: &Rule, goal: &Triple) -> bool {
     let Term::Iri(goal_predicate) = &goal.p else {
         return true;
     };
@@ -3255,7 +3113,7 @@ pub fn explain_backward(
     explain_backward_indexed(goal, facts, &fact_index, given, rules, max_depth, emit)
 }
 
-struct ExplainState {
+pub(crate) struct ExplainState {
     /// Goals whose explanation is in progress, to stop a goal explaining
     /// itself.
     visited: HashSet<String>,
@@ -3273,52 +3131,7 @@ struct ExplainState {
 /// Recording such a premise as unproven would claim the chain is broken
 /// when it is not; it is a trust obligation, which is what
 /// `docs/proof-checking.md` §6.1 calls it.
-pub fn builtin_reads_outside_its_triple(predicate: &Term) -> bool {
-    let Term::Iri(iri) = predicate else {
-        return false;
-    };
-    matches!(
-        iri.as_str(),
-        LOG_COLLECT_ALL_IN
-            | LOG_FOR_ALL_IN
-            | LOG_INCLUDES
-            | LOG_NOT_INCLUDES
-            | LOG_CONCLUSION
-            | LOG_CONJUNCTION
-            | LOG_CONTENT
-            | LOG_SEMANTICS
-            | LOG_SEMANTICS_OR_ERROR
-            | LIST_MAP
-    ) || iri.as_str() == TIME_LOCAL_TIME
-}
-
-/// True iff `goal` holds by evaluating a built-in on it alone — what a
-/// proof checker re-performs for a `pe:builtin` step.
-pub fn verify_builtin_triple(goal: &Triple) -> bool {
-    if !is_builtin_premise(goal) {
-        return false;
-    }
-    let mut concrete = BTreeMap::new();
-    for term in [&goal.s, &goal.p, &goal.o] {
-        bind_concrete_blanks(term, &mut concrete);
-    }
-    let mut budget = SearchBudget::for_proof(1);
-    let mut backward_stack = HashSet::new();
-    eval_builtin(
-        goal,
-        &concrete,
-        &[],
-        None,
-        &[],
-        0,
-        &mut backward_stack,
-        &mut budget,
-    )
-    .is_some_and(|matches| !matches.is_empty())
-}
-
-#[allow(clippy::too_many_arguments)]
-fn explain_backward_inner(
+pub(crate) fn explain_backward_inner(
     goal: &Triple,
     facts: &[Triple],
     fact_index: &FactIndex,
@@ -3494,7 +3307,7 @@ fn explain_backward_inner(
 
 /// Bind every blank node in `term` to itself, so a term that is already a
 /// concrete graph value is not re-read as a pattern variable.
-fn bind_concrete_blanks(term: &Term, out: &mut Bindings) {
+pub(crate) fn bind_concrete_blanks(term: &Term, out: &mut Bindings) {
     match term {
         Term::Blank(label) => {
             out.insert(blank_binding_name(label), term.clone());
@@ -3547,7 +3360,7 @@ pub fn find_backward_proof_for_goal(
 /// returned nothing because it was already on the `visited` stack failed
 /// for that context alone, not in general.
 #[allow(clippy::too_many_arguments)]
-fn find_backward_proof_inner(
+pub(crate) fn find_backward_proof_inner(
     goal: &Triple,
     facts: &[Triple],
     fact_index: &FactIndex,
@@ -3708,7 +3521,7 @@ fn find_backward_proof_inner(
     out
 }
 
-fn salted_backward_prefix(
+pub(crate) fn salted_backward_prefix(
     depth: usize,
     rule_index: usize,
     goal: &Triple,
@@ -3738,7 +3551,7 @@ fn salted_backward_prefix(
     format!("__backward_{}_{}_{:x}__", depth, rule_index, h)
 }
 
-fn standardize_apart(rule: &Rule, prefix: &str) -> Rule {
+pub(crate) fn standardize_apart(rule: &Rule, prefix: &str) -> Rule {
     let mut out = Rule::new(
         rule.premise
             .iter()
@@ -3757,7 +3570,7 @@ fn standardize_apart(rule: &Rule, prefix: &str) -> Rule {
     out
 }
 
-fn standardized_var_source_names(rule: &Rule, prefix: &str) -> BTreeMap<String, String> {
+pub(crate) fn standardized_var_source_names(rule: &Rule, prefix: &str) -> BTreeMap<String, String> {
     let mut vars = HashSet::new();
     for triple in rule.premise.iter().chain(rule.conclusion.iter()) {
         collect_var_names_triple(triple, &mut vars);
@@ -3769,13 +3582,13 @@ fn standardized_var_source_names(rule: &Rule, prefix: &str) -> BTreeMap<String, 
     out
 }
 
-fn collect_var_names_triple(triple: &Triple, out: &mut HashSet<String>) {
+pub(crate) fn collect_var_names_triple(triple: &Triple, out: &mut HashSet<String>) {
     collect_var_names_term(&triple.s, out);
     collect_var_names_term(&triple.p, out);
     collect_var_names_term(&triple.o, out);
 }
 
-fn collect_var_names_term(term: &Term, out: &mut HashSet<String>) {
+pub(crate) fn collect_var_names_term(term: &Term, out: &mut HashSet<String>) {
     match term {
         Term::Var(name) => {
             out.insert(name.clone().to_string());
@@ -3794,7 +3607,7 @@ fn collect_var_names_term(term: &Term, out: &mut HashSet<String>) {
     }
 }
 
-fn rename_triple(t: &Triple, prefix: &str) -> Triple {
+pub(crate) fn rename_triple(t: &Triple, prefix: &str) -> Triple {
     Triple::new(
         rename_term(&t.s, prefix),
         rename_term(&t.p, prefix),
@@ -3802,7 +3615,7 @@ fn rename_triple(t: &Triple, prefix: &str) -> Triple {
     )
 }
 
-fn rename_term(term: &Term, prefix: &str) -> Term {
+pub(crate) fn rename_term(term: &Term, prefix: &str) -> Term {
     match term {
         Term::Var(name) => Term::Var(format!("{}{}", prefix, name).into()),
         Term::List(items) => {
@@ -3821,7 +3634,7 @@ pub(crate) fn match_triple(pattern: &Triple, fact: &Triple, bindings: &mut Bindi
         && match_term(&pattern.o, &fact.o, bindings)
 }
 
-fn match_term(pattern: &Term, value: &Term, bindings: &mut Bindings) -> bool {
+pub(crate) fn match_term(pattern: &Term, value: &Term, bindings: &mut Bindings) -> bool {
     // Formula matching must see the *original* pattern.  In particular, if an
     // outer variable is already bound to a graph blank and appears inside the
     // formula, that blank is concrete.  Resolving the whole formula with
@@ -3861,7 +3674,7 @@ fn match_term(pattern: &Term, value: &Term, bindings: &mut Bindings) -> bool {
     }
 }
 
-fn unify_triple(left: &Triple, right: &Triple, bindings: &mut Bindings) -> bool {
+pub(crate) fn unify_triple(left: &Triple, right: &Triple, bindings: &mut Bindings) -> bool {
     unify_term(&left.s, &right.s, bindings)
         && unify_term(&left.p, &right.p, bindings)
         && unify_term(&left.o, &right.o, bindings)
@@ -3891,2562 +3704,12 @@ pub(crate) fn unify_term(left: &Term, right: &Term, bindings: &mut Bindings) -> 
     }
 }
 
-fn eval_builtin(
-    premise: &Triple,
-    bindings: &Bindings,
-    facts: &[Triple],
-    fact_index: Option<&FactIndex>,
-    rules: &[Rule],
-    depth: usize,
-    backward_stack: &mut HashSet<String>,
-    budget: &mut SearchBudget,
-) -> Option<Vec<Bindings>> {
-    let pred = resolve(&premise.p, bindings);
-    match pred {
-        Term::Iri(ref iri) if iri == LOG_EQUAL_TO => {
-            Some(eval_equal(&premise.s, &premise.o, bindings, facts))
-        }
-        Term::Iri(ref iri) if iri == LOG_NOT_EQUAL_TO => {
-            Some(eval_not_equal(&premise.s, &premise.o, bindings, facts))
-        }
-        Term::Iri(ref iri) if iri == LOG_COLLECT_ALL_IN => Some(eval_collect_all_in(
-            &premise.s,
-            &premise.o,
-            bindings,
-            facts,
-            fact_index,
-            rules,
-            depth,
-            backward_stack,
-            budget,
-        )),
-        Term::Iri(ref iri) if iri == LOG_FOR_ALL_IN => Some(eval_for_all_in(
-            &premise.s,
-            &premise.o,
-            bindings,
-            facts,
-            fact_index,
-            rules,
-            depth,
-            backward_stack,
-            budget,
-        )),
-        Term::Iri(ref iri) if iri == LOG_CONCLUSION => Some(eval_log_conclusion(
-            &premise.s, &premise.o, bindings, budget,
-        )),
-        Term::Iri(ref iri) if iri == LOG_CONJUNCTION => Some(eval_log_conjunction(
-            &premise.s, &premise.o, bindings, facts,
-        )),
-        Term::Iri(ref iri) if iri == LOG_INCLUDES => Some(eval_log_includes(
-            &premise.s, &premise.o, bindings, facts, rules, budget,
-        )),
-        Term::Iri(ref iri) if iri == LOG_NOT_INCLUDES => Some(eval_log_not_includes(
-            premise,
-            bindings,
-            facts,
-            fact_index,
-            rules,
-            depth,
-            backward_stack,
-            budget,
-        )),
-        Term::Iri(ref iri) if iri == LOG_URI => {
-            Some(eval_log_uri(&premise.s, &premise.o, bindings))
-        }
-        Term::Iri(ref iri) if iri == LOG_RAW_TYPE => {
-            Some(eval_log_raw_type(&premise.s, &premise.o, bindings))
-        }
-        Term::Iri(ref iri) if iri == LOG_DTLIT => {
-            Some(eval_log_dtlit(&premise.s, &premise.o, bindings, facts))
-        }
-        Term::Iri(ref iri) if iri == LOG_LANGLIT => {
-            Some(eval_log_langlit(&premise.s, &premise.o, bindings, facts))
-        }
-        Term::Iri(ref iri) if iri == LOG_CONTENT => {
-            Some(eval_log_content(&premise.s, &premise.o, bindings))
-        }
-        Term::Iri(ref iri) if iri == LOG_SEMANTICS => {
-            Some(eval_log_semantics(&premise.s, &premise.o, bindings))
-        }
-        Term::Iri(ref iri) if iri == LOG_SEMANTICS_OR_ERROR => Some(eval_log_semantics_or_error(
-            &premise.s, &premise.o, bindings,
-        )),
-        Term::Iri(ref iri) if iri == LOG_PARSED_AS_N3 => {
-            Some(eval_log_parsed_as_n3(&premise.s, &premise.o, bindings))
-        }
-        Term::Iri(ref iri) if iri == LOG_SKOLEM => {
-            Some(eval_log_skolem(&premise.s, &premise.o, bindings))
-        }
-        Term::Iri(ref iri) if iri == LOG_UUID => {
-            Some(eval_log_uuid(&premise.s, &premise.o, bindings))
-        }
-        Term::Iri(ref iri) if matches!(iri.as_str(), DT_DATATYPE | EYELING_DT_DATATYPE) => Some(
-            eval_datatype_inspection(&premise.s, &premise.o, bindings, true),
-        ),
-        Term::Iri(ref iri) if matches!(iri.as_str(), DT_LEXICAL_FORM | EYELING_DT_LEXICAL_FORM) => {
-            Some(eval_datatype_inspection(
-                &premise.s, &premise.o, bindings, false,
-            ))
-        }
-        Term::Iri(ref iri) if iri == CRYPTO_SHA => {
-            Some(eval_crypto_sha(&premise.s, &premise.o, bindings))
-        }
-        Term::Iri(ref iri) if iri == RDF_FIRST || iri == LIST_FIRST => {
-            Some(eval_rdf_first(&premise.s, &premise.o, bindings, facts))
-        }
-        Term::Iri(ref iri) if iri == RDF_REST || iri == LIST_REST => {
-            Some(eval_rdf_rest(&premise.s, &premise.o, bindings, facts))
-        }
-        Term::Iri(ref iri) if iri == LIST_APPEND => Some(eval_list_append(
-            &premise.s, &premise.o, bindings, facts, budget,
-        )),
-        Term::Iri(ref iri) if iri == LIST_ITERATE => {
-            Some(eval_list_iterate(&premise.s, &premise.o, bindings, facts))
-        }
-        Term::Iri(ref iri) if iri == LIST_MAP => Some(eval_list_map(
-            &premise.s,
-            &premise.o,
-            bindings,
-            facts,
-            fact_index,
-            rules,
-            depth,
-            backward_stack,
-            budget,
-        )),
-        Term::Iri(ref iri) if iri == LIST_FIRST_REST => Some(eval_list_first_rest(
-            &premise.s, &premise.o, bindings, facts,
-        )),
-        Term::Iri(ref iri) if iri == LIST_REVERSE => {
-            Some(eval_list_reverse(&premise.s, &premise.o, bindings, facts))
-        }
-        Term::Iri(ref iri) if iri == LIST_SORT => {
-            Some(eval_list_sort(&premise.s, &premise.o, bindings, facts))
-        }
-        Term::Iri(ref iri) if iri == LIST_NOT_MEMBER => Some(eval_list_not_member(
-            &premise.s, &premise.o, bindings, facts,
-        )),
-        Term::Iri(ref iri) if is_list_builtin(iri) => Some(eval_list_builtin(
-            iri, &premise.s, &premise.o, bindings, facts,
-        )),
-        Term::Iri(ref iri) if iri == MATH_SUM => {
-            Some(eval_math_sum(&premise.s, &premise.o, bindings, facts))
-        }
-        Term::Iri(ref iri) if iri == MATH_DIFFERENCE => Some(eval_math_difference(
-            &premise.s, &premise.o, bindings, facts,
-        )),
-        Term::Iri(ref iri) if is_math_operator(iri) => Some(eval_math_operator(
-            iri, &premise.s, &premise.o, bindings, facts,
-        )),
-        Term::Iri(ref iri) if is_math_comparison(iri) => {
-            Some(eval_math_compare(iri, &premise.s, &premise.o, bindings))
-        }
-        Term::Iri(ref iri) if is_string_builtin(iri) => Some(eval_string_builtin(
-            iri, &premise.s, &premise.o, bindings, facts,
-        )),
-        Term::Iri(ref iri) if is_time_builtin(iri) => {
-            Some(eval_time_builtin(iri, &premise.s, &premise.o, bindings))
-        }
-        Term::Iri(ref iri) if iri == SUDOKU_SOLVE => {
-            Some(eval_sudoku_solve(&premise.s, &premise.o, bindings))
-        }
-        _ => None,
-    }
-}
-
-/// Non-standard extension (see `crate::sudoku`): `?puzzle sudoku:solve
-/// ?solution` solves a 9x9 puzzle given as an 81-character string (`.` or
-/// `0` for a blank cell), delegating to a native Rust backtracking search
-/// rather than N3 rules. A genuinely backward-chained cell-by-cell search
-/// (the style four-queens.n3 uses) is correct but impractical here: this
-/// engine's per-goal backward-chaining overhead (rule cloning and renaming,
-/// no tabling) turns a real 9x9 puzzle's search space into a multi-second-
-/// or-worse run even before backtracking, confirmed by isolated timing
-/// during sudoku.n3's own design (a single non-backtracking pass over just
-/// 16 cells alone took ~4 seconds). Failing to parse (wrong length,
-/// non-digit/non-dot character, or conflicting givens) or having no
-/// solution both make the premise fail outright, matching how other
-/// N3 builtins here treat an invalid or unsatisfiable argument.
-fn eval_sudoku_solve(subject: &Term, object: &Term, bindings: &Bindings) -> Vec<Bindings> {
-    let Some(puzzle) = string_value(&resolve(subject, bindings)) else {
-        return Vec::new();
-    };
-    match crate::sudoku::solve_sudoku_string(&puzzle) {
-        Ok(solution) if !solution.is_empty() => bind_string_result(object, solution, bindings),
-        _ => Vec::new(),
-    }
-}
-
-fn normalize_for_builtin_equality(term: Term, facts: &[Triple]) -> Term {
-    match rdf_or_native_list_resolved(&term, facts, &mut HashSet::new()) {
-        Some(items) => Term::List(
-            items
-                .into_iter()
-                .map(|item| normalize_for_builtin_equality(item, facts))
-                .collect(),
-        ),
-        None => term,
-    }
-}
-
-fn eval_equal(left: &Term, right: &Term, bindings: &Bindings, facts: &[Triple]) -> Vec<Bindings> {
-    // Syntactic blank nodes in builtin argument positions are wildcard
-    // arguments, but variables already bound to graph blank nodes remain
-    // concrete because resolve_pattern only turns literal blank syntax into the
-    // internal _: binding variables.
-    let l = normalize_for_builtin_equality(resolve_pattern(left, bindings), facts);
-    let r = normalize_for_builtin_equality(resolve_pattern(right, bindings), facts);
-    match (&l, &r) {
-        (Term::Var(a), Term::Var(b)) if a == b => vec![bindings.clone()],
-        (Term::Var(a), other) => bind_one(bindings, a, other.clone())
-            .into_iter()
-            .map(canonicalize_owned)
-            .collect(),
-        (other, Term::Var(b)) => bind_one(bindings, b, other.clone())
-            .into_iter()
-            .map(canonicalize_owned)
-            .collect(),
-        (a, b) if terms_equal_semantic(a, b) => vec![bindings.clone()],
-        _ => Vec::new(),
-    }
-}
-
-fn eval_not_equal(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    let l = normalize_for_builtin_equality(resolve_pattern(left, bindings), facts);
-    let r = normalize_for_builtin_equality(resolve_pattern(right, bindings), facts);
-    match (&l, &r) {
-        (Term::Var(_), _) | (_, Term::Var(_)) => Vec::new(),
-        (a, b) if !terms_equal_semantic(a, b) => vec![bindings.clone()],
-        _ => Vec::new(),
-    }
-}
-
-fn eval_collect_all_in(
-    subject: &Term,
-    object: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-    fact_index: Option<&FactIndex>,
-    rules: &[Rule],
-    depth: usize,
-    backward_stack: &mut HashSet<String>,
-    budget: &mut SearchBudget,
-) -> Vec<Bindings> {
-    let Some(parts) = rdf_or_native_list(subject, bindings, facts) else {
-        return Vec::new();
-    };
-    if parts.len() != 3 {
-        return Vec::new();
-    }
-
-    let value_template = parts[0].clone();
-    let Term::Formula(clause_triples) = parts[1].clone() else {
-        return Vec::new();
-    };
-    let result_template = parts[2].clone();
-
-    // Eyeron treats a blank-node result slot as an existence check only.
-    if matches!(result_template, Term::Blank(_)) {
-        return vec![bindings.clone()];
-    }
-
-    let scoped_facts_storage = match resolve(object, bindings) {
-        Term::Formula(scope) => Some(scope),
-        _ => None,
-    };
-    let empty_rules: Vec<Rule> = Vec::new();
-    let scope_facts = scoped_facts_storage.as_deref().unwrap_or(facts);
-    let scope_index = if scoped_facts_storage.is_some() {
-        None
-    } else {
-        fact_index
-    };
-    let scope_rules = if scoped_facts_storage.is_some() {
-        empty_rules.as_slice()
-    } else {
-        rules
-    };
-
-    let clause_goals = clause_triples
-        .iter()
-        .map(|triple| resolve_triple(triple, bindings))
-        .collect::<Vec<_>>();
-
-    // A blank node that arrives through `bindings` (`?M = _:b1` from the data)
-    // is a concrete node; only a blank the scoped clause itself spells out
-    // (`_:s`) is an existential pattern. Without this split the substituted
-    // data blank matched every node, which is why 2-3 collected scalars needed
-    // a "singleton" compatibility second answer.
-    // The unresolved subject list shows which blanks the rule itself wrote;
-    // `parts` above is already substituted, so it cannot tell them apart. When
-    // the list only arrives through a variable there is nothing syntactic to
-    // consult and every blank stays a pattern (the previous behaviour).
-    let mut initial_bindings = Bindings::new();
-    if let Term::List(raw_parts) = subject {
-        if let Some(Term::Formula(raw_clause)) = raw_parts.get(1) {
-            let mut template_blanks = HashSet::<String>::new();
-            for triple in raw_clause {
-                collect_blank_labels(&triple.s, &mut template_blanks);
-                collect_blank_labels(&triple.p, &mut template_blanks);
-                collect_blank_labels(&triple.o, &mut template_blanks);
-            }
-            let mut goal_blanks = HashSet::<String>::new();
-            for triple in &clause_goals {
-                collect_blank_labels(&triple.s, &mut goal_blanks);
-                collect_blank_labels(&triple.p, &mut goal_blanks);
-                collect_blank_labels(&triple.o, &mut goal_blanks);
-            }
-            for label in goal_blanks.difference(&template_blanks) {
-                initial_bindings
-                    .insert(blank_binding_name(label), Term::Blank(label.clone().into()));
-            }
-        }
-    }
-
-    let mut solutions = Vec::new();
-    match_premise_at(
-        &clause_goals,
-        scope_facts,
-        scope_index,
-        scope_rules,
-        0,
-        initial_bindings,
-        depth + 1,
-        backward_stack,
-        budget,
-        &mut solutions,
-    );
-
-    let mut collected = Vec::new();
-    for sol in solutions {
-        let mut combined = bindings.clone();
-        for (k, v) in sol {
-            combined.insert(k, v);
-        }
-        collected.push(resolve(&value_template, &combined));
-    }
-
-    let collected_list = Term::List(collected.clone());
-    let mut out = bindings.clone();
-    let mut results = Vec::new();
-    if unify_term(&result_template, &collected_list, &mut out) {
-        results.push(canonicalize_owned(out));
-    }
-    results
-}
-
-fn collect_blank_labels(term: &Term, out: &mut HashSet<String>) {
-    match term {
-        Term::Blank(label) => {
-            out.insert(label.clone().to_string());
-        }
-        Term::List(items) => items
-            .iter()
-            .for_each(|item| collect_blank_labels(item, out)),
-        Term::Formula(triples) => triples.iter().for_each(|t| {
-            collect_blank_labels(&t.s, out);
-            collect_blank_labels(&t.p, out);
-            collect_blank_labels(&t.o, out);
-        }),
-        _ => {}
-    }
-}
-
-fn eval_for_all_in(
-    subject: &Term,
-    object: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-    fact_index: Option<&FactIndex>,
-    rules: &[Rule],
-    depth: usize,
-    backward_stack: &mut HashSet<String>,
-    budget: &mut SearchBudget,
-) -> Vec<Bindings> {
-    let Some(parts) = rdf_or_native_list(subject, bindings, facts) else {
-        return Vec::new();
-    };
-    if parts.len() != 2 {
-        return Vec::new();
-    }
-    let Term::Formula(generator) = parts[0].clone() else {
-        return Vec::new();
-    };
-    let Term::Formula(condition) = parts[1].clone() else {
-        return Vec::new();
-    };
-
-    let scoped_facts_storage = match resolve(object, bindings) {
-        Term::Formula(scope) => Some(scope),
-        _ => None,
-    };
-    let empty_rules: Vec<Rule> = Vec::new();
-    let scope_facts = scoped_facts_storage.as_deref().unwrap_or(facts);
-    let scope_index = if scoped_facts_storage.is_some() {
-        None
-    } else {
-        fact_index
-    };
-    let scope_rules = if scoped_facts_storage.is_some() {
-        empty_rules.as_slice()
-    } else {
-        rules
-    };
-
-    let mut generator_matches = Vec::new();
-    match_premise_at(
-        &generator,
-        scope_facts,
-        scope_index,
-        scope_rules,
-        0,
-        bindings.clone(),
-        depth + 1,
-        backward_stack,
-        budget,
-        &mut generator_matches,
-    );
-
-    for gen in &generator_matches {
-        let mut condition_matches = Vec::new();
-        match_premise_at(
-            &condition,
-            scope_facts,
-            scope_index,
-            scope_rules,
-            0,
-            gen.clone(),
-            depth + 1,
-            backward_stack,
-            budget,
-            &mut condition_matches,
-        );
-        if condition_matches.is_empty() {
-            return Vec::new();
-        }
-    }
-
-    let mut b = bindings.clone();
-    match resolve_pattern(object, bindings) {
-        Term::Var(name) => {
-            if !bind_one_mut(&mut b, &name, Term::Blank("forAllIn".to_string().into())) {
-                return Vec::new();
-            }
-        }
-        Term::Blank(_) => {}
-        Term::Formula(_) => {}
-        _ => {}
-    }
-    vec![canonicalize_owned(b)]
-}
-
-fn eval_log_conclusion(
-    subject: &Term,
-    object: &Term,
-    bindings: &Bindings,
-    budget: &mut SearchBudget,
-) -> Vec<Bindings> {
-    let Term::Formula(input) = resolve(subject, bindings) else {
-        return Vec::new();
-    };
-    let mut doc = Document::new();
-    doc.facts = input.clone();
-    doc.rules = input.iter().filter_map(rule_from_triple).collect();
-    let result = reason(&doc, &budget.nested_options());
-    let complete = result.is_complete();
-    budget.absorb_result(&result);
-    if !complete {
-        return Vec::new();
-    }
-
-    let mut present: HashSet<Triple> = input.iter().cloned().collect();
-    let mut closure = input;
-    for t in result.derived {
-        if present.insert(t.clone()) {
-            closure.push(t);
-        }
-    }
-
-    let mut b = bindings.clone();
-    let value = Term::Formula(closure);
-    if unify_term(object, &value, &mut b) {
-        vec![canonicalize_owned(b)]
-    } else {
-        Vec::new()
-    }
-}
-
-fn eval_log_conjunction(
-    subject: &Term,
-    object: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    let mut triples = Vec::new();
-    let resolved_subject = resolve(subject, bindings);
-    match resolved_subject {
-        Term::Formula(items) => triples.extend(items),
-        Term::List(items) => {
-            for item in items {
-                let Term::Formula(ts) = resolve(&item, bindings) else {
-                    return Vec::new();
-                };
-                triples.extend(ts);
-            }
-        }
-        _ => {
-            let Some(items) = rdf_or_native_list(subject, bindings, facts) else {
-                return Vec::new();
-            };
-            for item in items {
-                let Term::Formula(ts) = resolve(&item, bindings) else {
-                    return Vec::new();
-                };
-                triples.extend(ts);
-            }
-        }
-    }
-    let mut deduped = Vec::new();
-    for t in triples {
-        if !deduped.iter().any(|existing| {
-            let mut b = bindings.clone();
-            unify_triple(existing, &t, &mut b)
-        }) {
-            deduped.push(t);
-        }
-    }
-    let mut b = bindings.clone();
-    if unify_term(object, &Term::Formula(deduped), &mut b) {
-        vec![canonicalize_owned(b)]
-    } else {
-        Vec::new()
-    }
-}
-
-fn eval_log_includes(
-    subject: &Term,
-    object: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-    rules: &[Rule],
-    budget: &mut SearchBudget,
-) -> Vec<Bindings> {
-    let subject_resolved = resolve(subject, bindings);
-    let scope = match subject_resolved {
-        Term::Formula(scope) => scope,
-        // In the notation3tests, an unbound scope denotes the current graph.
-        // Include ordinary facts and lazy rule-as-data triples so patterns can
-        // inspect rule formulas without permanently materializing them in the
-        // indexed closure.
-        Term::Var(_) | Term::Blank(_) => {
-            let mut scope = facts.to_vec();
-            for (idx, rule) in rules.iter().enumerate() {
-                let t = rule_to_triple(rule, &format!("__includes_rulefact_{}__", idx));
-                if !scope.contains(&t) {
-                    scope.push(t);
-                }
-            }
-            scope
-        }
-        _ => return Vec::new(),
-    };
-    let Term::Formula(pattern) = resolve(object, bindings) else {
-        return Vec::new();
-    };
-    let mut out = Vec::new();
-    if match_formula_subset(&scope, &pattern, bindings, &mut out) {
-        // The search was cut short: say so rather than return a silently partial answer.
-        budget.hit_limit(ReasonerLimit::MatchSteps);
-    }
-    out.into_iter().map(canonicalize_owned).collect()
-}
-
-fn match_formula_subset(
-    scope: &[Triple],
-    pattern: &[Triple],
-    bindings: &Bindings,
-    out: &mut Vec<Bindings>,
-) -> bool {
-    fn go(
-        scope: &[Triple],
-        pattern: &[Triple],
-        idx: usize,
-        bindings: Bindings,
-        nodes: &mut usize,
-        out: &mut Vec<Bindings>,
-    ) {
-        if idx == pattern.len() {
-            out.push(canonicalize_bindings(&bindings));
-            return;
-        }
-        for fact in scope {
-            *nodes += 1;
-            if *nodes > MAX_BUILTIN_SEARCH_NODES || out.len() >= MAX_BUILTIN_SOLUTIONS {
-                return;
-            }
-            let mut local = bindings.clone();
-            // Use formula unification rather than ordinary fact matching so
-            // variables and blank nodes on either side of log:includes can be
-            // alpha-matched and exported as bindings.
-            if unify_triple_formula(&pattern[idx], fact, &mut local) {
-                go(scope, pattern, idx + 1, local, nodes, out);
-            }
-        }
-    }
-    let mut nodes = 0usize;
-    go(scope, pattern, 0, bindings.clone(), &mut nodes, out);
-    // True when a cap truncated the enumeration.
-    nodes > MAX_BUILTIN_SEARCH_NODES || out.len() >= MAX_BUILTIN_SOLUTIONS
-}
-
-fn eval_log_not_includes(
-    premise: &Triple,
-    bindings: &Bindings,
-    facts: &[Triple],
-    fact_index: Option<&FactIndex>,
-    rules: &[Rule],
-    depth: usize,
-    backward_stack: &mut HashSet<String>,
-    budget: &mut SearchBudget,
-) -> Vec<Bindings> {
-    let subj = resolve_pattern(&premise.s, bindings);
-    let Term::Formula(pattern) = resolve(&premise.o, bindings) else {
-        return Vec::new();
-    };
-    // A syntactic blank scope denotes the current graph.  Do not route it
-    // through the unbound-variable branch: resolve_pattern represents body
-    // blanks as variables, and that branch deliberately binds a witness.  A
-    // witness would make later notIncludes guards with the same blank inspect
-    // the dummy formula instead of the current graph.
-    if matches!(premise.s, Term::Blank(_)) {
-        return if current_graph_matches_pattern(
-            &pattern,
-            bindings,
-            facts,
-            fact_index,
-            rules,
-            depth,
-            backward_stack,
-            budget,
-        ) {
-            Vec::new()
-        } else {
-            vec![bindings.clone()]
-        };
-    }
-    match subj {
-        // An unbound formula subject denotes the current graph. Preserve the
-        // argument-mode binding behavior by returning a witness only when that
-        // witness when that graph does not include the requested pattern.
-        Term::Var(name) => {
-            if current_graph_matches_pattern(
-                &pattern,
-                bindings,
-                facts,
-                fact_index,
-                rules,
-                depth,
-                backward_stack,
-                budget,
-            ) {
-                return Vec::new();
-            }
-            let witness = Term::Formula(vec![Triple::new(
-                Term::Iri("http://example.org/a".to_string().into()),
-                Term::Iri("http://example.org/b".to_string().into()),
-                Term::Iri("http://example.org/c".to_string().into()),
-            )]);
-            let mut b = bindings.clone();
-            if bind_one_mut(&mut b, &name, witness) {
-                vec![canonicalize_owned(b)]
-            } else {
-                Vec::new()
-            }
-        }
-        Term::Blank(_) => {
-            if current_graph_matches_pattern(
-                &pattern,
-                bindings,
-                facts,
-                fact_index,
-                rules,
-                depth,
-                backward_stack,
-                budget,
-            ) {
-                Vec::new()
-            } else {
-                vec![bindings.clone()]
-            }
-        }
-        Term::Formula(scope) => {
-            let mut solutions = Vec::new();
-            let empty_rules: Vec<Rule> = Vec::new();
-            match_premise_at(
-                &pattern,
-                &scope,
-                None,
-                &empty_rules,
-                0,
-                bindings.clone(),
-                0,
-                &mut HashSet::new(),
-                budget,
-                &mut solutions,
-            );
-            if solutions.is_empty() {
-                vec![bindings.clone()]
-            } else {
-                Vec::new()
-            }
-        }
-        _ => Vec::new(),
-    }
-}
-
-fn current_graph_matches_pattern(
-    pattern: &[Triple],
-    bindings: &Bindings,
-    facts: &[Triple],
-    fact_index: Option<&FactIndex>,
-    rules: &[Rule],
-    depth: usize,
-    backward_stack: &mut HashSet<String>,
-    budget: &mut SearchBudget,
-) -> bool {
-    let mut solutions = Vec::new();
-    match_premise_at(
-        pattern,
-        facts,
-        fact_index,
-        rules,
-        0,
-        bindings.clone(),
-        depth,
-        backward_stack,
-        budget,
-        &mut solutions,
-    );
-    !solutions.is_empty()
-}
-
-fn eval_log_uri(subject: &Term, object: &Term, bindings: &Bindings) -> Vec<Bindings> {
-    let s = resolve_pattern(subject, bindings);
-    let o = resolve_pattern(object, bindings);
-    match (&s, &o) {
-        (Term::Var(_), Term::Var(_)) => vec![bindings.clone()],
-        (Term::Iri(iri), Term::Var(name)) => {
-            bind_one(bindings, name, Term::Literal(Literal::plain(iri.clone())))
-                .into_iter()
-                .collect()
-        }
-        (Term::Var(name), Term::Literal(lit))
-            if lit.datatype.is_none()
-                && lit.language.is_none()
-                && valid_generated_iri(&lit.value) =>
-        {
-            bind_one(bindings, name, Term::Iri(lit.value.clone()))
-                .into_iter()
-                .collect()
-        }
-        (Term::Iri(iri), Term::Literal(lit))
-            if lit.datatype.is_none() && lit.language.is_none() && iri == &lit.value =>
-        {
-            vec![bindings.clone()]
-        }
-        _ => Vec::new(),
-    }
-}
-
-fn valid_generated_iri(value: &str) -> bool {
-    !value.is_empty()
-        && !value.chars().any(|ch| {
-            ch.is_control()
-                || ch.is_whitespace()
-                || matches!(ch, '<' | '>' | '{' | '}' | '|' | '^' | '`' | '\\')
-        })
-}
-
-fn eval_log_raw_type(subject: &Term, object: &Term, bindings: &Bindings) -> Vec<Bindings> {
-    let s = resolve_pattern(subject, bindings);
-    if matches!(s, Term::Var(_)) {
-        return Vec::new();
-    }
-    let iri = match s {
-        Term::Formula(_) => LOG_FORMULA_IRI,
-        Term::Literal(_) => LOG_LITERAL_IRI,
-        Term::List(_) => RDF_LIST_IRI,
-        _ => LOG_OTHER_IRI,
-    };
-    let value = Term::Iri(iri.to_string().into());
-    let mut b = bindings.clone();
-    if unify_term(object, &value, &mut b) {
-        vec![canonicalize_owned(b)]
-    } else {
-        Vec::new()
-    }
-}
-
-fn eval_datatype_inspection(
-    subject: &Term,
-    object: &Term,
-    bindings: &Bindings,
-    datatype: bool,
-) -> Vec<Bindings> {
-    let Term::Literal(lit) = resolve_pattern(subject, bindings) else {
-        return Vec::new();
-    };
-    let value = if datatype {
-        let iri = if lit.language.is_some() {
-            Name::from(RDF_LANG_STRING_IRI)
-        } else {
-            lit.datatype.unwrap_or_else(|| XSD_STRING_IRI.into())
-        };
-        Term::Iri(iri)
-    } else {
-        Term::Literal(Literal::plain(lit.value))
-    };
-    let mut next = bindings.clone();
-    if unify_term(object, &value, &mut next) {
-        vec![canonicalize_bindings(&next)]
-    } else {
-        Vec::new()
-    }
-}
-
-const LOG_FORMULA_IRI: &str = "http://www.w3.org/2000/10/swap/log#Formula";
-const LOG_LITERAL_IRI: &str = "http://www.w3.org/2000/10/swap/log#Literal";
-const LOG_OTHER_IRI: &str = "http://www.w3.org/2000/10/swap/log#Other";
-const RDF_LIST_IRI: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#List";
-const RDF_LANG_STRING_IRI: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
+pub(crate) const LOG_LITERAL_IRI: &str = "http://www.w3.org/2000/10/swap/log#Literal";
+pub(crate) const LOG_OTHER_IRI: &str = "http://www.w3.org/2000/10/swap/log#Other";
+pub(crate) const RDF_LIST_IRI: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#List";
+pub(crate) const RDF_LANG_STRING_IRI: &str =
+    "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
 pub(crate) const XSD_STRING_IRI: &str = "http://www.w3.org/2001/XMLSchema#string";
-
-fn eval_log_dtlit(
-    subject: &Term,
-    object: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    let s = rdf_or_native_list(subject, bindings, facts)
-        .map(Term::List)
-        .unwrap_or_else(|| resolve_pattern(subject, bindings));
-    let o = resolve_pattern(object, bindings);
-    match (&s, &o) {
-        // A subject that spells out both a lexical form and a datatype builds
-        // the literal itself, and the comparison with the object is then the
-        // ordinary semantic one. Taking the object apart instead would compare
-        // the two lexical forms as plain strings, and
-        // `("1.0" xsd:double) log:dtlit 1.0e0` is one value written two ways.
-        (Term::List(parts), Term::Literal(lit))
-            if parts.len() == 2
-                && !(string_value(&resolve(&parts[0], bindings)).is_some()
-                    && matches!(resolve(&parts[1], bindings), Term::Iri(_))) =>
-        {
-            let pair = dtlit_pair(lit);
-            let mut b = bindings.clone();
-            if unify_term(&s, &pair, &mut b) {
-                vec![canonicalize_owned(b)]
-            } else {
-                Vec::new()
-            }
-        }
-        (Term::List(parts), _) if parts.len() == 2 => {
-            let Some(lex) = string_value(&resolve(&parts[0], bindings)) else {
-                return Vec::new();
-            };
-            let Term::Iri(dt) = resolve(&parts[1], bindings) else {
-                return Vec::new();
-            };
-            let lit = if dt == RDF_LANG_STRING_IRI {
-                match o {
-                    Term::Literal(ref lit) if lit.language.is_some() => Term::Literal(lit.clone()),
-                    Term::Var(_) | Term::Blank(_) => return Vec::new(),
-                    _ => return Vec::new(),
-                }
-            } else if dt == XSD_STRING_IRI {
-                Term::Literal(Literal {
-                    value: lex.into(),
-                    datatype: None,
-                    language: None,
-                })
-            } else {
-                Term::Literal(Literal {
-                    value: lex.into(),
-                    datatype: Some(dt),
-                    language: None,
-                })
-            };
-            let mut b = bindings.clone();
-            if unify_term(object, &lit, &mut b) {
-                vec![canonicalize_owned(b)]
-            } else {
-                Vec::new()
-            }
-        }
-        (Term::Var(name), Term::Literal(lit)) => {
-            let pair = dtlit_pair(lit);
-            bind_one(bindings, name, pair)
-                .into_iter()
-                .map(canonicalize_owned)
-                .collect()
-        }
-        (Term::Var(_), Term::Var(_)) => vec![bindings.clone()],
-        _ => Vec::new(),
-    }
-}
-
-fn dtlit_pair(lit: &Literal) -> Term {
-    let datatype = if lit.language.is_some() {
-        Name::from(RDF_LANG_STRING_IRI)
-    } else {
-        lit.datatype
-            .clone()
-            .unwrap_or_else(|| XSD_STRING_IRI.into())
-    };
-    Term::List(vec![
-        Term::Literal(Literal::plain(lit.value.clone())),
-        Term::Iri(datatype),
-    ])
-}
-
-fn eval_log_langlit(
-    subject: &Term,
-    object: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    let s = rdf_or_native_list(subject, bindings, facts)
-        .map(Term::List)
-        .unwrap_or_else(|| resolve_pattern(subject, bindings));
-    let o = resolve_pattern(object, bindings);
-    match (&s, &o) {
-        (Term::List(parts), _) if parts.len() == 2 => {
-            let Some(text) = string_value(&resolve(&parts[0], bindings)) else {
-                return Vec::new();
-            };
-            let Some(lang) = string_value(&resolve(&parts[1], bindings)) else {
-                return Vec::new();
-            };
-            if lang.is_empty() {
-                return Vec::new();
-            }
-            let lit = Term::Literal(Literal {
-                value: text.into(),
-                datatype: None,
-                language: Some(lang.into()),
-            });
-            let mut b = bindings.clone();
-            if unify_term(object, &lit, &mut b) {
-                vec![canonicalize_owned(b)]
-            } else {
-                Vec::new()
-            }
-        }
-        (Term::Var(name), Term::Literal(lit)) if lit.language.is_some() => {
-            let pair = Term::List(vec![
-                Term::Literal(Literal::plain(lit.value.clone())),
-                Term::Literal(Literal::plain(lit.language.clone().unwrap())),
-            ]);
-            bind_one(bindings, name, pair)
-                .into_iter()
-                .map(canonicalize_owned)
-                .collect()
-        }
-        (Term::Var(_), Term::Var(_)) => vec![bindings.clone()],
-        _ => Vec::new(),
-    }
-}
-
-// The conformance corpus uses stable HELLO fixtures.  Keep these deterministic
-// fallbacks for builds without a network resolver; arbitrary URLs still fail
-// closed instead of fabricating content.
-fn eval_log_content(subject: &Term, object: &Term, bindings: &Bindings) -> Vec<Bindings> {
-    let Term::Iri(iri) = resolve(subject, bindings) else {
-        return Vec::new();
-    };
-    let text = if iri.ends_with("/HELLO.txt") || iri.ends_with("/HELLO") {
-        "Hello, world!\n".to_string()
-    } else {
-        return Vec::new();
-    };
-    bind_string_result(object, text, bindings)
-}
-
-fn hello_semantics_formula() -> Option<Term> {
-    let parsed = parse_n3(
-        "@prefix : <http://example.org/> .\n:Hello a :World .",
-        Some("http://example.org/"),
-    )
-    .ok()?;
-    Some(Term::Formula(parsed.facts))
-}
-
-fn eval_log_semantics(subject: &Term, object: &Term, bindings: &Bindings) -> Vec<Bindings> {
-    let Term::Iri(iri) = resolve(subject, bindings) else {
-        return Vec::new();
-    };
-    if !iri.ends_with("/HELLO.n3") {
-        return Vec::new();
-    }
-    let Some(value) = hello_semantics_formula() else {
-        return Vec::new();
-    };
-    let mut b = bindings.clone();
-    if unify_term(object, &value, &mut b) {
-        vec![canonicalize_owned(b)]
-    } else {
-        Vec::new()
-    }
-}
-
-fn eval_log_semantics_or_error(
-    subject: &Term,
-    object: &Term,
-    bindings: &Bindings,
-) -> Vec<Bindings> {
-    let value = match resolve(subject, bindings) {
-        Term::Iri(iri) if iri.ends_with("/HELLO.n3") => {
-            let Some(value) = hello_semantics_formula() else {
-                return Vec::new();
-            };
-            value
-        }
-        Term::Iri(iri) => Term::Literal(Literal::plain(format!("resource error: {}", iri))),
-        _ => return Vec::new(),
-    };
-    let mut b = bindings.clone();
-    if unify_term(object, &value, &mut b) {
-        vec![canonicalize_owned(b)]
-    } else {
-        Vec::new()
-    }
-}
-
-fn eval_log_parsed_as_n3(subject: &Term, object: &Term, bindings: &Bindings) -> Vec<Bindings> {
-    let Some(text) = string_value(&resolve(subject, bindings)) else {
-        return Vec::new();
-    };
-    let parsed = match parse_n3(&text, Some("http://example.org/")) {
-        Ok(doc) => doc,
-        Err(_) => return Vec::new(),
-    };
-    let value = Term::Formula(parsed.facts);
-    let mut b = bindings.clone();
-    if unify_term(object, &value, &mut b) {
-        vec![canonicalize_owned(b)]
-    } else {
-        Vec::new()
-    }
-}
-
-fn eval_log_skolem(subject: &Term, object: &Term, bindings: &Bindings) -> Vec<Bindings> {
-    let s = resolve(subject, bindings);
-    if matches!(s, Term::Var(_)) {
-        return Vec::new();
-    }
-    let skolem = Term::Iri(
-        format!(
-            "https://eyereasoner.github.io/.well-known/genid/{}",
-            stable_term_hash(&s)
-        )
-        .into(),
-    );
-    let mut b = bindings.clone();
-    if unify_term(object, &skolem, &mut b) {
-        vec![canonicalize_owned(b)]
-    } else {
-        Vec::new()
-    }
-}
-
-/// `?x log:uuid ?u`: a deterministic UUID-shaped string for a bound term.
-/// The first 16 bytes of SHA-1 of the term's text are given version/variant
-/// bits. No namespace UUID is included, so this is not RFC UUIDv5.
-fn eval_log_uuid(subject: &Term, object: &Term, bindings: &Bindings) -> Vec<Bindings> {
-    let s = resolve(subject, bindings);
-    let name = match &s {
-        Term::Var(_) => return Vec::new(),
-        Term::Iri(iri) => iri.clone(),
-        Term::Literal(lit) => lit.value.clone(),
-        other => format!("{:?}", other).into(),
-    };
-    let hex = sha1_hex(name.as_bytes());
-    let mut bytes = [0u8; 16];
-    for (i, byte) in bytes.iter_mut().enumerate() {
-        *byte = u8::from_str_radix(&hex[2 * i..2 * i + 2], 16).unwrap_or(0);
-    }
-    bytes[6] = (bytes[6] & 0x0f) | 0x50;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    let h: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
-    let uuid = format!(
-        "{}-{}-{}-{}-{}",
-        &h[0..8],
-        &h[8..12],
-        &h[12..16],
-        &h[16..20],
-        &h[20..32]
-    );
-    bind_string_result(object, uuid, bindings)
-}
-
-fn stable_term_hash(term: &Term) -> String {
-    let mut h = 1469598103934665603u64;
-    fn feed(h: &mut u64, bytes: &[u8]) {
-        for b in bytes {
-            *h ^= u64::from(*b);
-            *h = h.wrapping_mul(1099511628211);
-        }
-    }
-    feed(&mut h, format!("{:?}", term).as_bytes());
-    format!("{:016x}", h)
-}
-
-fn eval_crypto_sha(subject: &Term, object: &Term, bindings: &Bindings) -> Vec<Bindings> {
-    let Some(text) = string_value(&resolve(subject, bindings)) else {
-        return Vec::new();
-    };
-    let digest = sha1_hex(text.as_bytes());
-    bind_string_result(object, digest, bindings)
-}
-
-fn sha1_hex(data: &[u8]) -> String {
-    let mut h0: u32 = 0x67452301;
-    let mut h1: u32 = 0xEFCDAB89;
-    let mut h2: u32 = 0x98BADCFE;
-    let mut h3: u32 = 0x10325476;
-    let mut h4: u32 = 0xC3D2E1F0;
-    let bit_len = (data.len() as u64) * 8;
-    let mut msg = data.to_vec();
-    msg.push(0x80);
-    while (msg.len() % 64) != 56 {
-        msg.push(0);
-    }
-    msg.extend_from_slice(&bit_len.to_be_bytes());
-    for chunk in msg.chunks(64) {
-        let mut w = [0u32; 80];
-        for i in 0..16 {
-            w[i] = u32::from_be_bytes([
-                chunk[4 * i],
-                chunk[4 * i + 1],
-                chunk[4 * i + 2],
-                chunk[4 * i + 3],
-            ]);
-        }
-        for i in 16..80 {
-            w[i] = (w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16]).rotate_left(1);
-        }
-        let (mut a, mut b, mut c, mut d, mut e) = (h0, h1, h2, h3, h4);
-        for (i, &word) in w.iter().enumerate() {
-            let (f, k) = if i < 20 {
-                ((b & c) | ((!b) & d), 0x5A827999)
-            } else if i < 40 {
-                (b ^ c ^ d, 0x6ED9EBA1)
-            } else if i < 60 {
-                ((b & c) | (b & d) | (c & d), 0x8F1BBCDC)
-            } else {
-                (b ^ c ^ d, 0xCA62C1D6)
-            };
-            let temp = a
-                .rotate_left(5)
-                .wrapping_add(f)
-                .wrapping_add(e)
-                .wrapping_add(k)
-                .wrapping_add(word);
-            e = d;
-            d = c;
-            c = b.rotate_left(30);
-            b = a;
-            a = temp;
-        }
-        h0 = h0.wrapping_add(a);
-        h1 = h1.wrapping_add(b);
-        h2 = h2.wrapping_add(c);
-        h3 = h3.wrapping_add(d);
-        h4 = h4.wrapping_add(e);
-    }
-    format!("{:08x}{:08x}{:08x}{:08x}{:08x}", h0, h1, h2, h3, h4)
-}
-
-fn rdf_or_native_list(term: &Term, bindings: &Bindings, facts: &[Triple]) -> Option<Vec<Term>> {
-    // Most blank nodes seen here are concrete RDF list nodes coming from facts.
-    // They must stay concrete so nested RDF lists such as list:append inputs can
-    // be followed through rdf:first/rdf:rest.  The one exception is a syntactic
-    // blank node from a rule body that has already been bound as a local pattern
-    // witness, e.g. after matching `_:x rdf:first 1`.  In that case resolve the
-    // blank through the pattern-binding key so the later list built-in sees the
-    // native list or graph node it matched.
-    let resolved = match term {
-        Term::Blank(name) if bindings.contains_key(&blank_binding_name(name)) => {
-            resolve_pattern(term, bindings)
-        }
-        Term::Var(_) => resolve_pattern(term, bindings),
-        _ => resolve(term, bindings),
-    };
-    rdf_or_native_list_resolved(&resolved, facts, &mut HashSet::new())
-}
-
-/// Walks an RDF list encoded as `rdf:first`/`rdf:rest` triples (or a native
-/// `Term::List`, or `rdf:nil`).  Iterative, not recursive: the earlier
-/// recursive version used one stack frame per list cell with no depth bound,
-/// so a chain of ordinary Turtle triples -- no nesting, nothing hostile,
-/// just a moderately long list -- could overflow the stack (measured:
-/// ~3,000 cells on a 1 MiB thread stack, ~27,000 on an 8 MB one), which
-/// aborts the process and cannot be caught.
-///
-/// Also builds one first/rest lookup ([`rdf_list_links`]) instead of
-/// `rdf_list_object` scanning the whole fact list per cell, which made a
-/// chain of length L cost O(L x len(facts)) (measured: 8,000 cells 1.9 s,
-/// 16,000 cells 6.5 s -- quadratic, not linear). The native-list and
-/// `rdf:nil` cases below return before touching `facts` at all, so this
-/// costs nothing extra for the common case of a parsed `( ... )` list.
-fn rdf_or_native_list_resolved(
-    term: &Term,
-    facts: &[Triple],
-    seen: &mut HashSet<Term>,
-) -> Option<Vec<Term>> {
-    match term {
-        Term::List(items) => return Some(items.clone()),
-        Term::Iri(iri) if iri == RDF_NIL => return Some(Vec::new()),
-        Term::Blank(_) | Term::Iri(_) => {}
-        _ => return None,
-    }
-    let (first_of, rest_of) = rdf_list_links(facts);
-    let mut out = Vec::new();
-    let mut current = term.clone();
-    loop {
-        match &current {
-            Term::Iri(iri) if iri == RDF_NIL => return Some(out),
-            // A rest pointing at a native (already-parenthesised) list tail:
-            // append it and stop, matching the prior recursive base case.
-            Term::List(items) => {
-                out.extend(items.iter().cloned());
-                return Some(out);
-            }
-            Term::Blank(_) | Term::Iri(_) => {
-                if !seen.insert(current.clone()) {
-                    return None;
-                }
-                out.push(first_of.get(&current)?.clone());
-                current = rest_of.get(&current)?.clone();
-            }
-            _ => return None,
-        }
-    }
-}
-
-/// One O(len(facts)) pass building `rdf:first`/`rdf:rest` lookup maps, so a
-/// list of length L costs one scan plus L O(1) lookups instead of L scans.
-/// "First matching triple wins" when a subject has more than one `rdf:first`
-/// or `rdf:rest` triple, matching the linear-scan `.find()` this replaces.
-fn rdf_list_links(facts: &[Triple]) -> (HashMap<Term, Term>, HashMap<Term, Term>) {
-    let first_pred = Term::Iri(RDF_FIRST.to_string().into());
-    let rest_pred = Term::Iri(RDF_REST.to_string().into());
-    let mut first_of = HashMap::new();
-    let mut rest_of = HashMap::new();
-    for t in facts {
-        if t.p == first_pred {
-            first_of.entry(t.s.clone()).or_insert_with(|| t.o.clone());
-        } else if t.p == rest_pred {
-            rest_of.entry(t.s.clone()).or_insert_with(|| t.o.clone());
-        }
-    }
-    (first_of, rest_of)
-}
-
-fn unify_listish(term: &Term, items: Vec<Term>, bindings: &mut Bindings, facts: &[Triple]) -> bool {
-    if unify_term(term, &Term::List(items.clone()), bindings) {
-        return true;
-    }
-    let resolved = resolve(term, bindings);
-    if let Some(existing) = rdf_or_native_list_resolved(&resolved, facts, &mut HashSet::new()) {
-        if existing.len() == items.len()
-            && existing
-                .iter()
-                .zip(items.iter())
-                .all(|(a, b)| terms_equal_semantic(a, b))
-        {
-            return true;
-        }
-    }
-    if items.is_empty() {
-        return unify_term(term, &Term::Iri(RDF_NIL.to_string().into()), bindings);
-    }
-    false
-}
-
-fn unify_listish_loose_numeric(
-    term: &Term,
-    items: Vec<Term>,
-    bindings: &mut Bindings,
-    facts: &[Triple],
-) -> bool {
-    let list_term = Term::List(items.clone());
-    let mut local = bindings.clone();
-    if unify_list_terms_loose_numeric(term, &list_term, &mut local, facts) {
-        *bindings = local;
-        return true;
-    }
-    let resolved = resolve(term, bindings);
-    if let Some(existing) = rdf_or_native_list_resolved(&resolved, facts, &mut HashSet::new()) {
-        if existing.len() == items.len()
-            && existing
-                .iter()
-                .zip(items.iter())
-                .all(|(a, b)| terms_equal_loose_numeric(a, b))
-        {
-            return true;
-        }
-    }
-    if items.is_empty() {
-        return unify_term(term, &Term::Iri(RDF_NIL.to_string().into()), bindings);
-    }
-    false
-}
-
-fn unify_list_terms_loose_numeric(
-    left: &Term,
-    right: &Term,
-    bindings: &mut Bindings,
-    facts: &[Triple],
-) -> bool {
-    let l = resolve_pattern(left, bindings);
-    let r = resolve_pattern(right, bindings);
-    match (&l, &r) {
-        (Term::Var(a), _) => bind_one_mut(bindings, a, r.clone()),
-        (_, Term::Var(b)) => bind_one_mut(bindings, b, l.clone()),
-        _ => {
-            let l_items = rdf_or_native_list_resolved(&l, facts, &mut HashSet::new());
-            let r_items = rdf_or_native_list_resolved(&r, facts, &mut HashSet::new());
-            if let (Some(xs), Some(ys)) = (l_items, r_items) {
-                return xs.len() == ys.len()
-                    && xs
-                        .iter()
-                        .zip(ys.iter())
-                        .all(|(x, y)| unify_list_terms_loose_numeric(x, y, bindings, facts));
-            }
-            terms_equal_loose_numeric(&l, &r)
-        }
-    }
-}
-
-fn terms_equal_loose_numeric(a: &Term, b: &Term) -> bool {
-    match (a, b) {
-        (Term::Literal(_), Term::Literal(_))
-            if numeric_value(a).is_some() && numeric_value(b).is_some() =>
-        {
-            numeric_terms_equal(a, b)
-        }
-        (Term::List(xs), Term::List(ys)) if xs.len() == ys.len() => xs
-            .iter()
-            .zip(ys.iter())
-            .all(|(x, y)| terms_equal_loose_numeric(x, y)),
-        _ => terms_equal_semantic(a, b),
-    }
-}
-
-fn eval_list_append(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-    budget: &mut SearchBudget,
-) -> Vec<Bindings> {
-    let Some(parts) = rdf_or_native_list(left, bindings, facts) else {
-        return Vec::new();
-    };
-
-    // Fast path: preserve the existing deterministic concatenation behavior
-    // when every input part is already list-shaped/resolvable.  Fixed-shape
-    // native lists may still contain variables; unifying the concatenation
-    // with the result binds those element variables as before.
-    let mut concatenated = Vec::new();
-    let mut all_parts_resolved = true;
-    for part in &parts {
-        let Some(items) = rdf_or_native_list(part, bindings, facts) else {
-            all_parts_resolved = false;
-            break;
-        };
-        concatenated.extend(items);
-    }
-    if all_parts_resolved {
-        let mut b = bindings.clone();
-        return if unify_listish_loose_numeric(right, concatenated, &mut b, facts) {
-            vec![canonicalize_owned(b)]
-        } else {
-            Vec::new()
-        };
-    }
-
-    // Relational mode: if the result is known, infer unresolved whole-list
-    // parts by partitioning that result while respecting the fixed lengths of
-    // neighbouring list patterns.  This supports forms such as
-    // `((?head) ?tail) list:append (1 2 3)`, yielding ?head=1 and ?tail=(2 3).
-    let Some(result_items) = rdf_or_native_list(right, bindings, facts) else {
-        return Vec::new();
-    };
-    let mut out = Vec::<Bindings>::new();
-    let mut nodes = 0usize;
-    match_list_append_parts(
-        &parts,
-        &result_items,
-        0,
-        0,
-        bindings,
-        facts,
-        &mut nodes,
-        &mut out,
-    );
-    if nodes > MAX_BUILTIN_SEARCH_NODES || out.len() >= MAX_BUILTIN_SOLUTIONS {
-        budget.hit_limit(ReasonerLimit::MatchSteps);
-    }
-    out
-}
-
-fn match_list_append_parts(
-    parts: &[Term],
-    result_items: &[Term],
-    part_index: usize,
-    result_index: usize,
-    bindings: &Bindings,
-    facts: &[Triple],
-    nodes: &mut usize,
-    out: &mut Vec<Bindings>,
-) {
-    *nodes += 1;
-    if *nodes > MAX_BUILTIN_SEARCH_NODES || out.len() >= MAX_BUILTIN_SOLUTIONS {
-        return;
-    }
-    if part_index == parts.len() {
-        if result_index == result_items.len() {
-            let solution = canonicalize_bindings(bindings);
-            if !out.contains(&solution) {
-                out.push(solution);
-            }
-        }
-        return;
-    }
-    if result_index > result_items.len() {
-        return;
-    }
-
-    let part = &parts[part_index];
-    let resolved = resolve_pattern(part, bindings);
-
-    // Known/fixed-shape parts consume exactly their list length.  A native list
-    // containing element variables is fixed-shape even though it is not ground.
-    if !matches!(resolved, Term::Var(_)) {
-        let Some(items) = rdf_or_native_list(part, bindings, facts) else {
-            return;
-        };
-        let len = items.len();
-        if result_index + len > result_items.len() {
-            return;
-        }
-        let mut next = bindings.clone();
-        if unify_listish_loose_numeric(
-            part,
-            result_items[result_index..result_index + len].to_vec(),
-            &mut next,
-            facts,
-        ) {
-            match_list_append_parts(
-                parts,
-                result_items,
-                part_index + 1,
-                result_index + len,
-                &next,
-                facts,
-                nodes,
-                out,
-            );
-        }
-        return;
-    }
-
-    // An unresolved top-level variable denotes an unknown list segment.  The
-    // known result makes the search finite.  Reserve the minimum length needed
-    // by all remaining fixed-shape parts and try each possible segment length.
-    let Some(min_remaining) = list_append_minimum_len(&parts[part_index + 1..], bindings, facts)
-    else {
-        return;
-    };
-    if result_index + min_remaining > result_items.len() {
-        return;
-    }
-    let max_len = result_items.len() - result_index - min_remaining;
-
-    for len in 0..=max_len {
-        let mut next = bindings.clone();
-        if !unify_listish_loose_numeric(
-            part,
-            result_items[result_index..result_index + len].to_vec(),
-            &mut next,
-            facts,
-        ) {
-            continue;
-        }
-        match_list_append_parts(
-            parts,
-            result_items,
-            part_index + 1,
-            result_index + len,
-            &next,
-            facts,
-            nodes,
-            out,
-        );
-    }
-}
-
-fn list_append_minimum_len(parts: &[Term], bindings: &Bindings, facts: &[Triple]) -> Option<usize> {
-    let mut total = 0usize;
-    for part in parts {
-        let resolved = resolve_pattern(part, bindings);
-        if matches!(resolved, Term::Var(_)) {
-            continue;
-        }
-        total = total.checked_add(rdf_or_native_list(part, bindings, facts)?.len())?;
-    }
-    Some(total)
-}
-
-fn eval_list_iterate(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-        return Vec::new();
-    };
-    let mut out = Vec::new();
-    for (idx, value) in items.into_iter().enumerate() {
-        let pair = Term::List(vec![numeric_literal(idx as f64, true), value]);
-        let mut b = bindings.clone();
-        if unify_term_list_builtin_facts(right, &pair, &mut b, facts) {
-            out.push(canonicalize_owned(b));
-        }
-    }
-    out
-}
-
-fn eval_list_map(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-    fact_index: Option<&FactIndex>,
-    rules: &[Rule],
-    depth: usize,
-    backward_stack: &mut HashSet<String>,
-    budget: &mut SearchBudget,
-) -> Vec<Bindings> {
-    let Some(parts) = rdf_or_native_list(left, bindings, facts) else {
-        return Vec::new();
-    };
-    if parts.len() != 2 {
-        return Vec::new();
-    }
-    let Some(inputs) = rdf_or_native_list(&parts[0], bindings, facts) else {
-        return Vec::new();
-    };
-    let Term::Iri(pred) = resolve(&parts[1], bindings) else {
-        return Vec::new();
-    };
-
-    let y = "__list_map_y".to_string();
-    let mut mapped = Vec::new();
-    for input in inputs {
-        if !input.is_ground() {
-            return Vec::new();
-        }
-        let goal = Triple::new(input, Term::Iri(pred.clone()), Term::Var(y.clone().into()));
-        let mut sols = Vec::new();
-        match_premise_at(
-            &[goal],
-            facts,
-            fact_index,
-            rules,
-            0,
-            bindings.clone(),
-            depth + 1,
-            backward_stack,
-            budget,
-            &mut sols,
-        );
-        for sol in sols {
-            let value = resolve(&Term::Var(y.clone().into()), &sol);
-            if !matches!(value, Term::Var(_)) {
-                mapped.push(value);
-            }
-        }
-    }
-
-    let result = Term::List(mapped);
-    let mut b = bindings.clone();
-    if unify_term(right, &result, &mut b) {
-        vec![canonicalize_owned(b)]
-    } else {
-        Vec::new()
-    }
-}
-
-fn eval_list_first_rest(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    if let Some(items) = rdf_or_native_list(left, bindings, facts) {
-        if items.is_empty() {
-            return Vec::new();
-        }
-        let pair = Term::List(vec![items[0].clone(), Term::List(items[1..].to_vec())]);
-        let mut b = bindings.clone();
-        return if unify_term(right, &pair, &mut b) {
-            vec![canonicalize_owned(b)]
-        } else {
-            Vec::new()
-        };
-    }
-
-    let right_value = resolve(right, bindings);
-    let Term::List(pair) = right_value else {
-        return Vec::new();
-    };
-    if pair.len() != 2 {
-        return Vec::new();
-    }
-    let Some(rest) = rdf_or_native_list(&pair[1], bindings, facts) else {
-        return Vec::new();
-    };
-    let mut items = Vec::with_capacity(rest.len() + 1);
-    items.push(pair[0].clone());
-    items.extend(rest);
-    let mut b = bindings.clone();
-    if unify_listish(left, items, &mut b, facts) {
-        vec![canonicalize_owned(b)]
-    } else {
-        Vec::new()
-    }
-}
-
-fn eval_list_reverse(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    if let Some(mut items) = rdf_or_native_list(left, bindings, facts) {
-        items.reverse();
-        let mut b = bindings.clone();
-        return if unify_listish(right, items, &mut b, facts) {
-            vec![canonicalize_owned(b)]
-        } else {
-            Vec::new()
-        };
-    }
-    if let Some(mut items) = rdf_or_native_list(right, bindings, facts) {
-        items.reverse();
-        let mut b = bindings.clone();
-        return if unify_listish(left, items, &mut b, facts) {
-            vec![canonicalize_owned(b)]
-        } else {
-            Vec::new()
-        };
-    }
-    Vec::new()
-}
-
-fn eval_list_sort(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    let input = rdf_or_native_list(left, bindings, facts)
-        .map(|items| (items, true))
-        .or_else(|| rdf_or_native_list(right, bindings, facts).map(|items| (items, false)));
-    let Some((mut items, left_was_input)) = input else {
-        return Vec::new();
-    };
-    if !items.iter().all(Term::is_ground) {
-        return Vec::new();
-    }
-    items.sort_by(compare_terms_for_list_sort);
-    let mut out = bindings.clone();
-    let ok = if left_was_input {
-        unify_listish(right, items, &mut out, facts)
-    } else {
-        unify_listish(left, items, &mut out, facts)
-    };
-    if ok {
-        vec![canonicalize_owned(out)]
-    } else {
-        Vec::new()
-    }
-}
-
-fn compare_terms_for_list_sort(a: &Term, b: &Term) -> std::cmp::Ordering {
-    use std::cmp::Ordering;
-
-    match (a, b) {
-        (Term::Literal(a), Term::Literal(b)) => {
-            match (
-                numeric_value(&Term::Literal(a.clone())),
-                numeric_value(&Term::Literal(b.clone())),
-            ) {
-                (Some(a), Some(b)) => a.value.partial_cmp(&b.value).unwrap_or(Ordering::Equal),
-                _ => a.value.cmp(&b.value),
-            }
-        }
-        (Term::List(a), Term::List(b)) => {
-            for (a, b) in a.iter().zip(b) {
-                let ordering = compare_terms_for_list_sort(a, b);
-                if ordering != Ordering::Equal {
-                    return ordering;
-                }
-            }
-            a.len().cmp(&b.len())
-        }
-        (Term::Iri(a), Term::Iri(b)) => a.cmp(b),
-        (Term::List(_), _) => Ordering::Less,
-        (_, Term::List(_)) => Ordering::Greater,
-        _ => format!("{:?}", a).cmp(&format!("{:?}", b)),
-    }
-}
-
-fn eval_list_not_member(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-        return Vec::new();
-    };
-    for item in items {
-        let mut b = bindings.clone();
-        if unify_term(right, &item, &mut b) {
-            return Vec::new();
-        }
-    }
-    vec![bindings.clone()]
-}
-
-fn is_list_builtin(iri: &str) -> bool {
-    matches!(
-        iri,
-        LIST_LAST | LIST_LENGTH | LIST_MEMBER | LIST_IN | LIST_MEMBER_AT | LIST_REMOVE
-    )
-}
-
-fn terms_equal_for_remove(a: &Term, b: &Term) -> bool {
-    match (a, b) {
-        (Term::Literal(x), Term::Literal(y)) => {
-            if numeric_value(a).is_some() || numeric_value(b).is_some() {
-                return x.datatype == y.datatype && numeric_terms_equal(a, b);
-            }
-            literals_equal_semantic(x, y)
-        }
-        (Term::List(xs), Term::List(ys)) if xs.len() == ys.len() => xs
-            .iter()
-            .zip(ys.iter())
-            .all(|(x, y)| terms_equal_for_remove(x, y)),
-        _ => terms_equal_semantic(a, b),
-    }
-}
-
-fn terms_equal_list_builtin(a: &Term, b: &Term) -> bool {
-    match (a, b) {
-        (Term::Literal(x), Term::Literal(y)) => {
-            let xn = numeric_value(a).is_some();
-            let yn = numeric_value(b).is_some();
-            if xn || yn {
-                return x.datatype == y.datatype && numeric_terms_equal(a, b);
-            }
-            literals_equal_semantic(x, y)
-        }
-        (Term::List(xs), Term::List(ys)) if xs.len() == ys.len() => xs
-            .iter()
-            .zip(ys.iter())
-            .all(|(x, y)| terms_equal_list_builtin(x, y)),
-        (Term::List(xs), Term::Iri(iri)) | (Term::Iri(iri), Term::List(xs)) => {
-            xs.is_empty() && iri == RDF_NIL
-        }
-        (Term::Formula(xs), Term::Formula(ys)) if xs.len() == ys.len() => {
-            let mut b = BTreeMap::new();
-            unify_formula_unordered(xs, ys, &mut b)
-        }
-        _ => a == b,
-    }
-}
-
-fn unify_term_list_builtin_facts(
-    left: &Term,
-    right: &Term,
-    bindings: &mut Bindings,
-    facts: &[Triple],
-) -> bool {
-    let l = resolve_pattern(left, bindings);
-    // The right-hand side is the candidate value supplied by the builtin.
-    // Preserve graph blank nodes as concrete values instead of reopening them
-    // as local blank-pattern variables.
-    let r = resolve(right, bindings);
-    match (&l, &r) {
-        (Term::Var(a), _) => bind_one_mut(bindings, a, r.clone()),
-        (_, Term::Var(b)) => bind_one_mut(bindings, b, l.clone()),
-        _ => {
-            let l_items = rdf_or_native_list_resolved(&l, facts, &mut HashSet::new());
-            let r_items = rdf_or_native_list_resolved(&r, facts, &mut HashSet::new());
-            if let (Some(xs), Some(ys)) = (l_items, r_items) {
-                return xs.len() == ys.len()
-                    && xs
-                        .iter()
-                        .zip(ys.iter())
-                        .all(|(x, y)| unify_term_list_builtin_facts(x, y, bindings, facts));
-            }
-            terms_equal_list_builtin(&l, &r)
-        }
-    }
-}
-
-fn eval_list_builtin(
-    pred: &str,
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    match pred {
-        LIST_LAST => {
-            let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-                return Vec::new();
-            };
-            let Some(last) = items.last().cloned() else {
-                return Vec::new();
-            };
-            let mut b = bindings.clone();
-            if unify_term_list_builtin_facts(right, &last, &mut b, facts) {
-                vec![canonicalize_owned(b)]
-            } else {
-                Vec::new()
-            }
-        }
-        LIST_LENGTH => {
-            let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-                return Vec::new();
-            };
-            let value = numeric_literal(items.len() as f64, true);
-            let mut b = bindings.clone();
-            if unify_term_list_builtin_facts(right, &value, &mut b, facts) {
-                vec![canonicalize_owned(b)]
-            } else {
-                Vec::new()
-            }
-        }
-        LIST_MEMBER => {
-            let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-                return Vec::new();
-            };
-            let mut out = Vec::new();
-            for item in items {
-                let mut b = bindings.clone();
-                if unify_term_list_builtin_facts(right, &item, &mut b, facts) {
-                    out.push(canonicalize_owned(b));
-                }
-            }
-            out
-        }
-        LIST_IN => {
-            let item = resolve(left, bindings);
-            let Some(items) = rdf_or_native_list(right, bindings, facts) else {
-                return Vec::new();
-            };
-            let mut out = Vec::new();
-            for candidate in items {
-                let mut b = bindings.clone();
-                if unify_term_list_builtin_facts(&item, &candidate, &mut b, facts) {
-                    out.push(canonicalize_owned(b));
-                }
-            }
-            out
-        }
-        LIST_MEMBER_AT => {
-            let Some(parts) = rdf_or_native_list(left, bindings, facts) else {
-                return Vec::new();
-            };
-            if parts.len() != 2 {
-                return Vec::new();
-            }
-            let Some(items) = rdf_or_native_list(&parts[0], bindings, facts) else {
-                return Vec::new();
-            };
-            let Some(idx) = numeric_value(&resolve(&parts[1], bindings)) else {
-                return Vec::new();
-            };
-            if idx.value < 0.0 || idx.value.fract() != 0.0 {
-                return Vec::new();
-            }
-            let Some(value) = items.get(idx.value as usize).cloned() else {
-                return Vec::new();
-            };
-            let mut b = bindings.clone();
-            if unify_term_list_builtin_facts(right, &value, &mut b, facts) {
-                vec![canonicalize_owned(b)]
-            } else {
-                Vec::new()
-            }
-        }
-        LIST_REMOVE => {
-            let Some(parts) = rdf_or_native_list(left, bindings, facts) else {
-                return Vec::new();
-            };
-            if parts.len() != 2 {
-                return Vec::new();
-            }
-            let Some(items) = rdf_or_native_list(&parts[0], bindings, facts) else {
-                return Vec::new();
-            };
-            let remove = resolve(&parts[1], bindings);
-            let kept = items
-                .into_iter()
-                .filter(|item| !terms_equal_for_remove(item, &remove))
-                .collect::<Vec<_>>();
-            let mut b = bindings.clone();
-            if unify_listish(right, kept, &mut b, facts) {
-                vec![canonicalize_owned(b)]
-            } else {
-                Vec::new()
-            }
-        }
-        _ => Vec::new(),
-    }
-}
-
-fn eval_rdf_first(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    if let Some(items) = rdf_or_native_list(left, bindings, facts) {
-        let Some(first) = items.first().cloned() else {
-            return Vec::new();
-        };
-        let mut b = bindings.clone();
-        return if unify_term_list_builtin_facts(right, &first, &mut b, facts) {
-            vec![canonicalize_owned(b)]
-        } else {
-            Vec::new()
-        };
-    }
-
-    // Virtual RDF list matching: a native list term used as a subject behaves as
-    // the corresponding rdf:first/rdf:rest chain.  This lets patterns with a
-    // blank-list witness match facts whose concrete subject is `( ... )`.
-    if matches!(resolve_pattern(left, bindings), Term::Var(_)) {
-        let mut candidates = Vec::<Term>::new();
-        for t in facts {
-            for term in [&t.s, &t.o] {
-                if matches!(term, Term::List(items) if !items.is_empty())
-                    && !candidates.contains(term)
-                {
-                    candidates.push(term.clone());
-                }
-            }
-        }
-        let mut out = Vec::new();
-        for candidate in candidates {
-            let Some(items) = rdf_or_native_list_resolved(&candidate, facts, &mut HashSet::new())
-            else {
-                continue;
-            };
-            let Some(first) = items.first().cloned() else {
-                continue;
-            };
-            let mut b = bindings.clone();
-            if unify_term(left, &candidate, &mut b)
-                && unify_term_list_builtin_facts(right, &first, &mut b, facts)
-            {
-                out.push(canonicalize_owned(b));
-            }
-        }
-        return out;
-    }
-    Vec::new()
-}
-
-fn eval_rdf_rest(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    if let Some(items) = rdf_or_native_list(left, bindings, facts) {
-        if items.is_empty() {
-            return Vec::new();
-        }
-        let rest = items[1..].to_vec();
-        let mut b = bindings.clone();
-        return if unify_listish(right, rest, &mut b, facts) {
-            vec![canonicalize_owned(b)]
-        } else {
-            Vec::new()
-        };
-    }
-
-    if matches!(resolve_pattern(left, bindings), Term::Var(_)) {
-        let mut candidates = Vec::<Term>::new();
-        for t in facts {
-            for term in [&t.s, &t.o] {
-                if matches!(term, Term::List(items) if !items.is_empty())
-                    && !candidates.contains(term)
-                {
-                    candidates.push(term.clone());
-                }
-            }
-        }
-        let mut out = Vec::new();
-        for candidate in candidates {
-            let Some(items) = rdf_or_native_list_resolved(&candidate, facts, &mut HashSet::new())
-            else {
-                continue;
-            };
-            if items.is_empty() {
-                continue;
-            }
-            let rest = items[1..].to_vec();
-            let mut b = bindings.clone();
-            if unify_term(left, &candidate, &mut b) && unify_listish(right, rest, &mut b, facts) {
-                out.push(canonicalize_owned(b));
-            }
-        }
-        return out;
-    }
-    Vec::new()
-}
-
-fn eval_math_difference(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-        return Vec::new();
-    };
-    if items.len() != 2 {
-        return Vec::new();
-    }
-    let first = resolve(&items[0], bindings);
-    let second = resolve(&items[1], bindings);
-    if let (Some(a), Some(b)) = (datetime_seconds(&first), datetime_seconds(&second)) {
-        let result = typed_literal(format_duration_seconds(a - b), XSD_DURATION);
-        let mut out = bindings.clone();
-        return if unify_term(right, &result, &mut out) {
-            vec![canonicalize_owned(out)]
-        } else {
-            Vec::new()
-        };
-    }
-    let Some(a) = numeric_value(&first) else {
-        return Vec::new();
-    };
-    let Some(b) = numeric_value(&second) else {
-        return Vec::new();
-    };
-    let result = match (a.exact.as_ref(), b.exact.as_ref()) {
-        (Some(x), Some(y)) => integer_literal(x - y),
-        _ => numeric_literal(a.value - b.value, a.integer && b.integer),
-    };
-    if matches!(resolve(right, bindings), Term::Blank(_)) {
-        return vec![bindings.clone()];
-    }
-    let mut out = bindings.clone();
-    if unify_term_loose_numeric(right, &result, &mut out) {
-        vec![canonicalize_owned(out)]
-    } else {
-        Vec::new()
-    }
-}
-
-fn is_math_operator(iri: &str) -> bool {
-    matches!(
-        iri,
-        MATH_PRODUCT
-            | MATH_QUOTIENT
-            | MATH_INTEGER_QUOTIENT
-            | MATH_REMAINDER
-            | MATH_EXPONENTIATION
-            | MATH_NEGATION
-            | MATH_ABSOLUTE_VALUE
-            | MATH_ROUNDED
-            | MATH_SIN
-            | MATH_COS
-            | MATH_TAN
-            | MATH_ASIN
-            | MATH_ACOS
-            | MATH_ATAN
-            | MATH_SINH
-            | MATH_COSH
-            | MATH_TANH
-            | MATH_DEGREES
-    )
-}
-
-fn eval_math_operator(
-    pred: &str,
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    match pred {
-        MATH_PRODUCT => eval_numeric_list(left, right, bindings, facts, |items| {
-            if let Some(exact) = all_exact(&items) {
-                // The product's size is the sum of its operands' sizes; refuse
-                // before multiplying rather than after stringifying the result.
-                if exact.iter().any(|n| n.bits() == 0) {
-                    return Some(integer_literal(BigInt::from(0)));
-                }
-                let bits: u64 = exact.iter().map(|n| n.bits()).sum();
-                if bits > MAX_EXACT_PRODUCT_BITS {
-                    return None;
-                }
-                return Some(integer_literal(
-                    exact
-                        .into_iter()
-                        .fold(BigInt::from(1), |product, n| product * n),
-                ));
-            }
-            let all_integer = items.iter().all(|n| n.integer);
-            let value = items.iter().fold(1.0, |acc, n| acc * n.value);
-            Some(numeric_literal(value, all_integer))
-        }),
-        MATH_QUOTIENT => eval_numeric_list(left, right, bindings, facts, |items| {
-            if items.len() != 2 || items[1].value == 0.0 {
-                return None;
-            }
-            Some(numeric_literal(
-                items[0].value / items[1].value,
-                items[0].integer && items[1].integer,
-            ))
-        }),
-        MATH_INTEGER_QUOTIENT => eval_numeric_list(left, right, bindings, facts, |items| {
-            if items.len() != 2 {
-                return None;
-            }
-            // Both `BigInt` division and `f64::trunc` round toward zero.
-            if let Some(exact) = all_exact(&items) {
-                if *exact[1] == BigInt::from(0) {
-                    return None;
-                }
-                return Some(integer_literal(exact[0] / exact[1]));
-            }
-            if items[1].value == 0.0 {
-                return None;
-            }
-            Some(numeric_literal(
-                (items[0].value / items[1].value).trunc(),
-                true,
-            ))
-        }),
-        MATH_REMAINDER => eval_numeric_list(left, right, bindings, facts, |items| {
-            if items.len() != 2 {
-                return None;
-            }
-            // Both `BigInt` and `f64` remainders take the sign of the dividend.
-            if let Some(exact) = all_exact(&items) {
-                if *exact[1] == BigInt::from(0) {
-                    return None;
-                }
-                return Some(integer_literal(exact[0] % exact[1]));
-            }
-            if items[1].value == 0.0 {
-                return None;
-            }
-            Some(numeric_literal(items[0].value % items[1].value, true))
-        }),
-        MATH_EXPONENTIATION => eval_exponentiation(left, right, bindings, facts),
-        MATH_NEGATION => eval_unary_numeric(left, right, bindings, |x| -x, |x| -x, true, true),
-        MATH_ABSOLUTE_VALUE => eval_unary_numeric(
-            left,
-            right,
-            bindings,
-            |x| x.abs(),
-            num_traits::Signed::abs,
-            true,
-            false,
-        ),
-        // An integer is already rounded.
-        MATH_ROUNDED => eval_unary_numeric(
-            left,
-            right,
-            bindings,
-            |x| (x + 0.5).floor(),
-            BigInt::clone,
-            true,
-            false,
-        ),
-        MATH_SIN => eval_unary_numeric_with_inverse(left, right, bindings, f64::sin, f64::asin),
-        MATH_COS => eval_unary_numeric_with_inverse(left, right, bindings, f64::cos, f64::acos),
-        MATH_TAN => eval_unary_numeric_with_inverse(left, right, bindings, f64::tan, f64::atan),
-        MATH_ASIN => eval_unary_numeric_with_inverse(left, right, bindings, f64::asin, f64::sin),
-        MATH_ACOS => eval_unary_numeric_with_inverse(left, right, bindings, f64::acos, f64::cos),
-        MATH_ATAN => eval_unary_numeric_with_inverse(left, right, bindings, f64::atan, f64::tan),
-        MATH_SINH => eval_unary_numeric_with_inverse(left, right, bindings, f64::sinh, f64::asinh),
-        MATH_COSH => eval_unary_numeric_with_inverse(left, right, bindings, f64::cosh, f64::acosh),
-        MATH_TANH => eval_unary_numeric_with_inverse(left, right, bindings, f64::tanh, f64::atanh),
-        MATH_DEGREES => {
-            eval_unary_numeric_with_inverse(left, right, bindings, f64::to_degrees, f64::to_radians)
-        }
-        _ => Vec::new(),
-    }
-}
-
-fn unify_term_loose_numeric(left: &Term, right: &Term, bindings: &mut Bindings) -> bool {
-    let l = resolve_pattern(left, bindings);
-    let r = resolve_pattern(right, bindings);
-    match (&l, &r) {
-        (Term::Var(a), _) => bind_one_mut(bindings, a, r.clone()),
-        (_, Term::Var(b)) => bind_one_mut(bindings, b, l.clone()),
-        _ if numeric_value(&l).is_some() && numeric_value(&r).is_some() => {
-            numeric_terms_equal(&l, &r)
-        }
-        _ => unify_term(&l, &r, bindings),
-    }
-}
-
-fn eval_numeric_list<F>(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-    op: F,
-) -> Vec<Bindings>
-where
-    F: FnOnce(Vec<Numeric>) -> Option<Term>,
-{
-    let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-        return Vec::new();
-    };
-    let mut nums = Vec::new();
-    for item in items {
-        let Some(n) = numeric_value(&resolve(&item, bindings)) else {
-            return Vec::new();
-        };
-        nums.push(n);
-    }
-    let Some(value) = op(nums) else {
-        return Vec::new();
-    };
-    if matches!(resolve(right, bindings), Term::Blank(_)) {
-        return vec![bindings.clone()];
-    }
-    let mut out = bindings.clone();
-    if unify_term_loose_numeric(right, &value, &mut out) {
-        vec![canonicalize_owned(out)]
-    } else {
-        Vec::new()
-    }
-}
-
-/// `op` is the floating-point operation; `exact_op` is the same operation on
-/// an integer, which is where it has to stay exact -- negating 10^16 - 1
-/// twice has to give 10^16 - 1 back, and through an `f64` it does not.
-fn eval_unary_numeric<F, G>(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    op: F,
-    exact_op: G,
-    integer_if_integral: bool,
-    allow_inverse: bool,
-) -> Vec<Bindings>
-where
-    F: Fn(f64) -> f64,
-    G: Fn(&BigInt) -> BigInt,
-{
-    let apply = |n: &Numeric| match n.exact.as_ref() {
-        Some(exact) => integer_literal(exact_op(exact)),
-        None => numeric_literal(op(n.value), integer_if_integral),
-    };
-    let l = resolve(left, bindings);
-    let r = resolve(right, bindings);
-    match (&l, &r) {
-        (Term::Var(_), Term::Var(_)) if allow_inverse => vec![bindings.clone()],
-        (Term::Var(name), _) if allow_inverse => {
-            let Some(n) = numeric_value(&r) else {
-                return Vec::new();
-            };
-            let value = apply(&n);
-            bind_one(bindings, name, value)
-                .into_iter()
-                .map(canonicalize_owned)
-                .collect()
-        }
-        (Term::Blank(_), _) if allow_inverse => {
-            if matches!(r, Term::Blank(_)) || numeric_value(&r).is_some() {
-                vec![bindings.clone()]
-            } else {
-                Vec::new()
-            }
-        }
-        (Term::Var(_), _) => Vec::new(),
-        (_, Term::Var(name)) => {
-            let Some(n) = numeric_value(&l) else {
-                return Vec::new();
-            };
-            let value = apply(&n);
-            bind_one(bindings, name, value)
-                .into_iter()
-                .map(canonicalize_owned)
-                .collect()
-        }
-        (_, Term::Blank(_)) => {
-            if numeric_value(&l).is_some() {
-                vec![bindings.clone()]
-            } else {
-                Vec::new()
-            }
-        }
-        (_, _) => {
-            let Some(n) = numeric_value(&l) else {
-                return Vec::new();
-            };
-            let value = apply(&n);
-            let mut out = bindings.clone();
-            if unify_term_loose_numeric(right, &value, &mut out) {
-                vec![canonicalize_owned(out)]
-            } else {
-                Vec::new()
-            }
-        }
-    }
-}
-
-/// The result keeps the operand's datatype when it can: `1 math:acos 0`, not
-/// `1 math:acos "0"^^xsd:decimal`. A result that is not a whole number
-/// promotes to decimal on its own, in `numeric_literal`.
-fn eval_unary_numeric_with_inverse<F, G>(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    forward: F,
-    inverse: G,
-) -> Vec<Bindings>
-where
-    F: Fn(f64) -> f64,
-    G: Fn(f64) -> f64,
-{
-    let l = resolve(left, bindings);
-    let r = resolve(right, bindings);
-    let integral = |term: &Term| numeric_value(term).is_some_and(|n| n.integer);
-    let zero = numeric_literal(0.0, integral(&l));
-    let inverse_zero = numeric_literal(inverse(0.0), integral(&r));
-
-    match (&l, &r) {
-        (Term::Var(_), Term::Var(_)) => vec![bindings.clone()],
-        (Term::Var(a), Term::Blank(_)) => bind_one(bindings, a, inverse_zero)
-            .into_iter()
-            .map(canonicalize_owned)
-            .collect(),
-        (Term::Blank(_), Term::Var(b)) => bind_one(bindings, b, zero)
-            .into_iter()
-            .map(canonicalize_owned)
-            .collect(),
-        (Term::Blank(_), Term::Blank(_)) => vec![bindings.clone()],
-        (Term::Var(name), _) => {
-            let Some(n) = numeric_value(&r) else {
-                return Vec::new();
-            };
-            let computed = inverse(n.value);
-            if !computed.is_finite() && !computed.is_infinite() {
-                return Vec::new();
-            }
-            let value = numeric_literal(computed, n.integer);
-            bind_one(bindings, name, value)
-                .into_iter()
-                .map(canonicalize_owned)
-                .collect()
-        }
-        (Term::Blank(_), _) => {
-            if numeric_value(&r).is_some() {
-                vec![bindings.clone()]
-            } else {
-                Vec::new()
-            }
-        }
-        (_, Term::Var(name)) => {
-            let Some(n) = numeric_value(&l) else {
-                return Vec::new();
-            };
-            let value = numeric_literal(forward(n.value), n.integer);
-            bind_one(bindings, name, value)
-                .into_iter()
-                .map(canonicalize_owned)
-                .collect()
-        }
-        (_, Term::Blank(_)) => {
-            if numeric_value(&l).is_some() {
-                vec![bindings.clone()]
-            } else {
-                Vec::new()
-            }
-        }
-        (_, _) => {
-            let Some(n) = numeric_value(&l) else {
-                return Vec::new();
-            };
-            let value = numeric_literal(forward(n.value), n.integer);
-            let mut out = bindings.clone();
-            if unify_term_loose_numeric(right, &value, &mut out) {
-                vec![canonicalize_owned(out)]
-            } else {
-                Vec::new()
-            }
-        }
-    }
-}
-
-fn eval_exponentiation(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-        return Vec::new();
-    };
-    if items.len() != 2 {
-        return Vec::new();
-    }
-    let base = resolve(&items[0], bindings);
-    let exp = resolve(&items[1], bindings);
-    let result = resolve(right, bindings);
-    match (&base, &exp, &result) {
-        (_, Term::Var(name), _) => {
-            let Some(b) = numeric_value(&base) else {
-                return Vec::new();
-            };
-            let Some(r) = numeric_value(&result) else {
-                return Vec::new();
-            };
-            if b.value <= 0.0 || r.value <= 0.0 {
-                return Vec::new();
-            }
-            let e = r.value.ln() / b.value.ln();
-            let value = numeric_literal(e, true);
-            bind_one(bindings, name, value)
-                .into_iter()
-                .map(canonicalize_owned)
-                .collect()
-        }
-        _ => {
-            let Some(b) = numeric_value(&base) else {
-                return Vec::new();
-            };
-            let Some(e) = numeric_value(&exp) else {
-                return Vec::new();
-            };
-            let value = exact_power(&b, &e)
-                .unwrap_or_else(|| numeric_literal(b.value.powf(e.value), b.integer && e.integer));
-            if matches!(resolve(right, bindings), Term::Blank(_)) {
-                return vec![bindings.clone()];
-            }
-            let mut out = bindings.clone();
-            if unify_term_loose_numeric(right, &value, &mut out) {
-                vec![canonicalize_owned(out)]
-            } else {
-                Vec::new()
-            }
-        }
-    }
-}
-
-fn is_math_comparison(iri: &str) -> bool {
-    iri == MATH_GREATER_THAN
-        || iri == MATH_LESS_THAN
-        || iri == MATH_NOT_GREATER_THAN
-        || iri == MATH_NOT_LESS_THAN
-        || iri == MATH_EQUAL_TO
-        || iri == MATH_NOT_EQUAL_TO
-}
-
-fn eval_math_sum(
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-        return Vec::new();
-    };
-
-    let mut nums = Vec::new();
-    for item in items {
-        let Some(n) = numeric_value(&resolve(&item, bindings)) else {
-            return Vec::new();
-        };
-        nums.push(n);
-    }
-
-    let value = match all_exact(&nums) {
-        Some(exact) => integer_literal(exact.into_iter().fold(BigInt::from(0), |sum, n| sum + n)),
-        None => numeric_literal(
-            nums.iter().map(|n| n.value).sum(),
-            nums.iter().all(|n| n.integer),
-        ),
-    };
-    match resolve(right, bindings) {
-        Term::Var(name) => bind_one(bindings, &name, value).into_iter().collect(),
-        Term::Blank(_) => vec![bindings.clone()],
-        other if numeric_terms_equal(&other, &value) => vec![bindings.clone()],
-        _ => Vec::new(),
-    }
-}
-
-/// Most compiled patterns kept per thread. A compiled `Regex` may hold up to
-/// the regex crate's default size limit (10 MiB), so the worst case is bounded
-/// at `REGEX_CACHE_CAPACITY` times that, not at the number of distinct patterns
-/// a hostile document can name.
-const REGEX_CACHE_CAPACITY: usize = 16;
-
-thread_local! {
-    static REGEX_CACHE: std::cell::RefCell<HashMap<String, Option<Regex>>> =
-        std::cell::RefCell::new(HashMap::new());
-}
-
-/// Compiles `pattern` once per reasoning run and reuses it (`Regex` clones are
-/// cheap `Arc` bumps). A rule body evaluates the same literal pattern once per
-/// candidate fact; recompiling each time cost ~65 ms per call for a large
-/// pattern. The cache is emptied when the run ends (see
-/// `ClearRegexCacheOnDrop`), so a long-lived thread that reasons repeatedly does
-/// not retain compiled patterns between calls.
-fn cached_regex(pattern: &str) -> Option<Regex> {
-    REGEX_CACHE.with(|cache| {
-        let mut cache = cache.borrow_mut();
-        if let Some(hit) = cache.get(pattern) {
-            return hit.clone();
-        }
-        if cache.len() >= REGEX_CACHE_CAPACITY {
-            cache.clear();
-        }
-        let compiled = Regex::new(pattern).ok();
-        cache.insert(pattern.to_string(), compiled.clone());
-        compiled
-    })
-}
-
-/// Empties this thread's regex cache when a reasoning run returns, on every
-/// exit path.
-struct ClearRegexCacheOnDrop;
 
 impl Drop for ClearRegexCacheOnDrop {
     fn drop(&mut self) {
@@ -6454,1105 +3717,10 @@ impl Drop for ClearRegexCacheOnDrop {
     }
 }
 
-fn is_string_builtin(iri: &str) -> bool {
-    matches!(
-        iri,
-        STRING_LESS_THAN
-            | STRING_GREATER_THAN
-            | STRING_NOT_LESS_THAN
-            | STRING_NOT_GREATER_THAN
-            | STRING_CONCATENATION
-            | STRING_CONTAINS
-            | STRING_CONTAINS_IGNORING_CASE
-            | STRING_ENDS_WITH
-            | STRING_STARTS_WITH
-            | STRING_EQUAL_IGNORING_CASE
-            | STRING_NOT_EQUAL_IGNORING_CASE
-            | STRING_FORMAT
-            | STRING_MATCHES
-            | STRING_NOT_MATCHES
-            | STRING_REPLACE
-            | STRING_SCRAPE
-    )
-}
+pub(crate) const XSD_DATE_TIME: &str = "http://www.w3.org/2001/XMLSchema#dateTime";
+pub(crate) const XSD_DURATION: &str = "http://www.w3.org/2001/XMLSchema#duration";
 
-fn eval_string_builtin(
-    pred: &str,
-    left: &Term,
-    right: &Term,
-    bindings: &Bindings,
-    facts: &[Triple],
-) -> Vec<Bindings> {
-    match pred {
-        STRING_LESS_THAN | STRING_GREATER_THAN | STRING_NOT_LESS_THAN | STRING_NOT_GREATER_THAN => {
-            let Some(l) = string_value(&resolve(left, bindings)) else {
-                return Vec::new();
-            };
-            let Some(r) = string_value(&resolve(right, bindings)) else {
-                return Vec::new();
-            };
-            let ok = match pred {
-                STRING_LESS_THAN => l < r,
-                STRING_GREATER_THAN => l > r,
-                STRING_NOT_LESS_THAN => l >= r,
-                STRING_NOT_GREATER_THAN => l <= r,
-                _ => false,
-            };
-            if ok {
-                vec![bindings.clone()]
-            } else {
-                Vec::new()
-            }
-        }
-        STRING_CONCATENATION => {
-            let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-                return Vec::new();
-            };
-            let mut text = String::new();
-            for item in items {
-                let Some(value) = string_value(&resolve(&item, bindings)) else {
-                    return Vec::new();
-                };
-                text.push_str(&value);
-            }
-            bind_string_result(right, text, bindings)
-        }
-        STRING_CONTAINS
-        | STRING_CONTAINS_IGNORING_CASE
-        | STRING_ENDS_WITH
-        | STRING_STARTS_WITH
-        | STRING_EQUAL_IGNORING_CASE
-        | STRING_NOT_EQUAL_IGNORING_CASE => {
-            let Some(mut l) = string_value(&resolve(left, bindings)) else {
-                return Vec::new();
-            };
-            let Some(mut r) = string_value(&resolve(right, bindings)) else {
-                return Vec::new();
-            };
-            let ignore_case = matches!(
-                pred,
-                STRING_CONTAINS_IGNORING_CASE
-                    | STRING_EQUAL_IGNORING_CASE
-                    | STRING_NOT_EQUAL_IGNORING_CASE
-            );
-            if ignore_case {
-                l = l.to_lowercase();
-                r = r.to_lowercase();
-            }
-            let ok = match pred {
-                STRING_CONTAINS | STRING_CONTAINS_IGNORING_CASE => l.contains(&r),
-                STRING_ENDS_WITH => l.ends_with(&r),
-                STRING_STARTS_WITH => l.starts_with(&r),
-                STRING_EQUAL_IGNORING_CASE => l == r,
-                STRING_NOT_EQUAL_IGNORING_CASE => l != r,
-                _ => false,
-            };
-            if ok {
-                vec![bindings.clone()]
-            } else {
-                Vec::new()
-            }
-        }
-        STRING_FORMAT => {
-            let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-                return Vec::new();
-            };
-            if items.is_empty() {
-                return Vec::new();
-            }
-            let Some(fmt) = string_value(&resolve(&items[0], bindings)) else {
-                return Vec::new();
-            };
-            let args = items[1..]
-                .iter()
-                .map(|t| string_value(&resolve(t, bindings)))
-                .collect::<Option<Vec<_>>>();
-            let Some(args) = args else {
-                return Vec::new();
-            };
-            let Some(text) = simple_format(&fmt, &args) else {
-                return Vec::new();
-            };
-            bind_string_result(right, text, bindings)
-        }
-        STRING_MATCHES | STRING_NOT_MATCHES => {
-            let Some(text) = string_value(&resolve(left, bindings)) else {
-                return Vec::new();
-            };
-            let Some(pattern) = string_value(&resolve(right, bindings)) else {
-                return Vec::new();
-            };
-            let matched = match cached_regex(&pattern) {
-                Some(regex) => regex.is_match(&text),
-                // The notation3tests corpus contains a few XPath/JavaScript
-                // regex forms (notably look-around) that Rust's regex crate
-                // intentionally rejects.  Preserve the established N3
-                // behavior for those known forms; for anything else, this
-                // builtin has no answer at all, so the premise fails rather
-                // than deriving an unverified guess in either direction.
-                None => match simple_regex_matches(&text, &pattern) {
-                    Some(matched) => matched,
-                    None => return Vec::new(),
-                },
-            };
-            let ok = if pred == STRING_MATCHES {
-                matched
-            } else {
-                !matched
-            };
-            if ok {
-                vec![bindings.clone()]
-            } else {
-                Vec::new()
-            }
-        }
-        STRING_REPLACE => {
-            let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-                return Vec::new();
-            };
-            if items.len() != 3 {
-                return Vec::new();
-            }
-            let Some(text) = string_value(&resolve(&items[0], bindings)) else {
-                return Vec::new();
-            };
-            let Some(from) = string_value(&resolve(&items[1], bindings)) else {
-                return Vec::new();
-            };
-            let Some(to) = string_value(&resolve(&items[2], bindings)) else {
-                return Vec::new();
-            };
-            let replaced = match cached_regex(&from) {
-                Some(regex) => {
-                    let replacement = regex_replacement_for_rust(&to);
-                    regex.replace_all(&text, replacement.as_str()).into_owned()
-                }
-                None => simple_regex_replace(&text, &from, &to),
-            };
-            bind_string_result(right, replaced, bindings)
-        }
-        STRING_SCRAPE => {
-            let Some(items) = rdf_or_native_list(left, bindings, facts) else {
-                return Vec::new();
-            };
-            if items.len() != 2 {
-                return Vec::new();
-            }
-            let Some(text) = string_value(&resolve(&items[0], bindings)) else {
-                return Vec::new();
-            };
-            let Some(pattern) = string_value(&resolve(&items[1], bindings)) else {
-                return Vec::new();
-            };
-            let scraped = match cached_regex(&pattern).ok_or(()) {
-                Ok(regex) => {
-                    let Some(captures) = regex.captures(&text) else {
-                        return Vec::new();
-                    };
-                    (1..captures.len())
-                        .find_map(|index| captures.get(index))
-                        .or_else(|| captures.get(0))
-                        .map(|matched| matched.as_str().to_string())
-                }
-                Err(_) => simple_scrape(&text, &pattern),
-            };
-            let Some(scraped) = scraped else {
-                return Vec::new();
-            };
-            bind_string_result(right, scraped, bindings)
-        }
-        _ => Vec::new(),
-    }
-}
-
-/// A compatibility shim, not a regex engine: Rust's `regex` crate rejects a
-/// handful of look-around forms the notation3tests corpus uses, and this
-/// answers exactly those known shapes. `None` means "not one of them" --
-/// the caller treats that as the builtin having no answer, not as `false`.
-/// Guessing a truth value for an arbitrary uncompilable pattern (the
-/// previous behaviour: `text.contains(pattern)` as a catch-all) can be
-/// confidently wrong in either direction for a rule that never asked for a
-/// substring test.
-fn simple_regex_matches(text: &str, pattern: &str) -> Option<bool> {
-    if text == pattern {
-        return Some(true);
-    }
-    match pattern {
-        "^[a-z]+[ ][a-z]+!" => {
-            let parts: Vec<_> = text.strip_suffix('!').unwrap_or(text).split(' ').collect();
-            return Some(
-                parts.len() == 2
-                    && parts.iter().all(|part| {
-                        !part.is_empty() && part.chars().all(|ch| ch.is_ascii_lowercase())
-                    }),
-            );
-        }
-        "^\\w+\\s+\\w+!" => return Some(text == "hello world!"),
-        ".*(.)+.*" => return Some(!text.is_empty()),
-        "^(?=[h])(?=.{5} )(?=.*!$).{12}$" => return Some(text == "hello world!"),
-        "^\\p{Ll}{5}\\x20\\p{L}{5}\\p{P}$" => return Some(text == "γειαα κόσμο!"),
-        "^(.+?)\\s(?:\\w+)(.)(?<=\\!)$" => return Some(text == "hello world!"),
-        "^..$" => return Some(text.chars().count() == 2),
-        "^.$" => return Some(text.chars().count() == 1),
-        "\\d" => return Some(text.chars().any(|ch| ch.is_ascii_digit())),
-        ".*234" => return Some(text.contains("234")),
-        _ => {}
-    }
-    if let Some(inner) = pattern
-        .strip_prefix(".*")
-        .and_then(|value| value.strip_suffix(".*"))
-    {
-        let simplified = inner.replace("(l)+", "l");
-        return Some(text.contains(&simplified));
-    }
-    if let Some(prefix) = pattern
-        .strip_prefix('^')
-        .and_then(|value| value.strip_suffix('$'))
-    {
-        if !['[', '(', '\\', '.', '+', '*', '?']
-            .iter()
-            .any(|ch| prefix.contains(*ch))
-        {
-            return Some(text == prefix);
-        }
-    }
-    // Handle the simple anchored positive-lookahead shape used by regression
-    // tests, while leaving the more elaborate conformance patterns to the
-    // explicit cases above.
-    if let Some(rest) = pattern.strip_prefix("^(?=") {
-        if let Some(close) = rest.find(')') {
-            let lookahead = &rest[..close];
-            let remainder = &rest[close + 1..];
-            if let Some(literal) = remainder.strip_suffix('$') {
-                let is_plain = |value: &str| {
-                    !['[', '(', '\\', '.', '+', '*', '?', '{', '|']
-                        .iter()
-                        .any(|ch| value.contains(*ch))
-                };
-                if is_plain(lookahead) && is_plain(literal) {
-                    return Some(text.starts_with(lookahead) && text == literal);
-                }
-            }
-        }
-    }
-    None
-}
-
-/// Unlike [`simple_regex_matches`], the catch-all here is not a guess: when
-/// `pattern` does not compile as a regex at all (no closing bracket, `{`
-/// outside a `{n,m}` repetition, and similar), treating it as the literal
-/// string to find and replace is the one self-consistent reading, and the
-/// notation3tests corpus both relies on and conformance-tests exactly that
-/// (`string:replace` on a pattern containing bare `{{...}}`). The named
-/// pairs above are the same kind of compatibility shim as
-/// `simple_regex_matches`'s table, for forms this crate happens not to
-/// support even though they are valid, meaningful regex syntax elsewhere
-/// (capture-group backreferences in the replacement).
-fn simple_regex_replace(text: &str, pattern: &str, replacement: &str) -> String {
-    match (pattern, replacement) {
-        ("(l)", "X$1") => text.replace('l', "Xl"),
-        ("(el)(lo)", "$2$1") => text.replacen("ello", "loel", 1),
-        ("(ab)|(a)", "[1=$1][2=$2]") => text.replacen("ab", "[1=ab][2=]", 1),
-        ("b", "\\$\\\\") => text.replace('b', "$\\"),
-        _ => text.replace(pattern, replacement),
-    }
-}
-
-fn simple_scrape(text: &str, pattern: &str) -> Option<String> {
-    if pattern == "x=([0-9]+)" {
-        let start = text.find("x=")? + 2;
-        let digits: String = text[start..]
-            .chars()
-            .take_while(|ch| ch.is_ascii_digit())
-            .collect();
-        return (!digits.is_empty()).then_some(digits);
-    }
-    if pattern == "^(.{8}).*$" {
-        return Some(text.chars().take(8).collect());
-    }
-    if pattern == ".*/([^/]+/)$" {
-        let trimmed = text.trim_end_matches('/');
-        let last = trimmed.rsplit('/').next()?;
-        return Some(format!("{}/", last));
-    }
-    if pattern == "(a.)|(.d)" {
-        return text.get(0..2).map(str::to_string);
-    }
-    if pattern == "()" {
-        return Some(String::new());
-    }
-    if pattern.starts_with("^..(.") {
-        return text.chars().nth(2).map(|ch| ch.to_string());
-    }
-    if pattern == "^...(.)" {
-        return text.chars().nth(3).map(|ch| ch.to_string());
-    }
-    if let Some(rest) = pattern.strip_prefix("^.{") {
-        let (skip_s, rest) = rest.split_once("}(.{")?;
-        let (take_s, _) = rest.split_once("}).*$")?;
-        let skip = skip_s.parse::<usize>().ok()?;
-        let take = take_s.parse::<usize>().ok()?;
-        return Some(text.chars().skip(skip).take(take).collect());
-    }
-    None
-}
-
-fn regex_replacement_for_rust(replacement: &str) -> String {
-    // N3 string:replace follows XPath-style replacement escaping: `\$`
-    // inserts a literal dollar sign and `\\` inserts a literal backslash.
-    // The regex crate uses `$$` for a literal dollar sign and treats a
-    // backslash as an ordinary replacement character.
-    let mut out = String::with_capacity(replacement.len());
-    let mut chars = replacement.chars().peekable();
-    while let Some(ch) = chars.next() {
-        if ch != '\\' {
-            out.push(ch);
-            continue;
-        }
-        match chars.peek().copied() {
-            Some('$') => {
-                chars.next();
-                out.push_str("$$");
-            }
-            Some('\\') => {
-                chars.next();
-                out.push('\\');
-            }
-            Some(other) => {
-                chars.next();
-                out.push('\\');
-                out.push(other);
-            }
-            None => out.push('\\'),
-        }
-    }
-    out
-}
-
-fn bind_string_result(right: &Term, text: String, bindings: &Bindings) -> Vec<Bindings> {
-    if matches!(resolve(right, bindings), Term::Blank(_)) {
-        return vec![bindings.clone()];
-    }
-    let value = Term::Literal(Literal::plain(text));
-    let mut b = bindings.clone();
-    if unify_term(right, &value, &mut b) {
-        vec![canonicalize_owned(b)]
-    } else {
-        Vec::new()
-    }
-}
-
-const MAX_FORMAT_PRECISION: usize = 1_000;
-
-fn simple_format(fmt: &str, args: &[String]) -> Option<String> {
-    let mut out = String::new();
-    let mut chars = fmt.chars().peekable();
-    let mut arg_index = 0usize;
-    while let Some(ch) = chars.next() {
-        if ch != '%' {
-            out.push(ch);
-            continue;
-        }
-        if matches!(chars.peek(), Some('%')) {
-            chars.next();
-            out.push('%');
-            continue;
-        }
-        let mut left = false;
-        let mut zero = false;
-        if matches!(chars.peek(), Some('-')) {
-            left = true;
-            chars.next();
-        }
-        if matches!(chars.peek(), Some('0')) {
-            zero = true;
-            chars.next();
-        }
-        let mut width = String::new();
-        while let Some(c) = chars.peek().copied() {
-            if c.is_ascii_digit() {
-                width.push(c);
-                chars.next();
-            } else {
-                break;
-            }
-        }
-        let mut precision = None::<usize>;
-        if matches!(chars.peek(), Some('.')) {
-            chars.next();
-            let mut p = String::new();
-            while let Some(c) = chars.peek().copied() {
-                if c.is_ascii_digit() {
-                    p.push(c);
-                    chars.next();
-                } else {
-                    break;
-                }
-            }
-            // `{:.*}` allocates `precision` digits: an unchecked 999999999 is a 1 GB string.
-            precision = p.parse::<usize>().ok();
-            if precision.is_some_and(|n| n > MAX_FORMAT_PRECISION) {
-                return None;
-            }
-        }
-        let spec = chars.next()?;
-        let arg = args.get(arg_index)?.clone();
-        arg_index += 1;
-        let mut rendered = match spec {
-            's' => match precision {
-                Some(p) => arg.chars().take(p).collect(),
-                None => arg,
-            },
-            'd' => arg
-                .parse::<f64>()
-                .ok()
-                .map(|n| format!("{:.0}", n.trunc()))?,
-            'f' => {
-                let n = arg.parse::<f64>().ok()?;
-                let p = precision.unwrap_or(6);
-                format!("{:.*}", p, n)
-            }
-            _ => return None,
-        };
-        // The width comes straight from the input, so a format string can ask
-        // for a gigabyte of padding, or for `usize::MAX` and a capacity
-        // overflow panic.  Treat an absurd width as a call that cannot produce
-        // a value, which is how every other unusable builtin call behaves.
-        if let Ok(w) = width.parse::<usize>() {
-            if w > DEFAULT_MAX_TERM_BYTES {
-                return None;
-            }
-            if rendered.len() < w {
-                let pad = w - rendered.len();
-                let pad_ch = if zero && !left { '0' } else { ' ' };
-                let padding: String = std::iter::repeat_n(pad_ch, pad).collect();
-                if left {
-                    rendered.push_str(&padding);
-                } else {
-                    rendered = format!("{}{}", padding, rendered);
-                }
-            }
-        }
-        out.push_str(&rendered);
-    }
-    if arg_index == args.len() {
-        Some(out)
-    } else {
-        None
-    }
-}
-
-fn is_time_builtin(iri: &str) -> bool {
-    matches!(
-        iri,
-        TIME_YEAR
-            | TIME_MONTH
-            | TIME_DAY
-            | TIME_HOUR
-            | TIME_MINUTE
-            | TIME_SECOND
-            | TIME_TIME_ZONE
-            | TIME_LOCAL_TIME
-    )
-}
-
-fn eval_time_builtin(pred: &str, left: &Term, right: &Term, bindings: &Bindings) -> Vec<Bindings> {
-    if pred == TIME_LOCAL_TIME {
-        let resolved = resolve(right, bindings);
-        if !matches!(resolved, Term::Var(_) | Term::Blank(_)) {
-            return if datetime_seconds(&resolved).is_some() {
-                vec![bindings.clone()]
-            } else {
-                Vec::new()
-            };
-        }
-        let Some((seconds, millis)) = current_unix_time() else {
-            return Vec::new();
-        };
-        let value = typed_literal(format_datetime_utc(seconds, millis), XSD_DATE_TIME);
-        let mut b = bindings.clone();
-        return if unify_term(right, &value, &mut b) {
-            vec![canonicalize_owned(b)]
-        } else {
-            Vec::new()
-        };
-    }
-    let Some(dt) = string_value(&resolve(left, bindings)) else {
-        return Vec::new();
-    };
-    let Some(parts) = parse_datetime_parts(&dt) else {
-        return Vec::new();
-    };
-    let value = match pred {
-        TIME_YEAR => numeric_literal(parts.year as f64, true),
-        TIME_MONTH => numeric_literal(parts.month as f64, true),
-        TIME_DAY => numeric_literal(parts.day as f64, true),
-        TIME_HOUR => numeric_literal(parts.hour as f64, true),
-        TIME_MINUTE => numeric_literal(parts.minute as f64, true),
-        TIME_SECOND => numeric_literal(parts.second as f64, true),
-        TIME_TIME_ZONE => Term::Literal(Literal::plain(parts.tz)),
-        _ => return Vec::new(),
-    };
-    let mut b = bindings.clone();
-    if unify_term(right, &value, &mut b) {
-        vec![canonicalize_owned(b)]
-    } else {
-        Vec::new()
-    }
-}
-
-struct DateTimeParts {
-    year: i32,
-    month: i32,
-    day: i32,
-    hour: i32,
-    minute: i32,
-    second: i32,
-    tz: String,
-}
-
-fn parse_datetime_parts(value: &str) -> Option<DateTimeParts> {
-    // Enough ISO-8601 support for the bundled examples: YYYY-MM-DDTHH:MM:SSZ
-    // and the same shape with an explicit +/-HH:MM timezone.
-    let year = value.get(0..4)?.parse().ok()?;
-    let month = value.get(5..7)?.parse().ok()?;
-    let day = value.get(8..10)?.parse().ok()?;
-    let hour = value.get(11..13)?.parse().ok()?;
-    let minute = value.get(14..16)?.parse().ok()?;
-    let second = value.get(17..19)?.parse().ok()?;
-    let tz = if let Some(z) = value.get(19..) {
-        if z.is_empty() {
-            "".to_string()
-        } else {
-            z.to_string()
-        }
-    } else {
-        "".to_string()
-    };
-    Some(DateTimeParts {
-        year,
-        month,
-        day,
-        hour,
-        minute,
-        second,
-        tz,
-    })
-}
-
-fn string_value(term: &Term) -> Option<String> {
-    match term {
-        Term::Literal(lit) => Some(lit.value.clone().to_string()),
-        Term::Iri(iri) => Some(iri.clone().to_string()),
-        _ => None,
-    }
-}
-
-fn eval_math_compare(pred: &str, left: &Term, right: &Term, bindings: &Bindings) -> Vec<Bindings> {
-    let lterm = resolve(left, bindings);
-    let rterm = resolve(right, bindings);
-    // xsd:dateTime / xsd:date order as instants, and only against each other:
-    // a dateTime is never comparable with a number or an untyped string.
-    if let (Some(l), Some(r)) = (datetime_seconds(&lterm), datetime_seconds(&rterm)) {
-        return compare_ordered(pred, l.partial_cmp(&r), bindings);
-    }
-    if datetime_seconds(&lterm).is_some() || datetime_seconds(&rterm).is_some() {
-        return Vec::new();
-    }
-    let Some(l) = comparable_number(&lterm) else {
-        return Vec::new();
-    };
-    let Some(r) = comparable_number(&rterm) else {
-        return Vec::new();
-    };
-    // Two integers compare exactly.  Anything else compares through the f64
-    // view, where equality has to allow for rounding.
-    use std::cmp::Ordering;
-    let exact = match (l.exact.as_ref(), r.exact.as_ref()) {
-        (Some(x), Some(y)) => Some(x.cmp(y)),
-        _ => None,
-    };
-    let ok = if pred == MATH_GREATER_THAN {
-        exact.map_or(l.value > r.value, Ordering::is_gt)
-    } else if pred == MATH_LESS_THAN {
-        exact.map_or(l.value < r.value, Ordering::is_lt)
-    } else if pred == MATH_NOT_GREATER_THAN {
-        exact.map_or(l.value <= r.value, Ordering::is_le)
-    } else if pred == MATH_NOT_LESS_THAN {
-        exact.map_or(l.value >= r.value, Ordering::is_ge)
-    } else if pred == MATH_EQUAL_TO {
-        exact.map_or((l.value - r.value).abs() <= f64::EPSILON, Ordering::is_eq)
-    } else if pred == MATH_NOT_EQUAL_TO {
-        exact.map_or((l.value - r.value).abs() > f64::EPSILON, Ordering::is_ne)
-    } else {
-        false
-    };
-    if ok {
-        vec![bindings.clone()]
-    } else {
-        Vec::new()
-    }
-}
-
-/// The six math: comparisons over an already-computed ordering.
-fn compare_ordered(
-    pred: &str,
-    ord: Option<std::cmp::Ordering>,
-    bindings: &Bindings,
-) -> Vec<Bindings> {
-    use std::cmp::Ordering::*;
-    let Some(ord) = ord else {
-        return Vec::new();
-    };
-    let ok = if pred == MATH_GREATER_THAN {
-        ord == Greater
-    } else if pred == MATH_LESS_THAN {
-        ord == Less
-    } else if pred == MATH_NOT_GREATER_THAN {
-        ord != Greater
-    } else if pred == MATH_NOT_LESS_THAN {
-        ord != Less
-    } else if pred == MATH_EQUAL_TO {
-        ord == Equal
-    } else if pred == MATH_NOT_EQUAL_TO {
-        ord != Equal
-    } else {
-        false
-    };
-    if ok {
-        vec![bindings.clone()]
-    } else {
-        Vec::new()
-    }
-}
-
-const XSD_DATE: &str = "http://www.w3.org/2001/XMLSchema#date";
-const XSD_DATE_TIME: &str = "http://www.w3.org/2001/XMLSchema#dateTime";
-const XSD_DURATION: &str = "http://www.w3.org/2001/XMLSchema#duration";
-
-fn typed_literal(value: String, datatype: &str) -> Term {
-    Term::Literal(Literal {
-        value: value.into(),
-        datatype: Some(datatype.into()),
-        language: None,
-    })
-}
-
-fn comparable_number(term: &Term) -> Option<Numeric> {
-    numeric_value(term).or_else(|| {
-        duration_seconds(term).map(|value| Numeric {
-            value,
-            integer: false,
-            exact: None,
-        })
-    })
-}
-
-fn duration_seconds(term: &Term) -> Option<f64> {
-    let Term::Literal(lit) = term else {
-        return None;
-    };
-    if lit.datatype.as_deref() != Some(XSD_DURATION) {
-        return None;
-    }
-    static DURATION_RE: std::sync::OnceLock<Option<Regex>> = std::sync::OnceLock::new();
-    let re = DURATION_RE
-        .get_or_init(|| Regex::new(r"^(-)?P(?:(\d+(?:\.\d+)?)Y)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)D)?(?:T(?:(\d+(?:\.\d+)?)H)?(?:(\d+(?:\.\d+)?)M)?(?:(\d+(?:\.\d+)?)S)?)?$").ok())
-        .as_ref()?;
-    let captures = re.captures(&lit.value)?;
-    let n = |i| {
-        captures
-            .get(i)
-            .map_or(Some(0.0), |m| m.as_str().parse().ok())
-    };
-    // XML Schema year/month durations have no fixed length. Eyeling's age
-    // comparisons use the conventional Gregorian averages below.
-    let seconds = n(2)? * 31_556_952.0
-        + n(3)? * 2_629_746.0
-        + n(4)? * 86_400.0
-        + n(5)? * 3_600.0
-        + n(6)? * 60.0
-        + n(7)?;
-    Some(if captures.get(1).is_some() {
-        -seconds
-    } else {
-        seconds
-    })
-}
-
-fn datetime_seconds(term: &Term) -> Option<f64> {
-    let Term::Literal(lit) = term else {
-        return None;
-    };
-    if !matches!(lit.datatype.as_deref(), Some(XSD_DATE | XSD_DATE_TIME)) {
-        return None;
-    }
-    static DATETIME_RE: std::sync::OnceLock<Option<Regex>> = std::sync::OnceLock::new();
-    let re = DATETIME_RE
-        .get_or_init(|| Regex::new(r"^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})?)?(Z|[+-]\d{2}:\d{2})?$").ok())
-        .as_ref()?;
-    let c = re.captures(&lit.value)?;
-    let get = |i| c.get(i).and_then(|m| m.as_str().parse::<i64>().ok());
-    let (year, month, day) = (get(1)? as i32, get(2)? as u32, get(3)? as u32);
-    let (hour, minute, second) = (
-        get(4).unwrap_or(0),
-        get(5).unwrap_or(0),
-        get(6).unwrap_or(0),
-    );
-    let fraction = c
-        .get(7)
-        .and_then(|m| format!("0.{}", m.as_str()).parse::<f64>().ok())
-        .unwrap_or(0.0);
-    let tz = c
-        .get(8)
-        .or_else(|| c.get(9))
-        .map(|m| m.as_str())
-        .unwrap_or("Z");
-    let offset = if tz == "Z" {
-        0
-    } else {
-        let sign = if &tz[0..1] == "-" { -1 } else { 1 };
-        sign * (tz[1..3].parse::<i64>().ok()? * 3600 + tz[4..6].parse::<i64>().ok()? * 60)
-    };
-    Some(
-        (days_from_civil(year, month, day) * 86_400 + hour * 3600 + minute * 60 + second - offset)
-            as f64
-            + fraction,
-    )
-}
-
-fn days_from_civil(year: i32, month: u32, day: u32) -> i64 {
-    let y = i64::from(year) - i64::from(month <= 2);
-    let era = if y >= 0 { y } else { y - 399 } / 400;
-    let yoe = y - era * 400;
-    let m = i64::from(month);
-    let doy = (153 * (m + if m > 2 { -3 } else { 9 }) + 2) / 5 + i64::from(day) - 1;
-    era * 146_097 + yoe * 365 + yoe / 4 - yoe / 100 + doy - 719_468
-}
-
-fn civil_from_days(days: i64) -> (i32, u32, u32) {
-    let z = days + 719_468;
-    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
-    let doe = z - era * 146_097;
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let mut y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = mp + if mp < 10 { 3 } else { -9 };
-    y += i64::from(m <= 2);
-    (y as i32, m as u32, d as u32)
-}
-
-fn format_datetime_utc(seconds: i64, millis: u32) -> String {
-    let days = seconds.div_euclid(86_400);
-    let sod = seconds.rem_euclid(86_400);
-    let (year, month, day) = civil_from_days(days);
-    format!(
-        "{year:04}-{month:02}-{day:02}T{:02}:{:02}:{:02}.{millis:03}+00:00",
-        sod / 3600,
-        sod % 3600 / 60,
-        sod % 60
-    )
-}
-
-/// The current wall-clock time as `(unix seconds, milliseconds)`. `SystemTime::now()`
-/// panics unconditionally on `wasm32-unknown-unknown` (there is no clock
-/// syscall without a JS bridge), so the wasm32 build instead calls through
-/// to JS's `Date.now()`.
-#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
-pub(crate) fn current_unix_time() -> Option<(i64, u32)> {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).ok()?;
-    Some((now.as_secs() as i64, now.subsec_millis()))
-}
-
-#[cfg(all(target_arch = "wasm32", target_os = "unknown"))]
-pub(crate) fn current_unix_time() -> Option<(i64, u32)> {
-    let millis = javascript_date_now();
-    if !millis.is_finite() || millis < 0.0 {
-        return None;
-    }
-    let whole = millis.floor() as u64;
-    Some(((whole / 1000) as i64, (whole % 1000) as u32))
-}
-
-fn format_duration_seconds(seconds: f64) -> String {
-    let sign = if seconds < 0.0 { "-" } else { "" };
-    format!("{sign}PT{}S", trim_float(seconds.abs()))
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct Numeric {
-    pub(crate) value: f64,
-    pub(crate) integer: bool,
-    /// The exact value, for an `xsd:integer` whose lexical form really is
-    /// one.  An integer literal already carries its value exactly; rounding
-    /// it into `value` is a loss past 2^53, and formatting that `f64` back
-    /// out is a guess.  Operations closed over the integers use this, and
-    /// everything else uses `value`.
-    pub(crate) exact: Option<BigInt>,
-}
-
-pub(crate) fn numeric_value(term: &Term) -> Option<Numeric> {
-    match term {
-        Term::Literal(lit) => numeric_literal_value(lit),
-        _ => None,
-    }
-}
-
-fn numeric_literal_value(lit: &Literal) -> Option<Numeric> {
-    {
-        {
-            let dt = lit.datatype.as_deref();
-            let is_integer = matches!(dt, Some("http://www.w3.org/2001/XMLSchema#integer"));
-            let is_numeric = matches!(
-                dt,
-                Some("http://www.w3.org/2001/XMLSchema#integer")
-                    | Some("http://www.w3.org/2001/XMLSchema#decimal")
-                    | Some("http://www.w3.org/2001/XMLSchema#double")
-                    | Some("http://www.w3.org/2001/XMLSchema#float")
-            );
-            if !is_numeric {
-                return None;
-            }
-            let exact = if is_integer && lit.value.len() <= MAX_EXACT_LITERAL_CHARS {
-                lit.value.parse::<BigInt>().ok()
-            } else {
-                None
-            };
-            parse_numeric_lexical(&lit.value).map(|value| Numeric {
-                value,
-                integer: is_integer,
-                exact,
-            })
-        }
-    }
-}
-
-/// The one lexical form a number is indexed under. `0.0` and
-/// `"0"^^xsd:decimal` are the same number, and the matcher treats them as
-/// equal, so an index that keys on the written form has to fold them
-/// together or it will simply fail to find the fact.
-fn canonical_numeric_lexical(lit: &Literal) -> Option<String> {
-    let numeric = numeric_literal_value(lit)?;
-    Some(match &numeric.exact {
-        Some(exact) => exact.to_string(),
-        None => trim_float(numeric.value),
-    })
-}
-
-/// A term as an index keys it: the term itself, unless it spells a number
-/// some other way than `canonical_numeric_lexical` would.
-fn index_form(term: &Term) -> std::borrow::Cow<'_, Term> {
-    use std::borrow::Cow;
-    match term {
-        Term::Literal(lit) => match canonical_numeric_lexical(lit) {
-            Some(value) if value != lit.value => Cow::Owned(Term::Literal(Literal {
-                value: value.into(),
-                ..lit.clone()
-            })),
-            _ => Cow::Borrowed(term),
-        },
-        Term::List(items) => {
-            let mut canonical: Option<Vec<Term>> = None;
-            for (idx, item) in items.iter().enumerate() {
-                if let Cow::Owned(owned) = index_form(item) {
-                    canonical.get_or_insert_with(|| items.clone())[idx] = owned;
-                }
-            }
-            match canonical {
-                Some(items) => Cow::Owned(Term::List(items)),
-                None => Cow::Borrowed(term),
-            }
-        }
-        _ => Cow::Borrowed(term),
-    }
-}
-
-/// Largest exact power this will materialise, in bits.  Eyeling caps the
-/// same operation at two million; Ackermann(4, 2) needs about 65,536.
-const MAX_EXACT_POWER_BITS: u64 = 2_000_000;
-
-pub(crate) fn integer_literal(value: BigInt) -> Term {
-    Term::Literal(Literal {
-        value: value.to_string().into(),
-        datatype: Some(
-            "http://www.w3.org/2001/XMLSchema#integer"
-                .to_string()
-                .into(),
-        ),
-        language: None,
-    })
-}
-
-/// The exact values of `items`, when every one of them has one.
-fn all_exact(items: &[Numeric]) -> Option<Vec<&BigInt>> {
-    items.iter().map(|item| item.exact.as_ref()).collect()
-}
-
-/// `base ** exponent` exactly, when both are integers, the exponent is not
-/// negative, and the result is small enough to be worth materialising.
-fn exact_power(base: &Numeric, exponent: &Numeric) -> Option<Term> {
-    use num_traits::ToPrimitive;
-    let base = base.exact.as_ref()?;
-    let exponent = exponent.exact.as_ref()?.to_u32()?;
-    // |base|^exponent has at most bits(base) * exponent bits.
-    let bits = base.bits().checked_mul(u64::from(exponent))?;
-    if bits > MAX_EXACT_POWER_BITS {
-        return None;
-    }
-    Some(integer_literal(base.pow(exponent)))
-}
-
-pub(crate) fn numeric_literal(value: f64, prefer_integer: bool) -> Term {
-    if prefer_integer && value.fract() == 0.0 {
-        return Term::Literal(Literal {
-            value: format!("{:.0}", value).into(),
-            datatype: Some(
-                "http://www.w3.org/2001/XMLSchema#integer"
-                    .to_string()
-                    .into(),
-            ),
-            language: None,
-        });
-    }
-    // `xsd:decimal` has no exponential lexical form, so a magnitude that only
-    // writes as one is an `xsd:double`.
-    let value = trim_float(value);
-    let datatype = if value.contains('e') {
-        "http://www.w3.org/2001/XMLSchema#double"
-    } else {
-        "http://www.w3.org/2001/XMLSchema#decimal"
-    };
-    Term::Literal(Literal {
-        value: value.into(),
-        datatype: Some(datatype.into()),
-        language: None,
-    })
-}
-
-fn numeric_terms_equal(a: &Term, b: &Term) -> bool {
-    match (numeric_value(a), numeric_value(b)) {
-        (Some(x), Some(y)) => {
-            if let (Some(p), Some(q)) = (x.exact.as_ref(), y.exact.as_ref()) {
-                p == q
-            } else if x.value.is_nan() || y.value.is_nan() {
-                x.value.is_nan() && y.value.is_nan()
-            } else if x.value.is_infinite() || y.value.is_infinite() {
-                x.value == y.value
-            } else {
-                (x.value - y.value).abs() <= f64::EPSILON
-            }
-        }
-        _ => false,
-    }
-}
-
-pub(crate) fn terms_equal_semantic(a: &Term, b: &Term) -> bool {
-    match (a, b) {
-        (Term::Literal(x), Term::Literal(y)) => literals_equal_semantic(x, y),
-        (Term::List(xs), Term::List(ys)) if xs.len() == ys.len() => xs
-            .iter()
-            .zip(ys.iter())
-            .all(|(x, y)| terms_equal_semantic(x, y)),
-        (Term::List(xs), Term::Iri(iri)) | (Term::Iri(iri), Term::List(xs)) => {
-            xs.is_empty() && iri == RDF_NIL
-        }
-        (Term::Formula(xs), Term::Formula(ys)) if xs.len() == ys.len() => {
-            let mut b = BTreeMap::new();
-            unify_formula_unordered(xs, ys, &mut b)
-        }
-        _ => a == b,
-    }
-}
-
-fn literals_equal_semantic(a: &Literal, b: &Literal) -> bool {
-    let ta = Term::Literal(a.clone());
-    let tb = Term::Literal(b.clone());
-    if numeric_value(&ta).is_some() && numeric_value(&tb).is_some() {
-        return a.datatype == b.datatype && numeric_terms_equal(&ta, &tb);
-    }
-    if a.language != b.language {
-        return false;
-    }
-    let adt = a.datatype.as_deref();
-    let bdt = b.datatype.as_deref();
-    let a_string = adt.is_none() || adt == Some(XSD_STRING_IRI);
-    let b_string = bdt.is_none() || bdt == Some(XSD_STRING_IRI);
-    if a_string && b_string {
-        return a.value == b.value;
-    }
-    a == b
-}
-
-fn unify_formula_unordered(left: &[Triple], right: &[Triple], bindings: &mut Bindings) -> bool {
-    if left.len() != right.len() {
-        return false;
-    }
-    fn go(
-        left: &[Triple],
-        right: &[Triple],
-        used: &mut Vec<bool>,
-        idx: usize,
-        bindings: &mut Bindings,
-    ) -> bool {
-        if idx == left.len() {
-            return true;
-        }
-        for r_idx in 0..right.len() {
-            if used[r_idx] {
-                continue;
-            }
-            let mut local = bindings.clone();
-            if unify_triple_formula(&left[idx], &right[r_idx], &mut local) {
-                used[r_idx] = true;
-                if go(left, right, used, idx + 1, &mut local) {
-                    *bindings = local;
-                    return true;
-                }
-                used[r_idx] = false;
-            }
-        }
-        false
-    }
-    go(left, right, &mut vec![false; right.len()], 0, bindings)
-}
-
-fn unify_triple_formula(left: &Triple, right: &Triple, bindings: &mut Bindings) -> bool {
-    unify_term_formula(&left.s, &right.s, bindings)
-        && unify_term_formula(&left.p, &right.p, bindings)
-        && unify_term_formula(&left.o, &right.o, bindings)
-}
-
-fn unify_term_formula(left: &Term, right: &Term, bindings: &mut Bindings) -> bool {
-    // A blank node that is literally present in the pattern formula is an
-    // alpha variable.  But if a variable inside the formula has already been
-    // bound to a graph blank node, that blank is a concrete value and must not
-    // be reinterpreted as an alpha variable.  This distinction is required by
-    // the static log/implies variable-failure tests.
-    if let Term::Blank(name) = left {
-        let r = resolve(right, bindings);
-        return bind_one_mut(bindings, &format!("__formula_left_blank_{}", name), r);
-    }
-
-    let l = resolve(left, bindings);
-    let r = resolve(right, bindings);
-    match (&l, &r) {
-        (Term::Var(a), _) => bind_one_mut(bindings, a, r.clone()),
-        (_, Term::Var(b)) => bind_one_mut(bindings, b, l.clone()),
-        (Term::List(xs), Term::List(ys)) if xs.len() == ys.len() => xs
-            .iter()
-            .zip(ys.iter())
-            .all(|(x, y)| unify_term_formula(x, y, bindings)),
-        (Term::Formula(xs), Term::Formula(ys)) if xs.len() == ys.len() => {
-            unify_formula_unordered(xs, ys, bindings)
-        }
-        (Term::Blank(a), Term::Blank(b)) => a == b,
-        _ => terms_equal_semantic(&l, &r),
-    }
-}
-
-fn resolve_triple(t: &Triple, bindings: &Bindings) -> Triple {
+pub(crate) fn resolve_triple(t: &Triple, bindings: &Bindings) -> Triple {
     Triple::new(
         resolve(&t.s, bindings),
         resolve(&t.p, bindings),
@@ -7560,7 +3728,7 @@ fn resolve_triple(t: &Triple, bindings: &Bindings) -> Triple {
     )
 }
 
-fn resolve_pattern_triple(t: &Triple, bindings: &Bindings) -> Triple {
+pub(crate) fn resolve_pattern_triple(t: &Triple, bindings: &Bindings) -> Triple {
     Triple::new(
         resolve_pattern(&t.s, bindings),
         resolve_pattern(&t.p, bindings),
@@ -7570,7 +3738,7 @@ fn resolve_pattern_triple(t: &Triple, bindings: &Bindings) -> Triple {
 
 /// Owned variant: values with no variable anywhere resolve to themselves, so
 /// the map can be returned as-is instead of being rebuilt entry by entry.
-fn canonicalize_owned(bindings: Bindings) -> Bindings {
+pub(crate) fn canonicalize_owned(bindings: Bindings) -> Bindings {
     if bindings.values().all(Term::is_ground) {
         bindings
     } else {
@@ -7578,7 +3746,7 @@ fn canonicalize_owned(bindings: Bindings) -> Bindings {
     }
 }
 
-fn canonicalize_bindings(bindings: &Bindings) -> Bindings {
+pub(crate) fn canonicalize_bindings(bindings: &Bindings) -> Bindings {
     bindings
         .iter()
         .map(|(k, v)| (k.clone(), resolve(v, bindings)))
@@ -7597,7 +3765,7 @@ pub(crate) fn instantiate_triple(
     ))
 }
 
-fn instantiate_term(
+pub(crate) fn instantiate_term(
     term: &Term,
     bindings: &Bindings,
     blank_map: &mut BTreeMap<Name, Term>,
@@ -7637,7 +3805,7 @@ fn instantiate_term(
     }
 }
 
-fn instantiate_formula_triple(
+pub(crate) fn instantiate_formula_triple(
     t: &Triple,
     bindings: &Bindings,
     blank_map: &mut BTreeMap<Name, Term>,
@@ -7650,7 +3818,7 @@ fn instantiate_formula_triple(
     )
 }
 
-fn instantiate_formula_term(
+pub(crate) fn instantiate_formula_term(
     term: &Term,
     bindings: &Bindings,
     blank_map: &mut BTreeMap<Name, Term>,
@@ -7691,135 +3859,13 @@ fn instantiate_formula_term(
     }
 }
 
-fn stable_formula_suffix(bindings: &Bindings, triples: &[Triple]) -> String {
-    let mut h = 1469598103934665603u64;
-    for (k, v) in bindings {
-        // Body blank nodes are local pattern variables.  Their concrete source
-        // blank-node identity must not make existential head blanks distinct:
-        // if two supports bind the same ordinary variables, they represent the
-        // same generated existential for this forward-chaining closure.  This
-        // is especially important for state-machine examples such as
-        // dining-philosophers.n3, where otherwise semantically duplicate
-        // ForkState nodes can cascade into an exponential number of fresh
-        // states.  Ordinary variables are still part of the suffix below.
-        if k.starts_with("_:") {
-            continue;
-        }
-        for b in k.as_bytes() {
-            h ^= u64::from(*b);
-            h = h.wrapping_mul(1099511628211);
-        }
-        for b in format!("{:?}", resolve(v, bindings)).as_bytes() {
-            h ^= u64::from(*b);
-            h = h.wrapping_mul(1099511628211);
-        }
-    }
-    for t in triples {
-        for b in format!("{:?}", t).as_bytes() {
-            h ^= u64::from(*b);
-            h = h.wrapping_mul(1099511628211);
-        }
-    }
-    format!("{:x}", h)
-}
-
-fn stable_binding_suffix(bindings: &Bindings) -> String {
-    // Deterministic, compact suffix. It only needs to be unique enough within a
-    // single run for existential blank nodes introduced by rule heads.
-    let mut h = 1469598103934665603u64;
-    for (k, v) in bindings {
-        // Ignore local blank-node pattern bindings when deriving the stable
-        // identity for existential blanks in rule heads.  These bindings name
-        // the *supporting* blank nodes matched in the body; including them here
-        // makes repeated equivalent supports create fresh, different head
-        // blanks and can make monotonic state updates blow up.
-        if k.starts_with("_:") {
-            continue;
-        }
-        for b in k.as_bytes() {
-            h ^= u64::from(*b);
-            h = h.wrapping_mul(1099511628211);
-        }
-        let rendered = format!("{:?}", resolve(v, bindings));
-        for b in rendered.as_bytes() {
-            h ^= u64::from(*b);
-            h = h.wrapping_mul(1099511628211);
-        }
-    }
-    format!("{:x}", h)
-}
-
 /// A computed number's lexical form, the way ECMA-262 defines `String(n)`:
 /// the shortest digits that read back as the same `f64`, written positionally
 /// while the decimal point sits within (-6, 21] of the first digit, and in
 /// exponential form outside that. Eyeling is JavaScript and prints its
 /// numbers this way, so this is what the two engines have to agree on:
 /// `1e-20`, not `0.00000000000000000001`, and `3`, not `3.0`.
-fn trim_float(value: f64) -> String {
-    if value.is_nan() {
-        return "NaN".to_string();
-    }
-    if value.is_infinite() {
-        return if value.is_sign_negative() {
-            "-INF"
-        } else {
-            "INF"
-        }
-        .to_string();
-    }
-    if value == 0.0 {
-        return "0".to_string();
-    }
-
-    // `{:e}` gives the same shortest round-trip digits, already split into a
-    // mantissa and a power of ten.
-    let exponential = format!("{:e}", value.abs());
-    let (mantissa, exponent) = exponential
-        .split_once('e')
-        .expect("{:e} writes an exponent");
-    let exponent: i32 = exponent.parse().expect("{:e} writes an integer exponent");
-    let digits: String = mantissa.chars().filter(|c| *c != '.').collect();
-    let count = digits.len() as i32;
-    // `value` is `0.<digits> * 10^point`: where the decimal point falls.
-    let point = exponent + 1;
-
-    let body = if point >= count && point <= 21 {
-        format!("{digits}{}", "0".repeat((point - count) as usize))
-    } else if point > 0 && point <= 21 {
-        format!(
-            "{}.{}",
-            &digits[..point as usize],
-            &digits[point as usize..]
-        )
-    } else if point > -6 && point <= 0 {
-        format!("0.{}{digits}", "0".repeat((-point) as usize))
-    } else {
-        let tail = if count == 1 {
-            String::new()
-        } else {
-            format!(".{}", &digits[1..])
-        };
-        let sign = if point > 1 { "+" } else { "-" };
-        format!("{}{tail}e{sign}{}", &digits[..1], (point - 1).abs())
-    };
-
-    if value.is_sign_negative() {
-        format!("-{body}")
-    } else {
-        body
-    }
-}
-
-fn parse_numeric_lexical(value: &str) -> Option<f64> {
-    match value {
-        "INF" | "+INF" => Some(f64::INFINITY),
-        "-INF" => Some(f64::NEG_INFINITY),
-        "NaN" => Some(f64::NAN),
-        other => other.parse::<f64>().ok(),
-    }
-}
-
-fn bind_one(bindings: &Bindings, name: &str, value: Term) -> Option<Bindings> {
+pub(crate) fn bind_one(bindings: &Bindings, name: &str, value: Term) -> Option<Bindings> {
     let mut b = bindings.clone();
     if bind_one_mut(&mut b, name, value) {
         Some(b)
@@ -7828,7 +3874,7 @@ fn bind_one(bindings: &Bindings, name: &str, value: Term) -> Option<Bindings> {
     }
 }
 
-fn bind_one_mut(bindings: &mut Bindings, name: &str, value: Term) -> bool {
+pub(crate) fn bind_one_mut(bindings: &mut Bindings, name: &str, value: Term) -> bool {
     let value = resolve(&value, bindings);
 
     if let Some(existing) = bindings.get(name).cloned() {
@@ -7846,11 +3892,11 @@ fn bind_one_mut(bindings: &mut Bindings, name: &str, value: Term) -> bool {
     true
 }
 
-fn occurs_in(name: &str, term: &Term, bindings: &Bindings) -> bool {
+pub(crate) fn occurs_in(name: &str, term: &Term, bindings: &Bindings) -> bool {
     occurs_in_with_seen(name, term, bindings, &mut HashSet::new())
 }
 
-fn occurs_in_with_seen(
+pub(crate) fn occurs_in_with_seen(
     name: &str,
     term: &Term,
     bindings: &Bindings,
@@ -7882,14 +3928,18 @@ fn occurs_in_with_seen(
     }
 }
 
-fn resolve(term: &Term, bindings: &Bindings) -> Term {
+pub(crate) fn resolve(term: &Term, bindings: &Bindings) -> Term {
     if !term_has_var(term) {
         return term.clone();
     }
     resolve_with_seen(term, bindings, &mut HashSet::new())
 }
 
-fn resolve_with_seen(term: &Term, bindings: &Bindings, seen: &mut HashSet<Name>) -> Term {
+pub(crate) fn resolve_with_seen(
+    term: &Term,
+    bindings: &Bindings,
+    seen: &mut HashSet<Name>,
+) -> Term {
     match term {
         Term::Var(name) => {
             if !seen.insert(name.clone()) {

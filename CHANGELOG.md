@@ -18,10 +18,11 @@ compiler, parameterized MERGE), typed refusal register, and receipt-hash pinning
   `b6013f7aa2`) into `ggen/sql-dialect/sql_statement_kinds.rs`, generated via
   `ggen sync run` from `ontology/statements.ttl` and included by `src/sql_statement_kinds.rs`.
 - Section 4 SHACL admission of the SQL AST: strict closed-world shape validation including
-  required integer `sql:statementIndex` per statement (`src/sql_ast.rs:1406`).
+  required integer `sql:statementIndex` per statement (SHACL violation table anchored at the
+  `sql:statementIndex` messages in `src/sql_ast.rs`, `validate_ast_shacl` at `src/sql_ast.rs:1031`).
 - Expression-level compiler covering 29 command classes (`src/sql_ast.rs`).
 - Section 7.1 parameterized `MERGE INTO` extraction (`extract_merge_statement`,
-  `src/sql_ast.rs:1234`).
+  `src/sql_ast.rs:952`).
 - Scope lattice (`ProcessScope`/`ViewScope`) with `REFUSAL-03 ScopeIntegrityRefusal`
   (aggregate in WHERE/JOIN/GROUP BY, scope column in wrong position).
 - Typed refusal register `REFUSAL-01..04` (`docs/refusals.md`): malformed-AST,
@@ -29,28 +30,78 @@ compiler, parameterized MERGE), typed refusal register, and receipt-hash pinning
 - `H_query = BLAKE3(Canon(G_AST) || P_params)` admitted-statement receipts with
   canon-once carry (`src/duckdb_eval.rs`).
 - Courts: SQL-in-RDF laundering corpus (`tests/sql_rdf_laundering_corpus.rs`), conformance
-  rung (`tests/sql_rdf_conformance.rs`), determinism court (`tests/p28_determinism_court.rs`).
+  rung (`tests/sql_rdf_conformance.rs`), determinism court (`tests/p28_determinism_court.rs`),
+  WASI vendored-patch guard (`tests/wasi_patch_guard.rs` — a live test under feature
+  `wasi-patched-deps` verifying the vendored `purrdf-sparql-eval` gates its clock on
+  `target_os = "unknown"`, typed flunk on absence), and a `graphlaw-verify --help`
+  surface court (`tests/verify_cli.rs` — exit 0 + documents `--trusted-key`, negative
+  twin: unknown flag exits 2).
+- Refusal message ergonomics (lane L85/T4): every register code triggered FOR REAL with
+  captured user-visible messages (`examples/refusal_probe.rs`, 13/13 MATCH), symptom →
+  message → cause → fix playbook at `docs/refusal-playbook.md`, and a re-audit of all
+  register file anchors (receipt: `docs/jira/v26.10.22/designs/t4-refusal-reaudit.md`).
 
 ### Changed
 
-- `frozen-duckdb` pinned to crates.io 2.0.0 with registry checksums (`Cargo.lock` 2.0.0).
-- `LICENSE-P28-SIL.md` added (P28 Sovereign Invariant License governing execution/use;
-  MIT remains the code license).
+- Pure-data typed refusals (P29-RFL / SQLRDF-18 switchover): `AstError` is
+  `{ code: RefusalCode, ctx: RefusalContext }` (`#[repr(C)] Copy`, 64 B, no heap;
+  Display renders from a const code-to-template table), living in the decomposed
+  `src/sql_ast/` module (`ast.rs`, `refusals.rs`, `serializer.rs`;
+  `src/sql_ast.rs` re-exports via `pub use refusals::*`). Legacy stringly
+  compiler errors and the SQLRDF-17 legacy receipt-hash/raw-SQL arms are deleted —
+  receipts key on `H_query` only, and the ABI duckdb op refuses legacy `ast.text`
+  with a typed refusal pointing at `compile_turtle`/`ast.turtle`
+  (`src/duckdb_op.rs`). Per P29-RFL (`docs/jira/v26.10.22/RECEIPTS.md` §6-7).
+- Statement receipt hash is the TC-HOT-01 two-node form
+  `H_query = BLAKE3(h_ast || P_params)` (equivalently
+  `BLAKE3(Canon(G_AST) || P_params)` via `purrdf::try_canonicalize`) with
+  canon-once carry (`CompiledQuery.canon_graph_bytes`), witnessed green in
+  `sql_rdf_dialect` + `chicago_validation` including a 5-variant
+  cosmetic-invariance set (`docs/jira/v26.10.22/RECEIPTS.md` SQLRDF-09 row).
+- SPSC evidentiary ring landed: `src/evidence_ring.rs`, `rtrb` behind the optional
+  `evidentiary-ring` feature (default-off), never-block property fence (dev ratio leg
+  + release absolute leg, 1.584 µs witnessed < 10 µs) and ring-to-ledger joint court
+  (max push 292 ns; drop gaps persisted exactly); restart watermark persists crash
+  loss as gap markers, never silent renumbering (RECEIPTS.md §8-9).
+- Query ledger (`src/query_ledger.rs`), epoch-bounded cache store
+  (`src/query_cache.rs`), LRU-256 prepared-statement seam with `$N`-bound
+  parameters (RECEIPTS.md §8).
+- `frozen-duckdb` resolved from the crates.io 2.0 registry source with checksum
+  (`version = "2.0.2"`; the `[patch]` redirect to a local checkout is gone). The
+  `wasm32-wasip1` link is green under `WASI_SDK_PATH`; the vendored
+  `purrdf-sparql-eval` WASI clock patch is now guarded by
+  `tests/wasi_patch_guard.rs` (feature `wasi-patched-deps`).
+- Licensing consolidated: `LICENSE` (MIT) and `LICENSE-P28-SIL.md` are replaced by
+  a single `LICENSE.md` carrying the P28 Sovereign Invariant License
+  (`urn:graphlaw:license:p28-sil:v2.1.0-sovereign`).
+- WASM artifact stays pinned at `332ea218…2c30c` (6,793,617 B). The wasm32-wasip1
+  link of the current tree is witnessed (2026-10-22; lane byte count in
+  `docs/WASM.md`). That witness is not a re-pin; a pin change belongs with a
+  graphlaw version bump (RECEIPTS.md Successor §2).
 
 ## [26.10.21] - 2026-10-21
 
-Wave release: Unconditional `frozen-duckdb 2.0` integration, zero-trust semantic compaction, and life-sciences cold-chain OCEL verification.
+Wave release: Unconditional `frozen-duckdb 2.0` integration, zero-trust semantic compaction, and
+  life-sciences cold-chain OCEL verification.
 
 ### Added
 
-- Embedded `frozen-duckdb 2.0` unconditionally into GraphLaw as the third admitted upstream engine (no optional feature gate).
-- Declarative SQL-in-RDF compiler (`src/sql_ast.rs`) supporting projection, aggregations (`COUNT`, `SUM`, `AVG`, `MIN`, `MAX`), joins (`sql:joinClause`), and parameters.
-- Fail-closed SHACL pre-flight gate (`validate_ast_shacl`) preventing SQL injection, verifying token safety, and refusing queries missing bounded `WHERE` clauses.
-- Vectorized query evaluator (`src/duckdb_eval.rs`) with direct `ValueRef` variant inspection into typed RDF literals, Hive partition scanning, and Parquet view registration.
-- Deductive rule built-in `builtin_eval_sql` bridging columnar analytical executions into PurRDF / N3 deduction state.
-- Regulated life-sciences cold-chain biologics verification case study (`ontologies/biopharma-ocel.ttl`, `examples/cold_chain_biologics_verification.rs`).
-- Zero-trust edge compaction test suite (`tests/test_edge_sovereign_ingestion.rs`): 10,000:1 semantic reduction and offline fail-closed actuator lockout.
-- Diataxis documentation: `docs/how-to/how-to-edge-ingestion-and-compaction.md` and `docs/explanation/edge-sovereignty-and-zero-trust-compaction.md`.
+- Embedded `frozen-duckdb 2.0` unconditionally into GraphLaw as the third admitted upstream engine
+-   (no optional feature gate).
+- Declarative SQL-in-RDF compiler (`src/sql_ast.rs`) supporting projection, aggregations (`COUNT`,
+-   `SUM`, `AVG`, `MIN`, `MAX`), joins (`sql:joinClause`), and parameters.
+- Fail-closed SHACL pre-flight gate (`validate_ast_shacl`) preventing SQL injection, verifying token
+-   safety, and refusing queries missing bounded `WHERE` clauses.
+- Vectorized query evaluator (`src/duckdb_eval.rs`) with direct `ValueRef` variant inspection into
+-   typed RDF literals, Hive partition scanning, and Parquet view registration.
+- Deductive rule built-in `builtin_eval_sql` bridging columnar analytical executions into PurRDF /
+-   N3 deduction state.
+- Regulated life-sciences cold-chain biologics verification case study
+-   (`ontologies/biopharma-ocel.ttl`, `examples/cold_chain_biologics_verification.rs`).
+- Zero-trust edge compaction test suite (`tests/test_edge_sovereign_ingestion.rs`): 10,000:1
+-   semantic reduction and offline fail-closed actuator lockout.
+- Diataxis documentation: `docs/how-to/how-to-edge-ingestion-and-compaction.md` and
+-   `docs/explanation/edge-sovereignty-and-zero-trust-compaction.md`.
 
 ## [26.10.20] - 2026-10-20
 
@@ -102,9 +153,9 @@ the wave that landed it.
   the 26.10.13 source state only, and must be re-pinned with any further artifact
   change.
 
-### Known divergences
+### Changed (known divergences)
 
-- 9 registered W3C divergences, all negative-suite entries the owning engine
+- Registered 9 W3C divergences, all negative-suite entries the owning engine
   (PurRdf) currently accepts: 5 Turtle, 2 N-Triples, 2 N-Quads
   (`KNOWN_DIVERGENCES` / `KNOWN_POSITIVE_DIVERGENCES` in
   `tests/w3c_conformance.rs`). Each is a tracked conformance gap, never a silent
@@ -192,7 +243,8 @@ checkable claims re-verified against live code, tests actually re-run.
 
 ### Added
 
-- doc-hdit scaffolded reference documentation (`docs/reference-generated/{reference,how_to,explanation}.md`,
+- doc-hdit scaffolded reference documentation
+-   (`docs/reference-generated/{reference,how_to,explanation}.md`,
   regen command in its `README.md`), generated from the code surface (`src/` + `crates/`; 94
   modules, 2,097 symbol rows) with `rust-doc-hdit-pack`; re-rendered with backticked identifier
   columns (`10b13bc`, `e1059f1`). Linked from the README API-stability section.
@@ -249,7 +301,8 @@ and the claim corrected here.
   / `ClosureFacts` (`graphlaw-eyeron` 0.7.8); N3 refusals report their real limit and ceiling
   (`n3_iterations`, `n3_derived_facts`, `n3_total_bytes`, `n3_term_bytes`, `n3_match_steps`);
   `plan_total_atoms` caps a plan's cumulative atoms; hooks cap the state at 1,000,000 quads; the
-  wasm module caps outstanding `gl_alloc` bytes at 256 MiB; `N3Error::Limit` gains `limit` and `max`.
+  wasm module caps outstanding `gl_alloc` bytes at 256 MiB; `N3Error::Limit` gains `limit` and
+    `max`.
 - `plan::Action` gains `pre_not`, `plan::Plan` gains `goal_not`, and `LawError::PlanRefused`
   gains `violated_absent`; every in-repo struct literal (tests, examples) was updated with
   `..Default::default()`. Digests of plans without negation are unchanged.

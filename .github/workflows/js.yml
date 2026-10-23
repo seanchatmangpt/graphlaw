@@ -21,8 +21,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Local equivalent: cargo build -p graphlaw-wasm --target wasm32-wasip1
+  # --profile wasm --locked && cargo install b3sum --locked, then in js/npm:
+  # npm ci && npm run build.
   js-build:
-    name: build wasm + js dist
+    name: build wasm artifact + js dist (ABI-surface drift gate)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # RELEASE_HOLD is a release.yml gate; mirrored here so a hold freezes the
@@ -102,6 +105,7 @@ jobs:
             js/npm/dist-bundler/**
             js/npm/wasm/**
 
+  # Local equivalent: cd js/npm && npm ci && npm run typecheck && npm run test.
   js-test-node:
     name: node tests (node ${{ matrix.node }})
     needs: js-build
@@ -127,8 +131,11 @@ jobs:
         working-directory: js/npm
         run: npm run test
 
+  # Local equivalent: cd js/npm && GRAPHLAW_BROWSER_TESTS=1 npm run test:browser
+  # (needs a playwright Chromium; the suite self-skips exit-0 without one —
+  # that skip is by design, not a red state).
   js-test-browser:
-    name: browser tests
+    name: browser tests (playwright Chromium, self-skips without one)
     needs: js-build
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -155,6 +162,7 @@ jobs:
           GRAPHLAW_BROWSER_TESTS: '1'
         run: npm run test:browser
 
+  # Local equivalent: cd js/npm && npm ci && npm run lint:pkg && node scripts/pack-smoke.mjs.
   js-package-lint:
     name: package lint + pack smoke
     needs: js-build
@@ -177,8 +185,12 @@ jobs:
         working-directory: js/npm
         run: node scripts/pack-smoke.mjs
 
+  # Local equivalent: node js/npm/scripts/sync-version.mjs, then rebuild wasm +
+  # repin (node js/npm/scripts/build.mjs) and regen types (npm run gen) —
+  # `git diff --exit-code` after each must be clean. Not an expected-red job;
+  # red means a generated file was hand-edited or a pin is stale.
   js-drift:
-    name: generated + version drift
+    name: generated-code + version drift (regen and diff, must be clean)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     if: vars.RELEASE_HOLD != 'true'

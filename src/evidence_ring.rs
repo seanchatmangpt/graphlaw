@@ -57,12 +57,14 @@ pub struct RingDescriptor {
     pub execution_ms: u32,
     /// Cache-hit flag (0 = computed; set by the later bench-integration lane).
     pub cached: u8,
-    /// MUST be zero (torn-read detector).
-    pub pad1: [u8; 3],
+    /// MUST be zero (torn-read detector). Private: the zero-pad invariant is
+    /// enforced by the kernel, inspected only via
+    /// [`RingDescriptor::with_torn_pad`]. Field order is ABI (repr(C), 64 B).
+    pad1: [u8; 3],
     /// Wall-clock push time in ms since the Unix epoch.
     pub timestamp_ms: u64,
-    /// MUST be zero (torn-read detector).
-    pub pad2: [u8; 8],
+    /// MUST be zero (torn-read detector). Private, same law as `pad1`.
+    pad2: [u8; 8],
 }
 
 const _: () = assert!(std::mem::size_of::<RingDescriptor>() == 64);
@@ -88,8 +90,28 @@ impl RingDescriptor {
     }
 
     /// Torn-read detector: pads must be zero on every lawful descriptor.
+    /// Routes through [`RingDescriptor::with_torn_pad`] — no direct field
+    /// reads outside the accessor.
     pub fn pads_zero(&self) -> bool {
-        self.pad1 == [0; 3] && self.pad2 == [0; 8]
+        self.with_torn_pad(|p1, p2| *p1 == [0; 3] && *p2 == [0; 8])
+    }
+
+    /// The ONLY public route to the torn-read pad bytes (inspection).
+    /// The pad fields themselves are private, so the zero-pad invariant
+    /// cannot be bypassed by literal construction.
+    pub fn with_torn_pad<R>(&self, f: impl FnOnce(&[u8; 3], &[u8; 8]) -> R) -> R {
+        f(&self.pad1, &self.pad2)
+    }
+
+    /// Constructs a torn descriptor by applying `f` to the pad bytes of an
+    /// otherwise-lawful copy of `self`. The pad fields are private, so this
+    /// is the only way to produce a nonzero-pad descriptor — the intended
+    /// caller is the refusal court that proves [`EvidenceRing::push`]
+    /// rejects torn entries.
+    pub fn torn_via(&self, f: impl FnOnce(&mut [u8; 3], &mut [u8; 8])) -> Self {
+        let mut d = *self;
+        f(&mut d.pad1, &mut d.pad2);
+        d
     }
 }
 
@@ -223,6 +245,10 @@ pub struct EvidenceRing {
     /// Last ledger-side error (drainer threads cannot return errors; surfaced
     /// instead of laundered — [`EvidenceRing::last_ledger_error`]).
     ledger_error: Arc<Mutex<Option<String>>>,
+    /// Last NDJSON write-path failure (open or batch write), as the `detail`
+    /// of a typed [`RingError::BrokenChain`] carrying batch identity. The
+    /// on-disk watermark never advances past a failed write (RUST-4 fix).
+    write_error: Arc<Mutex<Option<String>>>,
     drainer: Mutex<Option<std::thread::JoinHandle<()>>>,
 }
 
@@ -286,6 +312,7 @@ impl EvidenceRing {
             paused_flag: Arc::new(AtomicBool::new(false)),
             shutdown_flag: Arc::new(AtomicBool::new(false)),
             ledger_error: Arc::new(Mutex::new(None)),
+            write_error: Arc::new(Mutex::new(None)),
             drainer: Mutex::new(None),
         });
         let consumer = consumer_taken(&ring.consumer);
@@ -293,6 +320,7 @@ impl EvidenceRing {
             let dir = ring.dir.clone();
             let ledger_dir = ring.ledger_dir.clone();
             let ledger_error = Arc::clone(&ring.ledger_error);
+            let write_error = Arc::clone(&ring.write_error);
             let paused = Arc::clone(&ring.paused_flag);
             let shutdown = Arc::clone(&ring.shutdown_flag);
             let seq = Arc::clone(&ring.seq_counter);
@@ -302,8 +330,8 @@ impl EvidenceRing {
                 .name("evidence-drainer".into())
                 .spawn(move || {
                     drain_loop(
-                        consumer, &dir, ledger_dir, &ledger_error, &paused, &shutdown, &seq,
-                        watermark,
+                        consumer, &dir, ledger_dir, &ledger_error, &write_error, &paused,
+                        &shutdown, &seq, watermark,
                     )
                 })?
         };
@@ -313,7 +341,16 @@ impl EvidenceRing {
 
     /// Installs a ring as the process-global ring consumed by the eval seam
     /// in `duckdb_eval.rs`. Explicit, never lazy; refuses a second install.
+    /// Init-once semantics (RUST-4 fix): the installed-check and the I/O-
+    /// performing init are one critical section under [`GLOBAL_INIT`], so two
+    /// racing threads can never BOTH run the init I/O and spawn two drainer
+    /// threads writing one ledger directory — exactly one wins, the loser gets
+    /// a typed [`RingError::AlreadyInitialized`] before any I/O happens.
     pub fn init_global(dir: impl AsRef<Path>) -> Result<(), RingError> {
+        let _guard = global_init_guard();
+        if GLOBAL.get().is_some() {
+            return Err(RingError::AlreadyInitialized);
+        }
         let ring = Self::init(dir)?;
         GLOBAL.set(ring).map_err(|_| RingError::AlreadyInitialized)
     }
@@ -327,6 +364,10 @@ impl EvidenceRing {
         dir: impl AsRef<Path>,
         ledger_dir: impl AsRef<Path>,
     ) -> Result<(), RingError> {
+        let _guard = global_init_guard();
+        if GLOBAL.get().is_some() {
+            return Err(RingError::AlreadyInitialized);
+        }
         let ring = Self::init_with_ledger(dir, ledger_dir)?;
         GLOBAL.set(ring).map_err(|_| RingError::AlreadyInitialized)
     }
@@ -356,6 +397,20 @@ impl EvidenceRing {
             .clone()
     }
 
+    /// Last NDJSON ledger write-path failure (ledger open or batch write),
+    /// typed as [`RingError::BrokenChain`] with the failed batch's sequence
+    /// identity in `detail`. Law (RUST-4): a failed batch write NEVER advances
+    /// the on-disk watermark — the failed batch is disclosed by the closing
+    /// drop line (or the very failure that prevented it), never silently
+    /// lost; `None` = every drained batch is on disk under its chained parent.
+    pub fn last_write_error(&self) -> Option<RingError> {
+        self.write_error
+            .lock()
+            .expect("write error lock poisoned")
+            .as_ref()
+            .map(|detail| RingError::BrokenChain { detail: detail.clone() })
+    }
+
     /// Total pushes attempted (buffered + dropped).
     pub fn pushed_total(&self) -> u64 {
         self.seq_counter.load(Ordering::Relaxed)
@@ -374,8 +429,14 @@ impl EvidenceRing {
     }
 
     /// Pushes one descriptor. NEVER blocks and NEVER spins; returns
-    /// [`PushOutcome::DroppedNewest`] when the ring is full (drop-newest).
+    /// [`PushOutcome::DroppedNewest`] when the ring is full (drop-newest) and
+    /// [`PushOutcome::RefusedTornPad`] (typed refusal, the slot never enters
+    /// the ring and no sequence is minted) when the descriptor's pad bytes
+    /// are nonzero.
     pub fn push(&self, desc: RingDescriptor) -> PushOutcome {
+        if !desc.pads_zero() {
+            return PushOutcome::RefusedTornPad;
+        }
         let seq = self.seq_counter.fetch_add(1, Ordering::Relaxed) + 1;
         let mut guard = self.producer.lock().expect("producer lock poisoned");
         let Some(producer) = guard.as_mut() else {
@@ -423,9 +484,28 @@ pub enum PushOutcome {
     /// Ring full: newest slot refused (drop-newest); the sequence gap is
     /// recorded by the drainer as [`DroppedEvidence`].
     DroppedNewest,
+    /// Typed refusal: the descriptor's pad bytes were nonzero (torn read).
+    /// The slot never enters the ring, no sequence is minted, and nothing is
+    /// written to the ledger — a torn payload is never laundered into
+    /// evidence.
+    RefusedTornPad,
 }
 
 static GLOBAL: OnceLock<Arc<EvidenceRing>> = OnceLock::new();
+
+/// Critical section for the check-then-set in [`EvidenceRing::init_global`]
+/// / [`EvidenceRing::init_global_with_ledger`]: `OnceLock::set` alone is
+/// atomic, but the init that PRODUCES the ring performs I/O (mkdir, drainer
+/// spawn) before the set — without this lock two racers both run that I/O and
+/// the loser's drainer keeps appending to the same ledger. Structural sync,
+/// no sleeps.
+static GLOBAL_INIT: Mutex<()> = Mutex::new(());
+
+fn global_init_guard() -> std::sync::MutexGuard<'static, ()> {
+    // A poisoned guard (a panic while installing) must not wedge the global
+    // surface into permanent refusal: forward the inner guard.
+    GLOBAL_INIT.lock().unwrap_or_else(|p| p.into_inner())
+}
 
 fn consumer_taken(cell: &Mutex<Option<Consumer<EvidenceSlot>>>) -> Consumer<EvidenceSlot> {
     cell.lock()
@@ -453,20 +533,46 @@ fn drop_line(
     )
 }
 
+/// Records the first NDJSON write-path failure (first-wins) as the `detail`
+/// of a typed [`RingError::BrokenChain`], surfacing via
+/// [`EvidenceRing::last_write_error`] — never laundered, never panicked.
+fn record_write_error(slot: &Mutex<Option<String>>, detail: String) {
+    let mut guard = slot.lock().expect("write error lock poisoned");
+    if guard.is_none() {
+        *guard = Some(detail);
+    }
+}
+
+/// One committed batch write: `write_all` + `flush`. Any error is a batch
+/// failure — the caller must treat the on-disk watermark as unchanged.
+fn write_batch(out: &mut BufWriter<std::fs::File>, buf: &str) -> std::io::Result<()> {
+    out.write_all(buf.as_bytes())?;
+    out.flush()
+}
+
 fn drain_loop(
     mut consumer: Consumer<EvidenceSlot>,
     dir: &Path,
     ledger_dir: Option<PathBuf>,
     ledger_error: &Mutex<Option<String>>,
+    write_error: &Mutex<Option<String>>,
     paused: &AtomicBool,
     shutdown: &AtomicBool,
     seq: &AtomicU64,
     producer_attempted: u64,
 ) {
     let path = dir.join("evidence.ndjson");
+    // RUST-4: an unopenable ledger is a typed failure, not a silent no-op
+    // drainer — in-memory counters alone would launder the loss.
     let file = match OpenOptions::new().create(true).append(true).open(&path) {
         Ok(f) => f,
-        Err(_) => return, // ledger unavailable: in-memory counters still record
+        Err(e) => {
+            record_write_error(
+                write_error,
+                format!("ledger open failed (watermark unchanged at 0): {e}"),
+            );
+            return; // in-memory counters still record
+        }
     };
     let mut out = BufWriter::new(file);
     let mut parent = String::from(GENESIS);
@@ -525,6 +631,14 @@ fn drain_loop(
     // Feeding it to open_with_producer as well double-covers the same loss in
     // a second coordinate space (ledger count-space vs ring seq-space).
     let mut expected_seq: u64 = restart_seq;
+    // RUST-4 watermark law: `covered_seq` is the highest sequence whose
+    // coverage line is ON DISK, and `parent`/`committed_parent` track the
+    // speculative vs committed chain head. A failed batch write reverts the
+    // speculative head, never advances the watermark, and surfaces a typed
+    // BrokenChain carrying the failed batch's sequence identity.
+    let mut covered_seq: u64 = restart_seq;
+    let mut committed_parent: String = parent.clone();
+    let mut ndjson_dead = false;
     let mut flushes = 0usize;
     let mut buf = String::new();
     if let Some((d, slot)) = ledger.as_mut() {
@@ -546,8 +660,25 @@ fn drain_loop(
         buf.push_str(&line);
         parent = child;
         expected_seq = producer_attempted;
-        let _ = out.write_all(buf.as_bytes());
-        let _ = out.flush();
+        match write_batch(&mut out, &buf) {
+            Ok(()) => {
+                committed_parent = parent.clone();
+                covered_seq = producer_attempted;
+            }
+            Err(e) => {
+                record_write_error(
+                    write_error,
+                    format!(
+                        "ndjson batch write failed (seqs {}..{}, dropped {}): {e}",
+                        restart_seq + 1,
+                        producer_attempted,
+                        count
+                    ),
+                );
+                parent = committed_parent.clone();
+                ndjson_dead = true;
+            }
+        }
         buf.clear();
     }
 
@@ -561,6 +692,7 @@ fn drain_loop(
             continue;
         }
         let mut drained = 0usize;
+        let mut batch_first_seq: Option<u64> = None;
         buf.clear();
         batch.clear();
         while drained < DRAIN_BATCH {
@@ -591,6 +723,9 @@ fn drain_loop(
                         parent = child;
                     }
                     expected_seq = slot.seq;
+                    if batch_first_seq.is_none() {
+                        batch_first_seq = Some(slot.seq);
+                    }
                     batch.push(crate::query_ledger::Descriptor::from(slot.desc));
                     let (line, child) = encode_line(
                         slot.seq,
@@ -620,11 +755,35 @@ fn drain_loop(
                         Some(e.to_string());
                 }
             }
-            if out.write_all(buf.as_bytes()).is_ok() {
-                let _ = out.flush();
-                flushes += 1;
-                if flushes % FSYNC_EVERY == 0 {
-                    let _ = out.get_ref().sync_data();
+            // RUST-4: a failed batch write NEVER advances the on-disk
+            // watermark. The speculative chain head (`parent`) is committed
+            // only after write+flush succeed; on failure it reverts to
+            // `committed_parent`, the batch's sequence range is surfaced as a
+            // typed BrokenChain, and the drainer stops attempting further
+            // writes (they would chain off a head that is not on disk — the
+            // shutdown drop line below covers the residual loss once, typed).
+            if !ndjson_dead {
+                match write_batch(&mut out, &buf) {
+                    Ok(()) => {
+                        committed_parent = parent.clone();
+                        covered_seq = expected_seq;
+                        flushes += 1;
+                        if flushes % FSYNC_EVERY == 0 {
+                            let _ = out.get_ref().sync_data();
+                        }
+                    }
+                    Err(e) => {
+                        record_write_error(
+                            write_error,
+                            format!(
+                                "ndjson batch write failed (seqs {}..{}): {e}",
+                                batch_first_seq.unwrap_or(expected_seq),
+                                expected_seq
+                            ),
+                        );
+                        parent = committed_parent.clone();
+                        ndjson_dead = true;
+                    }
                 }
             }
         } else if stopping {
@@ -634,19 +793,32 @@ fn drain_loop(
         }
     }
 
-    // Finalize: trailing drops (refused after the last drained slot) become
-    // one closing drop line so coverage over attempted pushes is exact; the
-    // query ledger gets the matching gap marker and a final flush.
+    // Finalize: trailing drops (refused after the last covered slot, INCLUDING
+    // any batch whose write failed — RUST-4: the on-disk watermark stays at
+    // `covered_seq` and the loss is disclosed by one closing drop line, never
+    // silently absorbed); the query ledger gets the matching gap marker and a
+    // final flush.
     let final_seq = seq.load(Ordering::Relaxed);
-    if final_seq > expected_seq {
+    if final_seq > covered_seq {
         if let Some((_, Some(l))) = ledger.as_mut() {
-            if let Err(e) = l.record_gap(expected_seq + 1, final_seq) {
+            if let Err(e) = l.record_gap(covered_seq + 1, final_seq) {
                 *ledger_error.lock().expect("ledger error lock poisoned") = Some(e.to_string());
             }
         }
-        let count = final_seq - expected_seq;
-        let (line, _child) = drop_line(expected_seq + 1, count, &[0u8; 32], &parent);
-        let _ = out.write_all(line.as_bytes());
+        let count = final_seq - covered_seq;
+        let (line, _child) = drop_line(covered_seq + 1, count, &[0u8; 32], &committed_parent);
+        if !ndjson_dead {
+            if let Err(e) = write_batch(&mut out, &line) {
+                record_write_error(
+                    write_error,
+                    format!(
+                        "ndjson closing drop line write failed (seqs {}..{}): {e}",
+                        covered_seq + 1,
+                        final_seq
+                    ),
+                );
+            }
+        }
     }
     let _ = out.flush();
     let _ = out.get_ref().sync_data();

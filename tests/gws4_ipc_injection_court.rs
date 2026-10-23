@@ -11,11 +11,9 @@
 //! (a) a CSV corpus injected as a linear-memory buffer is loadable by the real
 //!     frozen-duckdb eval path (`eval_ast_query`) — native, on the same bytes
 //!     that cross the wasm boundary; and the same bytes cross the *compiled*
-//!     wasm module's boundary and get a typed response. The in-wasm SQL eval
-//!     itself is a typed STUB: `frozen-duckdb` (native C++ duckdb) does not
-//!     compile to wasm32, so the court proves the stub's aggregation semantics
-//!     equal the real duckdb eval on the identical buffer, and types real
-//!     in-wasm duckdb + production corpus scale as the follow-up.
+//!     wasm module's boundary and get a typed response. Equivalence is
+//!     whole-corpus `eval_ast_query` against the facility-partitioned chunks
+//!     on the same bytes. A hand-rolled aggregator is not the oracle.
 //! (b) the 16 MiB ABI bound vs corpus scale: bytes/row measured from the real
 //!     corpus, chunking design = facility-partition chunks (mirrors the case
 //!     study's `PARTITION_BY (facility_id)`), each chunk's wire envelope under
@@ -27,19 +25,16 @@
 //! Real collaborators only: the compiled wasm module (wasmi), real
 //! frozen-duckdb, a real generated 100-row corpus. No mocks.
 
-use std::path::PathBuf;
-use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 
+mod common;
 
 use serde_json::{Value, json};
 
 use graphlaw::purrdf::TermValue;
 use graphlaw::abi::{MAX_REQUEST_BYTES, call_json};
 use graphlaw::duckdb_eval::{GraphLawDuckDB, RdfTriple};
-use graphlaw::sql_ast::{
-    AggregateFunction, SelectStatement, SqlExpr, SqlLiteral, TableRef,
-};
+use graphlaw::sql_ast::compile_turtle;
 
 // ---------------------------------------------------------------- corpus ---
 
@@ -85,8 +80,7 @@ fn csv_bytes(rows: &[ColdChainRow]) -> Vec<u8> {
 fn wire_envelope(csv: &[u8]) -> Vec<u8> {
     let body = String::from_utf8(csv.to_vec()).expect("corpus is utf8");
     json!({
-        "op": "duckdb", // op-15 (native-only today; the wasm module's op
-                        // table does not include it — the gap this court types)
+        "op": "duckdb", // dispatched by the wasm module; omitted from the hashed 14-op table until a digest bump
         "corpus": body,
         "dialect": "csv",
     })
@@ -94,42 +88,12 @@ fn wire_envelope(csv: &[u8]) -> Vec<u8> {
     .into_bytes()
 }
 
-// ------------------------------------------------- the typed in-wasm stub ---
-
-/// STUB (typed): aggregation semantics of one chunk, mirroring
-/// `eval_ast_query`'s SUM/MIN/MAX/COUNT over (facility, temp) on the loaded
-/// relation. frozen-duckdb is native-only (C++ duckdb), so until real
-/// in-wasm SQL lands, this is the sandbox-side eval semantics the court
-/// checks for equivalence with the real engine on identical bytes.
-#[derive(Debug, Clone, PartialEq)]
-struct ChunkAggregate {
-    rows: u64,
-    min_temp: f64,
-    max_temp: f64,
-    sum_duration: i64,
-}
-
-fn eval_stub(chunk_csv: &[u8]) -> ChunkAggregate {
-    let text = std::str::from_utf8(chunk_csv).expect("utf8");
-    let mut agg = ChunkAggregate {
-        rows: 0,
-        min_temp: f64::INFINITY,
-        max_temp: f64::NEG_INFINITY,
-        sum_duration: 0,
-    };
-    for (i, line) in text.lines().enumerate() {
-        if i == 0 || line.trim().is_empty() {
-            continue; // header
-        }
-        let cols: Vec<&str> = line.split(',').collect();
-        assert_eq!(cols.len(), 4, "corpus shape is fixed: {line}");
-        let temp: f64 = cols[2].parse().expect("temp parses");
-        agg.rows += 1;
-        agg.min_temp = agg.min_temp.min(temp);
-        agg.max_temp = agg.max_temp.max(temp);
-        agg.sum_duration += cols[3].parse::<i64>().expect("duration parses");
-    }
-    agg
+fn source_rows(csv: &[u8]) -> usize {
+    let text = std::str::from_utf8(csv).expect("utf8");
+    text.lines()
+        .skip(1)
+        .filter(|line| !line.trim().is_empty())
+        .count()
 }
 
 // ------------------------------------------------------ real duckdb path ---
@@ -140,7 +104,7 @@ fn eval_stub(chunk_csv: &[u8]) -> ChunkAggregate {
 fn duckdb_whole(corpus_csv: &[u8]) -> (usize, Vec<(String, i64)>) {
     let db = GraphLawDuckDB::open_in_memory().expect("duckdb opens");
     load_csv(&db, corpus_csv);
-    let compiled = agg_query().compile().expect("compiles");
+    let compiled = agg_compiled();
     let receipt = db
         .eval_ast_query("urn:gws4:q_whole", &compiled, "urn:gws4:r", "urn:gws4:v")
         .expect("eval runs");
@@ -154,9 +118,9 @@ fn duckdb_chunked(chunks: &[Vec<u8>]) -> (usize, Vec<(String, i64)>) {
     for chunk in chunks {
         let db = GraphLawDuckDB::open_in_memory().expect("duckdb opens");
         load_csv(&db, chunk);
-        let compiled = agg_query().compile().expect("compiles");
+        let compiled = agg_compiled();
         let receipt = db
-            .eval_ast_query("urn:gws4:q_chunk", &compiled, "urn:gws4:r", "v".into())
+            .eval_ast_query("urn:gws4:q_chunk", &compiled, "urn:gws4:r", "v")
             .map_err(|e| format!("{e}"))
             .unwrap_or_else(|e| panic!("chunk eval failed: {e}"));
         total_rows += receipt.rows_emitted;
@@ -198,39 +162,26 @@ fn load_csv(db: &GraphLawDuckDB, csv: &[u8]) {
     db.raw_connection().execute_batch(&stmts).expect("load runs");
 }
 
-/// SELECT facility_id, COUNT(*) FROM cold_chain GROUP BY facility_id — via the
-/// AST compiler, exactly as the case study drives the eval path.
-fn agg_query() -> SelectStatement {
-    SelectStatement {
-        from: TableRef {
-            name: "cold_chain".into(),
-            alias: None,
-            schema: None,
-        },
-        joins: vec![],
-        select_list: vec![
-            SqlExpr::ColumnRef {
-                column: "facility_id".into(),
-                table_alias: None,
-            },
-            SqlExpr::Alias {
-                expr: Box::new(SqlExpr::FunctionCall {
-                    function: AggregateFunction::Count,
-                    argument: Box::new(SqlExpr::Literal(SqlLiteral::Integer(1))),
-                }),
-                alias: "n".into(),
-            },
-        ],
-        where_clause: None,
-        group_by: vec![SqlExpr::ColumnRef {
-            column: "facility_id".into(),
-            table_alias: None,
-        }],
-        limit: None,
-        offset: None,
-        having: None,
-        order_by: Vec::new(),
-    }
+/// SELECT facility_id, COUNT(event_id) AS n FROM cold_chain GROUP BY
+/// facility_id — admitted as an RDF AST graph and compiled with
+/// `compile_turtle`. SQLRDF-17: hand-built ASTs carry no canon anchor and are
+/// a typed `NoCanonicalGraph` refusal at eval, so the court admits the query
+/// the same way every consumer does.
+fn agg_compiled() -> graphlaw::sql_ast::CompiledQuery {
+    compile_turtle("@prefix sql: <http://graphlaw.org/sql#> .\n\
+         @prefix fn: <http://graphlaw.org/functions#> .\n\
+         @prefix ex: <urn:gws4:q#> .\n\
+         ex:FacilityCount a sql:SelectStatement ;\n\
+             sql:statementIndex 1 ;\n\
+             sql:fromTable [ sql:tableName \"cold_chain\" ] ;\n\
+             sql:selectList (\n\
+                 [ sql:columnName \"facility_id\" ]\n\
+                 [ sql:aliasName \"n\" ;\n\
+                   sql:expression [ sql:function fn:COUNT ;\n\
+                                    sql:argument [ sql:columnName \"event_id\" ] ] ]\n\
+             ) ;\n\
+             sql:groupBy ( [ sql:columnName \"facility_id\" ] ) .")
+    .expect("aggregate AST graph compiles")
 }
 
 /// Recover (facility, n) from the eval path's RDF projection. Each row projects
@@ -273,20 +224,9 @@ struct Host {
 
 impl Host {
     fn new() -> Self {
-        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let target = root.join("target/wasm-abi");
-        let status = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()))
-            .current_dir(&root)
-            .args(["build", "-p", "graphlaw-wasm", "--target", "wasm32-wasip1",
-                   "--profile", "wasm", "--target-dir"])
-            .arg(&target)
-            .status()
-            .expect("cargo runs");
-        assert!(status.success(), "wasm build failed");
-        let bytes = std::fs::read(
-            target.join("wasm32-wasip1/wasm/graphlaw_wasm.wasm"),
-        )
-        .expect("wasm artifact");
+        // Single shared build path (tests/common/mod.rs): honors CARGO_TARGET_DIR,
+        // cargo-flock serialized, typed BLOCKED-LINK panic on link failure.
+        let bytes = std::fs::read(common::wasm_path()).expect("wasm artifact");
         let engine = wasmi::Engine::default();
         let module = wasmi::Module::new(&engine, &bytes[..]).expect("valid wasm");
         let mut store = wasmi::Store::new(&engine, wasmi_wasi::WasiCtxBuilder::new().build());
@@ -317,8 +257,10 @@ impl Host {
         let (out_ptr, out_len) = ((packed >> 32) as u32, (packed & 0xffff_ffff) as u32);
         let mut out = vec![0u8; out_len as usize];
         self.memory.read(&self.store, out_ptr as usize, &mut out).unwrap();
+        // gl_call CONSUMES (frees) the request buffer (wasm/src/lib.rs:13-14);
+        // freeing it again here is a double free. Only the response buffer is
+        // still host-owned post-call.
         self.free.call(&mut self.store, (out_ptr, out_len)).unwrap();
-        self.free.call(&mut self.store, (ptr, body.len() as u32)).unwrap();
         serde_json::from_slice(&out).expect("response is JSON")
     }
 
@@ -329,8 +271,8 @@ impl Host {
         let (out_ptr, out_len) = ((packed >> 32) as u32, (packed & 0xffff_ffff) as u32);
         let mut out = vec![0u8; out_len as usize];
         self.memory.read(&self.store, out_ptr as usize, &mut out).unwrap();
+        // Same ownership contract: gl_call consumed the request buffer.
         self.free.call(&mut self.store, (out_ptr, out_len)).unwrap();
-        self.free.call(&mut self.store, (ptr, live_len)).unwrap();
         serde_json::from_slice(&out).expect("response is JSON")
     }
 }
@@ -434,29 +376,26 @@ fn gws4_b_chunk_streaming_design_meets_16mib_bound_and_merge_equals_whole() {
         );
     }
 
-    // Per-chunk equivalence: stub == real duckdb on the identical bytes.
-    let mut stub_merged: Vec<(String, i64)> = Vec::new();
+    // Per-chunk: the real eval's group count equals the source rows in the chunk.
+    let mut merged: Vec<(String, i64)> = Vec::new();
     for chunk in &chunks {
         let mut full = header.as_bytes().to_vec();
         full.push(b'\n');
         full.extend_from_slice(chunk);
-        let stub = eval_stub(&full);
-            let db = GraphLawDuckDB::open_in_memory().expect("duckdb opens");
+        let rows = source_rows(&full);
+        let db = GraphLawDuckDB::open_in_memory().expect("duckdb opens");
         load_csv(&db, &full);
-        let compiled = agg_query().compile().expect("compiles");
+        let compiled = agg_compiled();
         let receipt = db
             .eval_ast_query("urn:gws4:q_chunk", &compiled, "urn:gws4:r", "urn:gws4:v")
             .expect("chunk eval");
         let per_chunk = triples_to_counts(&receipt.result_triples);
         assert_eq!(per_chunk.len(), 1, "one facility per chunk");
-        // stub aggregates SOURCE rows (25); duckdb's GROUP BY emits one RESULT
-        // row per facility — equivalence is via the count, not rows_emitted.
         assert_eq!(receipt.rows_emitted, 1, "one group row per facility chunk");
-        assert_eq!(per_chunk[0].1 as u64, stub.rows, "stub == duckdb count");
-        assert_eq!(stub.rows, 25, "chunk carries 25 source rows");
-        stub_merged.extend(per_chunk);
+        assert_eq!(per_chunk[0].1 as u64, rows as u64, "group count equals source rows");
+        assert_eq!(rows, 25, "chunk carries 25 source rows");
+        merged.extend(per_chunk);
     }
-    let mut merged = stub_merged.clone();
     merged.sort();
     assert_eq!(merged.len(), 4);
     for (fac, n) in &merged {
@@ -465,7 +404,7 @@ fn gws4_b_chunk_streaming_design_meets_16mib_bound_and_merge_equals_whole() {
 
     // Aggregate-then-merge == whole-corpus real duckdb aggregate.
     let (whole_rows, whole_counts) = duckdb_whole(&csv);
-    let (chunked_rows, chunked_counts) = duckdb_chunked(&chunks_with_header(&header, &chunks));
+    let (chunked_rows, chunked_counts) = duckdb_chunked(&chunks_with_header(header, &chunks));
     assert_eq!(whole_rows, chunked_rows);
     assert_eq!(whole_counts, chunked_counts, "merge equals whole");
 }

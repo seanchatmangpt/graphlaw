@@ -8,8 +8,13 @@
 //! vectors to /Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw/.
 //!
 //! Run from /Users/sac/graphlaw:
-//!   cargo run --example naive_physics_vectors --features abi --release
+//!   cargo run --example naive_physics_vectors
+//! (`abi` is a default feature; --features abi --release is accepted but not required.)
 //! Idempotent: re-running rewrites the same bytes.
+//! Output: per-scenario lines ending with the fixtures-dir write summary
+//! (`wrote .../ENCODERS.md`), exit 0.
+//! Court: tests/corpus_conformance.rs::vecgen_naive_physics_fixtures
+//! (runs it against a temp GL_VECDIR).
 
 #![cfg(feature = "abi")]
 
@@ -249,11 +254,35 @@ fn check(scene: &Scene) -> Value {
     }
     let not_falls: Vec<String> = scene.not_falls.iter().map(|s| s.to_string()).collect();
     let value = "verified";
+
+    // wasm4pm oracle schema v1: the breed output haystack carries
+    // `falls:<o>=true` / `spills:<l>=true` facts; expected.derived_facts_sorted
+    // entries must appear in it verbatim (confirm/falsify contract).
+    let mut derived: Vec<String> = falls
+        .iter()
+        .map(|o| format!("falls:{o}=true"))
+        .chain(spills.iter().map(|l| format!("spills:{l}=true")))
+        .collect();
+    derived.sort();
+
+    // graphlaw_rev: HEAD of the generating repo (same convention as
+    // asp_tableaux_vector_gen / bayes_pop_vectors).
+    let rev = std::process::Command::new("git")
+        .args(["-C", env!("CARGO_MANIFEST_DIR"), "rev-parse", "HEAD"])
+        .output()
+        .expect("git rev-parse");
+    let rev = String::from_utf8(rev.stdout).expect("utf8").trim().to_string();
+
     json!({
-        "vector": scene.id,
+        "vector_id": scene.id,
         "breed": "naive_physics",
         "engine": "graphlaw::abi op=datalog (PurRDF least fixpoint)",
         "provenance": {
+            "graphlaw_rev": rev,
+            "purrdf": "2.0.2",
+            "eyeron": "0.7.8",
+            "generator": "naive_physics_vectors",
+            "stratified": true,
             "paper": "Hayes 1979 (Naive Physics Manifesto); Hayes 1985 (Naive physics I: ontology for liquids)",
             "axioms": [
                 "ax-support (on/in are support; support transitivity)",
@@ -265,11 +294,27 @@ fn check(scene: &Scene) -> Value {
         },
         "input": {"facts": scene.facts.iter().map(|(k, v)| json!({"key": k, "value": v})).collect::<Vec<_>>()},
         "datalog": {"rules": axioms(), "facts": edb_facts(scene)},
+        "breed_input": {
+            "intent": format!("naive physics scene {}", scene.id),
+            "facts": scene.facts.iter().map(|(k, v)| json!({"key": k, "value": v})).collect::<Vec<_>>()
+        },
         "expected": {
             "falls": falls.iter().cloned().collect::<Vec<_>>(),
             "spills": spills.iter().cloned().collect::<Vec<_>>(),
             "not_falls": not_falls,
-            "value": value
+            "value": value,
+            "derived_facts_sorted": derived,
+            // Negative case (no falls/spills): derived_facts_sorted is empty,
+            // so the v1 loader's non-empty-expected rule is satisfied by a
+            // verdict evidenced in the breed output's explanation line
+            // ("naive_physics saturated 4 Hayes axioms: 0 falls, 0 spills
+            // predicted").
+            "verdicts": if derived.is_empty() {
+                serde_json::json!({ "stability": "0 falls, 0 spills" })
+            } else {
+                serde_json::json!({})
+            },
+            "notes": scene.note
         }
     })
 }

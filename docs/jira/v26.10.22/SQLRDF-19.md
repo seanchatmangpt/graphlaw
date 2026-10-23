@@ -64,9 +64,14 @@ Untested cells (feature combinations never built in PR CI):
 1. **Matrix expansion.** Either `cargo hack check --each-feature
    --no-private-dev-deps` (plus `--feature-powerset --depth 2` for the ring
    × duckdb seam cell) as one CI job, or an explicit matrix job listing the
-   cells: `--no-default-features`, `--features duckdb`,
-   `--features abi`, `--features pack-tools`, `--features
-   evidentiary-ring`, `--features evidentiary-ring,duckdb`,
+   cells: `--no-default-features`, `--features abi`, `--features
+   pack-tools`, `--features evidentiary-ring`, `--features
+   evidentiary-ring,abi`, `--all-features`. (Fix-forward 2026-10-22: the
+   former duckdb-feature cell is withdrawn — frozen-duckdb 2.0.2 is an
+   unconditional crates.io dependency, not a feature (`Cargo.toml:59-78`,
+   `default = ["abi"]`), so its compile/test behavior is covered by every
+   default-features build. The ring × duckdb seam cell below is likewise a
+   default-build cell, not a feature-matrix cell.)
    `--all-features`. Every cell must `cargo check` (and, for cells with
    courts — `evidentiary-ring`, `evidentiary-ring,duckdb`,
    `--all-features` — `cargo test --all-targets`).

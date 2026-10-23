@@ -1,0 +1,13 @@
+# GENERATED FILE -- do not hand-edit. Generator: gen_shapes.py
+# #41209 falsifier twin. Validated against shapes/51_precision_anchor_41209.ttl
+# (reg:MoneyPrecision_USD_41209) and shapes/50_currency_precision.ttl.
+# reg: is the first-class scenario-local namespace of the TC-MEGA-FIBO-01
+# mega ontology (see shapes/ header + README.md reconciliation decisions).
+
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix reg: <http://graphlaw.org/ns/mega/fibo/reg#> .
+
+reg:Leg-41209 a reg:MoneyAmount_USD ;
+    reg:amount "1500.00"^^xsd:decimal ;
+    reg:currency "USD" ;
+    reg:legId "41209" .

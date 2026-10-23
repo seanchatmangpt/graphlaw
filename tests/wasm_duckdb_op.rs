@@ -1,12 +1,14 @@
 //! Op-15 `duckdb` court (GWS-16): cursor-streamed analytical eval, native ABI
-//! surface (`graphlaw::abi::call`), feature `duckdb`.
+//! surface (`graphlaw::abi::call`).
 //!
-//! Frozen-duckdb's native C++ core does not compile to wasm32 (GWS-1 finding),
-//! so "in-guest" here means: the op rides the exact request/response byte
-//! pipeline the wasm module uses (`gl_alloc`/`gl_call`/`gl_free` semantics via
-//! `graphlaw::abi::call`), while the DuckDB engine itself stays native. The
-//! wasm op table deliberately excludes op-15 (see contracts/abi-manifest.json
-//! notes and docs/wasm-duckdb-op15-design.md).
+//! Frozen-duckdb is a required dependency. The wasm module dispatches `duckdb`.
+//! The op stays off the hashed 14-op table until a digest bump; that absence
+//! is not a capability refusal. frozen-duckdb 2.0.2 emits `static=duckdb` for
+//! wasm32-wasip1. The link is witnessed (2026-10-22); the recorded pin
+//! `332ea218…` was not replaced. `WASI_SDK_PATH` must be a wasi-sdk root
+//! (`bin/clang`, `share/cmake/wasi-sdk-p1.cmake`). Without it,
+//! frozen-duckdb-sys `build.rs` fails typed (`WASI_SDK_PATH required`). This court exercises the
+//! op through `graphlaw::abi::call` on the host.
 //!
 //! Proven here:
 //! (a) exec/stream/close happy path over an injected CSV (the GWS-4 injection

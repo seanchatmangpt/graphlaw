@@ -34,8 +34,12 @@ permissions:
   id-token: write
 
 jobs:
+  # NOT locally reproducible end to end: publish requires the `npm` GitHub
+  # environment + OIDC trusted publishing (see header comment). Everything in
+  # the validate job IS locally reproducible (build, digest check, npm test,
+  # npm pack). Not an expected-red job; red means version drift or digest drift.
   validate:
-    name: validate and pack
+    name: validate and pack (version + blake3 digest gates)
     # HOLD semantics mirror release.yml: while the repository variable
     # RELEASE_HOLD is `true`, nothing runs (nothing is validated or published).
     # Job-level guard (rather than release.yml's step-level env check) is the
@@ -148,7 +152,7 @@ jobs:
           retention-days: 7
 
   publish:
-    name: publish to npm (OIDC)
+    name: publish to npm (OIDC trusted publishing, no token)
     needs: validate
     # Same HOLD semantics: nothing is published while RELEASE_HOLD is `true`.
     if: vars.RELEASE_HOLD != 'true' && needs.validate.result == 'success'

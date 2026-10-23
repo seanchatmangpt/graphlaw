@@ -42,7 +42,7 @@ pub fn coarse_now_ns() -> u64 {
         r.set(n);
         n
     });
-    if n % COARSE_CALIB_EVERY == 0 {
+    if n.is_multiple_of(COARSE_CALIB_EVERY) {
         let origin = COARSE_ORIGIN.get_or_init(Instant::now);
         let real = origin.elapsed().as_nanos() as u64;
         COARSE_NS.fetch_max(real, Ordering::Relaxed);
@@ -149,6 +149,10 @@ pub struct ExecutionReceipt {
 }
 
 /// Embedded execution context wrapping a sovereign `frozen-duckdb` connection.
+/// Debug is derived (lane L4 fix 7): all fields are Debug-derivable —
+/// `frozen_duckdb::Connection` implements Debug, `QueryCache` derives Debug
+/// (`src/query_cache.rs`), and `StmtCacheSeam` has a manual Debug below.
+#[derive(Debug)]
 pub struct GraphLawDuckDB {
     conn: frozen_duckdb::Connection,
     /// C1 compiled-plan cache (designs/C1-cache.md). Default-owned per
@@ -171,7 +175,7 @@ pub struct GraphLawDuckDB {
 /// Interior-mutable state for the prepared-statement reuse seam. The
 /// connection is !Sync and used single-threaded, so `Cell`/`RefCell` are
 /// sufficient and avoid changing the struct's Send story.
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct StmtCacheSeam {
     /// Mirror of the underlying frozen-duckdb prepared-statement cache,
     /// keyed by the CANONICAL AST DIGEST (`h_ast`) for graph-backed
@@ -339,22 +343,27 @@ impl ParamBytes {
 }
 
 /// Anchor-path parameter integration (charter A03): `H_query =
-/// BLAKE3(h_ast || P_params)` with the param half folded through
-/// [`ParamBytes`]. Inline (<= 64B encoded) buffers are bit-identical to the
-/// [`hash_param_buffer`] reference by construction (same bytes, one update).
-/// Above the inline budget the reference fold is used so the receipt law is
-/// never encoding-dependent; the digest branch stays available via
-/// [`ParamBytes::fold`] and is measured in `benches/tc_hot_01.rs`.
+/// BLAKE3(h_ast || P_params)`. Inline (<= 64B encoded) params are copied
+/// with `h_ast` into one stack buffer and absorbed with one `Hasher::update`.
+/// The bytes are the typed `P_params` encoding, so the digest matches
+/// [`admitted_statement_hash`] by BLAKE3 streaming. Above the inline budget
+/// the reference [`hash_param_buffer`] fold keeps the receipt law-stable.
 pub fn fold_params_anchored(h_ast: &[u8; 32], params: &[SqlLiteral]) -> [u8; 32] {
     let encoded = ParamBytes::encode(params);
     let mut hasher = blake3::Hasher::new();
-    hasher.update(h_ast);
-    if encoded.is_inline() {
-        encoded.fold(&mut hasher);
-    } else {
-        // Digest branch would diverge from the reference receipt encoding —
-        // the raw-byte reference fold keeps H_query law-stable.
-        hash_param_buffer(&mut hasher, params);
+    match encoded {
+        ParamBytes::Inline { buf, len } => {
+            let mut joined = [0u8; 32 + PARAM_BYTES_INLINE];
+            joined[..32].copy_from_slice(h_ast);
+            joined[32..32 + len].copy_from_slice(&buf[..len]);
+            hasher.update(&joined[..32 + len]);
+        }
+        ParamBytes::Digest(_) => {
+            // Digest branch would diverge from the reference receipt encoding —
+            // the raw-byte reference fold keeps H_query law-stable.
+            hasher.update(h_ast);
+            hash_param_buffer(&mut hasher, params);
+        }
     }
     *hasher.finalize().as_bytes()
 }
@@ -365,8 +374,8 @@ pub fn fold_params_anchored(h_ast: &[u8; 32], params: &[SqlLiteral]) -> [u8; 32]
 /// (sql-rdf Recommendation, section 1.4, first formula). `canonical_graph`
 /// is the output of [`canonical_ast_graph_bytes`]; the parameter buffer is
 /// the typed encoding (one type tag byte + little-endian value bytes per
-/// parameter) in bind order. One fresh hasher + two updates + finalize —
-/// no streaming absorb of `Canon(G_AST)` bytes per receipt.
+/// parameter) in bind order. One fresh hasher + the reference param updates
+/// + finalize — no streaming absorb of `Canon(G_AST)` bytes per receipt.
 pub fn admitted_statement_hash(
     canonical_graph: &[u8],
     params: &[SqlLiteral],
@@ -395,8 +404,141 @@ fn mutating_sql(sql: &str) -> bool {
     )
 }
 
+/// RDF literal from a projected cell. `datatype` is a full XSD IRI.
+fn xsd_cell(lexical_form: String, datatype: &str) -> TermValue {
+    TermValue::Literal {
+        lexical_form,
+        datatype: datatype.to_string(),
+        language: None,
+        direction: None,
+    }
+}
+
+/// `YYYY-MM-DD` from DuckDB `Date32`: days since the Unix epoch
+/// (1970-01-01). The day count is the engine's own value; this is the
+/// civil rendering of that count (Howard Hinnant), the same epoch
+/// frozen-duckdb's chrono bridge multiplies by `24 * 3600`.
+fn iso_date_from_epoch_days(days: i64) -> String {
+    let (y, m, d) = civil_from_epoch_days(days);
+    if y < 0 {
+        format!("-{:04}-{:02}-{:02}", -y, m, d)
+    } else {
+        format!("{y:04}-{m:02}-{d:02}")
+    }
+}
+
+/// Proleptic Gregorian year, month, day for a Unix-epoch day count.
+fn civil_from_epoch_days(days: i64) -> (i64, u32, u32) {
+    let z = days + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = (z - era * 146_097) as u64;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365;
+    let mut y = yoe as i64 + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let m = (if mp < 10 { mp + 3 } else { mp - 9 }) as u32;
+    if m <= 2 {
+        y += 1;
+    }
+    (y, m, d)
+}
+
+/// Split an engine time-unit count into whole seconds and leftover nanoseconds.
+fn time_unit_parts(unit: frozen_duckdb::duckdb::types::TimeUnit, ticks: i64) -> (i64, u32) {
+    use frozen_duckdb::duckdb::types::TimeUnit;
+    match unit {
+        TimeUnit::Second => (ticks, 0),
+        TimeUnit::Millisecond => {
+            let secs = ticks.div_euclid(1_000);
+            let millis = ticks.rem_euclid(1_000) as u32;
+            (secs, millis * 1_000_000)
+        }
+        TimeUnit::Microsecond => {
+            let secs = ticks.div_euclid(1_000_000);
+            let micros = ticks.rem_euclid(1_000_000) as u32;
+            (secs, micros * 1_000)
+        }
+        TimeUnit::Nanosecond => {
+            let secs = ticks.div_euclid(1_000_000_000);
+            let nanos = ticks.rem_euclid(1_000_000_000) as u32;
+            (secs, nanos)
+        }
+    }
+}
+
+/// `HH:MM:SS` with a trimmed fractional suffix when the nanosecond residue is non-zero.
+fn format_clock(secs_of_day: i64, nanos: u32) -> String {
+    let secs = secs_of_day.rem_euclid(86_400);
+    let h = secs / 3600;
+    let m = (secs % 3600) / 60;
+    let s = secs % 60;
+    if nanos == 0 {
+        format!("{h:02}:{m:02}:{s:02}")
+    } else {
+        let mut frac = format!("{nanos:09}");
+        while frac.ends_with('0') {
+            frac.pop();
+        }
+        format!("{h:02}:{m:02}:{s:02}.{frac}")
+    }
+}
+
+/// `Time64` is a clock time: the engine's time-unit count since midnight.
+fn iso_time_from_time_unit(unit: frozen_duckdb::duckdb::types::TimeUnit, ticks: i64) -> String {
+    let (secs, nanos) = time_unit_parts(unit, ticks);
+    format_clock(secs, nanos)
+}
+
+/// `Timestamp` is an instant: the engine's time-unit count since the Unix epoch,
+/// rendered `YYYY-MM-DD HH:MM:SS` (the form frozen-duckdb's chrono bridge prints).
+fn iso_datetime_from_time_unit(unit: frozen_duckdb::duckdb::types::TimeUnit, ticks: i64) -> String {
+    let (secs, nanos) = time_unit_parts(unit, ticks);
+    let days = secs.div_euclid(86_400);
+    let sod = secs.rem_euclid(86_400);
+    format!(
+        "{} {}",
+        iso_date_from_epoch_days(days),
+        format_clock(sod, nanos)
+    )
+}
+
+/// RFC 4648 base64 of a DuckDB blob, the lexical form of `xsd:base64Binary`.
+fn base64_encode(input: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(input.len().div_ceil(3) * 4);
+    let mut chunks = input.chunks_exact(3);
+    for chunk in chunks.by_ref() {
+        let n = ((chunk[0] as u32) << 16) | ((chunk[1] as u32) << 8) | (chunk[2] as u32);
+        out.push(TABLE[((n >> 18) & 0x3f) as usize] as char);
+        out.push(TABLE[((n >> 12) & 0x3f) as usize] as char);
+        out.push(TABLE[((n >> 6) & 0x3f) as usize] as char);
+        out.push(TABLE[(n & 0x3f) as usize] as char);
+    }
+    let rest = chunks.remainder();
+    if rest.len() == 1 {
+        let n = (rest[0] as u32) << 16;
+        out.push(TABLE[((n >> 18) & 0x3f) as usize] as char);
+        out.push(TABLE[((n >> 12) & 0x3f) as usize] as char);
+        out.push('=');
+        out.push('=');
+    } else if rest.len() == 2 {
+        let n = ((rest[0] as u32) << 16) | ((rest[1] as u32) << 8);
+        out.push(TABLE[((n >> 18) & 0x3f) as usize] as char);
+        out.push(TABLE[((n >> 12) & 0x3f) as usize] as char);
+        out.push(TABLE[((n >> 6) & 0x3f) as usize] as char);
+        out.push('=');
+    }
+    out
+}
+
 impl GraphLawDuckDB {
-    /// Creates an in-memory embedded execution instance.
+    /// Creates an in-memory embedded execution instance backed by a real
+    /// `frozen-duckdb` connection (statement cache capacity pinned to 256).
+    ///
+    /// Returns the [`GraphLawDuckDB`] handle on success; connection failure
+    /// surfaces as [`EvaluatorError`] (typed, never a panic). Data lives for
+    /// the process lifetime of the connection only.
     pub fn open_in_memory() -> Result<Self, EvaluatorError> {
         let conn = frozen_duckdb::Connection::open_in_memory()?;
         conn.set_prepared_statement_cache_capacity(PREPARED_STATEMENT_CACHE_CAPACITY);
@@ -497,13 +639,27 @@ impl GraphLawDuckDB {
         // <10 ns median) instead of an Instant::now() syscall-class read.
         let start_ns = coarse_now_ns();
 
+        // RUST-5 sole-admission gate: verify the compile-time admission seal
+        // BEFORE any prepare/execute. A CompiledQuery whose sealed fields
+        // (sql, cacheable, receipt_state, canon_graph_bytes) were mutated
+        // after compile_turtle — or that never passed through the admitted
+        // compile path — is a typed `EvaluatorError::ReceiptError`, never a
+        // panic or a generic DB error. `params` is unsealed: binding
+        // different parameters to the same admitted statement is lawful.
+        if !compiled.verify_seal() {
+            return Err(EvaluatorError::ReceiptError(format!(
+                "admission seal mismatch on query {query_iri}: CompiledQuery is not in its \
+                 admitted compile state; re-compile via compile_turtle (sole-admission path)"
+            )));
+        }
+
         // 1. Compute the receipt hash. When the compile was graph-backed,
         // this is the admitted-statement receipt of the sql-rdf
         // Recommendation section 1.4 first formula, TC-HOT-01 two-node
         // form: H_query = BLAKE3(h_ast || P_params) where
         // h_ast = BLAKE3(Canon(G_AST)) is pinned at compile time in
         // `receipt_state` (a 32-byte Copy), so a receipt costs ONE fresh
-        // hasher + two updates + finalize — bit-identical to
+        // hasher + one stack-buffer update + finalize — bit-identical to
         // `admitted_statement_hash` by construction (same formula).
         // SQLRDF-17: the legacy `(None, None)` raw-SQL-string hash arm and
         // the hand-built `ast_graph_turtle` re-canonicalization fallback are
@@ -511,14 +667,7 @@ impl GraphLawDuckDB {
         // canon anchor nor canon bytes is a typed `NoCanonicalGraph`
         // refusal, never a raw-SQL admission.
         let query_hash: [u8; 32] = match (&compiled.receipt_state, &compiled.canon_graph_bytes) {
-            (Some(h_ast), _) => {
-                // Charter A03: fixed-width param ingestion — inline (<= 64B)
-                // buffers fold as one contiguous stack-buffer update,
-                // bit-identical to the reference fold by construction.
-                let mut h_ast_arr = [0u8; 32];
-                h_ast_arr.copy_from_slice(h_ast);
-                fold_params_anchored(&h_ast_arr, &compiled.params)
-            }
+            (Some(h_ast), _) => fold_params_anchored(h_ast, &compiled.params),
             (None, Some(canon)) => admitted_statement_hash(canon, &compiled.params),
             (None, None) => {
                 return Err(EvaluatorError::NoCanonicalGraph(query_iri.to_string()));
@@ -531,8 +680,8 @@ impl GraphLawDuckDB {
         // statement receipt hash `H_query = BLAKE3(Canon(G_AST) || P_params)`
         // (sql-rdf Rec. section 1.4, first formula), so a flipped literal
         // parameter forks to a different entry by construction.
-        if compiled.cacheable {
-            if let Some((mut receipt, _store_epoch)) = self
+        if compiled.cacheable
+            && let Some((mut receipt, _store_epoch)) = self
                 .cache
                 .consult(query_hash, compiled.canon_graph_bytes.as_deref())
             {
@@ -541,7 +690,6 @@ impl GraphLawDuckDB {
                 receipt.query_iri = query_iri.to_string();
                 return Ok(receipt);
             }
-        }
 
         // D2 (epoch-coverage audit): snapshot the C1 epoch BEFORE execution.
         // A concurrent bump between row materialization and the store seam
@@ -693,12 +841,49 @@ impl GraphLawDuckDB {
                         language: None,
                         direction: None,
                     }),
-                    _ => row.get::<_, String>(col_idx).ok().map(|val| TermValue::Literal {
-                        lexical_form: val,
-                        datatype: "http://www.w3.org/2001/XMLSchema#string".to_string(),
-                        language: None,
-                        direction: None,
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Date32(days)) => Some(xsd_cell(
+                        iso_date_from_epoch_days(i64::from(days)),
+                        "http://www.w3.org/2001/XMLSchema#date",
+                    )),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Time64(unit, ticks)) => Some(xsd_cell(
+                        iso_time_from_time_unit(unit, ticks),
+                        "http://www.w3.org/2001/XMLSchema#time",
+                    )),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Timestamp(unit, ticks)) => {
+                        Some(xsd_cell(
+                            iso_datetime_from_time_unit(unit, ticks),
+                            "http://www.w3.org/2001/XMLSchema#dateTime",
+                        ))
+                    }
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Blob(bytes)) => Some(xsd_cell(
+                        base64_encode(bytes),
+                        "http://www.w3.org/2001/XMLSchema#base64Binary",
+                    )),
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Interval {
+                        months,
+                        days,
+                        nanos,
+                    }) => Some(xsd_cell(
+                        format!("({months},{days},{nanos})"),
+                        "http://www.w3.org/2001/XMLSchema#string",
+                    )),
+                    // Nested values have no XSD datatype in this projection.
+                    // Naming each variant keeps a new `ValueRef` arm a compile
+                    // failure instead of a silent string.
+                    Ok(
+                        frozen_duckdb::duckdb::types::ValueRef::List(..)
+                        | frozen_duckdb::duckdb::types::ValueRef::Enum(..)
+                        | frozen_duckdb::duckdb::types::ValueRef::Struct(..)
+                        | frozen_duckdb::duckdb::types::ValueRef::Array(..)
+                        | frozen_duckdb::duckdb::types::ValueRef::Map(..)
+                        | frozen_duckdb::duckdb::types::ValueRef::Union(..)
+                        | frozen_duckdb::duckdb::types::ValueRef::Variant(..),
+                    ) => row.get::<_, String>(col_idx).ok().map(|val| {
+                        xsd_cell(val, "http://www.w3.org/2001/XMLSchema#string")
                     }),
+                    // A cell the engine could not read is a null projection,
+                    // not a string of the error.
+                    Err(_) => None,
                 };
 
                 if let Some(object_term) = term {
@@ -910,9 +1095,7 @@ impl GraphLawDuckDB {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sql_ast::{
-        AggregateFunction, Operator, SelectStatement, SqlExpr, TableRef,
-    };
+    
 
     /// P28-SIL §3.1 property court (TC-HOT-01 two-node form): the
     /// `receipt_state` anchor path (`h_ast` + `P_params` fold + finalize)
@@ -943,15 +1126,10 @@ mod tests {
                 .collect();
             // Reference: two-node admitted_statement_hash.
             let reference = admitted_statement_hash(&canon, &params);
-            // Anchor path: pin h_ast = BLAKE3(canon) once, then per receipt
-            // one fresh hasher folding h_ast || P_params.
+            // Shipped fold: pin h_ast = BLAKE3(canon) once, then
+            // fold_params_anchored (one stack-buffer update).
             let h_ast = *blake3::hash(&canon).as_bytes();
-            let clone_path = {
-                let mut h = blake3::Hasher::new();
-                h.update(&h_ast);
-                hash_param_buffer(&mut h, &params);
-                *h.finalize().as_bytes()
-            };
+            let clone_path = fold_params_anchored(&h_ast, &params);
             assert_eq!(clone_path, reference, "clone path must be bit-identical for canon_len={canon_len}");
         }
 
@@ -962,11 +1140,9 @@ mod tests {
         let compiled = compile_turtle(turtle).expect("graph must compile");
         let canon = compiled.canon_graph_bytes.as_deref().expect("compile carries canon bytes");
         let params = vec![SqlLiteral::Integer(7), SqlLiteral::String("w".into())];
-        let mut h = blake3::Hasher::new();
-        h.update(&compiled.receipt_state.expect("compile pins h_ast"));
-        hash_param_buffer(&mut h, &params);
+        let h_ast = compiled.receipt_state.expect("compile pins h_ast");
         assert_eq!(
-            *h.finalize().as_bytes(),
+            fold_params_anchored(&h_ast, &params),
             admitted_statement_hash(canon, &params),
             "compile-time pinned h_ast anchor must match the reference receipt"
         );
@@ -1075,6 +1251,54 @@ mod tests {
         (0..64).map(|_| next() as u8).collect()
     }
 
+    /// RUST-5 sole-admission court (lane L4): eval verifies the admission
+    /// seal BEFORE prepare. A tampered CompiledQuery (sql mutated after
+    /// compile) is a typed `EvaluatorError::ReceiptError` — never a panic
+    /// and never a generic DB error. Anti-vacuity is inlined: the same query
+    /// unmutated evals for real against a real frozen-duckdb table.
+    #[test]
+    fn eval_refuses_typed_when_admission_seal_is_broken() {
+        let db = GraphLawDuckDB::open_in_memory().expect("DuckDB");
+        db.raw_connection()
+            .execute_batch("CREATE TABLE telemetry (batch_id VARCHAR, latency INTEGER);
+                 INSERT INTO telemetry VALUES ('alpha', 480), ('beta', 610);")
+            .expect("seed");
+        let compiled = crate::sql_ast::compile_turtle(A04_TURTLE).expect("compile");
+        assert!(compiled.verify_seal());
+
+        let good = db
+            .eval_ast_query(
+                "http://example.org/queries#Q",
+                &compiled,
+                "http://example.org/data",
+                "http://example.org/vocab",
+            )
+            .expect("untampered query evals (court is not vacuous)");
+
+        // Mutation: tamper with the sealed SQL after compile.
+        let mut tampered = compiled.clone();
+        tampered.sql = tampered.sql.replace("latency", "latency; DROP TABLE telemetry; --");
+        assert!(!tampered.verify_seal());
+        let err = db
+            .eval_ast_query(
+                "http://example.org/queries#Q",
+                &tampered,
+                "http://example.org/data",
+                "http://example.org/vocab",
+            )
+            .expect_err("tampered query must refuse");
+        assert!(
+            matches!(err, EvaluatorError::ReceiptError(ref m) if m.contains("admission seal mismatch")),
+            "expected typed ReceiptError, got: {err:?}"
+        );
+        // No child state: the tampered eval executed nothing.
+        let conn = db.raw_connection();
+        let mut stmt = conn.prepare("SELECT count(*) FROM telemetry").unwrap();
+        let n: i64 = stmt.query_row([], |r| r.get(0)).unwrap();
+        assert_eq!(n, 2, "tampered eval must not execute any SQL");
+        let _ = good;
+    }
+
     #[test]
     fn test_eval_ast_query_in_memory() {
         let db = GraphLawDuckDB::open_in_memory().expect("Failed to initialize DuckDB");
@@ -1122,7 +1346,7 @@ ex:q1 a sql:SelectStatement ;
 
         let receipt = db
             .eval_ast_query(
-                &query_iri,
+                query_iri,
                 &compiled,
                 "http://example.org/data",
                 "http://example.org/vocab",
@@ -1136,6 +1360,67 @@ ex:q1 a sql:SelectStatement ;
         );
         assert!(!receipt.result_triples.is_empty());
         assert_ne!(receipt.query_hash, [0u8; 32]);
+    }
+
+    /// Chicago readback: a real DATE and TIMESTAMP project as `xsd:date` and
+    /// `xsd:dateTime` with the engine's calendar lexical forms. A catch-all
+    /// that stringifies every other variant as `xsd:string` fails this assert.
+    #[test]
+    fn date_and_timestamp_project_as_xsd_temporal() {
+        let db = GraphLawDuckDB::open_in_memory().expect("duckdb");
+        db.raw_connection()
+            .execute_batch(
+                "CREATE TABLE temporal (d DATE, ts TIMESTAMP);
+                 INSERT INTO temporal VALUES (DATE '2020-01-02', TIMESTAMP '2020-01-02 03:04:05');",
+            )
+            .expect("seed");
+        let turtle = r#"@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/queries#> .
+ex:q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "temporal" ] ;
+    sql:selectList ( [ sql:columnName "d" ] [ sql:columnName "ts" ] ) .
+"#;
+        let compiled = crate::sql_ast::compile_turtle(turtle).expect("compile");
+        let receipt = db
+            .eval_ast_query(
+                "http://example.org/queries/temporal",
+                &compiled,
+                "http://example.org/data",
+                "http://example.org/vocab",
+            )
+            .expect("eval");
+
+        let cell = |suffix: &str| -> &TermValue {
+            &receipt
+                .result_triples
+                .iter()
+                .find(|t| t.predicate.ends_with(suffix))
+                .unwrap_or_else(|| panic!("missing predicate {suffix}"))
+                .object
+        };
+        match cell("/d") {
+            TermValue::Literal {
+                lexical_form,
+                datatype,
+                ..
+            } => {
+                assert_eq!(lexical_form, "2020-01-02");
+                assert_eq!(datatype, "http://www.w3.org/2001/XMLSchema#date");
+            }
+            other => panic!("date cell: {other:?}"),
+        }
+        match cell("/ts") {
+            TermValue::Literal {
+                lexical_form,
+                datatype,
+                ..
+            } => {
+                assert_eq!(lexical_form, "2020-01-02 03:04:05");
+                assert_eq!(datatype, "http://www.w3.org/2001/XMLSchema#dateTime");
+            }
+            other => panic!("timestamp cell: {other:?}"),
+        }
     }
 
     #[test]

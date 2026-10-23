@@ -24,15 +24,16 @@ fn corpus_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("conformance/sa2a/run14"))
 }
 
-fn request(v: Value) -> Value {
+fn request(v: Value) -> Result<Value, String> {
     serde_json::from_slice(&graphlaw::abi::call(v.to_string().as_bytes()))
-        .expect("GraphLaw ABI returns JSON")
+        .map_err(|e| format!("ABI returned non-JSON: {e}"))
 }
 
 /// Predicate local-name -> lexical values, for the single court node in namespace `ns`.
 fn court_props(text: &str, ns: &str) -> Result<Option<BTreeMap<String, Vec<String>>>, String> {
     let q = format!("SELECT ?s ?p ?o WHERE {{ ?s a <{ns}SemanticEvidenceCourt> ; ?p ?o }}");
-    let out = request(json!({"op":"sparql","data":{"text":text,"dialect":"turtle"},"query":q}));
+    let out = request(json!({"op":"sparql","data":{"text":text,"dialect":"turtle"},"query":q}))
+        .map_err(|e| format!("ABI decode failed on sparql: {e}"))?;
     if out["ok"] != true {
         return Err(format!("sparql refused: {out}"));
     }
@@ -73,11 +74,17 @@ fn one<'a>(p: &'a BTreeMap<String, Vec<String>>, k: &str) -> Result<&'a str, Str
 
 /// (namespace label, disposition) or typed (code, detail).
 fn judge(stem: &str, text: &str) -> Result<(&'static str, String), (&'static str, String)> {
-    let parsed = request(json!({"op":"parse","text":text,"dialect":"turtle"}));
+    let parsed = match request(json!({"op":"parse","text":text,"dialect":"turtle"})) {
+        Ok(p) => p,
+        Err(e) => return Err(("ABI_DECODE_FAILED", e)),
+    };
     if parsed["ok"] != true {
         return Err(("PARSE_REFUSED", parsed.to_string()));
     }
-    let canon = request(json!({"op":"canonical","data":{"text":text,"dialect":"turtle"}}));
+    let canon = match request(json!({"op":"canonical","data":{"text":text,"dialect":"turtle"}})) {
+        Ok(c) => c,
+        Err(e) => return Err(("ABI_DECODE_FAILED", e)),
+    };
     if canon["ok"] != true {
         return Err(("CANONICALIZATION_REFUSED", canon.to_string()));
     }
@@ -145,7 +152,12 @@ fn judge(stem: &str, text: &str) -> Result<(&'static str, String), (&'static str
         }
     } else {
         disposition = one(&props, "expectedDecision").map_err(bad)?.to_string();
-        let num = stem.split('_').next().unwrap_or_default();
+        let num = stem.split('_').next().filter(|s| !s.is_empty()).ok_or_else(|| {
+            (
+                "MALFORMED_FILENAME",
+                format!("no run-number prefix before '_' in stem {stem:?}"),
+            )
+        })?;
         let rk = one(&props, "replayKey").map_err(bad)?;
         if rk != format!("run14:{num}:{name}") {
             return Err((
@@ -194,8 +206,17 @@ fn main() -> ExitCode {
     let (mut admit, mut refuse, mut v1n, mut v2n) = (0usize, 0usize, 0usize, 0usize);
     let (mut fixtures, mut failures) = (vec![], vec![]);
     for path in &files {
-        let file = path.file_name().unwrap().to_string_lossy().to_string();
-        let stem = path.file_stem().unwrap().to_string_lossy().to_string();
+        let (file, stem) = match (path.file_name(), path.file_stem()) {
+            (Some(f), Some(s)) => (f.to_string_lossy().to_string(), s.to_string_lossy().to_string()),
+            _ => {
+                eprintln!(
+                    "SKIP: unreadable fixture name (no file_name/file_stem) at {}",
+                    path.display()
+                );
+                failures.push(json!({"file":path.display().to_string(),"code":"MALFORMED_FILENAME","detail":"path has no file_name or file_stem"}));
+                continue;
+            }
+        };
         let text = match fs::read_to_string(path) {
             Ok(t) => t,
             Err(e) => {

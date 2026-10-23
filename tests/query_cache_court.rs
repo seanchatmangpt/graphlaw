@@ -53,8 +53,8 @@ fn compile_select(threshold: i64) -> CompiledQuery {
 
 /// Real DML through the eval surface, compiled via `compile_turtle`'s
 /// command arms (SQLRDF-17: every admitted CompiledQuery carries Canon bytes
-/// and a receipt anchor; a hand-built CompiledQuery is a typed REFUSAL-04
-/// NoCanonicalGraph at eval). Mutating statements are never cacheable
+/// and a receipt anchor; a hand-built CompiledQuery is EvaluatorError::NoCanonicalGraph
+/// at eval). Mutating statements are never cacheable
 /// (C1-a: only the SelectStatement arm classifies cacheable).
 fn dml_compiled(doc: &str) -> CompiledQuery {
     let compiled = compile_turtle(doc).expect("command arm must compile");
@@ -294,6 +294,64 @@ fn cache_unit_epoch_and_grounding() {
     cache.store(make_entry(b"canon-a".to_vec(), cache.epoch()));
     assert!(cache.consult(h, Some(b"canon-b")).is_none(), "divergent grounding is a miss");
     assert!(cache.consult(h, Some(b"canon-a")).is_some(), "matching grounding still hits");
+}
+
+#[test]
+/// SPOF Tier-1 #3 court: a panic in a lock-holding closure poisons the
+/// mutex, but the cache must recover (`PoisonError::into_inner`) — entries
+/// stored before the panic survive, and store/consult/len/bump all work
+/// afterwards. The benign twin (`f1`) asserts normal unpoisoned behavior;
+/// this court must flip if poison recovery is removed.
+fn poisoned_mutex_recovers() {
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    let cache = QueryCache::new();
+    let h = [11u8; 32];
+    let receipt = ExecutionReceipt {
+        query_iri: "urn:pre".into(),
+        query_hash: h,
+        sql_statement: "SELECT 1".into(),
+        rows_emitted: 1,
+        execution_ms: 1.0,
+        result_triples: vec![],
+        cached: false,
+        consult_ms: 0.0,
+    };
+    cache.store(CacheEntry {
+        h_query: h,
+        receipt: receipt.clone(),
+        grounding: b"canon".to_vec(),
+        epoch: 0,
+        stored_at: graphlaw::query_cache::now_ms(),
+    });
+    assert_eq!(cache.len(), 1);
+
+    // Panic while actually holding the lock, caught at the test boundary.
+    let panicked = catch_unwind(AssertUnwindSafe(|| {
+        cache.with_entries(|_entries| {
+            panic!("holder panic while the cache mutex is locked");
+        })
+    }));
+    assert!(panicked.is_err(), "the panic must really happen (anti-vacuity)");
+
+    // Recovery: the pre-panic entry is intact and every surface works.
+    assert_eq!(cache.len(), 1, "pre-panic entry survives the poison");
+    let hit = cache
+        .consult(h, Some(b"canon".as_slice()))
+        .expect("cache must serve after a poisoned-holder panic");
+    assert!(hit.0.cached, "served as a real hit");
+    cache.store(CacheEntry {
+        h_query: [22u8; 32],
+        receipt,
+        grounding: vec![],
+        epoch: 0,
+        stored_at: graphlaw::query_cache::now_ms(),
+    });
+    assert_eq!(cache.len(), 2, "post-panic store lands");
+    assert!(cache.consult([22u8; 32], None).is_some());
+    let bumped = cache.bump();
+    assert_eq!(bumped, 1);
+    assert_eq!(cache.len(), 0, "bump clears after recovery");
 }
 
 // -- cache witnesses through the public surface -----------------------------

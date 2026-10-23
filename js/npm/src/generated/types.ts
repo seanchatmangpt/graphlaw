@@ -1,5 +1,5 @@
 // GENERATED from registry/capability-registry.json
-// registry_blake3: blake3:3f7a5c71ec2ae2f1daa2323a8c1eda5cc2c1df9425155201c6711c1a81ef634f
+// registry_blake3: blake3:22b7478c47293741a17c0ec1f884472bac8fcb0ec7320b0925b48aa04d80908b
 // Do not edit by hand; run `npm run gen` to regenerate.
 
 import type { DataSpec, Term } from '../types.js';
@@ -183,15 +183,15 @@ export type RefusalKind = "NotSemanticContent" | "Ambiguous" | "EngineRejected" 
 export const REFUSAL_KIND_VALUES = ["NotSemanticContent", "Ambiguous", "EngineRejected", "Unsupported", "ResourceLimit"] as const;
 
 /** Refusal detail codes (error.details.code). */
-export type RefusalCode = "Refused" | "ResourceLimit" | "PlanRefused" | "ReceiptRequired" | "ReceiptRefused" | "LeaseRefused" | "NotAdmitted" | "UnverifiedLeaseRefused" | "PolicyRefused";
+export type RefusalCode = "Refused" | "ResourceLimit" | "PlanRefused" | "ReceiptRequired" | "ReceiptRefused" | "LeaseRefused" | "NotAdmitted" | "DuckDb" | "UnverifiedLeaseRefused" | "PolicyRefused";
 
 /** Backend engines. */
-export type Engine = "PurRdf" | "Eyeron";
+export type Engine = "PurRdf" | "Eyeron" | "FrozenDuckdb";
 
 /** Dialect wire names accepted in requests. */
-export type DialectName = "turtle" | "trig" | "ntriples" | "nquads" | "rdfxml" | "jsonld" | "yamlld" | "trix" | "hextuples" | "n3" | "sparql" | "shexc" | "shexj";
+export type DialectName = "turtle" | "trig" | "ntriples" | "nquads" | "rdfxml" | "jsonld" | "yamlld" | "trix" | "hextuples" | "n3" | "sparql" | "sql" | "shexc" | "shexj";
 /** Dialect names as reported in responses (Rust variant names). */
-export type DialectResponseName = "Turtle" | "TriG" | "NTriples" | "NQuads" | "RdfXml" | "JsonLd" | "YamlLd" | "TriX" | "HexTuples" | "N3" | "Sparql" | "ShExC" | "ShExJ";
+export type DialectResponseName = "Turtle" | "TriG" | "NTriples" | "NQuads" | "RdfXml" | "JsonLd" | "YamlLd" | "TriX" | "HexTuples" | "N3" | "Sparql" | "SqlRdf" | "ShExC" | "ShExJ";
 
 /** Entailment regimes. */
 export type Regime = "simple" | "rdf" | "rdfs" | "owl-rl" | "d";

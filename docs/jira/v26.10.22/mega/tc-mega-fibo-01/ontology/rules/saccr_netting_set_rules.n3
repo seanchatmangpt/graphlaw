@@ -1,0 +1,70 @@
+# SA-CCR netting-set membership — intensional rules (Datalog Horn clauses in N3).
+# TC-MEGA-FIBO-01 lane L38. STRATIFICATION LAYER 1.
+# Positive Horn clauses only: no negation in this layer. Every clause is
+# range-restricted (every variable in the head appears in the body), so the
+# least Herbrand model exists and forward-chaining saturates finitely over the
+# extensional layer-0 facts. Boundedness: heads introduce only reg: terms
+# already named in the body; no value invention, no recursion beyond the
+# linear, well-founded nettingSetOf chain.
+
+# NAMESPACE RECONCILIATION (WO-13 decision): reg:
+# (<http://graphlaw.org/ns/mega/fibo/reg#>) is a first-class scenario-local
+# namespace of this self-contained mega ontology; it is not mapped onto or
+# renamed under repo-canonical surfaces (ontologies/sql-ast.ttl,
+# ggen/sql-dialect/). log: is the standard CWM/swap vocabulary. Full per-term
+# decisions: README.md, "Vocabulary grounding and RECONCILIATION-REQUIRED".
+
+@prefix reg: <http://graphlaw.org/ns/mega/fibo/reg#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ------------------------------------------------------------------
+# R1.1  Two cleared trades belong to the same netting set if they share
+#       a netting agreement and are in the same CCP membership.
+{ ?t1 a reg:Trade . ?t1 reg:nettingAgreement ?na .
+  ?t2 a reg:Trade . ?t2 reg:nettingAgreement ?na .
+  ?t1 reg:nettingSetOf ?ns . ?t2 reg:nettingSetOf ?ns . }
+=> { ?t1 reg:coNettedWith ?t2 . ?t2 reg:coNettedWith ?t1 . } .
+
+# ------------------------------------------------------------------
+# R1.2  A trade nets into the netting set of its holder's clearing
+#       membership when the agreement is SA-CCR eligible.
+{ ?t a reg:Trade ;
+     reg:holder ?h ;
+     reg:nettingAgreement ?na .
+  ?na a reg:SACCREligibleAgreement .
+  ?h reg:ccpMemberOf ?ccp .
+  ?ns reg:nettingSetForCCP ?ccp ;
+      reg:governingJurisdiction ?j .
+  ?na reg:governingJurisdiction ?j . }
+=> { ?t reg:nettingSetOf ?ns . } .
+
+# ------------------------------------------------------------------
+# R1.3  A netting set exists for a legal entity holding an ISDA margin
+#       agreement with a threshold in its jurisdiction's cap band.
+{ ?h a reg:LEIHolder ;
+     reg:nettingSetRef ?nsRef ;
+     reg:jurisdiction ?j .
+  ?ma a reg:MarginAgreement ;
+     reg:party ?h ;
+     reg:marginThreshold ?thr .
+  ?ns reg:nettingSetFor ?nsRef . }
+=> { ?ns reg:nettingSetMember ?h .
+     ?ns reg:nettingSetJurisdiction ?j . } .
+
+# ------------------------------------------------------------------
+# R1.4  Transitive co-netting closure within one set (bounded: only over
+#       pairs already co-netted by R1.1, scoped by the nettingSetOf guard).
+{ ?t1 reg:coNettedWith ?t2 . ?t2 reg:coNettedWith ?t3 .
+  ?t1 reg:nettingSetOf ?ns . }
+=> { ?t1 reg:coNettedWith ?t3 . } .
+
+# ------------------------------------------------------------------
+# R1.5  A netting set is SA-CCR recognized when every member holds a
+#       valid LEI node and a margin agreement in the set's jurisdiction.
+{ ?ns reg:nettingSetMember ?h .
+  ?h reg:leiCode ?lei .
+  ?ma reg:party ?h ;
+      reg:governingJurisdiction ?j .
+  ?ns reg:nettingSetJurisdiction ?j . }
+=> { ?ns a reg:SACCRRecognizedNettingSet . } .

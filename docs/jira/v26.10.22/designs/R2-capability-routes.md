@@ -1,10 +1,13 @@
 # R2 — capability route table (design record)
 
-Condensed from the R2 spec lane. Maps to SQLRDF-16 row R2. Anchors verified.
+Withdrawn as an implementation plan. DuckDB is not a Cargo feature and is not
+`CompiledOut` on wasm. `admit_sql_rdf` always calls `compile_turtle`.
+`REFUSAL-04` is the non-document-backed builtin reader (`docs/refusals.md`).
+The sections below record the rejected route. Do not implement them.
 
 ## Current state
-- cfg-split `admit_sql_rdf` (`src/tier.rs:153-166`): wasm → `capability_refusal()`; native → compile_turtle.
-- `REFUSAL_04_CAPABILITY_REFUSAL` (`src/tier.rs:23`), message receipt-gated (`docs/refusals.md:35,45`).
+- `admit_sql_rdf` compiles every UTF-8 `sql` document through `compile_turtle`. There is no wasm `capability_refusal()` arm.
+- `REFUSAL_04_CAPABILITY_REFUSAL` (`src/tier.rs`) is the document-backed builtin trigger (`docs/refusals.md`).
 - Registry `ENGINES` (`src/registry.rs:170`) descriptive only; `capabilities()` (`src/abi.rs:473-488`) exposes no engines today.
 - `NATIVE_ONLY_OPS = ["duckdb"]` (`src/registry.rs:889-897`); wasm mirror `wasm/src/abi_meta.rs` pins OPS+ERROR_CODES only.
 

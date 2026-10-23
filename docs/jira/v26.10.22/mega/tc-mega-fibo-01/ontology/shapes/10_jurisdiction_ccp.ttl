@@ -1,0 +1,81 @@
+# GENERATED FILE -- do not hand-edit.
+# Generator: gen_shapes.py (TC-MEGA-FIBO-01, lane L38, ontology surface)
+# Regenerate: python3 gen_shapes.py
+#
+# NAMESPACE DECLARATION (reconciliation decision, WO-13): reg:
+# (<http://graphlaw.org/ns/mega/fibo/reg#>) is a FIRST-CLASS namespace of this
+# self-contained scenario ontology. Its terms (RegulatedParty,
+# LegalEntityIdentifier, MarginAgreement, MoneyAmount_*, jurisdiction,
+# marginThreshold, floatingCurve, ...) are SCENARIO-LOCAL vocabulary of the
+# regulatory rule layer, deliberately NOT mapped onto or renamed under repo-
+# canonical surfaces (ontologies/sql-ast.ttl, ggen/sql-dialect/). Only the
+# sh:/xsd:/rdf: terms are standard shared vocabulary.
+# Repo-surface grounding and per-term reconciliation decisions: README.md
+# (section "Vocabulary grounding and RECONCILIATION-REQUIRED").
+
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix reg: <http://graphlaw.org/ns/mega/fibo/reg#> .
+
+### 1. Jurisdiction enum (closed world: US/UK/EU) + CCP membership
+reg:JurisdictionShape a sh:NodeShape ;
+    sh:targetClass reg:RegulatedParty ;
+    sh:property [
+        sh:path reg:jurisdiction ;
+        sh:in ( "US" "UK" "EU" ) ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:message "jurisdiction must be exactly one of US/UK/EU (closed enum)" ;
+    ] .
+
+reg:CCPMembershipShape a sh:NodeShape ;
+    sh:targetClass reg:ClearingMemberParty ;
+    sh:property [
+        sh:path reg:ccpMemberOf ;
+        sh:node reg:CCPNodeShape ;
+        sh:minCount 1 ;
+        sh:message "a clearing member must reference a well-formed CCP" ;
+    ] .
+
+reg:CCPNodeShape a sh:NodeShape ;
+    sh:targetClass reg:CentralCounterparty ;
+    sh:property [
+        sh:path reg:ccpId ;
+        sh:datatype xsd:string ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path reg:jurisdiction ;
+        sh:in ( "US" "UK" "EU" ) ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+reg:CCPMembership_USShape a sh:NodeShape ;
+    sh:targetClass reg:ClearingMemberParty ;
+    sh:property [
+        sh:path reg:ccpMemberOf ;
+        sh:qualifiedValueShape [ sh:path reg:jurisdiction ; sh:hasValue "US" ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:message "US/EU/UK clearing members must point at a US-domiciled CCP" ;
+    ] .
+
+reg:CCPMembership_UKShape a sh:NodeShape ;
+    sh:targetClass reg:ClearingMemberParty ;
+    sh:property [
+        sh:path reg:ccpMemberOf ;
+        sh:qualifiedValueShape [ sh:path reg:jurisdiction ; sh:hasValue "UK" ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:message "US/EU/UK clearing members must point at a UK-domiciled CCP" ;
+    ] .
+
+reg:CCPMembership_EUShape a sh:NodeShape ;
+    sh:targetClass reg:ClearingMemberParty ;
+    sh:property [
+        sh:path reg:ccpMemberOf ;
+        sh:qualifiedValueShape [ sh:path reg:jurisdiction ; sh:hasValue "EU" ] ;
+        sh:qualifiedMinCount 1 ;
+        sh:message "US/EU/UK clearing members must point at a EU-domiciled CCP" ;
+    ] .
+

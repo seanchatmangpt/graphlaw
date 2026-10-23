@@ -30,6 +30,10 @@
 //!
 //! Run: cargo run --example asp_tableaux_vector_gen [-- --verify]
 //! (from /Users/sac/graphlaw)
+//! Output: generation log ending `generated N vectors; rev <sha>; now run with
+//! --verify` (exit 0); `--verify` re-evaluates every emitted vector and exits 0
+//! on byte-agreement.
+//! Court: tests/corpus_conformance.rs::vecgen_asp_tableaux_generate_then_verify.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;

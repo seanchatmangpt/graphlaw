@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "5540f3457aeba663bfd9b956d332121739c00e3f7e63f0931ce70631cd6f0cb1",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T051420Z-Edit-5540f345.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/CHARTER-DFLSS.md",
+  "timestamp_utc": "2026-10-23T051420Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

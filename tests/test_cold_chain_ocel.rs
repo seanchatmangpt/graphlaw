@@ -99,7 +99,7 @@ fn test_cold_chain_biologics_verification_flow() {
     validate_ast_shacl(query_ast_ttl, shapes_ttl).expect("SHACL validation must pass");
 
     // 4. Compile and evaluate (SQLRDF-17: admission is compile_turtle —
-    // hand-built/hand-extracted ASTs are a typed REFUSAL-04 at eval).
+    // a CompiledQuery with no canon bytes is EvaluatorError::NoCanonicalGraph at eval).
     let compiled = graphlaw::sql_ast::compile_turtle(query_ast_ttl)
         .expect("admitted AST graph must compile");
     let query_node = "http://biopharma.org/queries#ColdChainExcursionQuery".to_string();

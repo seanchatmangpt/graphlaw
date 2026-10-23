@@ -159,8 +159,8 @@ Conforming implementations **MUST** recognize all 35 statement classes. The embe
 | `sql:AttachStatement` | `sql:SessionStatement` | `AttachStatement` | Mounts external database files into namespace catalog. |
 | `sql:DetachStatement` | `sql:SessionStatement` | `DetachStatement` | Unmounts database files from active engine catalog. |
 | `sql:UseStatement` | `sql:SessionStatement` | `UseStatement` | Sets default schema and database resolution path. |
-| `sql:ConnectStatement` | `sql:SessionStatement` | `ConnectStatement` | **Engine Refusal:** `CONNECT LOCAL is not yet implemented`. |
-| `sql:DisconnectStatement` | `sql:SessionStatement` | `DisconnectStatement` | **Engine Refusal:** `no active CONNECT`. |
+| `sql:ConnectStatement` | `sql:SessionStatement` | `ConnectStatement` | **Engine Refusal:** `CONNECT LOCAL is not yet implemented` (illustrative; courts pin loose substrings `not yet implemented` / `no active CONNECT` at `tests/duckdb_statement_kinds.rs:115`). |
+| `sql:DisconnectStatement` | `sql:SessionStatement` | `DisconnectStatement` | **Engine Refusal:** `no active CONNECT` (illustrative; same substring pin at `tests/duckdb_statement_kinds.rs:115`). |
 
 ### 3.3 Syntactic Clauses and Scoped Expressions
 
@@ -329,7 +329,7 @@ When an incoming graph violates syntactic constraints, requests an unexecutable 
 | `REFUSAL-01` | `MalformedAstRefusal` | Node fails validation against shapes in `ontologies/sql-ast.ttl`. | Graph returned to sender with SHACL validation report details. |
 | `REFUSAL-02` | `UnimplementedStatementRefusal` | Node represents a recognized statement that the engine refuses (`ConnectStatement`, `DisconnectStatement`). | Operation rejected; recorded as a witnessed engine refusal. |
 | `REFUSAL-03` | `ScopeIntegrityRefusal` | Term violates operational scope boundaries (e.g., aggregate placed inside `WHERE`). | Compilation rejected; sender must re-scope expression. |
-| `REFUSAL-04` | `CapabilityRefusal` | Statement requires engine features disabled in sandbox (e.g., calling DuckDB in WASM). | Fail-Closed sandboxing enforced; execution halted. |
+| `REFUSAL-04` | `CapabilityRefusal` | Builtin SQL eval was given a reader that is not document-backed. The wasm module still admits and compiles SQL-in-RDF through `compile_turtle`. | Supply the admitted Turtle document (`query_document_turtle`) and compile with `compile_turtle`. |
 
 ---
 
@@ -353,7 +353,7 @@ The runtime environment **MUST** certify that built-in engine extensions answer 
 | `icu` | Installed & Loaded | `SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END FROM icu_calendar_names()` | Returned integer `1` |
 | `json` | Installed & Loaded | `SELECT json_extract('{"a": 1}', '$.a')::INTEGER` | Returned integer `1` |
 | `parquet` | Installed & Loaded | `COPY (...) TO 'surface.parquet'; SELECT count(*) FROM read_parquet(...)` | Returned integer `1` |
-| `tpch` | Installed | `CALL dbgen(sf = 0); SELECT count(*) FROM nation` | Returned integer `25` |
+| `tpch` | Installed | `CALL dbgen(sf = 0.01); SELECT count(*) FROM nation` | Returned integer `25` (courted at `tests/duckdb_statement_kinds.rs:573`, count pinned at `:605`; supersedes earlier `sf = 0` wording) |
 
 ---
 

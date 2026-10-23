@@ -4,12 +4,22 @@
 //! upstream Rust libraries:
 //!
 //! - PurRDF owns RDF 1.2, SPARQL 1.1/1.2, SHACL, ShEx 2.1, Datalog,
-//!   RDF/RDFS/OWL-RL entailment, and RDF event ingestion.
+//!   RDF/RDFS/OWL-RL entailment, one admission law
+//!   ([`LawState`]: parse → shape-validate → entail → step, each transition
+//!   content-addressed and receipted), and RDF event ingestion.
 //! - Eyeron owns Notation3 parsing and reasoning.
 //!
 //! GraphLaw intentionally contains no fallback parser, rule evaluator, triplestore,
 //! SHACL/ShEx validator, SPARQL evaluator, or OWL ruleset of its own. Missing
 //! capabilities are refused or added upstream instead of being reimplemented here.
+//!
+//! The SQL-in-RDF surface composes the same law into a pipeline: a SQL
+//! statement written as an RDF graph admits only if it validates against the
+//! SHACL shapes in `ontologies/sql-ast.ttl`, compiles to parameterized
+//! DuckDB SQL via [`sql_ast::compile_turtle`], executes on an embedded
+//! [`duckdb_eval::GraphLawDuckDB`] connection, and returns an
+//! [`duckdb_eval::ExecutionReceipt`] whose hash is
+//! `BLAKE3(Canon(G_AST) || P_params)` (sql-rdf Rec. section 1.4).
 //!
 //! ```
 //! use graphlaw::dialect::Dialect;
@@ -26,6 +36,33 @@
 //! assert_eq!(receipt.step, "derive:rdfs");
 //! assert!(child.quad_count() > state.quad_count());
 //! assert_ne!(child.id(), state.id());
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! The same shape end-to-end for the SQL surface — RDF in, SHACL admission,
+//! parameterized SQL, receipt out:
+//!
+//! ```
+//! use graphlaw::duckdb_eval::GraphLawDuckDB;
+//! use graphlaw::sql_ast::compile_turtle;
+//!
+//! let db = GraphLawDuckDB::open_in_memory()?;
+//! db.raw_connection().execute_batch(
+//!     "CREATE TABLE t(c INTEGER); INSERT INTO t VALUES (42);",
+//! )?;
+//! let doc = concat!(
+//!     "@prefix sql: <http://graphlaw.org/sql#> .\n",
+//!     "@prefix ex: <http://example.org/queries#> .\n",
+//!     "ex:S a sql:SelectStatement ;\n",
+//!     "    sql:statementIndex 1 ;\n",
+//!     "    sql:fromTable [ sql:tableName \"t\" ] ;\n",
+//!     "    sql:selectList ( [ sql:columnName \"c\" ] ) .\n",
+//! );
+//! let compiled = compile_turtle(doc)?;
+//! let receipt = db.eval_ast_query("ex:S", &compiled, "https://e/row/", "https://e/p/")?;
+//! assert_eq!(receipt.rows_emitted, 1);
+//! // The receipt hash binds the canonical AST graph and the bound params.
+//! assert_ne!(receipt.query_hash, [0u8; 32]);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
@@ -192,7 +229,7 @@ pub const BACKEND_AUTHORITIES: &[BackendAuthority] = &[
     BackendAuthority {
         capability: "Vectorized columnar execution, Parquet scan, and SIMD aggregations",
         authority: "frozen-duckdb",
-        revision: "2.0.0",
+        revision: "2.0.2",
     },
 ];
 

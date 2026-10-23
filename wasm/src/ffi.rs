@@ -6,11 +6,18 @@
 // buffer_style, abi_path.
 // Rendered by ggen (rust-wasi-wasmex-pack) from the wja: graph.
 // Edit the ontology and re-render; never edit this file by hand.
-// The ownership table below is the soundness contract for `buffer_style = vec`.
-// A re-render must keep it (see the pack template): reconstructing a `Vec`
-// with `capacity = len.max(1)` is undefined behavior when the allocator's
-// capacity is larger, and freeing an unread `gl_alloc` buffer with
-// `length = len` claims uninitialized bytes.
+//
+// SIDE-TABLE CONTRACT (pack law): the guest never supplies layout facts. Every
+// buffer this module hands the host is registered in `LIVE` at publish time —
+// key = raw pointer, value = (real `capacity()`, initialized `length`,
+// host-visible `declared` length, byte `budget`). Every guest `(ptr, len)` is
+// looked up by handle before any reconstruction; a buffer is rebuilt only from
+// the recorded capacity, and only when the host length equals the declared
+// length. Unknown pointers, mismatched lengths, and a second free never
+// rebuild a `Vec`: they yield typed error responses (or no-ops), never UB.
+// A re-render must keep this table; `Vec::from_raw_parts(ptr, len, len.max(1))`
+// — trusting the host length as capacity — is undefined behavior and is
+// banned from the generated output.
 //
 // Protocol (ABI version 1, request limit 16777216 bytes; all
 // integers are wasm `i32`/`i64`):
@@ -32,11 +39,6 @@
 //   pub fn unknown_buffer_response() -> Vec<u8>
 // and with the generated `crate::abi_meta`: `MAX_REQUEST_BYTES: usize`, `MAX_OUTSTANDING_BYTES: usize`.
 //
-// Allocation discipline: every buffer is a zero-filled `Vec<u8>` whose real
-// `capacity()` is recorded in `LIVE` at the moment it is leaked to the host.
-// Reclaim looks the pointer up, checks the host length against the recorded
-// declared length, and rebuilds with that capacity. Unknown pointers and
-// mismatched lengths are not rebuilt.
 // Outstanding-byte cap: bytes handed to the host (`_alloc` buffers and `_call` responses)
 // and not yet freed are counted; `_alloc` returns null once a reservation would exceed
 // `MAX_OUTSTANDING_BYTES`, so a host that never frees cannot fill linear memory.
@@ -45,41 +47,21 @@
 // Native builds only exercise the helpers through tests; the exports are wasm32-only.
 #![cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 
-use crate::abi_meta::MAX_OUTSTANDING_BYTES;
 use crate::abi_meta::MAX_REQUEST_BYTES;
+use crate::abi_meta::MAX_OUTSTANDING_BYTES;
 use core::sync::atomic::{AtomicUsize, Ordering};
-use std::collections::BTreeMap;
-use std::sync::Mutex;
 
 /// Bytes handed to the host (`_alloc` buffers and `_call` responses) and not yet freed.
 static OUTSTANDING: AtomicUsize = AtomicUsize::new(0);
 
-/// Live host-owned buffers. The key is the leaked `Vec` pointer.
-/// Absent on purpose from the ABI: the host only round-trips `(ptr, len)`.
-static LIVE: Mutex<BTreeMap<usize, LiveAlloc>> = Mutex::new(BTreeMap::new());
-
-/// One buffer this module handed the host.
-struct LiveAlloc {
-    /// `Vec::capacity()` at [`publish`]. This is the layout `from_raw_parts` must use.
-    capacity: usize,
-    /// Initialized prefix. Allocations are zero-filled, so this is at least 1.
-    length: usize,
-    /// Length the host must pass back (`gl_alloc`'s argument, or the response length).
-    declared: u32,
-    /// Bytes reserved against [`MAX_OUTSTANDING_BYTES`].
-    budget: usize,
-}
-
-fn live() -> std::sync::MutexGuard<'static, BTreeMap<usize, LiveAlloc>> {
-    LIVE.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
-}
+use std::collections::BTreeMap;
+use std::sync::Mutex;
 
 /// Reserve `bytes` against the outstanding cap; false when the cap would be exceeded.
 fn reserve(bytes: usize) -> bool {
     OUTSTANDING
         .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
-            n.checked_add(bytes)
-                .filter(|total| *total <= MAX_OUTSTANDING_BYTES)
+            n.checked_add(bytes).filter(|total| *total <= MAX_OUTSTANDING_BYTES)
         })
         .is_ok()
 }
@@ -91,7 +73,30 @@ fn release(bytes: usize) {
     });
 }
 
-/// Record `buf` and leak it to the host. `buf` must be non-empty and initialized.
+/// Live host-owned buffers: the bounds-checked side table. The key is the
+/// leaked buffer pointer.
+/// Absent on purpose from the ABI: the host only round-trips `(ptr, len)`.
+static LIVE: Mutex<BTreeMap<usize, Slot>> = Mutex::new(BTreeMap::new());
+
+/// One buffer this module handed the host.
+struct Slot {
+    /// `Vec::capacity()` at [`publish`]. This is the only layout any
+    /// reconstruction may use.
+    capacity: usize,
+    /// Initialized prefix. Allocations are zero-filled, so this is at least 1.
+    length: usize,
+    /// Length the host must pass back (`_alloc`'s argument, or the response length).
+    declared: u32,
+    /// Bytes reserved against the outstanding cap.
+    budget: usize,
+}
+
+fn live() -> std::sync::MutexGuard<'static, BTreeMap<usize, Slot>> {
+    LIVE.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+/// Record `buf` in the side table and leak it to the host.
+/// `buf` must be non-empty and initialized.
 fn publish(mut buf: Vec<u8>, declared: u32, budget: usize) -> *mut u8 {
     let length = buf.len();
     let capacity = buf.capacity();
@@ -100,7 +105,7 @@ fn publish(mut buf: Vec<u8>, declared: u32, budget: usize) -> *mut u8 {
     core::mem::forget(buf);
     live().insert(
         ptr as usize,
-        LiveAlloc {
+        Slot {
             capacity,
             length,
             declared,
@@ -110,7 +115,7 @@ fn publish(mut buf: Vec<u8>, declared: u32, budget: usize) -> *mut u8 {
     ptr
 }
 
-/// Why a host `(ptr, len)` was not rebuilt.
+/// Why a guest `(ptr, len)` was rejected by the side table.
 enum Reject {
     /// Null pointer. The caller answers with [`graphlaw::abi::missing_buffer_response`].
     Missing,
@@ -125,7 +130,8 @@ struct Taken {
     budget: usize,
 }
 
-/// Take a live buffer back. A mismatch leaves the allocation in the table.
+/// Take a live buffer back through the side table. A length mismatch or an
+/// unknown pointer leaves the allocation exactly where it is.
 fn reclaim(ptr: *mut u8, len: u32) -> Result<Taken, Reject> {
     if ptr.is_null() {
         return Err(Reject::Missing);
@@ -139,17 +145,17 @@ fn reclaim(ptr: *mut u8, len: u32) -> Result<Taken, Reject> {
         return Err(Reject::Len);
     }
     let slot = map.remove(&key).expect("key was just present");
-    // SAFETY: `ptr`, `length`, and `capacity` were stored by `publish` from this
-    // `Vec`. `length` bytes were initialized before the leak (zero-filled alloc
-    // buffers, or a response `Vec` built in safe code). The map entry is gone,
-    // so a second reclaim cannot rebuild the same allocation.
+    // SAFETY: `ptr`, `length`, and `capacity` were recorded by `publish` from
+    // this exact `Vec`; `length` bytes were initialized before the leak
+    // (zero-filled `_alloc` buffers, or a response `Vec` built in safe code).
+    // The map entry is gone, so a second reclaim cannot rebuild the same
+    // allocation.
     let buf = unsafe { Vec::from_raw_parts(ptr, slot.length, slot.capacity) };
     Ok(Taken {
         buf,
         budget: slot.budget,
     })
 }
-
 /// Reserve a zero-filled buffer of length `len.max(1)`.
 /// Null when `len` exceeds the request limit or the reservation would exceed the outstanding cap.
 pub fn alloc_buf(len: u32) -> *mut u8 {
@@ -170,8 +176,8 @@ pub fn alloc_buf(len: u32) -> *mut u8 {
 /// Unknown pointers and mismatched lengths do not rebuild a `Vec`.
 ///
 /// # Safety
-/// Safe against a hostile `(ptr, len)`. The `unsafe` marker matches the
-/// export: a correct host passes a pair this module handed out, once.
+/// Safe against a hostile `(ptr, len)`. A correct host passes a pair this
+/// module handed out, once.
 pub unsafe fn free_buf(ptr: *mut u8, len: u32) {
     if let Ok(taken) = reclaim(ptr, len) {
         release(taken.budget);
@@ -207,6 +213,7 @@ pub unsafe fn call_buf(ptr: *mut u8, len: u32) -> Vec<u8> {
         }
     };
     if response.is_empty() {
+        // Keep len >= 1 so the host's free reclaims the exact allocation.
         b"{}".to_vec()
     } else {
         response
@@ -236,7 +243,7 @@ fn pack_response(response: Vec<u8>) -> u64 {
         return publish_response(err, err_budget);
     }
     // The cap is already saturated. Track the error buffer with a zero budget
-    // so `gl_free` is still defined, without wrapping the counter.
+    // so `_free` is still defined, without wrapping the counter.
     publish_response(err, 0)
 }
 
@@ -266,6 +273,7 @@ pub extern "C" fn gl_alloc(len: u32) -> *mut u8 {
 #[cfg(target_arch = "wasm32")]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn gl_free(ptr: *mut u8, len: u32) {
+    // SAFETY: forwarded caller contract.
     unsafe { free_buf(ptr, len) }
 }
 
@@ -277,9 +285,9 @@ pub unsafe extern "C" fn gl_free(ptr: *mut u8, len: u32) {
 #[cfg(target_arch = "wasm32")]
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn gl_call(ptr: *mut u8, len: u32) -> u64 {
+    // SAFETY: forwarded caller contract.
     pack_response(unsafe { call_buf(ptr, len) })
 }
-
 #[cfg(test)]
 fn is_live(ptr: *mut u8) -> bool {
     live().contains_key(&(ptr as usize))
@@ -347,7 +355,7 @@ mod tests {
             p.write(b'{');
             p.add(1).write(b'}');
             let response = call_buf(p, 2);
-            assert!(!is_live(p), "gl_call consumes the request");
+            assert!(!is_live(p), "call consumes the request");
             free_buf(p, 2);
             assert!(!is_live(p));
             let text = String::from_utf8(response).expect("json");

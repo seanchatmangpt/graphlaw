@@ -82,6 +82,21 @@ for spec in "rdf-turtle Turtle TestTurtlePositiveSyntax TestTurtleNegativeSyntax
     emit_dialect "$1" "$2" "$3" "$4"
 done
 echo "];"
+cat <<'RUST'
+#[test]
+fn w3c_manifest_census_notice() {
+    // LOUD-SKIP census notice: this target is a GENERATED DATA MANIFEST
+    // (entries only, no corpus courts of its own). The substantive W3C
+    // conformance courts run in tests/w3c_conformance.rs (target
+    // `w3c_conformance`). This companion keeps the `w3c_manifest` test target
+    // from reporting a silent "0 passed; 0 failed" in a default census.
+    println!(
+        "SKIP [w3c-manifest] reason: data-only generated manifest ({} entries) consumed via #[path] by tests/w3c_conformance.rs — run the courts there: cargo test --test w3c_conformance",
+        ENTRIES.len()
+    );
+    assert!(!ENTRIES.is_empty(), "generated manifest must be non-empty");
+}
+RUST
 } > "$OUT"
 
 echo "wrote $OUT ($(grep -c 'Dialect::' "$OUT") entries)"

@@ -15,18 +15,30 @@ fn request(v: Value) -> Value {
     serde_json::from_slice(&graphlaw::abi::call(v.to_string().as_bytes()))
         .expect("GraphLaw ABI returns JSON")
 }
+fn fail(msg: String) -> ! {
+    eprintln!("error: {msg}");
+    std::process::exit(2)
+}
 fn main() -> ExitCode {
     let dir = corpus_dir();
-    let mut files: Vec<_> = fs::read_dir(&dir)
-        .expect("run12 corpus")
-        .map(|e| e.expect("dir entry").path())
-        .filter(|p| p.extension().and_then(|x| x.to_str()) == Some("ttl"))
-        .collect();
+    let mut files: Vec<_> = match fs::read_dir(&dir) {
+        Ok(rd) => rd,
+        Err(e) => fail(format!("cannot read run12 corpus dir {}: {e}", dir.display())),
+    }
+    .map(|e| match e {
+        Ok(e) => e.path(),
+        Err(e) => fail(format!("cannot read entry in {}: {e}", dir.display())),
+    })
+    .filter(|p| p.extension().and_then(|x| x.to_str()) == Some("ttl"))
+    .collect();
     files.sort();
     let mut admitted = 0usize;
     let mut refused = 0usize;
     for path in &files {
-        let text = fs::read_to_string(path).expect("UTF-8 Turtle");
+        let text = match fs::read_to_string(path) {
+            Ok(t) => t,
+            Err(e) => fail(format!("cannot read corpus file {} as UTF-8: {e}", path.display())),
+        };
         let parsed = request(json!({"op":"parse","text":text,"dialect":"turtle"}));
         assert_eq!(
             parsed["ok"],

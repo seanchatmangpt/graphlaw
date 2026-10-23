@@ -1,0 +1,3 @@
+SUPERSEDED_BY: spc-2026-10-22T191548.json
+REASON: W20 dedup - superseded duplicate of the same SMOKE leg (tc_hot_01 clone_path), receipt bytes left untouched (append-only law).
+MARKED: 2026-10-22 lane AA15

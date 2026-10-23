@@ -134,7 +134,7 @@ fn base_manifest() -> Value {
             "default_max_skew_secs": DEFAULT_MAX_SKEW_SECS,
         },
         "ops": ops,
-        "notes": "op `duckdb` (op-15) is native-only behind the `duckdb` cargo feature and is deliberately absent from this wasm op table (frozen-duckdb does not compile to wasm32); its bounds are enforced in src/duckdb_op.rs: DuckDB memory_limit=32MiB and threads=1 compile-time pragmas (GAP-2), chunk rows <= 10000 and chunk bytes <= 16 MiB typed ResourceLimit refusals (GAP-4), MAX_OUTSTANDING_ALLOC_BYTES is 16 MiB for the wasm32 target via split-config (GAP-1)",
+        "notes": "op `duckdb` (op-15) is dispatched by the wasm module (`src/abi.rs` routes it to `duckdb_op::dispatch`). It stays off this hashed 14-op table so `registry_blake3` does not move until an explicit digest bump. Absence from `capabilities` is not a SQL refusal and is not REFUSAL-04. SQL-in-RDF admits inside the module through `compile_turtle`. frozen-duckdb 2.0.2 emits `static=duckdb` for wasm32-wasip1. The wasm32-wasip1 link is witnessed (2026-10-22); the recorded pin `332ea218…` was not replaced. `WASI_SDK_PATH` must be a wasi-sdk root (`bin/clang`, `share/cmake/wasi-sdk-p1.cmake`). Without it, frozen-duckdb-sys `build.rs` fails typed (`WASI_SDK_PATH required`). Bounds enforced in src/duckdb_op.rs: DuckDB memory_limit=32MiB and threads=1 compile-time pragmas (GAP-2), chunk rows <= 10000 and chunk bytes <= 16 MiB typed ResourceLimit refusals (GAP-4), MAX_OUTSTANDING_ALLOC_BYTES is 16 MiB for the wasm32 target via split-config (GAP-1)",
         "response_envelope": {
             "success": {"ok": true, "extra": "op-specific fields"},
             "refusal": {"ok": false, "error": {

@@ -1,0 +1,26 @@
+# TC-MEGA-FIBO-01 reserved anti-vacuity twin seed — leg #41209 (MALFORMED)
+#
+# Defect class: currency decimal precision 2 -> 4. Every benign leg in
+# tc-mega-fibo-01-{smoke,full}.ttl carries monetary decimals with exactly 2
+# fractional digits (ISO 4217 minor-unit precision). This twin carries 4.
+# Kept in a separate file so the benign corpus stays clean: loading this file
+# alongside the benign corpus must surface the defect under any precision
+# court, and the court must refuse or flag it — a gate that admits this file
+# unchanged is vacuous.
+#
+# Hand-authored reserved seed (not generated); deterministic and immutable.
+
+@prefix tcg: <http://graphlaw.org/tcmega#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+tcg:leg-041209-malformed a tcg:CDS_TRANCHE ;
+    rdfs:label "anti-vacuity twin of leg 041209 — currency precision 2->4" ;
+    tcg:legId "041209" ;
+    tcg:jurisdiction "US" ;
+    tcg:currency "USD"^^xsd:string ;
+    # DEFECT: 4 fractional digits; benign sibling emits "1234567.89" (2).
+    tcg:notional "1234567.8901"^^xsd:decimal ;
+    tcg:rate "0.045678"^^xsd:decimal ;
+    tcg:counterparty tcg:lei-00003 ;
+    tcg:heldBy tcg:holder-000 .

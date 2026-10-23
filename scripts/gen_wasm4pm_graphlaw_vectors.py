@@ -13,26 +13,53 @@ Usage (from /Users/sac/graphlaw):
 
 import argparse
 import json
+import os
 import subprocess
 from pathlib import Path
 
 GRAPHLAW = Path("/Users/sac/graphlaw")
-EYERON = GRAPHLAW / "target/release/graphlaw-eyeron"
+EYERON = Path(
+    os.environ.get("EYERON_BIN", str(GRAPHLAW / "target/release/graphlaw-eyeron"))
+)
 DEFAULT_OUT = Path(
     "/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw"
 )
 
-GRAPHLAW_REV = "82c67c2b7e2ed71e7ca6bbd557e36fc7f446b1bd"
 PURRDF = "2.0.2"
 EYERON_VERSION = "0.7.8"
-GENERATOR = (
-    "graphlaw:scripts/gen_wasm4pm_graphlaw_vectors.py@82c67c2 — encodes "
-    "successor-state progression / STRIPS replay as N3 Datalog over explicit "
-    "situation constants s0..sN (holds(F,do(A,S)) :- causes(F,A); "
-    "holds(F,do(A,S)) :- holds(F,S), keeps(F,A), keeps = closed-world "
-    "completion of not causes_del), derives holds fluents with "
-    "graphlaw-eyeron 0.7.8, emits SCHEMA.md v1 vectors"
-)
+
+
+def graphlaw_rev():
+    """Live workspace rev, stamped at generation time (mirrors
+    src/bin/dl_dualroute.rs:303 — never a hardcoded constant)."""
+    proc = subprocess.run(
+        ["git", "-C", str(GRAPHLAW), "rev-parse", "HEAD"],
+        capture_output=True, text=True,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(f"git rev-parse failed: {proc.stderr}")
+    return proc.stdout.strip()
+
+
+def graphlaw_version():
+    """Workspace package version from the root Cargo.toml [package]."""
+    for line in (GRAPHLAW / "Cargo.toml").read_text().splitlines():
+        if line.startswith("version ="):
+            return line.split('"')[1]
+    raise RuntimeError("no version = line in root Cargo.toml [package]")
+
+
+def generator_note(rev):
+    short = rev[:7]
+    return (
+        f"graphlaw:scripts/gen_wasm4pm_graphlaw_vectors.py@{short} — encodes "
+        "successor-state progression / STRIPS replay as N3 Datalog over explicit "
+        "situation constants s0..sN (holds(F,do(A,S)) :- causes(F,A); "
+        "holds(F,do(A,S)) :- holds(F,S), keeps(F,A), keeps = closed-world "
+        "completion of not causes_del), derives holds fluents with "
+        f"graphlaw-eyeron {EYERON_VERSION}, emits SCHEMA.md v1 vectors"
+    )
+
 
 PREFIX = "@prefix : <http://example.org/sc#> ."
 
@@ -122,15 +149,16 @@ def sitcalc_breed_facts(dom):
 
 
 def emit_vector(out_dir, vector_id, breed, breed_input, derived_facts,
-                verdicts, notes):
+                verdicts, notes, rev):
     vector = {
         "vector_id": vector_id,
         "breed": breed,
         "provenance": {
-            "graphlaw_rev": GRAPHLAW_REV,
+            "graphlaw_rev": rev,
+            "graphlaw_version": graphlaw_version(),
             "purrdf": PURRDF,
             "eyeron": EYERON_VERSION,
-            "generator": GENERATOR,
+            "generator": generator_note(rev),
             "stratified": False,
         },
         "breed_input": breed_input,
@@ -303,6 +331,7 @@ def main():
     args = ap.parse_args()
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
+    rev = graphlaw_rev()
 
     # ---- situation_calculus vectors -------------------------------------
     for slug, dom_fn in [
@@ -346,7 +375,7 @@ def main():
         emit_vector(out_dir, f"situation_calculus-{slug}", "situation_calculus",
                     breed_input,
                     sorted(f"holds:{f}" for f in holds_final),
-                    verdicts, notes)
+                    verdicts, notes, rev)
 
     # ---- strips vectors ---------------------------------------------------
     for slug, dom_fn in [
@@ -399,7 +428,7 @@ def main():
             "candidates": [], "cases": [], "state": dom["state"],
         }
         emit_vector(out_dir, f"strips-{slug}", "strips", breed_input,
-                    derived, verdicts, notes)
+                    derived, verdicts, notes, rev)
 
 
 if __name__ == "__main__":

@@ -100,7 +100,7 @@ Notes, grounded in the code:
 
 ## Refusal kinds
 
-Six `RefusalKind` variants (`src/dialect.rs`, `#[non_exhaustive]` — always
+Seven `RefusalKind` variants (`src/dialect.rs`, `#[non_exhaustive]` — always
 match with a wildcard):
 
 | Kind | Meaning |
@@ -111,6 +111,7 @@ match with a wildcard):
 | `Unsupported` | Valid, but not usable in this operation. |
 | `ResourceLimit` | A documented `abi::MAX_*` cap was exceeded. |
 | `TierMismatch` | The document belongs to the other semantic tier (R04): N3 logic to an RDF parser, or N3 sniffed undeclared. See `src/tier.rs`. |
+| `DuckDb` | The frozen-duckdb execution substrate (ABI op `duckdb`) failed or the request misused it. Never traps. Absence from the hashed 14-op registry list is not this refusal and is not REFUSAL-04. |
 
 ## Typed parse refusals
 

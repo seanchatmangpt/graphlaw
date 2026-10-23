@@ -1,11 +1,26 @@
-# sql_ast.rs decomposition design (post-integration refactor prep)
+# sql_ast.rs decomposition design
 
-Condensed from the decomposition design lane. Current: 2,410 lines
-monolithic. All existing `graphlaw::sql_ast::{...}` imports must keep
-resolving — the refactor is a directory module with a facade `pub use` layer,
-path-transparent, zero consumer changes.
+Public path stays `graphlaw::sql_ast::…`. The module root stayed
+`src/sql_ast.rs`. Children live in `src/sql_ast/`.
 
-## Layout
+## On disk (2026-10-22)
+
+Measured with `wc -l` after the switchover. `cargo check -p graphlaw --tests --offline` exit 0.
+
+| File | Lines | What it holds |
+|---|---:|---|
+| `src/sql_ast.rs` | 2338 | Module root: `RdfAstGraphReader`, `compile_turtle`, dataset reader, tests |
+| `src/sql_ast/ast.rs` | 520 | Expression and clause types, `CompiledQuery`, `MergeStatement` |
+| `src/sql_ast/refusals.rs` | 603 | `RefusalCode`, `AstError`, `refusal_arm`, `RefusalContext`, `PackedIdent` |
+| `src/sql_ast/serializer.rs` | 232 | `SelectStatement` and `serialize_expr` |
+
+`CompiledQuery::admission_seal` is `pub(super)` so the parent court can read it. A struct literal outside `sql_ast` is still impossible. No field order, `repr`, or receipt formula change.
+
+## Not executed
+
+The prep-lane layout below (`mod.rs`, `error.rs`, `scope.rs`, `compiled.rs`, `reader.rs`, `dataset.rs`, `compile.rs`) was not cut. The same-day operator brief asked for `src/sql/{ast,refusals,serializer,builder}.rs` and a cleanup of an unused import in `src/duckdb_eval.rs`. `builder.rs` was not created. The parent was not renamed to a directory. `src/sql/` does not exist.
+
+## Prep-lane layout (unexecuted)
 src/sql_ast/{mod.rs (facade), error.rs (~60), ast.rs (~550), scope.rs (~150),
 compiled.rs (~120), reader.rs (~760), dataset.rs (~700, private),
 compile.rs (~350)}.

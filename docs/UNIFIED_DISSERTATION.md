@@ -1,3 +1,5 @@
+> **[ARCHIVED-SNAPSHOT — 2026-10-22]** This document is a 2026-10 essay preserved for provenance only. It is superseded by the adjudicated, receipt-cited text at `docs/jira/v26.10.22/DISSERTATION.md` (v26.10.22 milestone window); that file carries the conformance-adjudicated version, and this snapshot is retained unmodified so historical links remain resolvable. Do not cite this file for current claims.
+
 # The Grand Synthesis: Differential Sheaf Law, Variational Process Intelligence, and Post-Quantum Attestation over Sovereign WebAssembly Substrates
 
 **Doctoral Dissertation in Applied Mathematics, Mathematical Physics, Category Theory, and Theoretical Computer Science**

@@ -16,9 +16,9 @@ fn names() -> Vec<String> {
         .collect()
 }
 
-/// Registry op names plus the registered native-only (feature-gated, compiled
-/// out of the wasm target) surface — the complete dispatch contract of the
-/// native ABI.
+/// Registry op names plus `duckdb`, which the module dispatches and which
+/// stays off the hashed OPS list until a digest bump. Together they are the
+/// complete dispatch contract of the native ABI.
 fn full_names() -> Vec<String> {
     let mut full = names();
     full.extend(registry::NATIVE_ONLY_OPS.iter().map(|s| s.to_string()));
@@ -37,29 +37,13 @@ fn dispatch_arms() -> Vec<String> {
         .find("unknown op")
         .expect("dispatch fallthrough `unknown op` present");
     let mut arms = Vec::new();
-    let mut prev_cfg = false;
     for line in body[..end].lines() {
         let t = line.trim_start();
-        // A `#[cfg(...)]` attribute on the arm above means the arm is
-        // feature-gated (op-15 `duckdb` is native-only). Include it only when
-        // this build actually has the feature, matching the compiled binary.
-        if t.starts_with("#[cfg(feature = \"duckdb\")]") {
-            prev_cfg = true;
-            continue;
-        }
-        let _ = cfg!(feature = "duckdb");
         if let Some(rest) = t.strip_prefix('"')
             && let Some(q) = rest.find('"')
             && rest[q + 1..].trim_start().starts_with("=>")
         {
-            if !prev_cfg || cfg!(feature = "duckdb") {
-                arms.push(rest[..q].to_string());
-            }
-            prev_cfg = false;
-            continue;
-        }
-        if !t.is_empty() {
-            prev_cfg = false;
+            arms.push(rest[..q].to_string());
         }
     }
     arms
@@ -92,8 +76,8 @@ fn dispatch_arms_equal_registry_op_names_as_sets() {
         arms.len(),
         "duplicate dispatch arm: {arms:?}"
     );
-    // Native-only ops (feature `duckdb`) are registered in the registry
-    // module but deliberately absent from OPS/capabilities/the wasm mirror.
+    // `duckdb` is dispatched by the wasm module and listed in `NATIVE_ONLY_OPS`
+    // so it stays off the hashed OPS list.
     let reg = full_names();
     let reg_set: BTreeSet<_> = reg.iter().cloned().collect();
     assert_eq!(reg_set.len(), reg.len(), "duplicate registry op: {reg:?}");

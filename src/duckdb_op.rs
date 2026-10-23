@@ -61,7 +61,7 @@ fn duckdb_fail(message: impl std::fmt::Display) -> Fail {
             kind: RefusalKind::DuckDb,
             dialect: None,
             engine: None,
-            message: format!("duckdb: {message}"),
+            message: format!("duckdb: {message}").into(),
         },
         json!({"code": "DuckDb", "message": message.to_string()}),
     )

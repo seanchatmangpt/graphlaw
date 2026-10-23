@@ -95,6 +95,10 @@ fn main() {
     let dir: PathBuf = std::env::temp_dir().join(format!("tc_hot_02_{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).expect("temp corpus dir");
+    // L159 lane-local patch (disclosed): persist deterministic corpus to TC_HOT_CORPUS_PATH when set.
+    let corpus_dir: PathBuf = std::env::var("TC_HOT_CORPUS_PATH").ok().filter(|s| !s.is_empty())
+        .map(|s| { let p = PathBuf::from(s); fs::create_dir_all(&p).expect("corpus dir"); p })
+        .unwrap_or_else(|| dir.join("telemetry"));
 
     let db = GraphLawDuckDB::open_in_memory().expect("duckdb open");
 
@@ -108,8 +112,8 @@ fn main() {
                 (i * 37) % 1000 AS cost,
                 (i * 53) % 1200 AS latency_ms
             FROM range({rows}) AS t(i)
-        ) TO '{d}/telemetry' (FORMAT PARQUET, PARTITION_BY (tenant_id));",
-        d = dir.display()
+        ) TO '{d}' (FORMAT PARQUET, PARTITION_BY (tenant_id));",
+        d = corpus_dir.display()
     );
     let t_setup = Instant::now();
     db.raw_connection()
@@ -118,7 +122,7 @@ fn main() {
     let setup_elapsed = t_setup.elapsed();
 
     // 2. Register the hive-partitioned view.
-    let glob = format!("{}/telemetry/**/*.parquet", dir.display());
+    let glob = format!("{}/**/*.parquet", corpus_dir.display());
     db.register_parquet_view("telemetry_events", &glob, true)
         .expect("register_parquet_view");
 

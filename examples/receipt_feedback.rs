@@ -1,4 +1,9 @@
 //! Receipt feedback: a gate refuses until the receipt is recorded into the state.
+//!
+//! Run: cargo run --example receipt_feedback
+//! Output: `before record: <typed refusal>` then
+//! `after record:  admitted by ` + backticked `admit:require-receipt` (exit 0).
+//! Court: tests/readme_first_ten_minutes.rs::receipt_feedback_matches_readme_lines.
 use graphlaw::{
     dialect::Dialect,
     law::{LawState, Step},

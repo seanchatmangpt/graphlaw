@@ -7,111 +7,17 @@
 //! 4. Vectorized pushdown via embedded `frozen-duckdb` scanning Parquet views with zone maps.
 //! 5. Fixed-point rule deduction deriving `bio:ReleasedBatch` vs `bio:QuarantinedBatch`
 //!    committed to an immutable cryptographic BLAKE3 receipt.
+//!
+//! Run: cargo run --example cold_chain_biologics_verification
+//! Output: phase banners (OCEL ingestion -> AST -> SHACL gate -> duckdb
+//! pushdown -> receipt), ending `=== GxP Verification Execution Completed
+//! Successfully ===`; exit 0.
+//! Court: tests/test_cold_chain_ocel.rs pins the same flow end to end.
 
 use graphlaw::duckdb_eval::GraphLawDuckDB;
-use graphlaw::sql_ast::{
-    validate_ast_shacl, CompiledQuery, RdfAstGraphReader,
-};
+use graphlaw::sql_ast::{compile_turtle, validate_ast_shacl};
 use purrdf::TermValue;
-use std::collections::HashMap;
 use std::fs;
-
-struct RdfDatasetReader {
-    outgoing: HashMap<String, HashMap<String, Vec<RdfTerm>>>,
-}
-
-#[derive(Clone, Debug)]
-enum RdfTerm {
-    Iri(String),
-    Literal { lexical: String, datatype: Option<String> },
-}
-
-impl RdfDatasetReader {
-    fn from_turtle(turtle: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let dataset = purrdf::parse_dataset(turtle.as_bytes(), "text/turtle", None)
-            .map_err(|e| format!("Failed to parse turtle: {:?}", e))?;
-        let mut outgoing: HashMap<String, HashMap<String, Vec<RdfTerm>>> = HashMap::new();
-
-        for quad in dataset.quads() {
-            let subj = match dataset.term_value(quad.s) {
-                TermValue::Iri(i) => i,
-                TermValue::Blank { label, scope } => format!("_:{}_{}", label, scope.0),
-                _ => continue,
-            };
-
-            let pred = match dataset.term_value(quad.p) {
-                TermValue::Iri(i) => i,
-                _ => continue,
-            };
-
-            let term = match dataset.term_value(quad.o) {
-                TermValue::Iri(i) => RdfTerm::Iri(i),
-                TermValue::Blank { label, scope } => RdfTerm::Iri(format!("_:{}_{}", label, scope.0)),
-                TermValue::Literal { lexical_form, datatype, .. } => RdfTerm::Literal {
-                    lexical: lexical_form,
-                    datatype: Some(datatype),
-                },
-                _ => continue,
-            };
-
-            outgoing
-                .entry(subj)
-                .or_default()
-                .entry(pred)
-                .or_default()
-                .push(term);
-        }
-
-        Ok(Self { outgoing })
-    }
-}
-
-impl RdfAstGraphReader for RdfDatasetReader {
-    type Node = String;
-
-    fn get_single_object(&self, subject: &Self::Node, predicate: &str) -> Option<Self::Node> {
-        self.outgoing
-            .get(subject)?
-            .get(predicate)?
-            .first()
-            .and_then(|term| match term {
-                RdfTerm::Iri(i) => Some(i.clone()),
-                _ => None,
-            })
-    }
-
-    fn get_datatype_literal(
-        &self,
-        subject: &Self::Node,
-        predicate: &str,
-    ) -> Option<(String, Option<String>)> {
-        self.outgoing
-            .get(subject)?
-            .get(predicate)?
-            .first()
-            .and_then(|term| match term {
-                RdfTerm::Literal { lexical, datatype } => Some((lexical.clone(), datatype.clone())),
-                _ => None,
-            })
-    }
-
-    fn get_iri(&self, node: &Self::Node) -> Option<String> {
-        Some(node.clone())
-    }
-
-    fn object_count(&self, _node: &Self::Node, _predicate: &str) -> usize {
-        0
-    }
-
-    fn iri_object_count(&self, node: &Self::Node, predicate: &str) -> usize {
-        self.outgoing
-            .get(node)
-            .and_then(|preds| preds.get(predicate))
-            .map_or(0, |terms| {
-                terms.iter().filter(|t| matches!(t, RdfTerm::Iri(_))).count()
-            })
-    }
-}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("===============================================================================");
@@ -172,6 +78,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         @prefix ex:   <http://biopharma.org/queries#> .
 
         ex:ColdChainExcursionQuery a sql:SelectStatement ;
+            sql:statementIndex 1 ;
             sql:fromTable [
                 sql:tableName "ocel_events" ;
                 sql:tableAlias "e"
@@ -227,10 +134,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("  -> AST conformance verified: adherence to sql:SelectStatementShape and token safety rules.");
 
     println!("\n=== Phase 3: Extracting AST & Compiling Parameterized SQL Pushdown ===");
-    let reader = RdfDatasetReader::from_turtle(query_ast_ttl)?;
     let query_node = "http://biopharma.org/queries#ColdChainExcursionQuery".to_string();
-    let ast = reader.extract_select_statement(&query_node)?;
-    let compiled: CompiledQuery = ast.compile()?;
+    let compiled = compile_turtle(query_ast_ttl)?;
 
     println!("  -> Serialized SQL:\n     {}", compiled.sql);
     println!("  -> Parameter Vector: {:?}", compiled.params);
@@ -259,14 +164,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for target_batch in batches {
         let mut row_subj = None;
         for t in &receipt.result_triples {
-            if t.predicate == "http://biopharma.org/vocab/object_id" {
-                if let TermValue::Literal { lexical_form, .. } = &t.object {
-                    if lexical_form == target_batch {
+            if t.predicate == "http://biopharma.org/vocab/object_id"
+                && let TermValue::Literal { lexical_form, .. } = &t.object
+                    && lexical_form == target_batch {
                         row_subj = Some(t.subject.clone());
                         break;
                     }
-                }
-            }
         }
 
         let subj = row_subj.expect("Batch row should exist in result");
@@ -275,16 +178,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         for t in &receipt.result_triples {
             if t.subject == subj {
-                if t.predicate == "http://biopharma.org/vocab/total_excursion_duration" {
-                    if let TermValue::Literal { lexical_form, .. } = &t.object {
+                if t.predicate == "http://biopharma.org/vocab/total_excursion_duration"
+                    && let TermValue::Literal { lexical_form, .. } = &t.object {
                         duration = lexical_form.parse().unwrap_or(0);
                     }
-                }
-                if t.predicate == "http://biopharma.org/vocab/max_excursion_temp" {
-                    if let TermValue::Literal { lexical_form, .. } = &t.object {
+                if t.predicate == "http://biopharma.org/vocab/max_excursion_temp"
+                    && let TermValue::Literal { lexical_form, .. } = &t.object {
                         max_temp = lexical_form.parse().unwrap_or(0.0);
                     }
-                }
             }
         }
 

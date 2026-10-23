@@ -43,9 +43,12 @@
 //!                   reply frame, mirroring the wasmtime 64 MiB
 //!                   linear-memory wall (`--max-memory 67108864` parity).
 //!
-//! Other non-zero exits are harness faults (90 EOF mid-frame, 91 stdin read
-//! error, 93 malformed envelope, 94 non-JSON module response, 84 artifact
-//! digest mismatch refusal, 2 usage/I/O).
+//! Other non-zero exits are harness faults, all typed (see `RunError`):
+//! 90 EOF mid-frame, 91 stdin read error, 93 malformed envelope, 94 non-JSON
+//! module response, 84 artifact digest mismatch refusal, 2 usage/I/O, and the
+//! wasm-artifact classes 95 (invalid module), 96 (instantiation/link failure),
+//! 97 (guest ABI fault). Malformed input never panics the runner; every
+//! failure is a typed one-line stderr diagnostic plus its stable exit code.
 //!
 //! ## Artifact selection and identity
 //!
@@ -57,6 +60,7 @@
 
 use std::io::{Read, Write};
 use std::path::PathBuf;
+use std::process::ExitCode;
 
 use serde_json::{Value, json};
 use wasmi::{Engine, Instance, Linker, Memory, Module, Store, TypedFunc};
@@ -64,143 +68,64 @@ use wasmi_wasi::{WasiCtx, WasiCtxBuilder};
 
 const WALL_BYTES: u32 = 67_108_864; // wasmtime `--max-memory 67108864` parity
 
-struct Host {
-    store: Store<WasiCtx>,
-    memory: Memory,
-    alloc: TypedFunc<u32, u32>,
-    free: TypedFunc<(u32, u32), ()>,
-    call: TypedFunc<(u32, u32), u64>,
+/// Typed runner failure. Every variant maps to one stable process exit code
+/// (courts depend on these; see the module docs) and carries a one-line
+/// stderr diagnostic.
+#[derive(Debug)]
+enum RunError {
+    /// Usage / artifact I/O fault. Exit 2.
+    Usage(String),
+    /// Artifact digest mismatch refusal. Exit 84 (loud, never silent serve).
+    DigestMismatch { path: PathBuf, expected: String, got: String },
+    /// EOF in the middle of a packet-4 frame. Exit 90.
+    FrameEof,
+    /// Stdin read error. Exit 91.
+    StdinRead(std::io::Error),
+    /// Malformed eval envelope (undecodable base64 payload). Exit 93.
+    MalformedEnvelope,
+    /// Module returned a non-JSON ABI response. Exit 94.
+    NonJsonResponse(String),
+    /// Guest-panic / memory-wall trap. Exit 86.
+    Trap,
+    /// Bytes are not a valid wasm module. Exit 95.
+    WasmInvalid(String),
+    /// Module failed to instantiate/link/export the graphlaw ABI. Exit 96.
+    WasmInstantiation(String),
+    /// Guest ABI call or linear-memory access faulted. Exit 97.
+    AbiFault(String),
 }
 
-impl Host {
-    fn new(bytes: &[u8]) -> Self {
-        let engine = Engine::default();
-        let module = Module::new(&engine, bytes).expect("valid wasm module");
-        // The only imports allowed are WASI's (clock, random, stdio).
-        for i in module.imports() {
-            assert_eq!(
-                i.module(),
-                "wasi_snapshot_preview1",
-                "unexpected host import {}::{}",
-                i.module(),
-                i.name()
-            );
-        }
-        let mut store = Store::new(&engine, WasiCtxBuilder::new().build());
-        let mut linker = <Linker<WasiCtx>>::new(&engine);
-        wasmi_wasi::add_to_linker(&mut linker, |ctx| ctx).expect("links WASI");
-        let instance: Instance = linker
-            .instantiate_and_start(&mut store, &module)
-            .expect("instantiates");
-        // Reactor-style modules expose `_initialize`; hosts must call it once.
-        if let Ok(init) = instance.get_typed_func::<(), ()>(&store, "_initialize") {
-            init.call(&mut store, ()).expect("_initialize");
-        }
-        let memory = instance
-            .get_memory(&store, "memory")
-            .expect("exports memory");
-        Host {
-            alloc: instance.get_typed_func(&store, "gl_alloc").unwrap(),
-            free: instance.get_typed_func(&store, "gl_free").unwrap(),
-            call: instance.get_typed_func(&store, "gl_call").unwrap(),
-            store,
-            memory,
+impl RunError {
+    fn code(&self) -> u8 {
+        match self {
+            RunError::Usage(_) => 2,
+            RunError::DigestMismatch { .. } => 84,
+            RunError::Trap => 86,
+            RunError::FrameEof => 90,
+            RunError::StdinRead(_) => 91,
+            RunError::MalformedEnvelope => 93,
+            RunError::NonJsonResponse(_) => 94,
+            RunError::WasmInvalid(_) => 95,
+            RunError::WasmInstantiation(_) => 96,
+            RunError::AbiFault(_) => 97,
         }
     }
 
-    /// `gl_alloc` + memory write + `gl_call` + read + `gl_free`, exactly the
-    /// `request_bytes` pattern of graphlaw tests/wasm_abi.rs.
-    fn request_bytes(&mut self, body: &[u8]) -> Vec<u8> {
-        let ptr = self
-            .alloc
-            .call(&mut self.store, body.len() as u32)
-            .expect("gl_alloc");
-        assert_ne!(ptr, 0, "gl_alloc refused a request the caller pre-checked");
-        self.memory
-            .write(&mut self.store, ptr as usize, body)
-            .expect("memory write");
-        let packed = self
-            .call
-            .call(&mut self.store, (ptr, body.len() as u32))
-            .expect("gl_call");
-        let (out_ptr, out_len) = ((packed >> 32) as u32, (packed & 0xffff_ffff) as u32);
-        let mut out = vec![0u8; out_len as usize];
-        self.memory
-            .read(&self.store, out_ptr as usize, &mut out)
-            .expect("memory read");
-        self.free
-            .call(&mut self.store, (out_ptr, out_len))
-            .expect("gl_free");
-        out
-    }
-}
-
-fn main() {
-    let mut wasm: Option<PathBuf> = None;
-    let mut expect_blake3: Option<String> = None;
-    let mut mode = Mode::Eval;
-    let mut args = std::env::args().skip(1);
-    while let Some(a) = args.next() {
-        match a.as_str() {
-            "--crash" => mode = Mode::Crash,
-            "--hang" => mode = Mode::Hang,
-            "--wasm" => wasm = Some(PathBuf::from(args.next().expect("--wasm needs a path"))),
-            "--expect-blake3" => {
-                expect_blake3 = Some(args.next().expect("--expect-blake3 needs a hex digest"))
-            }
-            other => {
-                eprintln!("graphlaw-run: unknown argument `{other}`");
-                std::process::exit(2);
-            }
-        }
-    }
-
-    let path = wasm
-        .or_else(|| std::env::var_os("GRAPHLAW_WASM").map(PathBuf::from))
-        .unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("target/wasm-abi/wasm32-wasip1/wasm/graphlaw_wasm.wasm")
-        });
-
-    let bytes = std::fs::read(&path).unwrap_or_else(|e| {
-        eprintln!("graphlaw-run: cannot read wasm artifact {}: {e}", path.display());
-        std::process::exit(2);
-    });
-
-    if let Some(hex) = &expect_blake3 {
-        let got = blake3_hex(&bytes);
-        if &got != hex {
-            eprintln!(
-                "graphlaw-run: ARTIFACT DIGEST MISMATCH for {}: expected {hex}, got {got}",
+    fn diagnostic(&self) -> String {
+        match self {
+            RunError::Usage(m) => format!("graphlaw-run: {m}"),
+            RunError::DigestMismatch { path, expected, got } => format!(
+                "graphlaw-run: ARTIFACT DIGEST MISMATCH for {}: expected {expected}, got {got}",
                 path.display()
-            );
-            std::process::exit(84);
-        }
-    }
-
-    let mut host = Host::new(&bytes);
-
-    let mut stdin = std::io::stdin().lock();
-    let mut stdout = std::io::stdout().lock();
-
-    loop {
-        let Some(body) = read_frame(&mut stdin) else { std::process::exit(0) };
-        match mode {
-            Mode::Hang => {
-                // Simulated guest infinite loop: never reply, never exit.
-                loop {
-                    std::thread::sleep(std::time::Duration::from_secs(3600));
-                }
-            }
-            Mode::Crash => {
-                // Simulated guest panic: trap like the memory wall does.
-                std::process::exit(86);
-            }
-            Mode::Eval => {
-                let reply = eval_frame(&mut host, &body);
-                write_frame(&mut stdout, &reply);
-                stdout.flush().expect("flush");
-            }
+            ),
+            RunError::Trap => "graphlaw-run: guest trap (crash mode or memory wall)".into(),
+            RunError::FrameEof => "graphlaw-run: EOF mid-frame".into(),
+            RunError::StdinRead(e) => format!("graphlaw-run: stdin read error: {e}"),
+            RunError::MalformedEnvelope => "graphlaw-run: malformed envelope (bad base64 payload)".into(),
+            RunError::NonJsonResponse(e) => format!("graphlaw-run: module returned non-JSON response: {e}"),
+            RunError::WasmInvalid(e) => format!("graphlaw-run: invalid wasm artifact: {e}"),
+            RunError::WasmInstantiation(e) => format!("graphlaw-run: wasm instantiation failed: {e}"),
+            RunError::AbiFault(e) => format!("graphlaw-run: guest ABI fault: {e}"),
         }
     }
 }
@@ -211,40 +136,217 @@ enum Mode {
     Hang,
 }
 
+fn run() -> Result<ExitCode, RunError> {
+    let mut wasm: Option<PathBuf> = None;
+    let mut expect_blake3: Option<String> = None;
+    let mut mode = Mode::Eval;
+    let mut args = std::env::args().skip(1);
+    while let Some(a) = args.next() {
+        match a.as_str() {
+            "--crash" => mode = Mode::Crash,
+            "--hang" => mode = Mode::Hang,
+            "--wasm" => match args.next() {
+                Some(p) => wasm = Some(PathBuf::from(p)),
+                None => return Err(RunError::Usage("--wasm needs a path".into())),
+            },
+            "--expect-blake3" => match args.next() {
+                Some(h) => expect_blake3 = Some(h),
+                None => return Err(RunError::Usage("--expect-blake3 needs a hex digest".into())),
+            },
+            other => return Err(RunError::Usage(format!("unknown argument `{other}`"))),
+        }
+    }
+
+    let path = wasm
+        .or_else(|| std::env::var_os("GRAPHLAW_WASM").map(PathBuf::from))
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("target/wasm-abi/wasm32-wasip1/wasm/graphlaw_wasm.wasm")
+        });
+
+    let bytes = std::fs::read(&path).map_err(|e| {
+        RunError::Usage(format!("cannot read wasm artifact {}: {e}", path.display()))
+    })?;
+
+    if let Some(hex) = &expect_blake3 {
+        let got = blake3_hex(&bytes);
+        if &got != hex {
+            return Err(RunError::DigestMismatch {
+                path: path.clone(),
+                expected: hex.clone(),
+                got,
+            });
+        }
+    }
+
+    let mut host = Host::new(&bytes)?;
+
+    let mut stdin = std::io::stdin().lock();
+    let mut stdout = std::io::stdout().lock();
+
+    loop {
+        let Some(body) = read_frame(&mut stdin)? else {
+            return Ok(ExitCode::from(0));
+        };
+        match mode {
+            Mode::Hang => {
+                // Simulated guest infinite loop: never reply, never exit.
+                // (SLEEP-CLASS: SCHEDULING — the process genuinely has nothing
+                // to do; this IS the court's fail-closed timeout fixture.)
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(3600));
+                }
+            }
+            Mode::Crash => {
+                // Simulated guest panic: trap like the memory wall does.
+                return Err(RunError::Trap);
+            }
+            Mode::Eval => {
+                let reply = match eval_frame(&mut host, &body) {
+                    Ok(reply) => reply,
+                    Err(RunError::Trap) => return Err(RunError::Trap),
+                    Err(e) => return Err(e),
+                };
+                write_frame(&mut stdout, &reply)?;
+                stdout.flush().map_err(|e| RunError::Usage(format!("stdout flush failed: {e}")))?;
+            }
+        }
+    }
+}
+
+fn main() -> ExitCode {
+    match run() {
+        Ok(code) => code,
+        Err(e) => {
+            eprintln!("{}", e.diagnostic());
+            ExitCode::from(e.code())
+        }
+    }
+}
+
+struct Host {
+    store: Store<WasiCtx>,
+    memory: Memory,
+    alloc: TypedFunc<u32, u32>,
+    free: TypedFunc<(u32, u32), ()>,
+    call: TypedFunc<(u32, u32), u64>,
+}
+
+impl Host {
+    fn new(bytes: &[u8]) -> Result<Self, RunError> {
+        let engine = Engine::default();
+        let module = Module::new(&engine, bytes)
+            .map_err(|e| RunError::WasmInvalid(e.to_string()))?;
+        // The only imports allowed are WASI's (clock, random, stdio).
+        for i in module.imports() {
+            if i.module() != "wasi_snapshot_preview1" {
+                return Err(RunError::WasmInstantiation(format!(
+                    "unexpected host import {}::{}",
+                    i.module(),
+                    i.name()
+                )));
+            }
+        }
+        let mut store = Store::new(&engine, WasiCtxBuilder::new().build());
+        let mut linker = <Linker<WasiCtx>>::new(&engine);
+        wasmi_wasi::add_to_linker(&mut linker, |ctx| ctx)
+            .map_err(|e| RunError::WasmInstantiation(e.to_string()))?;
+        let instance: Instance = linker
+            .instantiate_and_start(&mut store, &module)
+            .map_err(|e| RunError::WasmInstantiation(e.to_string()))?;
+        // Reactor-style modules expose `_initialize`; hosts must call it once.
+        if let Ok(init) = instance.get_typed_func::<(), ()>(&store, "_initialize") {
+            init.call(&mut store, ())
+                .map_err(|e| RunError::WasmInstantiation(format!("_initialize: {e}")))?;
+        }
+        let memory = instance.get_memory(&store, "memory").ok_or_else(|| {
+            RunError::WasmInstantiation("module does not export memory".into())
+        })?;
+        let export = |name: &'static str, e: wasmi::Error| {
+            RunError::WasmInstantiation(format!("missing or mistyped export {name}: {e}"))
+        };
+        Ok(Host {
+            alloc: instance
+                .get_typed_func::<u32, u32>(&store, "gl_alloc")
+                .map_err(|e| export("gl_alloc", e))?,
+            free: instance
+                .get_typed_func::<(u32, u32), ()>(&store, "gl_free")
+                .map_err(|e| export("gl_free", e))?,
+            call: instance
+                .get_typed_func::<(u32, u32), u64>(&store, "gl_call")
+                .map_err(|e| export("gl_call", e))?,
+            store,
+            memory,
+        })
+    }
+
+    /// `gl_alloc` + memory write + `gl_call` + read + `gl_free`, exactly the
+    /// `request_bytes` pattern of graphlaw tests/wasm_abi.rs.
+    fn request_bytes(&mut self, body: &[u8]) -> Result<Vec<u8>, RunError> {
+        let ptr = self
+            .alloc
+            .call(&mut self.store, body.len() as u32)
+            .map_err(|e| RunError::AbiFault(format!("gl_alloc: {e}")))?;
+        if ptr == 0 {
+            return Err(RunError::AbiFault(
+                "gl_alloc refused a request the caller pre-checked".into(),
+            ));
+        }
+        self.memory
+            .write(&mut self.store, ptr as usize, body)
+            .map_err(|e| RunError::AbiFault(format!("memory write: {e}")))?;
+        let packed = self
+            .call
+            .call(&mut self.store, (ptr, body.len() as u32))
+            .map_err(|e| RunError::AbiFault(format!("gl_call: {e}")))?;
+        let (out_ptr, out_len) = ((packed >> 32) as u32, (packed & 0xffff_ffff) as u32);
+        let mut out = vec![0u8; out_len as usize];
+        self.memory
+            .read(&self.store, out_ptr as usize, &mut out)
+            .map_err(|e| RunError::AbiFault(format!("memory read: {e}")))?;
+        self.free
+            .call(&mut self.store, (out_ptr, out_len))
+            .map_err(|e| RunError::AbiFault(format!("gl_free: {e}")))?;
+        Ok(out)
+    }
+}
+
 /// Reads one packet-4 frame: 4-byte BE length prefix + body. Returns None on a
 /// clean EOF at a frame boundary.
-fn read_frame(stdin: &mut impl Read) -> Option<Vec<u8>> {
+fn read_frame(stdin: &mut impl Read) -> Result<Option<Vec<u8>>, RunError> {
     let mut len_buf = [0u8; 4];
     match stdin.read_exact(&mut len_buf) {
         Ok(()) => {}
-        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => return None,
-        Err(_) => std::process::exit(91),
+        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => return Ok(None),
+        Err(e) => return Err(RunError::StdinRead(e)),
     }
     let len = u32::from_be_bytes(len_buf) as usize;
     let mut body = vec![0u8; len];
     match stdin.read_exact(&mut body) {
-        Ok(()) => Some(body),
-        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => std::process::exit(90),
-        Err(_) => std::process::exit(91),
+        Ok(()) => Ok(Some(body)),
+        Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => Err(RunError::FrameEof),
+        Err(e) => Err(RunError::StdinRead(e)),
     }
 }
 
-fn write_frame(stdout: &mut impl Write, body: &[u8]) {
+fn write_frame(stdout: &mut impl Write, body: &[u8]) -> Result<(), RunError> {
     let mut buf = Vec::with_capacity(4 + body.len());
     buf.extend_from_slice(&(body.len() as u32).to_be_bytes());
     buf.extend_from_slice(body);
-    stdout.write_all(&buf).expect("frame write");
+    stdout
+        .write_all(&buf)
+        .map_err(|e| RunError::Usage(format!("frame write failed: {e}")))
 }
 
-fn eval_frame(host: &mut Host, body: &[u8]) -> Vec<u8> {
+fn eval_frame(host: &mut Host, body: &[u8]) -> Result<Vec<u8>, RunError> {
     let parsed: Value = match serde_json::from_slice(body) {
         Ok(v) => v,
         // Not the eval envelope: forward the raw bytes to the module as an
         // ABI request and reply under "result" (abi-mode passthrough).
         Err(_) => {
-            let response = call_and_decode(host, body);
-            return serde_json::to_vec(&json!({"ok": true, "result": response}))
-                .expect("reply serializes");
+            let response = call_and_decode(host, body)?;
+            return serde_json::to_vec(&json!({ "ok": true, "result": response }))
+                .map_err(reply_serialize);
         }
     };
 
@@ -254,14 +356,11 @@ fn eval_frame(host: &mut Host, body: &[u8]) -> Vec<u8> {
                 .get("payload_b64")
                 .and_then(Value::as_str)
                 .unwrap_or("");
-            let payload = match base64_decode(payload_b64) {
-                Some(p) => p,
-                None => std::process::exit(93),
-            };
+            let payload = base64_decode(payload_b64).ok_or(RunError::MalformedEnvelope)?;
             if payload.len() > WALL_BYTES as usize {
                 // Memory wall: the guest is killed by the enforced 64 MiB
                 // linear-memory ceiling before any reply can be framed.
-                std::process::exit(86);
+                return Err(RunError::Trap);
             }
             let frames_count = parsed
                 .get("predicate_frames")
@@ -270,31 +369,84 @@ fn eval_frame(host: &mut Host, body: &[u8]) -> Vec<u8> {
                 .unwrap_or(0);
             // The bytes that cross the sandbox boundary are the production
             // call_json shape; the module answers with the raw ABI response.
-            let response = call_and_decode(host, &payload);
+            let response = call_and_decode(host, &payload)?;
             let reply = json!({
                 "ok": true,
                 "result": response,
                 "predicate_frames_count": frames_count,
             });
-            serde_json::to_vec(&reply).expect("reply serializes")
+            serde_json::to_vec(&reply).map_err(reply_serialize)
         }
         // Any other op: the frame IS an ABI request; same envelope, raw
         // response as "result".
         _ => {
-            let response = call_and_decode(host, body);
-            serde_json::to_vec(&json!({"ok": true, "result": response}))
-                .expect("reply serializes")
+            let response = call_and_decode(host, body)?;
+            serde_json::to_vec(&json!({ "ok": true, "result": response })).map_err(reply_serialize)
         }
     }
 }
 
-fn call_and_decode(host: &mut Host, request_bytes: &[u8]) -> Value {
-    let abi_response = host.request_bytes(request_bytes);
-    serde_json::from_slice(&abi_response).unwrap_or_else(|e| {
-        eprintln!("graphlaw-run: module returned non-JSON response: {e}");
-        std::process::exit(94);
-    })
+fn reply_serialize(e: serde_json::Error) -> RunError {
+    RunError::Usage(format!("reply serialization failed: {e}"))
 }
+
+fn call_and_decode(host: &mut Host, request_bytes: &[u8]) -> Result<Value, RunError> {
+    let abi_response = host.request_bytes(request_bytes)?;
+    let response: Value = serde_json::from_slice(&abi_response)
+        .map_err(|e| RunError::NonJsonResponse(e.to_string()))?;
+    // #region agent log
+    debug_dialect_log(request_bytes, &response);
+    // #endregion
+    Ok(response)
+}
+
+// #region agent log
+fn debug_dialect_log(request_bytes: &[u8], response: &Value) {
+    let req: Value = serde_json::from_slice(request_bytes).unwrap_or(Value::Null);
+    let op = req.get("op").and_then(Value::as_str).unwrap_or("");
+    let hypothesis_id = match op {
+        "capabilities" => "A",
+        "parse" | "sniff" | "convert" => "B",
+        "duckdb" => "C",
+        _ => "D",
+    };
+    let dialects = req
+        .pointer("/result/other_dialects")
+        .or_else(|| response.pointer("/other_dialects"));
+    let line = json!({
+        "sessionId": "c0cb0f",
+        "runId": "pre-fix",
+        "hypothesisId": hypothesis_id,
+        "location": "src/bin/graphlaw_run.rs:call_and_decode",
+        "message": "wasm dialect reply",
+        "timestamp": std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0),
+        "data": {
+            "op": op,
+            "dialect": req.get("dialect").and_then(Value::as_str),
+            "ok": response.get("ok"),
+            "error_kind": response.pointer("/error/kind"),
+            "error_message": response.pointer("/error/message"),
+            "result_dialect": response.get("dialect"),
+            "has_id": response.get("id").map(|v| !v.is_null()).unwrap_or(false),
+            "quads": response.get("quads"),
+            "valid": response.get("valid"),
+            "other_dialects": dialects,
+            "rdf_dialects": response.get("rdf_dialects"),
+        }
+    });
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/Users/sac/graphlaw/.cursor/debug-c0cb0f.log")
+    {
+        use std::io::Write;
+        let _ = writeln!(f, "{line}");
+    }
+}
+// #endregion
 
 /// Base64 decode without an extra dependency (the runner must build with only
 /// the graphlaw dependency tree). Accepts standard alphabet with padding.

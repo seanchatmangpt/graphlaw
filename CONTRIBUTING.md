@@ -1,7 +1,10 @@
 # Contributing
 
-Rust 1.96 (pinned by `rust-toolchain.toml`). Rules: normal branches, merge (no rebase, no force
-push); tests use real collaborators, not mocks.
+Rust 1.96 (pinned by `rust-toolchain.toml`). Rules: normal branches, merge only (never rebase,
+force-push, or `git reset --hard`); tests use real collaborators, not mocks. Multi-line commit
+messages go through `git commit -F <file>`, never inline `-m`. Concurrent agents work one
+canonical checkout with disjoint file-ownership lanes (no worktrees/clones; build isolation via
+`CARGO_TARGET_DIR=target-lane<N>`); the coordinator owns git transitions.
 
 ## Gate (mirrors `.github/workflows/ci.yml`)
 
@@ -18,6 +21,19 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features pack-tools,abi,wasi-pa
 cargo check --lib --target wasm32-unknown-unknown
 ```
 
+Two supply-chain gates run in CI (`.github/workflows/ci.yml`, jobs `cargo-deny` and
+`cargo-audit`) and locally as:
+
+```sh
+cargo deny check          # advisories + licenses + bans + sources, per deny.toml
+cargo audit               # RustSec advisory DB against Cargo.lock
+```
+
+Doc claims are gated too: `tests/docs_release_claims.rs` reads README.md and
+`.github/workflows/release.yml` from disk and fails when the release-flow prose
+drifts from what the workflow actually does. Run it with
+`cargo test --test docs_release_claims`.
+
 The `graphlaw-registry --check` line fails when the committed `registry/` files differ from what
 `src/registry.rs` emits. The registry-vs-dispatch court (a test that parses the `"<op>" => ...`
 arms of `dispatch` in `src/abi.rs` and compares them with the registry op list) runs inside
@@ -27,7 +43,7 @@ Install targets first: `rustup target add wasm32-wasip1 wasm32-unknown-unknown`.
 
 ## Embedded DuckDB 2.0 Substrate
 
-GraphLaw unconditionally embeds `frozen-duckdb 2.0`. Prebuilt native binaries are cached automatically in `~/.frozen-duckdb/cache/` (e.g., `libduckdb_arm64.dylib` on macOS).
+GraphLaw unconditionally embeds `frozen-duckdb 2.0.2`. Prebuilt native binaries are cached automatically in `~/.frozen-duckdb/cache/` (e.g., `libduckdb_arm64.dylib` on macOS).
 Run DuckDB-specific integration suites:
 ```sh
 cargo test --test test_edge_sovereign_ingestion --test test_cold_chain_ocel --test test_parquet_and_builtin_eval
@@ -36,8 +52,8 @@ cargo test --test test_edge_sovereign_ingestion --test test_cold_chain_ocel --te
 ## WebAssembly module
 
 `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` produces
-`target/wasm32-wasip1/wasm/graphlaw_wasm.wasm` (the `wasm` member is pinned at
-26.10.13; the same commit must carry `registry/ARTIFACTS.blake3` and
+`target/wasm32-wasip1/wasm/graphlaw_wasm.wasm` (the `wasm` member is version-pinned in
+`wasm/Cargo.toml`; the same commit must carry `registry/ARTIFACTS.blake3` and
 `priv/graphlaw.wasm.blake3` for any version bump). `tests/wasm_abi.rs` runs it in a real wasm runtime
 when `GRAPHLAW_WASM` points at it. The `graphlaw` lib facade must also compile
 for `wasm32-unknown-unknown` (no WASI imports allowed in the facade); the
@@ -78,7 +94,7 @@ The artifact size/header court is a shell script, not a cargo test:
 
 ```sh
 scripts/wasm_audit.sh   # derives the version from wasm/Cargo.toml, checks
-                        # \0asm header magic + 25 MiB ceiling on the artifact
+                        # \0asm header magic + 64 MiB sandbox-wall ceiling on the artifact
                         # at $GRAPHLAW_WASM or the default target path
 ```
 

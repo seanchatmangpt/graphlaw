@@ -24,7 +24,7 @@
 
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 
@@ -67,7 +67,7 @@ fn wasm_path() -> Option<PathBuf> {
 
 /// Bounded-poll freshness check: the artifact must be newer than every
 /// `src/` + `wasm/src` input. A stale artifact is rebuilt, not trusted.
-fn wasm_fresh(root: &PathBuf, artifact: &PathBuf) -> bool {
+fn wasm_fresh(root: &Path, artifact: &Path) -> bool {
     let Ok(art_mtime) = artifact.metadata().and_then(|m| m.modified()) else {
         return false;
     };
@@ -346,8 +346,10 @@ fn hostile(body: &[u8], class: &str, desc: &str) -> Value {
 #[test]
 fn gws9_wasm_boundary_fuzz() {
     let Some(path) = wasm_path() else {
-        println!("SKIP: no wasm binary builds (GWS-2 state) — court not run, not passed");
-        return;
+        panic!(
+            "SKIP is not a pass: no wasm binary (set GRAPHLAW_WASM or build \
+             graphlaw-wasm for wasm32-wasip1). The boundary court did not run."
+        );
     };
     println!("GWS-9 subject: {}", path.display());
 
@@ -567,7 +569,11 @@ fn gws9_sql_injection_ast_gate() {
         let ttl = format!(
             "{valid_prefix}\"{tok}\" ; sql:selectList ( [ sql:columnName \"event_id\" ] ) ."
         );
+        // Lawful large typed refusal: AstError carries full SHACL diagnostics;
+        // scoping the allow to these catch_unwind closures, no API change.
+        #[allow(clippy::result_large_err)]
         let r = std::panic::catch_unwind(|| sql_ast::validate_ast_shacl(&ttl, shapes_ttl));
+        #[allow(clippy::result_large_err)]
         let r = r.unwrap_or_else(|p| {
             panic!("validate_ast_shacl PANICKED on injection token {tok:?}: {p:?}")
         });

@@ -21,11 +21,18 @@ allow = [
     "BSD-2-Clause",
     "BSD-3-Clause",
     "BSL-1.0",
+    "bzip2-1.0.6",
     "CC0-1.0",
     "CDLA-Permissive-2.0",
     "ISC",
     "MIT",
     "MIT-0",
+    # purrdf 3.x family (RUST-8 lane L7: keep a purrdf 3.x migration unblocked).
+    # NOTE: the workspace crates' own "MIT AND LicenseRef-P28-SIL-2.1.0"
+    # expression cannot be allow-listed here — cargo-deny's SPDX parser
+    # rejects LicenseRef-* identifiers outright (parse error at allow-list
+    # parse time, before any check runs).
+    "MulanPSL-2.0",
     "Unicode-3.0",
     "Unlicense",
     "Zlib",

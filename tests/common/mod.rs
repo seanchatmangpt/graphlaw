@@ -2,7 +2,10 @@
 //! native `graphlaw::abi` (same requests, byte-identical responses expected).
 //!
 //! Extracted from `tests/wasm_abi.rs`. Set `GRAPHLAW_WASM` to test a prebuilt
-//! module; otherwise it is built once into `target/wasm-abi`.
+//! module; otherwise it is built once into
+//! `$CARGO_TARGET_DIR/wasm-abi` (or `target/wasm-abi` when unset), honoring
+//! the caller's `CARGO_TARGET_DIR` so concurrent lane build roots never
+//! collide on a hardcoded path.
 //!
 //! Public API (frozen for v26.9.29): `native`, `native_bytes`, `wasm`,
 //! `wasm_bytes`, `ok`, `refused`, `read`.
@@ -18,13 +21,24 @@ use wasmi::{Engine, Instance, Linker, Memory, Module, Store, TypedFunc};
 use wasmi_wasi::{WasiCtx, WasiCtxBuilder};
 
 /// Path of the wasm artifact: `GRAPHLAW_WASM`, else a one-time build.
+///
+/// Concurrency: racing callers are serialized by cargo's own per-target-dir
+/// file lock — the inner invocation shares this helper's `--target-dir`, so
+/// two concurrent callers block on cargo's flock rather than corrupting the
+/// artifact, and cargo places the final `.wasm` atomically (hardlink from
+/// `deps/`) so a reader never observes a partial artifact. No additional lock
+/// file is layered on top.
 pub fn wasm_path() -> PathBuf {
     if let Some(p) = std::env::var_os("GRAPHLAW_WASM") {
         return p.into();
     }
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let target = root.join("target/wasm-abi");
-    let status = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()))
+    // Honor CARGO_TARGET_DIR so concurrent lanes never share a hardcoded path.
+    let target = match std::env::var_os("CARGO_TARGET_DIR") {
+        Some(dir) if !dir.is_empty() => PathBuf::from(dir).join("wasm-abi"),
+        _ => root.join("target/wasm-abi"),
+    };
+    let out = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".into()))
         .current_dir(&root)
         .args([
             "build",
@@ -37,13 +51,53 @@ pub fn wasm_path() -> PathBuf {
             "--target-dir",
         ])
         .arg(&target)
-        .status()
-        .expect("cargo runs");
+        .output()
+        .unwrap_or_else(|e| panic!("GRAPHLAW-WASM-BUILD-FAILED: cargo did not run: {e}"));
+    if !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        let wasi_sdk_refusal = stderr
+            .lines()
+            .find(|l| l.contains("WASI_SDK_PATH"))
+            .map(|l| l.to_string());
+        let linker_line = wasi_sdk_refusal.clone().or_else(|| {
+            stderr
+                .lines()
+                .find(|l| l.contains("rust-lld") || l.contains("-lduckdb"))
+                .map(|l| l.to_string())
+        }).or_else(|| {
+                stderr.lines().rev().find(|l| l.starts_with("error:"))
+                    .map(|l| l.to_string())
+            })
+            .unwrap_or_else(|| "<linker line not present in stderr>".to_string());
+        let label = if wasi_sdk_refusal.is_some() {
+            "BLOCKED-WASI-SDK (frozen-duckdb-sys build.rs refusal: WASI_SDK_PATH required \
+             — set WASI_SDK_PATH to a wasip1 SDK; the legacy -lduckdb linker mode is retired)"
+        } else {
+            "BLOCKED-LINK"
+        };
+        panic!(
+            "GRAPHLAW-WASM-BUILD-FAILED ({}): `cargo build -p graphlaw-wasm \
+             --target wasm32-wasip1 --profile wasm` exited with {status}\n\
+             {}linker line: {linker_line}\n\
+             --- cargo stderr ---\n{stderr}--- end stderr ---\n\
+             See docs/WASM.md for the wasm link requirements (frozen-duckdb \
+             native symbol `duckdb_*` must resolve for wasm32-wasip1).",
+            label,
+            if wasi_sdk_refusal.is_some() {
+                "typed refusal (first match): "
+            } else {
+                ""
+            },
+            status = out.status,
+        );
+    }
+    let artifact = target.join("wasm32-wasip1/wasm/graphlaw_wasm.wasm");
     assert!(
-        status.success(),
-        "wasm build failed (is the wasm32-wasip1 target installed?)"
+        artifact.is_file(),
+        "GRAPHLAW-WASM-BUILD-FAILED: cargo reported success but artifact is missing: {}",
+        artifact.display()
     );
-    target.join("wasm32-wasip1/wasm/graphlaw_wasm.wasm")
+    artifact
 }
 
 struct Host {

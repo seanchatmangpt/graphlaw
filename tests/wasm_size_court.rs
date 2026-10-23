@@ -1,12 +1,11 @@
 //! W04 — WASM artifact size ceiling + header court (native companion to
-//! scripts/wasm_audit.sh). Honors GRAPHLAW_WASM; when the artifact is absent
-//! the skip is named and counted, never silent (same discipline as
-//! wasi_patch_guard.rs).
+//! scripts/wasm_audit.sh). Honors GRAPHLAW_WASM. A missing artifact fails
+//! the court. The ceiling is the 64 MiB sandbox wall.
 
 use std::path::PathBuf;
 use std::process::Command;
 
-const MAX_BYTES: u64 = 26_214_400; // 25 MiB
+const MAX_BYTES: u64 = 67_108_864; // 64 MiB sandbox wall (docs/WASM.md)
 const WASM_MAGIC: [u8; 4] = [0x00, b'a', b's', b'm'];
 
 fn subject() -> Option<PathBuf> {
@@ -31,12 +30,11 @@ fn script_path() -> PathBuf {
 #[test]
 fn wasm_artifact_within_size_ceiling_and_valid_header() {
     let Some(path) = subject() else {
-        println!(
-            "NOTICE [wasm-size-court-skip]: no wasm artifact found (set GRAPHLAW_WASM or build \
-             with `cargo build -p graphlaw-wasm --target wasm32-wasip1 --release`); the size \
-             court is NOT covered by this run."
+        panic!(
+            "SKIP is not a pass: no wasm artifact (set GRAPHLAW_WASM or build \
+             `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`). \
+             The size court did not run."
         );
-        return;
     };
 
     let bytes = std::fs::read(&path)
@@ -49,7 +47,7 @@ fn wasm_artifact_within_size_ceiling_and_valid_header() {
     );
     assert!(
         len <= MAX_BYTES,
-        "WASM_SIZE_COURT: {} is {} bytes, exceeding the {}-byte (25 MiB) ceiling by {} bytes. \
+        "WASM_SIZE_COURT: {} is {} bytes, exceeding the {}-byte (64 MiB) ceiling by {} bytes. \
          Slim the artifact (features/opt-levels/strip) before landing.",
         path.display(),
         len,

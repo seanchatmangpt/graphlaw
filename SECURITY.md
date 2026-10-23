@@ -4,10 +4,18 @@
 
 | version | supported |
 |---|---|
-| 26.10.21 (latest released) | yes |
-| 26.10.5 | no |
-| 26.9.28 | no |
-| earlier / `graphlaw` | no |
+| 26.10.21 (latest released) | yes — the current workspace release line on `main` |
+| v26.10.13 (newest published GitHub release / crate) | yes |
+| 26.10.14 – 26.10.20 | intermediate workspace versions; fixed forward on `main`, no per-version patches |
+| `main` (development) | fixes land on `main` only; no backports, no LTS branches |
+| all earlier published releases | no |
+
+There is no long-term-support policy: only the current release line receives security
+fixes, and `main` is fixed forward. The version string is gated to the workspace version
+(`tests/docs_release_claims.rs::doc_version_lines_match_workspace_version`), so this table
+moves with every workspace bump; published artifacts may lag the workspace line (as of this
+writing the newest published release is v26.10.13). Pin your own dependency versions
+accordingly.
 
 ## Reporting a vulnerability
 

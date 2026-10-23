@@ -1,0 +1,38 @@
+# GENERATED FILE -- do not hand-edit.
+# Generator: gen_shapes.py (TC-MEGA-FIBO-01, lane L38, ontology surface)
+# Regenerate: python3 gen_shapes.py
+#
+# NAMESPACE DECLARATION (reconciliation decision, WO-13): reg:
+# (<http://graphlaw.org/ns/mega/fibo/reg#>) is a FIRST-CLASS namespace of this
+# self-contained scenario ontology. Its terms (RegulatedParty,
+# LegalEntityIdentifier, MarginAgreement, MoneyAmount_*, jurisdiction,
+# marginThreshold, floatingCurve, ...) are SCENARIO-LOCAL vocabulary of the
+# regulatory rule layer, deliberately NOT mapped onto or renamed under repo-
+# canonical surfaces (ontologies/sql-ast.ttl, ggen/sql-dialect/). Only the
+# sh:/xsd:/rdf: terms are standard shared vocabulary.
+# Repo-surface grounding and per-term reconciliation decisions: README.md
+# (section "Vocabulary grounding and RECONCILIATION-REQUIRED").
+
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix reg: <http://graphlaw.org/ns/mega/fibo/reg#> .
+
+### 6. Falsifier anchor: the #41209 currency-decimal-precision shape.
+### Single NodeShape, single violating constraint. The mutated twin
+### twins/41209_mutated.ttl violates exactly this constraint; refusal is
+### deterministic (one focus node, one property shape, one pattern component)
+### and byte-positioned (byte offsets recorded in README.md).
+
+reg:MoneyPrecision_USD_41209 a sh:NodeShape ;
+    sh:targetClass reg:MoneyAmount_USD ;
+    sh:property reg:MoneyPrecision_USD_41209_p1 .
+
+reg:MoneyPrecision_USD_41209_p1 a sh:PropertyShape ;
+    sh:path reg:amount ;
+    sh:datatype xsd:decimal ;
+    sh:pattern "^[+-]?\\d+(\\.\\d{1,2})?$" ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:message "USD monetary amounts carry at most 2 decimal places; leg #41209 must not exceed ISO 4217 minor units" ;
+    sh:severity sh:Violation .

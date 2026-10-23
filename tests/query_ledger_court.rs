@@ -320,7 +320,7 @@ fn parse_records(body: &[u8]) -> Vec<Descriptor> {
             .split("\":")
             .skip(1)
             .filter_map(|p| {
-                p.split(|c| c == ',' || c == '}')
+                p.split([',', '}'])
                     .next()
                     .unwrap()
                     .parse()

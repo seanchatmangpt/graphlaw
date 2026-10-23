@@ -12,7 +12,15 @@ The crate has two halves:
 
 - **Generated shell** — `wasm/src/ffi.rs` and `wasm/src/abi_meta.rs` are
   rendered by `ggen sync` from `ontologies/graphlaw-wasm.ttl` through the
-  rust-wasi-wasmex-pack (queries/ + templates/abi/). "Rendered by ggen ...
+  rust-wasi-wasmex-pack (queries/ + templates/abi/). The sync pin is the
+  committed `wasm/ggen.toml` (ffi rule only, output_dir `src`; `abi_meta.rs`
+  is rendered by Lane 1's config, not this one). Regenerate `ffi.rs` with
+  `cd wasm && ggen sync run` (ggen >= 26.10.11). Determinism receipt
+  (2026-10-22): two consecutive syncs plus a delete-and-regen all produce
+  b3sum `9dcab4e4099ede0e605b2f619c8791e8f19bf656f3c6a8bd552eeade6d9e46a9` (historical lane receipt, 2026-10-22, not a pin; re-verify with `b3sum wasm/src/ffi.rs`)
+  for `wasm/src/ffi.rs` at graph_hash_hex
+  `8821e277608452cd44baac350c850e4d96759b17a64bec9b08f2b644b0c07ae2` (historical graph hash, not a pin).
+  "Rendered by ggen ...
   never edit this file by hand" is the standing header law
   (`wasm/src/ffi.rs:7-8`, `wasm/src/abi_meta.rs:6-7`). Edit the ontology, re-render.
 - **Hand-written safe core** — all behaviour lives in `graphlaw::abi`
@@ -58,9 +66,29 @@ free always reclaims a non-zero-length allocation. Null pointer or oversize
 length never traps — the call returns a typed error response from the safe
 core (`wasm/src/ffi.rs:111-123`).
 
-Every boundary buffer is a `Vec<u8>` of capacity `len.max(1)`, and responses
-are shrunk to capacity == length, so `_free`/`_call` reconstruct the exact
-allocation with `Vec::from_raw_parts` (`wasm/src/ffi.rs:28-33`).
+## Side-table contract (allocation discipline)
+
+Every buffer crossing the boundary is registered in a bounds-checked side
+table (`LIVE`, `wasm/src/ffi.rs:100-140`) at publish time — key = raw pointer,
+value = (real `Vec::capacity()`, initialized `length`, host-visible `declared`
+length, outstanding-byte `budget`). The guest never supplies layout facts.
+Every guest `(ptr, len)` pair is looked up by handle before any
+reconstruction; a buffer is rebuilt (`Vec::from_raw_parts`) only from the
+recorded capacity, and only when the host length equals the declared length
+(`wasm/src/ffi.rs:159-181`). Unknown pointers, mismatched lengths, and a
+second free never rebuild a `Vec`: they yield typed error responses from the
+safe core (`missing_buffer_response` / `unknown_buffer_response` /
+`limit_response`) or are no-ops — never a trap, never undefined behavior.
+
+This contract lives in the pack template
+(`ggen-marketplace` `rust-wasi-wasmex-pack` `templates/abi/ffi.rs.tmpl`),
+not in the rendered file: a `ggen sync` re-render cannot regenerate the
+legacy host-trusting `Vec::from_raw_parts(ptr, len, len.max(1))`
+reconstruction, which is UB when the allocator's capacity is larger. The
+template's tests (rendered into `wasm/src/ffi.rs` under
+`#[cfg(all(test, not(target_arch = "wasm32")))]`) pin the behavior: mismatched
+lengths leave the entry live, unknown pointers and double frees are no-ops,
+and calls consume the request exactly once.
 
 ## Limits (from the wja: graph)
 
@@ -81,8 +109,18 @@ fill linear memory (`wasm/src/ffi.rs:43-61, 82-91`).
 
 ## Compile profile
 
+Build prerequisite: `WASI_SDK_PATH` must point at a wasi-sdk root
+(`bin/clang` and `share/cmake/wasi-sdk-p1.cmake`). CI installs wasi-sdk 34 at
+`/opt/wasi-sdk`. The engine cache
+`~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1` is not a wasi-sdk.
+frozen-duckdb-sys links `libduckdb.a` when the variable is set; without it
+the build fails typed at its `build.rs`. The link itself is green with the
+variable set (witnessed exit 0, 2026-10-22; byte count in
+[WASM.md](WASM.md)).
+
 ```sh
-cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+WASI_SDK_PATH=/opt/wasi-sdk \
+  cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 # -> target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
 ```
 
@@ -104,12 +142,27 @@ and drives all fourteen ops in a real wasmi runtime
 
 The shipped artifact is pinned by digest and size:
 
-- digest `cbc80f07346f025d4e1cd001f21d15474928cb055d4b1a9c0ac7c31c5938dc6a`
-  (BLAKE3, verified with `b3sum priv/graphlaw.wasm`), 6,654,496 bytes —
+- digest `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`
+  (BLAKE3, verified with `b3sum priv/graphlaw.wasm`), 6,793,617 bytes —
   `registry/ARTIFACTS.blake3` (`wasm` row) and `priv/graphlaw.wasm.blake3`
   (dual pin: registry pin + sidecar next to the tracked
-  `priv/graphlaw.wasm`). Minted at the **26.10.13** source state (W09
-  re-pin, 2026-10-20); the pin header records `pin-source=26.10.13`.
+  `priv/graphlaw.wasm`). Minted at the **26.10.21** source state (W09
+  re-pin, 2026-10-20); the pin header records `pin-source=26.10.21`.
+  **Historical, as of 2026-10-22**: the wasm32-wasip1 link is GREEN when
+  `WASI_SDK_PATH` is a wasi-sdk root (`bin/clang`,
+  `share/cmake/wasi-sdk-p1.cmake`; CI uses `/opt/wasi-sdk`). frozen-duckdb
+  2.0.2 emits `static=duckdb` and the link exits 0 with full DuckDB in the
+  module, and fails typed at frozen-duckdb-sys `build.rs` (`WASI_SDK_PATH
+  required`) without that root. The lane witness byte count is in
+  [WASM.md](WASM.md). The earlier `rust-lld: unable to find library -lduckdb`
+  failure predates the SDK staging and no longer reproduces in that form.
+  This digest still describes the last artifact that built AND pinned, not a
+  build of the current tree. The recorded pin remains the current pin until a
+  lawful re-pin transition lands; the coordinator owns that transition. See
+  [WASM.md](WASM.md) for the full build
+  state. (Historical: the 26.10.13-era pin was
+  `cbc80f07346f025d4e1cd001f21d15474928cb055d4b1a9c0ac7c31c5938dc6a`,
+  6,654,496 B.)
 - Reproducibility was witnessed 2026-09-30: two builds, each after
   `cargo clean -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` in the
   same target dir (dependency crates cached), same machine, produced identical
@@ -119,16 +172,17 @@ The shipped artifact is pinned by digest and size:
 
 **Superseded claims**: 2026-10-07 — lane W637's build claim
 `b7664a5e…` (6,657,549 B) was rejected. 2026-10-10 — the earlier pin
-`fc23a292…` (6,657,708 B) is superseded; `2802cede…` (6,659,724 B) and the
-26.10.5-era pin `02a54c48…` (6,648,473 B) are superseded by the current
-BLAKE3 pin `cbc80f07…` (6,654,496 B, built from the 26.10.13 source state,
-distinct from the v26.9.29 release digest `b4cf5dd1…`).
+`fc23a292…` (6,657,708 B) is superseded; `2802cede…` (6,659,724 B), the
+26.10.5-era pin `02a54c48…` (6,648,473 B), and the 26.10.13-era pin
+`cbc80f07…` (6,654,496 B) are superseded by the current BLAKE3 pin
+`332ea218…` (6,793,617 B, built from the 26.10.21 source state, distinct
+from the v26.9.29 release digest `b4cf5dd1…`).
 
-## Pinned 26.10.13 source state
+## Pinned 26.10.21 source state
 
-`wasm/Cargo.toml` reads `version = "26.10.13"`: the wasm pin (`cbc80f07…`)
+`wasm/Cargo.toml` reads `version = "26.10.21"`: the wasm pin (`332ea218…`)
 was minted at that source state, and any version bump invalidates the pin —
-the digest is of the bytes built from 26.10.13 sources. At the next rebuild
+the digest is of the bytes built from 26.10.21 sources. At the next rebuild
 the coordinator MUST re-pin both `registry/ARTIFACTS.blake3` (row + header)
 and `priv/graphlaw.wasm.blake3` in the same commit as the version bump.
 Never hand-write a digest.

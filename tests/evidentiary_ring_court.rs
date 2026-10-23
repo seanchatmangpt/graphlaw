@@ -4,11 +4,19 @@
 //! coordination sleeps — every wait is a bounded poll on a real observable
 //! (ledger line counts with a deadline).
 
-#![cfg(all(feature = "evidentiary-ring", not(target_arch = "wasm32")))]
+// LOUD-SKIP GATE (census law): the substantive courts below are gated on the
+// `evidentiary-ring` feature (default OFF, Cargo.toml [features]). They live in
+// `mod ring_courts` so the file still compiles ungated, and the always-compiled
+// companion test at the bottom prints-and-fails a typed SKIP when the gate is
+// closed — a default `cargo test` census can never read this target's
+// "0 passed" as silent-by-accident.
+#[cfg(all(feature = "evidentiary-ring", not(target_arch = "wasm32")))]
+mod ring_courts {
 
 use graphlaw::evidence_ring::{
     EvidenceRing, PushOutcome, RingDescriptor, RingError, RING_CAPACITY,
 };
+use std::os::unix::fs::PermissionsExt;
 use std::time::{Duration, Instant};
 
 fn tmp_dir(tag: &str) -> std::path::PathBuf {
@@ -91,26 +99,34 @@ fn chain_integrity_under_100k_push_drain() {
 }
 
 #[test]
-fn torn_slot_is_typed_refused_via_real_pipeline() {
+fn torn_pad_entry_is_typed_refused_at_push_and_benign_twin_accepted() {
     let dir = tmp_dir("torn");
     let ring = EvidenceRing::init(&dir).expect("ring init");
-    // Fields are public by ABI design; a torn descriptor (nonzero pads) is
-    // pushed through the REAL producer -> drainer -> ledger pipeline.
-    let mut torn = desc(0);
-    torn.pad1 = [1, 0, 0];
-    ring.push(torn);
+    // Pads are private; the only route to a torn descriptor is the public
+    // torn_via constructor (with_torn_pad family).
+    let torn = desc(0).torn_via(|p1, _| *p1 = [1, 0, 0]);
+    assert!(
+        !torn.pads_zero(),
+        "torn_via must actually tear the pads (court non-vacuity)"
+    );
+    assert!(
+        torn.with_torn_pad(|p1, p2| *p1 != [0; 3] || *p2 != [0; 8]),
+        "with_torn_pad inspection must observe the torn pads"
+    );
+    // ANTI-VACUITY FLIP: the torn entry is typed-refused; its benign twin
+    // (identical payload, zero pads) is buffered through the same producer.
+    assert_eq!(ring.push(torn), PushOutcome::RefusedTornPad);
+    assert_eq!(ring.push(desc(0)), PushOutcome::Buffered);
+    // A refusal mints no sequence: the benign twin is seq 1, not seq 2.
+    assert_eq!(ring.pushed_total(), 1, "refused torn entry must not mint a sequence");
     let ok = poll_until(Instant::now() + Duration::from_secs(30), || {
         (ledger_line_count(&ring) >= 1).then_some(())
     });
-    assert!(ok.is_some(), "torn slot not drained");
+    assert!(ok.is_some(), "benign twin not drained");
     ring.close();
-    match graphlaw::evidence_ring::verify(&dir) {
-        Err(RingError::TornSlot { line }) => assert_eq!(line, 1),
-        other => panic!(
-            "expected typed TornSlot refusal, got {other:?}; ledger: {}",
-            std::fs::read_to_string(ring.ledger_path()).unwrap_or_default()
-        ),
-    }
+    let (evidence, dropped_lines, dropped_total) =
+        graphlaw::evidence_ring::verify(&dir).expect("ledger verifies with benign twin only");
+    assert_eq!((evidence, dropped_lines, dropped_total), (1, 0, 0));
     std::fs::remove_dir_all(&dir).ok();
 }
 
@@ -532,3 +548,144 @@ fn restart_court_crash_gap_arithmetic_exact_and_complete_false() {
     std::fs::remove_dir_all(&dir).ok();
     std::fs::remove_dir_all(&ldir).ok();
 }
+
+/// RUST-4 court (write-fail injection): the NDJSON write path fails for real
+/// (the ledger file is chmod'd read-only, so the drainer's append-open gets
+/// EACCES — a real OS failure, no mocks). Law: the drainer must surface a
+/// TYPED BrokenChain carrying the failure identity and must NOT advance the
+/// on-disk watermark (ledger bytes byte-identical), and the gate must FLIP:
+/// the same directory drains cleanly once the file is writable again.
+#[test]
+fn ndjson_write_failure_surfaces_typed_and_never_advances_watermark() {
+    let dir = tmp_dir("writefail");
+    // Session 1 (healthy leg of the inline flip): one line on disk, no error.
+    let r1 = EvidenceRing::init(&dir).expect("ring session 1");
+    r1.push(desc(1));
+    let ok = poll_until(Instant::now() + Duration::from_secs(30), || {
+        (ledger_line_count(&r1) >= 1).then_some(())
+    });
+    assert!(ok.is_some(), "session 1 line not drained");
+    assert!(r1.last_write_error().is_none(), "healthy leg must be error-free");
+    r1.close();
+    let path = r1.ledger_path();
+    let before = std::fs::read(&path).expect("ledger read");
+
+    // INJECTION: read-only ledger file -> the resumed drainer's append-open
+    // fails with a real EACCES.
+    let mut perms = std::fs::metadata(&path).expect("stat").permissions();
+    perms.set_mode(0o444);
+    std::fs::set_permissions(&path, perms.clone()).expect("chmod 0444");
+    let r2 = EvidenceRing::init(&dir).expect("session 2 init (dir writable, file not)");
+    for i in 1..=64u64 {
+        let _ = r2.push(desc(100 + i));
+    }
+    // Bounded poll on the real observable: the typed write error surfaces.
+    let err = poll_until(Instant::now() + Duration::from_secs(30), || {
+        r2.last_write_error()
+    });
+    assert!(
+        err.is_some(),
+        "write-failure must surface typed within the deadline, never laundered"
+    );
+    assert!(
+        matches!(err.as_ref().unwrap(), RingError::BrokenChain { detail }
+            if detail.contains("failed"),
+        ),
+        "typed refusal must be BrokenChain, got {err:?}"
+    );
+    r2.close();
+
+    // Watermark law: the on-disk ledger is byte-identical to before the
+    // failed session — the failed batch did NOT advance the watermark and was
+    // not silently lost (its loss is typed on r2 + covered by the closing
+    // drop accounting in the drainer's error state).
+    perms.set_mode(0o644);
+    std::fs::set_permissions(&path, perms).expect("chmod back");
+    let after = std::fs::read(&path).expect("ledger read after failed session");
+    assert_eq!(
+        before, after,
+        "watermark must not advance on a failed write path (no silent loss)"
+    );
+
+    // ANTI-VACUITY FLIP: with the file writable again, the same directory
+    // drains and verifies — the gate above is not vacuously green. The
+    // watermark-seeded restart constructor continues the on-disk sequence
+    // space (disk watermark = 1), never renumbers it.
+    let ldir = tmp_dir("writefail-ledger");
+    let r3 = EvidenceRing::init_with_ledger_restart(&dir, &ldir, 1).expect("ring session 3");
+    r3.push(desc(2));
+    let ok = poll_until(Instant::now() + Duration::from_secs(30), || {
+        (ledger_line_count(&r3) >= 2).then_some(())
+    });
+    assert!(ok.is_some(), "flip leg: writable ledger must drain");
+    r3.close();
+    std::fs::remove_dir_all(&ldir).ok();
+    assert!(
+        r3.last_write_error().is_none(),
+        "flip leg: healthy session must be error-free"
+    );
+    let (evidence, _, _) = graphlaw::evidence_ring::verify(&dir).expect("flip leg verifies");
+    assert_eq!(evidence, 2, "both healthy sessions chained on disk");
+    std::fs::remove_dir_all(&dir).ok();
+}
+
+/// RUST-4 court (concurrent init): two threads race `init_global` through a
+/// real start barrier. Init-once semantics admit EXACTLY ONE ledger: the
+/// loser gets the typed AlreadyInitialized refusal BEFORE performing any
+/// init I/O (no second drainer thread can exist to interleave into the
+/// ledger), and the winning ring verifies as a single coherent chain.
+#[test]
+fn concurrent_init_global_admits_exactly_one_ledger() {
+    use std::sync::{Arc, Barrier};
+    let dir = tmp_dir("global-race");
+    let barrier = Arc::new(Barrier::new(2));
+    let mut handles = Vec::new();
+    for _ in 0..2 {
+        let barrier = Arc::clone(&barrier);
+        let dir = dir.clone();
+        handles.push(std::thread::spawn(move || {
+            barrier.wait(); // structural sync: both racers live before either starts
+            EvidenceRing::init_global(&dir)
+        }));
+    }
+    let mut wins = 0usize;
+    let mut refusals = 0usize;
+    for h in handles {
+        match h.join().expect("racer thread") {
+            Ok(()) => wins += 1,
+            Err(RingError::AlreadyInitialized) => refusals += 1,
+            Err(e) => panic!("unexpected typed error from racer: {e}"),
+        }
+    }
+    assert_eq!(wins, 1, "exactly one racer may install the global ring");
+    assert_eq!(
+        refusals, 1,
+        "the loser must be typed-refused, never silently co-installed"
+    );
+    // Single-identity readback: exactly one ledger exists, drains, verifies.
+    let ring = EvidenceRing::global().expect("global ring installed by the winner");
+    ring.push(desc(9));
+    let ok = poll_until(Instant::now() + Duration::from_secs(30), || {
+        (ledger_line_count(ring) >= 1).then_some(())
+    });
+    assert!(ok.is_some(), "global ring did not drain");
+    ring.close();
+    let (evidence, dropped_lines, dropped_total) =
+        graphlaw::evidence_ring::verify(&dir).expect("single ledger verifies");
+    assert_eq!((evidence, dropped_lines, dropped_total), (1, 0, 0));
+    std::fs::remove_dir_all(&dir).ok();
+}
+}
+
+/// ALWAYS-COMPILED loud-skip companion (census law): asserts the gate
+/// condition for the feature-gated courts in `mod ring_courts`. When the gate
+/// is closed this FAILS LOUDLY with a typed SKIP reason — a loud skip is not a
+/// pass, and a gate that cannot exit 1 is the failure.
+#[cfg(not(all(feature = "evidentiary-ring", not(target_arch = "wasm32"))))]
+#[test]
+fn evidentiary_ring_gate_loud_skip_notice() {
+    panic!(
+        "SKIP [evidentiary-ring-courts] reason: feature 'evidentiary-ring' disabled in this build (default OFF, Cargo.toml) — 9 ring/ledger courts compiled out; run: cargo test --features evidentiary-ring --test evidentiary_ring_court"
+    );
+}
+

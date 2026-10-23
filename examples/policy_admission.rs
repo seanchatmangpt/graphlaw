@@ -1,4 +1,11 @@
-//! Admit a FOND strong-cyclic retry-loop policy (needs `--features abi`).
+//! Admit a FOND strong-cyclic retry-loop policy (`abi` is a default feature, so a
+//! plain `cargo run` works).
+//!
+//! Run: cargo run --example policy_admission
+//! Output: `ADMITTED reachable=["g", "s0"] goals=["g"] entries=[("s0", "flip")]`
+//! (exit 0).
+//! Court: the same policy-op admission/refusal path as
+//! tests/wasm_abi.rs::fond_policy_admission_runs_in_wasm (BadMass skew refusal).
 #[cfg(feature = "abi")]
 fn main() {
     use graphlaw::policy::admit;

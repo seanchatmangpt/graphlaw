@@ -55,3 +55,54 @@ fn wasi_patch_guard_skipped_without_the_feature() {
          runs only under `--features wasi-patched-deps` (CI and wasm/Cargo.toml enable it)."
     );
 }
+
+/// Fail-loud court on the build-script-emitted cfg itself: when
+/// `wasi-patched-deps` is requested, `graphlaw_wasi_clock_patched`
+/// (emitted by build.rs on detecting the vendored gate) must be set. If the
+/// cfg is absent while the feature is on, this test is COMPILED OUT under the
+/// cfg gate — so the mirror arm below (same name, `not(...)` cfg) fails
+/// instead. This arm is the positive witness: real filesystem readback of the
+/// vendored clock module, matching build.rs's patch predicate exactly.
+#[cfg(graphlaw_wasi_clock_patched)]
+#[test]
+fn wasi_clock_patch_cfg_is_applied() {
+    let clock = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("vendor/purrdf-sparql-eval/src/clock.rs");
+    let src = std::fs::read_to_string(&clock)
+        .unwrap_or_else(|e| panic!("WASI_PATCH_CFG_MISSING: vendored clock gone: {e}"));
+    assert!(
+        src.contains(r#"all(target_arch = "wasm32", target_os = "unknown")"#)
+            && !src.contains("#[cfg(target_arch = \"wasm32\")]"),
+        "WASI_PATCH_CFG_STALE: cfg graphlaw_wasi_clock_patched is set but the vendored \
+         clock.rs no longer carries the WASI gate — build.rs and the vendor tree disagree."
+    );
+    eprintln!("NOTICE [wasi-patch-cfg-verified]: graphlaw_wasi_clock_patched set by build.rs.");
+}
+
+/// Negative arm of the cfg court (feature ON, build.rs did NOT emit the cfg).
+/// Without this, a cfg-gated positive test would silently vanish when the
+/// patch is missing — the exact silent-pass the guard exists to prevent.
+/// Normally unreachable because build.rs now panics first (fail-closed); this
+/// arm is the second net if the build script's refusal is ever bypassed.
+#[cfg(all(feature = "wasi-patched-deps", not(graphlaw_wasi_clock_patched)))]
+#[test]
+fn wasi_clock_patch_cfg_is_applied() {
+    panic!(
+        "WASI_PATCH_CFG_MISSING: the `wasi-patched-deps` feature is enabled but build.rs did \
+         not emit cfg(graphlaw_wasi_clock_patched) — the vendored WASI clock patch is absent \
+         or unpatched. Restore vendor/purrdf-sparql-eval (vendor/README.md) or drop the \
+         feature; WASI would trap on the first clock read."
+    );
+}
+
+/// Loud, named skip when the feature is OFF: prints a typed reason on stderr
+/// so the guard's absence from a default run is witnessed, never silent.
+#[cfg(not(feature = "wasi-patched-deps"))]
+#[test]
+fn wasi_clock_patch_cfg_skip_without_feature() {
+    eprintln!(
+        "SKIP [wasi-patch-cfg-court]: wasi-patched-deps feature is OFF; \
+         cfg(graphlaw_wasi_clock_patched) is not asserted in this build. \
+         Rerun with --features wasi-patched-deps to arm the court."
+    );
+}

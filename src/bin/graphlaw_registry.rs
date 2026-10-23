@@ -23,11 +23,31 @@ fn registry_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("registry")
 }
 
+const HELP: &str = "\
+graphlaw-registry — emit or check the capability registry files.
+
+Usage:
+  graphlaw-registry --write | --check | --print-json | --print-ttl | --print-digests
+
+Modes (exactly one per invocation):
+  --write          Write registry/capability-registry.json and .ttl under the crate
+                   root and re-pin the ARTIFACTS.blake3 rows this bin owns
+                   (`registry`, `surface`, `receipt-surface`); the `wasm` row is
+                   never touched here — it is re-pinned by the wasm rebuild flow
+  --check          Compare the committed files against live output; exit 1 with a
+                   first-difference summary on drift
+  --print-json     Print the capability registry JSON to stdout
+  --print-ttl      Print the capability registry Turtle to stdout
+  --print-digests  Print the live surface/registry BLAKE3 digests
+
+Exit codes: 0 ok, 1 drift (`--check`), 2 usage or I/O error.";
+
 fn usage(msg: &str) -> ExitCode {
     eprintln!("graphlaw-registry: {msg}");
     eprintln!(
         "usage: graphlaw-registry --write | --check | --print-json | --print-ttl | --print-digests"
     );
+    eprintln!("run `graphlaw-registry --help` for mode details");
     ExitCode::from(2)
 }
 
@@ -261,8 +281,12 @@ fn main() -> ExitCode {
             println!("registry_blake3 {}", registry_blake3());
             ExitCode::SUCCESS
         }
+        [a] if a == "--help" || a == "-h" => {
+            println!("{HELP}");
+            ExitCode::SUCCESS
+        }
         _ => usage(
-            "expected exactly one of --write, --check, --print-json, --print-ttl, --print-digests",
+            "expected exactly one of --write, --check, --print-json, --print-ttl, --print-digests (try --help)",
         ),
     }
 }

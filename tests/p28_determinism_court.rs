@@ -232,8 +232,7 @@ fn tc_legal_02_viewscope_leak_refused_03_no_execution() {
     let leaked = "@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n_:s a sql:SelectStatement ;\n    sql:statementIndex 1 ;\n    sql:select ( [ a sql:ColumnIdentifier ; sql:columnName \"amount\" ; sql:scope sql:ProcessScope ] ) ;\n    sql:from ( [ a sql:TableIdentifier ; sql:tableName \"invoices\" ] ) .";
 
     let err = compile_turtle(leaked)
-        .err()
-        .expect("ViewScope-leak graph must be refused at compile time, before any engine call");
+        .expect_err("ViewScope-leak graph must be refused at compile time, before any engine call");
     let msg = err.to_string();
     assert!(
         msg.contains("REFUSAL-03") || msg.contains("ScopeIntegrity"),

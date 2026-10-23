@@ -32,7 +32,7 @@ path = "src/lib.rs"
 
 [dependencies]
 purrdf = "=2.0.2"
-frozen-duckdb = { version = "2.0", optional = true }
+frozen-duckdb = { version = "2.0.2" }
 # SECURITY (supply-chain note): sha2 0.10.9 remains in the tree ONLY as a
 # transitive dep of the purrdf family (purrdf-core 2.0.2 declares sha2 = "0.10")
 # and ed25519-dalek 2.2.0 (sha2 = "0.10", exact-pinned per GOALS.md invariant 3).
@@ -65,13 +65,10 @@ evidentiary-ring = ["dep:rtrb"]
 # extra dependencies (serde_json is a required dep), and without it the
 # default dev profile cannot compile the abi-backed bins, examples, and
 # integration tests (E0432 on graphlaw::abi under plain `cargo test`).
-default = ["abi", "duckdb"]
+default = ["abi"]
 # Capture/rewrite tooling for packs/self-monitoring-pack (replaces the former
 # Python scripts). Off by default so the library stays dependency-light.
 pack-tools = ["dep:regex"]
-# Native-only SQL evaluation (frozen-duckdb): excluded from the wasm target.
-# Rules referencing `gl:evalSql` without this feature are refused at admission.
-duckdb = ["dep:frozen-duckdb"]
 # JSON request/response ABI (src/abi.rs) consumed by the wasm module in ./wasm.
 # (serde_json is now a required dependency for the receipt-chain family, so the
 # former `dep:serde_json` toggles are no-ops kept for feature compatibility.)
@@ -112,16 +109,11 @@ name = "graphlaw-registry"
 path = "src/bin/graphlaw_registry.rs"
 required-features = ["abi"]
 
-# Charter A08 measurement-isolation lane: tc_hot_01/tc_hot_02 are
-# harness=false bench binaries (custom main, not libtest). Minimal unblock
-# after a concurrent lane edit dropped the [[bench]] sections.
+# Charter A08 measurement-isolation lane: tc_hot_01 is a harness=false
+# bench binary (custom main, not libtest). It times the receipt fold and
+# the refusal render. DuckDB scan and prepare timing is not a graphlaw bench.
 [[bench]]
 name = "tc_hot_01"
-harness = false
-
-# TC-HOT-02: duckdb-generated parquet corpus, compiled-query throughput court.
-[[bench]]
-name = "tc_hot_02"
 harness = false
 
 [package.metadata.docs.rs]

@@ -1,5 +1,10 @@
 //! Admit a 3-action plan over an N-Triples state and print the receipt chain.
 //! No hand-written N-Triples: `Triple` validates IRIs and escapes literals.
+//!
+//! Run: cargo run --example quickstart_plan
+//! Output: one `step -> receipt-hash` line per admitted action, then
+//! `final state: blake3:<64 hex>`.
+//! Court: tests/readme_first_ten_minutes.rs::quickstart_plan_matches_readme_hashes.
 use graphlaw::{
     dialect::Dialect,
     law::LawState,

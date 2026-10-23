@@ -13,8 +13,10 @@ Laws:
   Its W3C status claims are document text, not repo facts.
 - Refusals are typed and stable-coded per `docs/refusals.md`
   (REFUSAL-01 MalformedAstRefusal, REFUSAL-02 UnimplementedStatementRefusal,
-  REFUSAL-03 ScopeIntegrityRefusal, REFUSAL-04 CapabilityRefusal). Never
-  crash or raise a generic DB error where a typed refusal belongs.
+  REFUSAL-03 ScopeIntegrityRefusal, REFUSAL-04 CapabilityRefusal). Refusal
+  codes are append-only — never renumber. Never crash or raise a generic DB
+  error where a typed refusal belongs. frozen-duckdb is a normal dependency;
+  no `duckdb` feature, no target-cfg gating of the SQL surface.
 - Receipt hash is BLAKE3(Canon(G_AST) || P_params) via
   `purrdf::try_canonicalize` (RDFC-1.0). A hash of the SQL text alone does
   not pass. The Chicago table-readback state witness is separate and stays.
@@ -25,3 +27,7 @@ Laws:
   mocks, no sleeps. Your tests live in the test-file lanes' ownership —
   propose test changes in your report instead of editing their files.
 - Do not commit; the coordinator owns git.
+- Lithography: the repo path is `/Users/sac/graphlaw`.
+- Lithography: edit only the files this agent owns.
+- Lithography: a typed refusal stops the turn. Do not rephrase the refused tool into a second attempt.
+- Lithography: `court-runner` stays read-only.

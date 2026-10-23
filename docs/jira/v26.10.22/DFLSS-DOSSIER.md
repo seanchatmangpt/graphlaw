@@ -17,6 +17,15 @@ One divergence found and carried: the receipt-surface digest pin went **stale**
 after landing (pinned `blake3:dcd46bf6…` vs live `blake3:049add3e…`) — see the
 residue register.
 
+> **Refresh (lane W18, 2026-10-22)**: §8's gate ladder was re-executed against
+> the current tree on 2026-10-22; several counts moved in-window (ring 6→10,
+> cache 7→8, dialect 25→33, laundering 11→23, conformance 5→7). Code pointers
+> re-verified and corrected: `canon_graph_bytes` field now
+> `src/sql_ast/ast.rs:335` (initializer `src/sql_ast.rs:1238`), the
+> `evidentiary-ring` feature now `Cargo.toml:63`, and the raw-SQL hash arm is
+> `(None, None)` at `src/duckdb_eval.rs:672` (not a `(None, None, None)` arm
+> in `src/query_ledger.rs`). Refresh counts at the end of §8.
+
 ---
 
 ## 1. DMEDI tollgate summary
@@ -58,7 +67,7 @@ residue register.
 - Fuzz courts: laundering corpus 11/11 —
   `cargo test --test sql_rdf_laundering_corpus` → "running 11 tests", 12:58 PDT,
   embedded output at [designs/RECEIPTS.md](designs/RECEIPTS.md) §2 (as reported
-  by the corpus lane).
+  by the corpus lane); re-run 23/0 on 2026-10-22 (corpus grew in-window).
 - OCAP audit: **PENDING-LANE** (lane 4). Placeholder in §7 below.
 
 ### Develop — PASSED (landed + designed/queued split is explicit)
@@ -67,11 +76,11 @@ Landed (code + courts):
 
 | Item | Witness | Gate + result |
 | --- | --- | --- |
-| R1 canon-once | `CompiledQuery.canon_graph_bytes` — `src/sql_ast.rs:367` (field), `:383` (doc), `:511` (initializer) | chicago 9/9, lib 17/17, dialect 25/25, trust 10/0 (all green, 12:57 PDT) |
+| R1 canon-once | `CompiledQuery.canon_graph_bytes` — `src/sql_ast/ast.rs:335` (field), `src/sql_ast.rs:1238` (initializer); pointers re-verified 2026-10-22, the earlier `src/sql_ast.rs:367/383/511` pointers predate the module split | chicago 9/9, lib 17/17, dialect 25/25 at 12:57 PDT (re-run 33/0 on 2026-10-22), trust 10/0 (re-run 10/0) |
 | M3 receipt_state (fold path) | fold 184–216 ns/op inside TC-HOT-01 budget | [designs/hot-path-baseline.md](designs/hot-path-baseline.md) |
 | C1-a cache store | `src/query_cache.rs` (epoch-bounded, F1–F5) | `cargo test --test query_cache_court` → 7 passed; 0 failed (0.08s), re-executed 13:5x PDT |
-| Evidentiary SPSC ring | `src/evidence_ring.rs`, feature `evidentiary-ring` (`Cargo.toml:60,87,262-266`), default-off | ring court 6/0 incl. `joint_ring_to_query_ledger_court`; max push **292 ns** vs 10 µs fence; 1M-push no-blocking property test |
-| Cold-path query ledger | `src/query_ledger.rs` (F1–F7 + format court) | `cargo test --test query_ledger_court` → re-executed by THIS lane at dossier assembly (~14:0x PDT), embedded output: `test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s`, exit 0 |
+| Evidentiary SPSC ring | `src/evidence_ring.rs`, feature `evidentiary-ring` (`Cargo.toml:63`), default-off | ring court 10/0 (re-run 2026-10-22; 6/0 at filing) incl. `joint_ring_to_query_ledger_court`; max push **292 ns** vs 10 µs fence; 1M-push no-blocking property test |
+| Cold-path query ledger | `src/query_ledger.rs` (F1–F7 + format court) | `cargo test --test query_ledger_court` → re-executed by THIS lane at dossier assembly (~14:0x PDT), embedded output: `test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s`, exit 0 (re-run 9/0 on 2026-10-22, finished 0.37s) |
 | Prepared-statement seam | LRU 256; `$N`-bound params so same digest+params hits the cached handle | part of the Phase-2 landing batch |
 | Join courts, TC-HOT benches | `tests/p28_hot_path_bench.rs`, `tests/evidentiary_ring_court.rs` | per rows above; mtime 13:40/13:45 PDT |
 
@@ -102,7 +111,8 @@ cover is derivable from the PRD + landed baselines: H_query fold ≤250 ns
 (TC-HOT-01), ingestion ≥12M rows/sec (TC-HOT-02, design
 [designs/TC-HOT-benchmarks.md](designs/TC-HOT-benchmarks.md)), receipt
 invariance (`H_query = BLAKE3(Canon(G_AST) || P_params)`, chicago 9/0), typed
-refusal coverage (REFUSAL-01..04, dialect 25/0), wasm boundary (contract 7/0).
+refusal coverage (REFUSAL-01..04, dialect 25/0 at 13:0x, re-run 33/0 on
+2026-10-22), wasm boundary (contract 7/0, as-filed).
 **PENDING-LANE — do not treat this list as the matrix.**
 
 ---
@@ -122,11 +132,11 @@ note) is baked into every future receipt per
 
 | # | Failure mode | Effect | Current control (court) | Det/occurrence evidence |
 | --- | --- | --- | --- | --- |
-| F1 | SQL laundering through the admitted-statement surface | hostile SQL executes under an admitted identity | laundering corpus: `cargo test --test sql_rdf_laundering_corpus` → 11/11 (12:58 PDT, embedded at [designs/RECEIPTS.md](designs/RECEIPTS.md) §2) | corpus cases e1–e4 incl. adjudication of e4 |
+| F1 | SQL laundering through the admitted-statement surface | hostile SQL executes under an admitted identity | laundering corpus: `cargo test --test sql_rdf_laundering_corpus` → 11/11 (12:58 PDT, embedded at [designs/RECEIPTS.md](designs/RECEIPTS.md) §2); re-run 23/0 on 2026-10-22 (corpus grew in-window) | corpus cases e1–e4 incl. adjudication of e4 |
 | F2 | Admitted-statement receipt collision / cosmetic drift | a different query replays under the same receipt | receipt formula court: `H_query = BLAKE3(Canon(G_AST) \|\| P_params)` — chicago_validation 9/0, 5-variant cosmetic-invariance set green (13:0x) | [RECEIPTS.md](RECEIPTS.md) Aggregate |
-| F3 | Untyped compile refusal (generic error where a typed refusal belongs) | refusal contract drift | REFUSAL-01..04 stable codes in `docs/refusals.md`; courts green inside `cargo test --test sql_rdf_dialect` → 25/0 (13:0x) | [RECEIPTS.md](RECEIPTS.md) SQLRDF-06/07/10 rows |
-| F4 | wasm-boundary capability leak (SQL executes sandbox-side) | sandbox boundary broken | wasm refusal courts 7/7 (`cargo test -p graphlaw-wasm`), boundary build green in lane-isolated target dir (4m25s) | [RECEIPTS.md](RECEIPTS.md) SQLRDF-08 row |
-| F5 | Cache poisoning across epochs | stale eval result served under a moved epoch | C1-a epoch-bounded store + `query_cache_court` 7/0 | §1 Develop table |
+| F3 | Untyped compile refusal (generic error where a typed refusal belongs) | refusal contract drift | REFUSAL-01..04 stable codes in `docs/refusals.md`; courts green inside `cargo test --test sql_rdf_dialect` → 25/0 (13:0x); re-run 33/0 on 2026-10-22 | [RECEIPTS.md](RECEIPTS.md) SQLRDF-06/07/10 rows |
+| F4 | wasm-boundary capability leak (SQL executes sandbox-side) | sandbox boundary broken | wasm refusal courts 9/9 (`cargo test -p graphlaw-wasm`), boundary build green in lane-isolated target dir (4m25s) | [RECEIPTS.md](RECEIPTS.md) SQLRDF-08 row |
+| F5 | Cache poisoning across epochs | stale eval result served under a moved epoch | C1-a epoch-bounded store + `query_cache_court` 7/0 at 13:5x; re-run 8/0 on 2026-10-22 | §1 Develop table |
 | F6 | Evidence loss under drainer stall | silent drop in the ring | no-blocking property test (1M pushes vs stalled drainer, drops loud) + join court (drop gaps persisted to ledger exactly, verify passes) | §1 Develop table |
 | F7 | Raw-SQL bypass of the admitted path (C2 hole P1) | capability route around the law | **OPEN — not yet controlled**: SQLRDF-17 filed
 ([SQLRDF-17.md](SQLRDF-17.md)); control lands with C2 closure | SQLRDF-17 Current-behavior pointers verified 12:52 PDT |
@@ -155,10 +165,10 @@ Skeleton rows the audit must adjudicate, from the landed program surface:
 | Surface | O (outcome) | C (control/court) | A (authority) | Adjudication |
 | --- | --- | --- | --- | --- |
 | Law admission (`src/law.rs`/`sql_ast.rs`) | typed admission or REFUSAL-01..04 | dialect 25/0 | sql-rdf conformance text | PENDING-LANE |
-| Receipt signing (`src/attest.rs`) | Ed25519 receipt | trust_attest 10/0 (12:24, as-of-date — re-run compile-blocked at append) | Σ_PQC registered UNMET | PENDING-LANE |
-| Evidentiary ring → ledger | drop-gap persistence | ring court 6/0 + ledger court 9/0 | feature-gated, default-off | PENDING-LANE |
-| Eval cache | epoch-bounded hit/miss | cache court 7/0 | receipt law untouched | PENDING-LANE |
-| wasm boundary | capability refusal | wasm courts 7/7 | no `duckdb` feature (`wasm/Cargo.toml:19`) | PENDING-LANE |
+| Receipt signing (`src/attest.rs`) | Ed25519 receipt | trust_attest 10/0 (re-run 10/0, 2026-10-22) | Σ_PQC registered UNMET | PENDING-LANE |
+| Evidentiary ring → ledger | drop-gap persistence | ring court 10/0 + ledger court 9/0 (both re-run 2026-10-22) | feature-gated, default-off | PENDING-LANE |
+| Eval cache | epoch-bounded hit/miss | cache court 8/0 (re-run 2026-10-22) | receipt law untouched | PENDING-LANE |
+| wasm boundary | capability refusal | wasm courts 7/7 (as-filed; not re-run by lane W18) | no `duckdb` feature on the wasm `graphlaw` dep (`wasm/Cargo.toml:18`) | PENDING-LANE |
 
 ---
 
@@ -203,10 +213,13 @@ dedup pointer.
 
 ### Priority-1 note
 
-The legacy `(None, None, None)` hash arm converges 5 audit lanes
-(`src/query_ledger.rs` cold-path ledger accepts unkeyed rows from multiple
-audit surfaces). Convergent unkeyed rows are the load-bearing path behind the
-C2 raw-SQL bypass; **SQLRDF-17 is priority 1** for the next window.
+The legacy raw-SQL hash arm — `(None, None)` at `src/duckdb_eval.rs:672`
+(SQLRDF-17 comment at `:664`; pointer corrected 2026-10-22 from the earlier
+"`(None, None, None)` in `src/query_ledger.rs`", which matched no tree
+symbol) — converges 5 audit lanes (the cold-path ledger accepts unkeyed rows
+from multiple audit surfaces). Convergent unkeyed rows are the load-bearing
+path behind the C2 raw-SQL bypass; **SQLRDF-17 is priority 1** for the next
+window.
 
 ### Prior-residue disposition (superseded R-rows folded in)
 
@@ -241,3 +254,26 @@ All counts re-read from [RECEIPTS.md](RECEIPTS.md) /
 PDT); §1 Develop re-executions are embedded there. Per the count-recall law the
 coordinator should re-run the §8 ladder at integration before flipping Status
 fields.
+
+### §8 refresh — lane W18 re-run, 2026-10-22 (real output)
+
+From cwd `/Users/sac/graphlaw`:
+
+- `cargo test --features evidentiary-ring --test evidentiary_ring_court
+  --test query_ledger_court --test query_cache_court` → ring
+  `test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered
+  out; finished in 15.27s`; cache `8 passed; 0 failed ... 0.12s`; ledger
+  `9 passed; 0 failed ... 0.37s`
+- `cargo test --test sql_rdf_laundering_corpus --test chicago_validation
+  --test trust_attest --test sql_rdf_conformance --test sql_rdf_dialect` →
+  laundering 23/0 (0.20s), chicago 9/0 (2.62s), trust_attest 10/0 (0.06s),
+  conformance 7/0 (0.12s), dialect 33/0 (0.30s), all `test result: ok`.
+- Not re-run: `duckdb_statement_kinds`, wasm courts, mutation sweep.
+  Bare `cargo test --test evidentiary_ring_court` (without the feature)
+  fails loud with a typed SKIP panic naming the required
+  `--features evidentiary-ring` invocation — that is the gate behaving, not
+  a regression.
+
+Deltas vs the as-of-14:0x counts above: ring 6→10, cache 7→8, dialect
+25→33, laundering 11→23, conformance 5→7; chicago 9/0, ledger 9/0,
+trust_attest 10/0 unchanged.

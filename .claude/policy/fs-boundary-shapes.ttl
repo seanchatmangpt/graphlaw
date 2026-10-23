@@ -1,0 +1,359 @@
+# fs-boundary-shapes.ttl — Vision-2030 step 2: Schema Invariant Definition
+# Lane V2030-2 on /Users/sac/graphlaw.
+#
+# STATUS: SPECIFICATION LAYER ONLY. Enforcement wiring (hook consumption of
+# these shapes) is sequenced: P1's seed-graph lane (V2030-1) owns the seed
+# rules; this graph is the target for the sequenced hook extension. Nothing
+# here enforces; it states the law the enforcer must admit.
+#
+# Merge point with P1: shared vocabulary (policy:FileNode, policy:path,
+# policy:class) and shared IRI base (https://graphlaw.dev/policy#). Merge is a
+# union of graphs; no term is re-declared. If P1's seed establishes a
+# different base or extra FileNode properties, reconcile at merge time by
+# extending, never re-declaring, the shared terms.
+
+@prefix sh:  <http://www.w3.org/ns/shacl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix policy: <https://graphlaw.dev/policy#> .
+
+##########
+# Shared vocabulary
+##########
+
+policy:FileNode a rdfs:Class ;
+    rdfs:label "FileNode" ;
+    rdfs:comment "A repository file-system path classified into exactly one boundary class." .
+
+policy:path a rdf:Property ;
+    rdfs:label "path" ;
+    rdfs:comment "Repo-root-relative POSIX path of the FileNode." .
+
+policy:class a rdf:Property ;
+    rdfs:label "class" ;
+    rdfs:comment "The single boundary class assigned to this FileNode." .
+
+policy:rule a rdf:Property ;
+    rdfs:label "rule" ;
+    rdfs:comment "Links a FileNode to the boundary rule(s) constraining its class." .
+
+policy:boundaryClass a rdfs:Class ;
+    rdfs:label "boundary class" ;
+    rdfs:comment "A rigid class of paths carrying one invariant." .
+
+policy:BoundaryRule a rdfs:Class ;
+    rdfs:label "boundary rule" ;
+    rdfs:comment "A named invariant carried by one or more boundary classes." .
+
+##########
+# Boundary classes (8, each one witnessed enforcement law)
+##########
+
+policy:CoordinatorOwnedManifest a policy:boundaryClass ;
+    rdfs:label "coordinator-owned manifest" ;
+    rdfs:comment "Cargo.toml, deny.toml: same-commit law — a manifest change and the rule change citing it land in one commit; lane agents read-only." .
+
+policy:GeneratedRegistry a policy:boundaryClass ;
+    rdfs:label "generated registry artifact" ;
+    rdfs:comment "registry/ARTIFACTS.blake3, registry/capability-registry.json: regenerate via src/registry.rs registry-sync flow; never hand-edit." .
+
+policy:GeneratedDocs a policy:boundaryClass ;
+    rdfs:label "generated docs" ;
+    rdfs:comment "docs/reference-generated/: regenerate via their generators; never patch by hand." .
+
+policy:WasmArtifact a policy:boundaryClass ;
+    rdfs:label "wasm artifact" ;
+    rdfs:comment "priv/graphlaw.wasm and its .blake3 pin: immutable except through rebuild-and-repin." .
+
+policy:ReceiptAppendOnly a policy:boundaryClass ;
+    rdfs:label "receipt append-only" ;
+    rdfs:comment "receipts/ including CHAIN.blake3: append-only, BLAKE3-chained; never edit or delete an existing receipt." .
+
+policy:UnwiredDraft a policy:boundaryClass ;
+    rdfs:label "unwired draft" ;
+    rdfs:comment "Unwired drafts (solve_context, src/abi/lease.rs): draft law; may not be cited as admitted capability until wired into the admission path." .
+
+policy:RefusalAppendOnly a policy:boundaryClass ;
+    rdfs:label "refusal append-only" ;
+    rdfs:comment "docs/refusals.md: codes REFUSAL-01.. stable — never renumbered or deleted; additions append." .
+
+policy:DatedReceiptImmutable a policy:boundaryClass ;
+    rdfs:label "dated receipt immutable" ;
+    rdfs:comment "receipts/*-YYYY-MM-DD.(md|json): immutable once written." .
+
+##########
+# Boundary rules
+##########
+
+policy:SameCommitLaw a policy:BoundaryRule ;
+    rdfs:label "same-commit law" .
+
+policy:RegenerateNotHandEdit a policy:BoundaryRule ;
+    rdfs:label "regenerate, never hand-edit" .
+
+policy:RebuildRepinOnly a policy:BoundaryRule ;
+    rdfs:label "rebuild-and-repin only" .
+
+policy:AppendOnly a policy:BoundaryRule ;
+    rdfs:label "append-only" .
+
+policy:NotAdmittedCapability a policy:BoundaryRule ;
+    rdfs:label "not-yet-admitted capability" ;
+    rdfs:comment "Draft surface; not citable as admitted capability." .
+
+policy:StableRefusalCodes a policy:BoundaryRule ;
+    rdfs:label "stable refusal codes" ;
+    rdfs:comment "Existing codes keep their meaning; deletes/renames are a refused transition." .
+
+policy:ImmutableOnceWritten a policy:BoundaryRule ;
+    rdfs:label "immutable once written" .
+
+##########
+# FileNode shape (closed world)
+##########
+
+policy:FileNodeShape a sh:NodeShape ;
+    sh:targetClass policy:FileNode ;
+    sh:closed true ;
+    sh:property [
+        sh:path rdf:type ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:path ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+        sh:minLength 1 ;
+    ] ;
+    sh:property [
+        sh:path policy:class ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:node policy:ClassShape ;
+    ] ;
+    sh:property [
+        sh:path policy:class ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:rule ;
+        sh:minCount 0 ;
+    ] .
+
+policy:ClassShape a sh:NodeShape ;
+    sh:closed true ;
+    sh:property [
+        sh:path rdfs:label ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path rdfs:comment ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path rdf:type ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path rdf:type ;
+        sh:qualifiedValueShape [ sh:hasValue policy:boundaryClass ] ;
+        sh:qualifiedMinCount 1 ;
+    ] .
+
+##########
+# Per-class shapes: path pattern + rule binding, closed world
+##########
+
+policy:CoordinatorOwnedManifestShape a sh:NodeShape ;
+    sh:targetClass policy:CoordinatorOwnedManifest ;
+    sh:closed true ;
+    sh:property [
+        sh:path rdf:type ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:path ;
+        sh:pattern "^(Cargo\\.toml|deny\\.toml)$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path policy:class ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:rule ;
+        sh:hasValue policy:SameCommitLaw ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+policy:GeneratedRegistryShape a sh:NodeShape ;
+    sh:targetClass policy:GeneratedRegistry ;
+    sh:closed true ;
+    sh:property [
+        sh:path rdf:type ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:path ;
+        sh:pattern "^registry/(ARTIFACTS\\.blake3|capability-registry\\.json)" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path policy:class ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:rule ;
+        sh:hasValue policy:RegenerateNotHandEdit ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+policy:GeneratedDocsShape a sh:NodeShape ;
+    sh:targetClass policy:GeneratedDocs ;
+    sh:closed true ;
+    sh:property [
+        sh:path rdf:type ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:path ;
+        sh:pattern "^docs/reference-generated/" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path policy:class ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:rule ;
+        sh:hasValue policy:RegenerateNotHandEdit ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+policy:WasmArtifactShape a sh:NodeShape ;
+    sh:targetClass policy:WasmArtifact ;
+    sh:closed true ;
+    sh:property [
+        sh:path rdf:type ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:path ;
+        sh:pattern "^priv/graphlaw\\.wasm(\\.blake3)?$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path policy:class ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:rule ;
+        sh:hasValue policy:RebuildRepinOnly ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+policy:ReceiptAppendOnlyShape a sh:NodeShape ;
+    sh:targetClass policy:ReceiptAppendOnly ;
+    sh:closed true ;
+    sh:property [
+        sh:path rdf:type ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:path ;
+        sh:pattern "^receipts/" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path policy:class ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:rule ;
+        sh:in ( policy:AppendOnly policy:ImmutableOnceWritten ) ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+policy:UnwiredDraftShape a sh:NodeShape ;
+    sh:targetClass policy:UnwiredDraft ;
+    sh:closed true ;
+    sh:property [
+        sh:path rdf:type ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:path ;
+        sh:pattern "^(src/solve_context|src/abi/lease\\.rs)" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path policy:class ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:rule ;
+        sh:hasValue policy:NotAdmittedCapability ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+policy:RefusalAppendOnlyShape a sh:NodeShape ;
+    sh:targetClass policy:RefusalAppendOnly ;
+    sh:closed true ;
+    sh:property [
+        sh:path rdf:type ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:path ;
+        sh:pattern "^docs/refusals\\.md$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path policy:class ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:rule ;
+        sh:hasValue policy:StableRefusalCodes ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .
+
+policy:DatedReceiptShape a sh:NodeShape ;
+    sh:targetClass policy:DatedReceiptImmutable ;
+    sh:closed true ;
+    sh:property [
+        sh:path rdf:type ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:path ;
+        sh:pattern "^receipts/.*-[0-9]{4}-[0-9]{2}-[0-9]{2}\\.(md|json)$" ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] ;
+    sh:property [
+        sh:path policy:class ;
+        sh:minCount 0 ;
+    ] ;
+    sh:property [
+        sh:path policy:rule ;
+        sh:hasValue policy:ImmutableOnceWritten ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+    ] .

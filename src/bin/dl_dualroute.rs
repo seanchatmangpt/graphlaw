@@ -199,7 +199,7 @@ fn route_a(p: &Parsed, goals: &[&str]) -> Result<Vec<bool>, String> {
         };
         closure.insert((a, b));
     }
-    Ok(goals.iter().map(|g| eval_goal(g, &closure, &p.concepts)).collect())
+    goals.iter().map(|g| eval_goal(g, &closure, &p.concepts)).collect()
 }
 
 fn select(state: &LawState, q: &str) -> Result<Vec<Vec<String>>, String> {
@@ -223,10 +223,20 @@ fn select(state: &LawState, q: &str) -> Result<Vec<Vec<String>>, String> {
     }
 }
 
+/// Split a goal of the form "A:B" into its two concept names.
+fn split_goal(goal: &str) -> Result<(&str, &str), String> {
+    goal.split_once(':')
+        .ok_or_else(|| format!("malformed goal '{goal}' (expected 'A:B')"))
+}
+
 /// Reflexive verdict: goal A:B is true iff sub(A,B) in the closure.
-fn eval_goal(goal: &str, closure: &BTreeSet<(String, String)>, _c: &BTreeSet<String>) -> bool {
-    let (a, b) = goal.split_once(':').expect("goal A:B");
-    closure.contains(&(iri(a), iri(b)))
+fn eval_goal(
+    goal: &str,
+    closure: &BTreeSet<(String, String)>,
+    _c: &BTreeSet<String>,
+) -> Result<bool, String> {
+    let (a, b) = split_goal(goal)?;
+    Ok(closure.contains(&(iri(a), iri(b))))
 }
 
 // ---------------------------------------------------------------------------
@@ -288,10 +298,10 @@ fn route_b(p: &Parsed, goals: &[&str]) -> Result<Vec<bool>, String> {
         };
         types.insert((s, o));
     }
-    Ok(goals.iter().map(|goal| {
-        let (a, b) = goal.split_once(':').expect("goal A:B");
-        types.contains(&(format!("{}w_{}", DL, a), iri(b)))
-    }).collect())
+    goals.iter().map(|goal| {
+        let (a, b) = split_goal(goal)?;
+        Ok(types.contains(&(format!("{}w_{}", DL, a), iri(b))))
+    }).collect()
 }
 
 // ---------------------------------------------------------------------------
@@ -314,7 +324,7 @@ fn emit_vector(case: &Case, _parsed: &Parsed, verdicts: &[bool]) -> Result<Strin
     let mut verdicts_json = String::new();
     let mut derived = Vec::new();
     for (i, (g, v)) in case.goals.iter().zip(verdicts).enumerate() {
-        let (a, b) = g.split_once(':').unwrap();
+        let (a, b) = split_goal(g)?;
         let gid = format!("g{}", i + 1);
         if i > 0 { goals_json.push_str(", "); }
         goals_json.push_str(&format!(
@@ -337,6 +347,7 @@ fn emit_vector(case: &Case, _parsed: &Parsed, verdicts: &[bool]) -> Result<Strin
   "breed": "description_logic",
   "provenance": {{
     "graphlaw_rev": "{rev}",
+    "graphlaw_version": "{version}",
     "purrdf": "2.0.2",
     "eyeron": "0.7.8",
     "generator": "graphlaw src/bin/dl_dualroute.rs (dual-route: Eyeron N3 DATALOG CR1-CR4 + purrdf OWL-RL; agreement required before emission)",
@@ -363,6 +374,7 @@ fn emit_vector(case: &Case, _parsed: &Parsed, verdicts: &[bool]) -> Result<Strin
 }}
 "#,
         slug = case.slug,
+        version = env!("CARGO_PKG_VERSION"),
         facts_json = facts_json,
         goals_json = goals_json,
         derived_json = derived_json,
@@ -422,7 +434,11 @@ fn main() {
         // Paper-fixture cross-check on case (a).
         if case.slug == "a-paper-baader-el" {
             for (g, expected) in paper {
-                let i = case.goals.iter().position(|x| *x == g).unwrap();
+                let Some(i) = case.goals.iter().position(|x| *x == g) else {
+                    eprintln!("FAIL: paper-fixture cross-check goal {g} not in case goals");
+                    failed = true;
+                    continue;
+                };
                 if a[i] != expected {
                     eprintln!("FAIL: paper-fixture cross-check {g}: got {}, want {expected}", a[i]);
                     failed = true;

@@ -4,11 +4,17 @@
 Source pin: frozen-duckdb 2.0.0-dev, duckdb commit b6013f7aa2.
 """
 
+import os
 from pathlib import Path
 
-ROOT = Path("/Users/sac/frozen-duckdb/target/wasm-build/duckdb")
-GRAM = ROOT / "src/parser/peg/grammar/statements/common.gram"
-EXT_DIR = ROOT / "extension"
+# DUCKDB_SRC is the unpacked frozen-duckdb tree (the directory that contains
+# src/parser/peg/grammar). There is no default checkout path: a missing tree
+# exits 1.
+ROOT = Path(os.environ["DUCKDB_SRC"]) if os.environ.get("DUCKDB_SRC") else None
+GRAM = (
+    ROOT / "src/parser/peg/grammar/statements/common.gram" if ROOT else Path()
+)
+EXT_DIR = ROOT / "extension" if ROOT else Path()
 
 # setup SQL, then a SELECT whose first column is an integer.
 # Directories under extension/ that are not loadable extensions are omitted.
@@ -96,6 +102,12 @@ def statement_names(text: str) -> list[str]:
 
 
 def main() -> None:
+    if ROOT is None or not GRAM.is_file():
+        raise SystemExit(
+            "DUCKDB_SRC is unset or has no PEG grammar at "
+            "src/parser/peg/grammar/statements/common.gram; "
+            "the committed contract is ggen/sql-dialect/ontology/statements.ttl"
+        )
     names = statement_names(GRAM.read_text())
     missing = [n for n in names if n not in EXAMPLES]
     extra = [n for n in EXAMPLES if n not in names]
@@ -107,7 +119,7 @@ def main() -> None:
         "@prefix dcterms: <http://purl.org/dc/terms/> .",
         "",
         "sql: a dcterms:source .",
-        f'sql:grammarSource dcterms:source "{GRAM}" .',
+        'sql:grammarSource dcterms:source "src/parser/peg/grammar/statements/common.gram" .',
         "",
     ]
     for i, name in enumerate(names, start=1):
@@ -123,7 +135,7 @@ def main() -> None:
     extra_ext = [n for n in EXTENSIONS if n not in dirs]
     if missing_ext or extra_ext:
         raise SystemExit(f"extension map drifted: missing={missing_ext} extra={extra_ext}")
-    lines.append(f'sql:extensionRoot dcterms:source "{EXT_DIR}" .')
+    lines.append('sql:extensionRoot dcterms:source "extension" .')
     lines.append("")
     for i, name in enumerate(dirs, start=1):
         setup, check, expect = EXTENSIONS[name]

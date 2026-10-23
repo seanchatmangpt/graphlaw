@@ -31,3 +31,9 @@ js/npm/wasm/graphlaw.wasm
 js/npm/*.tgz
 js/npm/test-results/
 js/npm/playwright-report/
+
+# L159 durable bench corpus (tc-hot-25m) — regenerated via benches/tc_hot_02.rs TC_HOT_CORPUS_PATH
+/var/
+
+# python bytecode (hook courts)
+__pycache__/

@@ -337,7 +337,7 @@ fn gws10_full_pipeline_in_one_wasm_sequence() {
     // Audit-proof binding is load-bearing: the same corpus with the proof
     // STRIPPED from one release-class batch must derive NOTHING for it
     // (premise failure -> fail-closed), proving no release without the proof.
-    let mut stripped = materialized.replace(&format!("<http://biopharma.org/batches/BATCH-R1> a bio:ExcursionBatch ;\n    bio:totalDuration 120 ;\n    bio:maxTemp -17.0 ;\n    gl:auditProof \"{digest}\" .\n", digest = digest), "<http://biopharma.org/batches/BATCH-R1> a bio:ExcursionBatch ;\n    bio:totalDuration 120 ;\n    bio:maxTemp -17.0 .\n");
+    let stripped = materialized.replace(&format!("<http://biopharma.org/batches/BATCH-R1> a bio:ExcursionBatch ;\n    bio:totalDuration 120 ;\n    bio:maxTemp -17.0 ;\n    gl:auditProof \"{digest}\" .\n", digest = digest), "<http://biopharma.org/batches/BATCH-R1> a bio:ExcursionBatch ;\n    bio:totalDuration 120 ;\n    bio:maxTemp -17.0 .\n");
     assert!(stripped != materialized, "strip must change the document");
     let r2 = ok(&json!({"op": "n3", "text": format!("{stripped}\n{RULESET}")}));
     let d2 = r2["derived"].as_str().unwrap();

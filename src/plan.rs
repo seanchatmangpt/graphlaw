@@ -16,9 +16,9 @@
 
 use std::collections::BTreeSet;
 
-use crate::dialect::{Dialect, Refusal, RefusalKind, parse_rdf};
+use crate::dialect::{Dialect, Refusal, RefusalKind, RefusalMessage, parse_rdf};
 use crate::law::{LawError, LawState, Receipt};
-use crate::{BACKEND_AUTHORITIES, BackendAuthority};
+use crate::BackendAuthority;
 
 /// Capability the replay is executed under: RDF parsing/serialization/identity.
 const CAPABILITY: &str = "RDF 1.2 / codecs / storage IR";
@@ -415,11 +415,8 @@ pub struct Admitted {
     pub plan_digest: String,
 }
 
-fn authority() -> BackendAuthority {
-    *BACKEND_AUTHORITIES
-        .iter()
-        .find(|a| a.capability == CAPABILITY)
-        .expect("plan replay maps to a declared authority")
+fn authority() -> Result<BackendAuthority, LawError> {
+    crate::law::authority_for_capability(CAPABILITY)
 }
 
 fn refuse(message: impl Into<String>) -> LawError {
@@ -427,7 +424,7 @@ fn refuse(message: impl Into<String>) -> LawError {
         kind: RefusalKind::Unsupported,
         dialect: Some(Dialect::NTriples),
         engine: Some(Dialect::NTriples.engine()),
-        message: message.into(),
+        message: RefusalMessage::Dynamic(message.into()),
     })
 }
 
@@ -453,7 +450,8 @@ fn check_total_atoms(plan: &Plan) -> Result<(), LawError> {
             engine: Some(Dialect::NTriples.engine()),
             message: format!(
                 "resource limit `plan_total_atoms` exceeded: {total} > {MAX_PLAN_TOTAL_ATOMS}"
-            ),
+            )
+            .into(),
         }));
     }
     Ok(())
@@ -606,7 +604,7 @@ impl Plan {
                 parent: state.id().to_string(),
                 child: child.id().to_string(),
                 step: "plan-action",
-                authority: authority(),
+                authority: authority()?,
                 added: child.quad_count().saturating_sub(state.quad_count()),
                 lease_id: None,
                 plan_blake3: Some(plan_digest.clone()),

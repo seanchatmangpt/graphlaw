@@ -44,6 +44,9 @@
 //! Run from /Users/sac/graphlaw:
 //!   cargo run --example bayes_pop_vectors [-- --verify]
 //!   (GL_VECDIR overrides the output dir)
+//! Output: `generated N vector(s); rev <sha>; now run with --verify` (exit 0);
+//! `--verify` re-evaluates and byte-compares against `expected`.
+//! Court: tests/corpus_conformance.rs::vecgen_bayes_pop_generate_then_verify.
 
 use std::collections::{BTreeSet, VecDeque};
 use std::fs;
@@ -434,7 +437,7 @@ fn dsep_cases() -> Vec<DsepCase> {
             vector_id: "bayesian_network-dsep-collider-empty",
             nodes: &["a", "b", "c"],
             edges: &[("b", "a"), ("b", "c")],
-            cpts: &[("cpt:B|A,C", "0.5,0.5,0.5,0.5")],
+            cpts: &[("cpt:b|a,c", "0.5,0.5,0.5,0.5")],
             obs: &[],
             start: "a",
             end: "c",
@@ -447,7 +450,7 @@ fn dsep_cases() -> Vec<DsepCase> {
             vector_id: "bayesian_network-dsep-collider-b",
             nodes: &["a", "b", "c"],
             edges: &[("b", "a"), ("b", "c")],
-            cpts: &[("cpt:B|A,C", "0.5,0.5,0.5,0.5")],
+            cpts: &[("cpt:b|a,c", "0.5,0.5,0.5,0.5")],
             obs: &["b"],
             start: "a",
             end: "c",
@@ -462,7 +465,7 @@ fn dsep_cases() -> Vec<DsepCase> {
             vector_id: "bayesian_network-dsep-chain-b",
             nodes: &["a", "b", "c"],
             edges: &[("b", "a"), ("c", "b")],
-            cpts: &[("cpt:B|A", "0.5,0.9"), ("cpt:C|B", "0.5,0.9")],
+            cpts: &[("cpt:b|a", "0.5,0.9"), ("cpt:c|b", "0.5,0.9")],
             obs: &["b"],
             start: "a",
             end: "c",
@@ -474,7 +477,7 @@ fn dsep_cases() -> Vec<DsepCase> {
             vector_id: "bayesian_network-dsep-chain-empty",
             nodes: &["a", "b", "c"],
             edges: &[("b", "a"), ("c", "b")],
-            cpts: &[("cpt:B|A", "0.5,0.9"), ("cpt:C|B", "0.5,0.9")],
+            cpts: &[("cpt:b|a", "0.5,0.9"), ("cpt:c|b", "0.5,0.9")],
             obs: &[],
             start: "a",
             end: "c",

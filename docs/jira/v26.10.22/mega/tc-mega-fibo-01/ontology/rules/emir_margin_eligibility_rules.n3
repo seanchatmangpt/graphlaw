@@ -1,0 +1,82 @@
+# EMIR margin eligibility — intensional rules (Datalog Horn clauses in N3).
+# TC-MEGA-FIBO-01 lane L38. STRATIFICATION LAYER 2.
+#
+# Bounded stratification (closed-world completeness, binding addendum item 1):
+#   Layer 0  extensional scenario facts (twins/, scenario data): all reg:
+#            ground atoms. Negation is NEVER taken over layer 0-incomplete
+#            predicates; reg: predicates here are read under the closed-world
+#            assumption of the layer-0 fact base being saturated and finite.
+#   Layer 1  rules/saccr_netting_set_rules.n3: positive Horn clauses only;
+#            saturates to its least Herbrand model (finite: range-restricted
+#            heads over finite layer-0 facts).
+#   Layer 2  THIS FILE. Negation-as-failure appears ONLY via log:notIncludes
+#            over formulas whose predicates are fully computed by layer 1
+#            (reg:SACCRRecognizedNettingSet, reg:nettingSetMember,
+#            reg:coNettedWith) or ground layer-0 atoms.
+#            There is no negation over any layer-2 head predicate, so the
+#            stratification is acyclic and evaluation is a single ordered
+#            fixpoint pass per layer: terminates by construction.
+#
+# Comparison atoms use the sql-rdf Rec section 4 operator tokens (= != < <=
+# > >=) carried as ngn:comparison over xsd:decimal literals, matching the
+# operator enum in src/sql_ast.rs Operator::from_token.
+#
+# NAMESPACE + OPERATOR RECONCILIATION (WO-13 decisions):
+#   reg:  first-class scenario-local namespace of this self-contained
+#         mega ontology; not mapped onto or renamed under repo-canonical
+#         surfaces. Declared above and in every generated shapes/ header.
+#   log: / math: are the standard CWM/swap vocabularies (external, stable
+#         IRIs), used as the N3 spelling of this scenario's rule layer.
+#   Canonical operator form: the section-4 token `<` / the sql:LessThan
+#         axiom IRI. math:lessThan below is the N3 spelling of exactly that
+#         operator (swap/math#lessThan over xsd:decimal <=> `<` token); pick
+#         the token form in any future compiler admission lane. No rename of
+#         math:lessThan in N3 -- the correspondence is documented, not
+#         silently rewritten.
+
+@prefix reg: <http://graphlaw.org/ns/mega/fibo/reg#> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# ------------------------------------------------------------------
+# R2.1  EMIR-eligible: a recognized netting set whose jurisdiction is
+#       an EMIR scope and whose members are all CCP clearing members.
+{ ?ns a reg:SACCRRecognizedNettingSet ;
+      reg:nettingSetJurisdiction ?j .
+  ?h reg:ccpMemberOf ?ccp .
+  ?ns reg:nettingSetMember ?h .
+  ?scenario log:notIncludes { ?ns reg:emirExclusionFlag ?x . } . }
+=> { ?ns a reg:EMIREligibleNettingSet . } .
+
+# ------------------------------------------------------------------
+# R2.2  Margin obligation arises when posted variation margin is below
+#       the agreement threshold (numeric comparison, >= semantics).
+{ ?ma a reg:MarginAgreement ;
+      reg:marginThreshold ?thr ;
+      reg:variationMargin ?vm .
+  ?vm math:lessThan ?thr . }
+=> { ?ma a reg:MarginCallObligation . } .
+
+# ------------------------------------------------------------------
+# R2.3  Eligibility exclusion: a holder outside all recognized netting
+#       sets is NOT margin-eligible under EMIR (negation on the
+#       completed layer-1 predicate reg:nettingSetMember).
+{ ?h a reg:LEIHolder ;
+     reg:isDaEligible true .
+  ?scenario log:notIncludes { ?ns reg:nettingSetMember ?h . } . }
+=> { ?h reg:emirMarginIneligible ?h . } .
+
+# ------------------------------------------------------------------
+# R2.4  Threshold breach isJurisdiction-specific: a margin agreement
+#       breaches when its threshold exceeds the jurisdiction cap and
+#       it carries no cap waiver.
+{ ?ma a reg:MarginAgreement ;
+      reg:marginThreshold ?thr ;
+      reg:party ?h .
+  ?h reg:jurisdiction ?j .
+  ?cap reg:capFor ?j ;
+       reg:capAmount ?c .
+  ?c math:lessThan ?thr .
+  ?scenario log:notIncludes { ?ma reg:capWaiver true . } . }
+=> { ?ma a reg:ThresholdBreach . } .

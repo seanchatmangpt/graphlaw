@@ -15,15 +15,8 @@ Condensed from the TC-HOT spec lane. No bench infrastructure exists in-tree
 - 10M × ~150-200ns ≈ 1.5-2s timed work — cheap; do NOT shard (concurrency
   inflates p99; PRD says "consecutive").
 
-## TC-HOT-02 (ingestion >12M rows/sec, parquet-grounded)
-- Fixture: duckdb-generated 25M-row hive-partitioned parquet corpus
-  (ROW_GROUP_SIZE 122880), `register_parquet_view` (zero-copy mount,
-  duckdb_eval.rs:394), timed AST-compiled SELECT with WHERE+GROUP BY via
-  eval_ast_query until ≥12M rows streamed; 5 reps, best + p95.
-- HONESTY: report rows scanned/produced (not COPY generation); print
-  frozen-duckdb version + threads setting + warm-cache disclosure; ALSO time
-  the raw prepare/execute path without the receipt — the delta is the
-  substrate overhead the PRD actually asks about.
+## TC-HOT-02 (removed)
+The parquet rows/sec and `eval_ast_query` p95 court timed DuckDB. `benches/tc_hot_02.rs` is deleted. Graphlaw benches time the receipt fold and the refusal render (`benches/tc_hot_01.rs`).
 
 ## Hardware disclosure (baked into every receipt)
 ARCH, core count, machdep.cpu.brand_string, AC power required +

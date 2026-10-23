@@ -5,7 +5,7 @@
 # court proves the gates are non-vacuous; this court proves the measured
 # process is within control limits). See repo CLAUDE.md "Test ladder".
 #
-#   scripts/spc_court.sh                 SMOKE run (n>=100k default sample)
+#   scripts/spc_court.sh                 SMOKE run (1M iterations default sample)
 #   SPC_MODE=FULL scripts/spc_court.sh   10M-iteration full run (TC_HOT_FULL=1)
 #   SPC_INJECT_OUTLIER=1 ...             anti-vacuity: inject a real 2µs
 #                                        busy-spin outlier into every recorded
@@ -34,8 +34,18 @@ MODE="${SPC_MODE:-SMOKE}"
 INJECT="${SPC_INJECT_OUTLIER:-0}"
 mkdir -p receipts
 
-TMP_JSON="$(mktemp "${TMPDIR:-/tmp}/spc-court.XXXXXX.json")"
-trap 'rm -f "$TMP_JSON"' EXIT
+# L57 mktemp robustness (L50 finding): a polluted TMPDIR (stale spc-court.*
+# files, huge dir) can make mktemp's mkstemp fail. Use a fresh mktemp -d
+# scratch dir (atomically created, no name collision with stale entries),
+# falling back to /tmp if TMPDIR is unusable. Measurement behavior unchanged.
+SPC_SCRATCH=""
+for d in "${TMPDIR:-/tmp}" /tmp; do
+  SPC_SCRATCH="$(mktemp -d "${d%/}/spc-court.XXXXXXXX" 2>/dev/null)" && break
+  SPC_SCRATCH=""
+done
+[ -n "$SPC_SCRATCH" ] || { echo "spc_court: cannot create temp scratch dir" >&2; exit 2; }
+TMP_JSON="$SPC_SCRATCH/spc-court.json"
+trap 'rm -rf "$SPC_SCRATCH"' EXIT
 
 echo "spc_court: building tc_hot_01 (release) in $CARGO_TARGET_DIR" >&2
 cargo build --release --bench tc_hot_01 >&2
@@ -138,14 +148,21 @@ PY
 RC=$?
 set -e
 
-DATE="$(python3 -c 'import datetime;print(datetime.date.today().isoformat())')"
+# Append-only receipts (L111 fix): every run writes a NEW timestamped file
+# (spc-<date>T<HHMMSS>.json); no same-day file is ever overwritten in place.
+# Immutability chains consume append-only inputs — an overwrite breaks re-sync
+# forever (witnessed: spc-2026-10-22.json drift is permanent history).
+STAMP="$(date +%Y-%m-%dT%H%M%S)"
 # SPC_INJECT_OUTLIER runs are anti-vacuity probes: they document the flip, they
 # do not overwrite the standing receipt (which must reflect the real process).
+# A4 fix: hoist the receipt path so writer, readback and PASS message all use
+# one variable (previously the rule-1 readback opened a stale file, not the
+# receipt just written).
+RECEIPT_PATH="receipts/spc-${STAMP}.json"
 if [ "$INJECT" = 1 ]; then
-  echo "$RECEIPT" > "receipts/spc-$(date +%Y-%m-%d)-inject.json"
-else
-  echo "$RECEIPT" > "receipts/spc-$(date +%Y-%m-%d).json"
+  RECEIPT_PATH="receipts/spc-${STAMP}-inject.json"
 fi
+echo "$RECEIPT" > "$RECEIPT_PATH"
 echo "$RECEIPT" >&2
 
 if [ "$INJECT" = 1 ]; then
@@ -157,7 +174,7 @@ try:
 except Exception as e:
     print(f"spc_court: rule-1 check error: {e!r}", file=sys.stderr); sys.exit(2)
 sys.exit(0 if flagged else 1)
-' "receipts/spc-$(date +%Y-%m-%d)-inject.json" ; then
+' "$RECEIPT_PATH" ; then
     echo "spc_court: VACUOUS GATE — injected outliers did NOT trip Shewhart rule 1 (beyond mean±3σ)" >&2
     exit 1
   fi
@@ -172,4 +189,4 @@ if [ "$RC" -ne 0 ]; then
   echo "spc_court: FAIL — process out of control (see receipt above)" >&2
   exit 1
 fi
-echo "spc_court: PASS — receipt: receipts/spc-$(date +%Y-%m-%d).json" >&2
+echo "spc_court: PASS — receipt: $RECEIPT_PATH" >&2

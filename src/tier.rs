@@ -127,7 +127,7 @@ fn tier_mismatch(dialect: Dialect, message: String) -> Refusal {
         kind: RefusalKind::TierMismatch,
         dialect: Some(dialect),
         engine: Some(dialect.engine()),
-        message,
+        message: message.into(),
     }
 }
 
@@ -139,38 +139,6 @@ fn admit_sql_rdf(bytes: &[u8]) -> Result<crate::sql_ast::CompiledQuery, Refusal>
     let text = std::str::from_utf8(bytes)
         .map_err(|e| Refusal::engine(Dialect::SqlRdf, format!("input is not UTF-8: {e}")))?;
     crate::sql_ast::compile_turtle(text).map_err(|e| Refusal::engine(Dialect::SqlRdf, e.to_string()))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const SQL_DOC: &str = r#"
-        @prefix sql: <http://graphlaw.org/sql#> .
-        @prefix ex: <http://example.org/queries#> .
-        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-        ex:Q a sql:SelectStatement ;
-            sql:statementIndex 1 ;
-            sql:fromTable [ sql:tableName "telemetry_events" ] ;
-            sql:selectList ( [ sql:columnName "batch_id" ] ) ;
-            sql:whereClause [
-                sql:operator sql:GreaterThan ;
-                sql:leftOperand [ sql:columnName "latency_ms" ] ;
-                sql:rightOperand [ sql:literalValue "400"^^xsd:integer ]
-            ] ."#;
-
-    /// SQL-in-RDF admits through the same compiler on every build of this crate,
-    /// including the graphlaw linked into the wasm module.
-    #[test]
-    fn sql_document_admitted() {
-        let admitted = admit_declared(
-            SQL_DOC.as_bytes(),
-            DialectDecl { tier: Tier::Relational, dialect: Dialect::SqlRdf },
-            None,
-        )
-        .unwrap();
-        assert!(matches!(admitted, Admitted::Query(_)));
-    }
 }
 
 /// Validate `bytes` as an N3 logic document via Eyeron's parse entry point.
@@ -261,5 +229,37 @@ pub fn admit_bytes_tiered(
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SQL_DOC: &str = r#"
+        @prefix sql: <http://graphlaw.org/sql#> .
+        @prefix ex: <http://example.org/queries#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+        ex:Q a sql:SelectStatement ;
+            sql:statementIndex 1 ;
+            sql:fromTable [ sql:tableName "telemetry_events" ] ;
+            sql:selectList ( [ sql:columnName "batch_id" ] ) ;
+            sql:whereClause [
+                sql:operator sql:GreaterThan ;
+                sql:leftOperand [ sql:columnName "latency_ms" ] ;
+                sql:rightOperand [ sql:literalValue "400"^^xsd:integer ]
+            ] ."#;
+
+    /// SQL-in-RDF admits through the same compiler on every build of this crate,
+    /// including the graphlaw linked into the wasm module.
+    #[test]
+    fn sql_document_admitted() {
+        let admitted = admit_declared(
+            SQL_DOC.as_bytes(),
+            DialectDecl { tier: Tier::Relational, dialect: Dialect::SqlRdf },
+            None,
+        )
+        .unwrap();
+        assert!(matches!(admitted, Admitted::Query(_)));
     }
 }

@@ -13,7 +13,7 @@ use std::fs;
 // =============================================================================
 // Document-backed AST reader fixture (SQLRDF-17): supplies the admitted
 // Turtle AST document so builtin eval compiles it via `compile_turtle`
-// (hand-built ASTs are a typed REFUSAL-04 at eval).
+// (a CompiledQuery with no canon bytes is EvaluatorError::NoCanonicalGraph at eval).
 // =============================================================================
 
 struct AstReaderFixture {
@@ -241,25 +241,22 @@ ex:Q a sql:SelectStatement ;
         // Search materialized triples for matching batch and total_cost
         let mut row_subject = None;
         for t in &res.derived_triples {
-            if t.predicate == "http://example.org/vocab/batch_id" {
-                if let TermValue::Literal { lexical_form, .. } = &t.object {
-                    if lexical_form == batch_id {
+            if t.predicate == "http://example.org/vocab/batch_id"
+                && let TermValue::Literal { lexical_form, .. } = &t.object
+                    && lexical_form == batch_id {
                         row_subject = Some(t.subject.clone());
                         break;
                     }
-                }
-            }
         }
 
         let subj = row_subject?;
         let mut total_cost = None;
         for t in &res.derived_triples {
-            if t.subject == subj && t.predicate == "http://example.org/vocab/total_cost" {
-                if let TermValue::Literal { lexical_form, .. } = &t.object {
+            if t.subject == subj && t.predicate == "http://example.org/vocab/total_cost"
+                && let TermValue::Literal { lexical_form, .. } = &t.object {
                     total_cost = lexical_form.parse::<i64>().ok();
                     break;
                 }
-            }
         }
 
         let cost = total_cost?;

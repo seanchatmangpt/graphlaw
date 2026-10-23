@@ -188,3 +188,33 @@ fn engine_refusals_are_typed_and_name_the_engine() {
         other => panic!("expected refusal, got {other:?}"),
     }
 }
+
+#[test]
+fn unknown_step_capability_refuses_typed_never_panics() {
+    // A capability string missing from BACKEND_AUTHORITIES must produce a
+    // typed refusal carrying the UNKNOWN-STEP-CAPABILITY marker, not a panic.
+    let err = graphlaw::law::authority_for_capability("totally-unknown-capability")
+        .expect_err("unknown capability must refuse");
+    match &err {
+        LawError::Refused(r) => {
+            assert_eq!(r.kind, RefusalKind::Unsupported);
+            let msg = r.message.as_str();
+            assert!(
+                msg.contains("[UNKNOWN-STEP-CAPABILITY]"),
+                "message missing stable marker: {msg}"
+            );
+            assert!(
+                msg.contains("totally-unknown-capability"),
+                "message must name the offending capability: {msg}"
+            );
+            assert!(
+                msg.contains("BACKEND_AUTHORITIES"),
+                "message must carry recovery text: {msg}"
+            );
+        }
+        other => panic!("expected LawError::Refused, got {other:?}"),
+    }
+    // Known capability still resolves to a real authority (Chicago readback).
+    let known = graphlaw::law::authority_for_capability("SHACL").expect("SHACL is declared");
+    assert_eq!(known.authority, "purrdf::shapes");
+}

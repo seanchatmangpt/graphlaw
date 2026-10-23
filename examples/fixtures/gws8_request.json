@@ -1,0 +1,8 @@
+{
+  "op": "shacl",
+  "data": {
+    "text": "<http://example.org/s> <http://example.org/p> <http://example.org/o> .",
+    "dialect": "nquads"
+  },
+  "shapes": "<http://example.org/NodeShape> a <http://www.w3.org/ns/shacl#NodeShape> ; <http://www.w3.org/ns/shacl#targetClass> <http://example.org/C> ."
+}

@@ -48,8 +48,9 @@ else
     echo "== wasm_audit: subject = wasm v${VERSION} artifact =="
 fi
 
-# --- 25 MiB ceiling ---
-MAX_BYTES=26214400
+# --- 64 MiB sandbox wall (docs/WASM.md). The old 25 MiB ceiling assumed the
+# engine was absent from the module. ---
+MAX_BYTES=67108864
 
 if [[ ! -f "$SUBJECT" ]]; then
     echo "[MISSING] wasm artifact not found: $SUBJECT" >&2
@@ -79,9 +80,9 @@ if ! strip "$TMP_COPY" 2>/dev/null; then
     cp "$SUBJECT" "$TMP_COPY"
 fi
 measured_size="$(stat -f%z "$TMP_COPY")"
-echo "measured size: ${measured_size} bytes (ceiling ${MAX_BYTES} = 25 MiB)"
+echo "measured size: ${measured_size} bytes (ceiling ${MAX_BYTES} = 64 MiB)"
 if (( measured_size > MAX_BYTES )); then
-    echo "[FAIL] wasm size ${measured_size} exceeds ceiling ${MAX_BYTES} (25 MiB)" >&2
+    echo "[FAIL] wasm size ${measured_size} exceeds ceiling ${MAX_BYTES} (64 MiB)" >&2
     echo "== wasm_audit: BREACH =="
     exit 1
 fi

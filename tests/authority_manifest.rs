@@ -29,16 +29,12 @@ fn duckdb_revision_matches_cargo_pin() {
         .iter()
         .filter(|a| a.authority == "frozen-duckdb")
     {
-        // The Cargo pin is a caret-compatible major.minor ("2.0"); the exact revision
-        // (2.0.0) must resolve in the lockfile, keeping pin<->authority agreement.
+        // The requirement names the published revision. `2.0` would still
+        // accept 2.0.0, whose build script emits `dylib=duckdb`.
         assert!(
             toml.contains(&format!(
                 "frozen-duckdb = {{ version = \"{}\"",
                 a.revision
-                    .split('.')
-                    .take(2)
-                    .collect::<Vec<_>>()
-                    .join(".")
             )),
             "{} claims frozen-duckdb {} but Cargo.toml disagrees",
             a.capability,

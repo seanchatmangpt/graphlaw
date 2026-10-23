@@ -128,8 +128,7 @@ fn row1_shape_violation_refused_01_with_zero_engine_allocation() {
     // before admission as a typed AstError carrying [REFUSAL-01].
     let malformed = select_graph("ProcessScope", /* with_index = */ false);
     let err = compile_turtle(&malformed)
-        .err()
-        .expect("shape violation must be refused at compile time, not executed");
+        .expect_err("shape violation must be refused at compile time, not executed");
     let msg = err.to_string();
     assert!(
         msg.contains("REFUSAL-01") || msg.contains("MalformedAst"),
@@ -184,8 +183,7 @@ fn row2_viewscope_predicate_leak_refused_03_before_execution() {
     // same compile-time boundary.
     let leaked = select_graph("ViewScope", /* with_index = */ true);
     let err = compile_turtle(&leaked)
-        .err()
-        .expect("scope leak must be refused at compile time, before any engine call");
+        .expect_err("scope leak must be refused at compile time, before any engine call");
     let msg = err.to_string();
     assert!(
         msg.contains("REFUSAL-03") || msg.contains("ScopeIntegrity"),
@@ -228,19 +226,8 @@ fn row2_viewscope_predicate_leak_refused_03_before_execution() {
 // evidentiary_ring_dropped surfaces in capabilities
 // ---------------------------------------------------------------------------
 
-/// LOUD typed notice, never a silent skip: when the `evidentiary-ring` feature
-/// is off, row 3 still executes and discloses that it did not run (a skip with
-/// a typed reason, not a pass — exit-discipline per CLAUDE.md test ladder).
-#[cfg(not(feature = "evidentiary-ring"))]
-#[test]
-fn row3_ring_saturation_transaction_completes_gaps_persisted_capabilities_surface() {
-    println!(
-        "OCAP NOTICE [SKIPPED-TYPED]: row 3 (ring saturation, \
-         evidentiary_ring_dropped/ledger_gaps capabilities surfacing) requires \
-         `--features evidentiary-ring` (P28-SIL §3.2, default OFF). \
-         Rows 1-2 ran unconditionally; row 3 did NOT run and this is not a pass."
-    );
-}
+/// Row 3 is compiled only with `--features evidentiary-ring`. There is no
+/// off-feature test: a notice that returns would be recorded as a pass.
 
 /// Real row-3 court under the feature: ring saturation, transaction completion,
 /// ledger gap persistence, and the capabilities-keys assertion.
@@ -271,6 +258,7 @@ fn row3_ring_saturation_transaction_completes_gaps_persisted_capabilities_surfac
     ring.set_drainer_paused(true);
     let mut buffered = 0u64;
     let mut dropped = 0u64;
+    let mut torn = 0u64;
     for i in 0..(RING_CAPACITY as u64 + 512) {
         let mut h = [0u8; 32];
         h[..8].copy_from_slice(&i.to_be_bytes());
@@ -278,9 +266,11 @@ fn row3_ring_saturation_transaction_completes_gaps_persisted_capabilities_surfac
         match ring.push(d) {
             PushOutcome::Buffered => buffered += 1,
             PushOutcome::DroppedNewest => dropped += 1,
+            PushOutcome::RefusedTornPad => torn += 1,
         }
     }
-    assert_eq!(buffered + dropped, RING_CAPACITY as u64 + 512);
+    assert_eq!(torn, 0, "pad-free descriptors must never be refused as torn");
+    assert_eq!(buffered + dropped + torn, RING_CAPACITY as u64 + 512);
     assert_eq!(buffered, RING_CAPACITY as u64, "exactly the 4096 slots buffer");
     assert!(dropped >= 512, "saturated ring must drop; got dropped={dropped}");
     assert_eq!(ring.dropped_total(), dropped);

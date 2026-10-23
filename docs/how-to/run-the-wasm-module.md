@@ -9,6 +9,7 @@ glue. Reference: [abi-reference](../abi-reference.md) ·
 
 ```sh
 rustup target add wasm32-wasip1        # once per toolchain
+WASI_SDK_PATH="/opt/wasi-sdk" \
 cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 # -> target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
 ```
@@ -60,7 +61,9 @@ error, never a trap.
 All consts are `pub` in `graphlaw::abi` / `graphlaw::law`; caps are checked before
 parsing or heavy work.
 
-## Drive all 14 ops like a host
+## Drive the hashed op table like a host
+
+The hashed table is 14 ops. `duckdb` is dispatched by the same module and is omitted from that table until an explicit digest bump. Absence from `capabilities` is not `REFUSAL-04`.
 
 ```sh
 cargo test --test wasm_abi

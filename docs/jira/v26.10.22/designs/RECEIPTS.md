@@ -71,7 +71,7 @@ pointers were re-verified on disk by this lane (§4).
   test scope_on_operator_node_refuses ... ok
   test result: ok. 11 passed; 0 failed; ... finished in 0.07s
   ```
-  Anti-vacuity is inline-flip per court (`assert_flip_compiles`,
+  Anti-vacuity is inline-flip per court (`assert_flip_compiles`; receipts/sql-rdf-laundering-corpus-2026-10-22.md — re-executed 2026-10-22 by lane V-L17: current corpus 23/0, the 11/11 record above is as-of-date historical),
   tests/sql_rdf_laundering_corpus.rs:39); the E4 courts carry live flips
   ("e4-limit flip", "e4-offset flip", lines 163/174).
 - **Conformance rung skeleton** — `tests/sql_rdf_conformance.rs` exists;
@@ -87,7 +87,7 @@ pointers were re-verified on disk by this lane (§4).
   current tree.** The failing assertion is itself an anti-vacuity flip check;
   it aborts instead of flipping, so the §4 court's flip witness is currently
   red. This is a live defect in the skeleton (§4), not an environmental
-  failure.
+  failure. (receipts/sql-rdf-conformance-2026-10-22.md — repaired same-day: 7/0 as of 2026-10-22; this 4/1 record is as-of-date historical)
 - **R1 canon-once implementation complete, receipts bit-identical** —
   `CompiledQuery.canon_graph_bytes` landed
   (`src/duckdb_eval.rs:171-178`, carry-and-reuse at 372-374); canonical
@@ -99,7 +99,7 @@ pointers were re-verified on disk by this lane (§4).
   $ cargo test --test sql_rdf_dialect      # 25 passed; 0 failed (0.31s)
   $ cargo test --lib                       # 17 passed; 0 failed (0.06s)
   ```
-  Receipts bit-identical across the canon-once change (counter test +
+  Receipts bit-identical across the canon-once change (receipts/chicago-validation-2026-10-22.md, receipts/sql-rdf-dialect-2026-10-22.md, receipts/kernel-lib-courts-2026-10-22.md — re-executed 2026-10-22 by lane V-L17; lib suite now 34/0; counter test +
   unchanged receipt hashes, per window RECEIPTS.md 12:57 entry; the two
   receipt-carrying courts above are green on the post-R1 tree).
 
@@ -147,6 +147,7 @@ Per [SQLRDF-16](../SQLRDF-16.md) rows; designs exist, code does not:
 - **Conformance-skeleton flip failure (introduced by this layer's E3
   skeleton lane, observed live 12:58 PDT)** —
   `cargo test --test sql_rdf_conformance` → 4 passed / 1 failed,
+  [receipts/sql-rdf-conformance-2026-10-22.md — re-run 2026-10-22: current standing 7 passed / 0 failed; the 4/1 flip-fixture failure was repaired same-day, this failure kept visible]
   `tests/sql_rdf_conformance.rs:175` panics "flip: closing the rdf:rest
   chain must admit the document". The court's own anti-vacuity flip aborts
   instead of flipping. Falsifier: fixing the flip fixture (or the §4 shape

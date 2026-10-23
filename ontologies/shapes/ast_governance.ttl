@@ -18,20 +18,33 @@
 sql:SelectStatementShape a sh:NodeShape ;
     rdfs:label "Governed SELECT statement shape" ;
     sh:targetClass sql:SelectStatement ;
-    sh:property sql:HasFromTable ;
+    sh:node sql:HasFromTable ;
     sh:property sql:FromTableNamePattern ;
     sh:property sql:JoinTableNamePattern ;
-    sh:property sql:HasSelectList ;
+    sh:node sql:HasSelectList ;
     # Anti-scan law: every governed SELECT must be bounded by an explicit
     # predicate — an unbounded WHERE-less scan is refused at preflight,
     # before any pushdown to the columnar engine.
-    sh:property sql:HasWhereClause .
+    sh:node sql:HasWhereClause .
 
-sql:HasFromTable a sh:PropertyShape ;
-    sh:path sql:fromTable ;
-    sh:minCount 1 ;
-    sh:maxCount 1 ;
-    sh:node sql:TableRefShape .
+# Disjunction (alias window): a governed SELECT carries its FROM source in
+# exactly one of the two legal spellings — legacy sql:fromTable (one
+# well-formed TableRef) or normative sql:from (one ordered list, rec section
+# 4). Without the sh:or, a purely normative document would fail governance
+# while passing sql-ast.ttl (conjoin contradiction, L55 finding A).
+# NodeShape (not PropertyShape): SHACL requires a direct sh:path on a
+# PropertyShape; the disjunction branches each carry their own path.
+sql:HasFromTable a sh:NodeShape ;
+    sh:or (
+        [ sh:path sql:fromTable ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:node sql:TableRefShape ; ]
+        [ sh:path sql:from ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:node sql:OrderedListShape ; ]
+    ) .
 
 # Identifier pattern on table names, evaluated through sequence property
 # paths so the Pattern violation is reported directly at the governed query
@@ -46,16 +59,30 @@ sql:JoinTableNamePattern a sh:PropertyShape ;
     sh:datatype xsd:string ;
     sh:pattern "^[a-zA-Z_][a-zA-Z0-9_]*$" .
 
-sql:HasSelectList a sh:PropertyShape ;
-    sh:path sql:selectList ;
-    sh:minCount 1 ;
-    sh:maxCount 1 .
+# Disjunction (alias window): projection list in either spelling — legacy
+# sql:selectList or normative sql:select (one ordered list).
+sql:HasSelectList a sh:NodeShape ;
+    sh:or (
+        [ sh:path sql:selectList ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ; ]
+        [ sh:path sql:select ;
+          sh:minCount 1 ;
+          sh:maxCount 1 ;
+          sh:node sql:OrderedListShape ; ]
+    ) .
 
 # Anti-scan law: a governed SELECT without a WHERE clause is an unbounded
-# scan and is refused at preflight.
-sql:HasWhereClause a sh:PropertyShape ;
-    sh:path sql:whereClause ;
-    sh:minCount 1 .
+# scan and is refused at preflight. The sh:or keeps the law binding across
+# both spellings (legacy sql:whereClause / normative sql:where) so the
+# targetClass sql:SelectStatement scope still covers every SELECT.
+sql:HasWhereClause a sh:NodeShape ;
+    sh:or (
+        [ sh:path sql:whereClause ;
+          sh:minCount 1 ; ]
+        [ sh:path sql:where ;
+          sh:minCount 1 ; ]
+    ) .
 
 # =============================================================================
 # sql:TableRefShape — identifier pattern (anti-injection)

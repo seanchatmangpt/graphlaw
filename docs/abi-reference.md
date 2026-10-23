@@ -17,7 +17,7 @@ on refusal:
 ```
 
 - `kind` is one of `NotSemanticContent`, `Ambiguous`, `EngineRejected`, `Unsupported`,
-  `ResourceLimit`.
+  `ResourceLimit`, `TierMismatch`, `DuckDb`.
 - `engine` (`PurRdf`, `Eyeron`, or `DuckDb`) and `dialect` are `null` when not applicable.
 - `details` is present only for refusals that carry a machine-readable `code`; see
   [Refusals](refusals.md).
@@ -73,7 +73,11 @@ An unbound SPARQL cell is JSON `null`. SHACL result fields are different: `focus
 
 ## Ops
 
-Fourteen ops, in registry order.
+Fourteen ops, in registry order. A fifteenth, `duckdb` (frozen-duckdb
+analytical eval, `src/duckdb_op.rs`), is dispatched by the module
+(`src/abi.rs`) but omitted from the 14-op registry table until an explicit
+digest bump — see [the Op-15 design](wasm-duckdb-op15-design.md). Absence
+from `capabilities` is not a refusal; the op still dispatches.
 
 ### 1. `capabilities`
 

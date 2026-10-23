@@ -4,11 +4,12 @@
 //!   1. H_query = BLAKE3(Canon(G_ast) || P_params) per-op cost (`admitted_statement_hash`)
 //!   2. compile_turtle = the actual admission gate (SHACL validate + canonicalize),
 //!      once per compile — reported as ADMISSION cost, explicitly NOT hot path
-//!   3. eval_ast_query per-call overhead excluding engine execution
-//!      (trivial SELECT round-trip minus raw prepared-statement baseline)
+//!
+//! DuckDB prepare and scan timing is not this test.
+//!
 //! Run: CARGO_TARGET_DIR=target-bench cargo test --release --test p28_hot_path_bench -- --nocapture
-use graphlaw::duckdb_eval::{GraphLawDuckDB, admitted_statement_hash, hash_param_buffer};
-use graphlaw::sql_ast::{CompiledQuery, SqlLiteral, compile_turtle};
+use graphlaw::duckdb_eval::{admitted_statement_hash, fold_params_anchored};
+use graphlaw::sql_ast::{SqlLiteral, compile_turtle};
 use std::hint::black_box;
 use std::time::Instant;
 
@@ -68,70 +69,13 @@ fn p28_hot_path_baseline() {
     });
     println!("[2] compile_turtle (admission, once per compile): {:.0} ns/compile", c_ns);
 
-    // (3) eval_ast_query overhead vs raw prepared-statement baseline
-    let db = GraphLawDuckDB::open_in_memory().unwrap();
-    db.raw_connection()
-        .execute_batch("CREATE TABLE t(id INTEGER, name VARCHAR); INSERT INTO t VALUES (1,'a'),(2,'b');")
-        .unwrap();
-
-    // SQLRDF-17: hand-built ASTs no longer admit (legacy raw-SQL arm is a
-    // typed NoCanonicalGraph refusal), so the eval legs are graph-backed:
-    // the trivial query carries the real compile's canon anchor.
-    let trivial = CompiledQuery {
-        sql: "SELECT id, name FROM t WHERE id = $1".into(),
-        params: vec![SqlLiteral::Integer(1)],
-        ast_graph_turtle: None,
-        canon_graph_bytes: Some(canon.clone()),
-        receipt_state: Some(compiled.receipt_state.expect("compile pins h_ast")),
-        // Lane minimal unblock (SLA, disclosed): new CompiledQuery field from
-        // the C1-a lane; this hand-built bench query is not cacheable.
-        cacheable: false,
-    };
-    let trivial_canon = trivial.clone();
-
-    let raw_ns = timed_ns_m(200, 2_000, 10, || {
-        let mut stmt = db
-            .raw_connection()
-            .prepare("SELECT id, name FROM t WHERE id = $1")
-            .unwrap();
-        let mut rows = stmt.query([1i64]).unwrap();
-        while let Some(row) = rows.next().unwrap() {
-            black_box(row.get::<_, i64>(0).unwrap());
-        }
-    });
-
-    let eval_canon_ns = timed_ns_m(200, 2_000, 10, || {
-        black_box(
-            db.eval_ast_query("http://ex/s", &trivial_canon, "http://ex/row", "http://ex/pred")
-                .unwrap(),
-        );
-    });
-
-    println!("[3] raw prepared-stmt round-trip (engine baseline): {:.0} ns/call", raw_ns);
-    println!("[3] eval_ast_query (graph-backed H_query path): {:.0} ns/call", eval_canon_ns);
-    // Anchor path: fresh hasher over h_ast || P_params + finalize (P28-SIL
-    // two-node path; hash_param_buffer is private, so the param bytes are
-    // the test's own equivalent typed encoding — surrogate, labeled as such).
-    let mut pb = Vec::new();
-    for p in &params {
-        match p {
-            SqlLiteral::Integer(i) => { pb.push(1u8); pb.extend_from_slice(&i.to_le_bytes()); }
-            SqlLiteral::String(s) => { pb.push(2u8); pb.extend_from_slice(&(s.len() as u64).to_le_bytes()); pb.extend_from_slice(s.as_bytes()); }
-            SqlLiteral::Float(f) => { pb.push(3u8); pb.extend_from_slice(&f.to_le_bytes()); }
-            SqlLiteral::Boolean(b) => { pb.push(4u8); pb.push(*b as u8); }
-            SqlLiteral::Null => pb.push(5u8),
-        }
-    }
+    // Shipped fold: one stack-buffer update of h_ast || P_params.
     let state = compiled.receipt_state.unwrap();
     let fold_ns = timed_ns_m(1_000, 20_000, 10, || {
-        let mut h = blake3::Hasher::new();
-        h.update(state.as_slice());
-        h.update(black_box(&pb));
-        black_box(*h.finalize().as_bytes());
+        black_box(fold_params_anchored(black_box(&state), black_box(&params)));
     });
-    println!("[1b] two-node fold (h_ast anchor + {} param bytes + finalize): {:.1} ns/op", pb.len(), fold_ns);
+    println!("[1b] fold_params_anchored (h_ast + 4 params): {:.1} ns/op", fold_ns);
 
-    println!("[3] eval overhead (eval - raw, H_query fold path): {:.0} ns", eval_canon_ns - raw_ns);
     // Verdict, not a hard gate: this is a Measure-lane baseline. The budget
     // miss is the finding; enforcement is a later court's job.
     if h_ns <= 150.0 {
@@ -141,9 +85,9 @@ fn p28_hot_path_baseline() {
     }
 }
 
-/// P28 PRD §5 TC-HOT-01 capability analysis of the M3 fold path
-/// (fresh hasher over `h_ast` anchor + `hash_param_buffer` + `finalize`),
-/// the path eval_ast_query actually executes when `receipt_state` is pinned.
+/// P28 PRD §5 TC-HOT-01 capability analysis of `fold_params_anchored`,
+/// the receipt fold `eval_ast_query` calls when `receipt_state` is pinned.
+/// This test times that fold. It does not time DuckDB.
 /// USL = 0.25 µs = 250 ns (the TC-HOT-01 per-op budget). No LSL (lower is
 /// better), so Cpk = Cpu = (USL - mu) / (3 sigma).
 ///
@@ -167,10 +111,7 @@ fn p28_hot_path_capability() {
 
     // Warm-up before sampling (caches, page-in); not part of the study.
     for _ in 0..10_000 {
-        let mut h = blake3::Hasher::new();
-        h.update(state.as_slice());
-        hash_param_buffer(&mut h, &params);
-        black_box(*h.finalize().as_bytes());
+        black_box(fold_params_anchored(&state, &params));
     }
 
     // Per-sample timing: capability analysis needs the distribution, not a
@@ -179,10 +120,7 @@ fn p28_hot_path_capability() {
     let mut samples = Vec::with_capacity(N);
     for _ in 0..N {
         let t = Instant::now();
-        let mut h = blake3::Hasher::new();
-        h.update(state.as_slice());
-        hash_param_buffer(&mut h, black_box(&params));
-        black_box(*h.finalize().as_bytes());
+        black_box(fold_params_anchored(black_box(&state), black_box(&params)));
         samples.push(t.elapsed().as_nanos() as f64);
     }
 
@@ -201,10 +139,10 @@ fn p28_hot_path_capability() {
         std::env::consts::ARCH,
         { #[cfg(target_os = "macos")] { std::process::Command::new("sw_vers").args(["-productVersion"]).output().map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).unwrap_or_else(|_| "?".into()) } #[cfg(not(target_os = "macos"))] { "?".to_string() } },
         std::thread::available_parallelism().map(|p| p.get()).unwrap_or(0),
-        { let v = rustc_version(); v });
+        {  rustc_version() });
     println!("[MACHINE] release profile, per-sample Instant::now overhead (~20-25 ns) included symmetrically");
     println!("[CMD] CARGO_TARGET_DIR=target-dflss3 cargo test --release --test p28_hot_path_bench -- p28_hot_path_capability --nocapture");
-    println!("[PATH] h_ast anchor (32B Copy) + Hasher::new + hash_param_buffer(4 params) + finalize");
+    println!("[PATH] fold_params_anchored: one stack-buffer update of h_ast || P_params");
     println!("[N] {} samples, USL = {:.0} ns", N, USL_NS);
     println!("mu = {:.3} ns | sigma = {:.3} ns | Cpk(Cpu) = {:.2} | P(X > USL) = {:.4}%",
         mean, sigma, cpk, 100.0 - pct_below);
@@ -225,10 +163,7 @@ fn p28_hot_path_capability() {
     for _ in 0..50 {
         let t = Instant::now();
         for _ in 0..100 {
-            let mut h = blake3::Hasher::new();
-            h.update(state.as_slice());
-            hash_param_buffer(&mut h, black_box(&params));
-            black_box(*h.finalize().as_bytes());
+            black_box(fold_params_anchored(black_box(&state), black_box(&params)));
         }
         let per = t.elapsed().as_secs_f64() / 100.0 * 1e9;
         if per < best {

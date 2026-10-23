@@ -15,37 +15,42 @@ use graphlaw::sql_statement_kinds::{SQL_EXTENSIONS, SQL_STATEMENTS};
 /// process-local lock: structural sync, no sleeps, no mocks.
 static ENGINE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-const GRAM: &str = "/Users/sac/frozen-duckdb/target/wasm-build/duckdb/src/parser/peg/grammar/statements/common.gram";
-
-fn names_from_gram(text: &str) -> Vec<String> {
-    let rest = text.split_once("Statement <-").expect("Statement rule").1;
+/// Committed grammar projection. The court compares this file to
+/// `SQL_STATEMENTS`. A missing sibling checkout is not the spec, and a
+/// missing file fails the court.
+fn committed_statement_names() -> Vec<String> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("ggen/sql-dialect/ontology/statements.ttl");
+    let text = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("committed grammar ontology missing at {}: {e}", path.display()));
     let mut names = Vec::new();
-    for line in rest.lines().skip(1) {
-        let token = line.trim().trim_end_matches('/').trim();
-        if token.is_empty() || token.starts_with('#') {
-            if !names.is_empty() && token.is_empty() {
-                break;
-            }
-            continue;
-        }
-        if token.ends_with("Statement") {
-            names.push(token.to_string());
-        } else if !names.is_empty() {
+    for line in text.lines() {
+        let line = line.trim();
+        if line.starts_with("sql:extensionRoot") {
             break;
         }
+        if let Some(rest) = line.strip_prefix("sql:name \"") {
+            let name = rest.split('"').next().unwrap_or("");
+            if name.is_empty() {
+                panic!("empty sql:name in {}", path.display());
+            }
+            names.push(name.to_string());
+        }
+    }
+    if names.is_empty() {
+        panic!("no sql:name rows in {}", path.display());
     }
     names
 }
 
 #[test]
-fn generated_kinds_match_the_peg_statement_rule() {
-    let path = Path::new(GRAM);
-    if !path.exists() {
-        panic!("DuckDB grammar not at {GRAM}");
-    }
-    let names = names_from_gram(&std::fs::read_to_string(path).unwrap());
+fn generated_kinds_match_the_committed_grammar() {
+    let names = committed_statement_names();
     let generated: Vec<&str> = SQL_STATEMENTS.iter().map(|(n, _)| *n).collect();
-    assert_eq!(generated, names);
+    assert_eq!(
+        generated, names,
+        "ggen/sql-dialect/sql_statement_kinds.rs drifted from ontology/statements.ttl"
+    );
 }
 
 #[test]
@@ -160,11 +165,9 @@ fn expr_doc(kind: &str, variant: &str) -> String {
         "ResetStatement" => r#"; sql:resetTarget [ sql:configKey "memory_limit" ]"#.into(),
         "TransactionStatement" => format!("; sql:transactionAction sql:{variant}"),
         "LoadStatement" => r#"; sql:loadTarget [ sql:extensionName "icu" ]"#.into(),
-        "InstallStatement" => format!(
-            r#"; sql:installTarget [ sql:extensionName "tpch" ; sql:repositoryPath "/Users/sac/.duckdb/extensions" ]"#
-        ),
+        "InstallStatement" => r#"; sql:installTarget [ sql:extensionName "tpch" ; sql:repositoryPath "/Users/sac/.duckdb/extensions" ]"#.to_string(),
         "AttachStatement" => {
-            format!(r#"; sql:attachTarget [ sql:databasePath ":memory:" ; sql:attachAlias "memalias" ]"#)
+            r#"; sql:attachTarget [ sql:databasePath ":memory:" ; sql:attachAlias "memalias" ]"#.to_string()
         }
         "DetachStatement" => r#"; sql:detachTarget [ sql:attachAlias "memalias" ]"#.into(),
         "UseStatement" => r#"; sql:useTarget [ sql:databaseName "memdb" ]"#.into(),
@@ -441,12 +444,11 @@ fn every_command_class_compiles_from_expressions_and_runs_on_its_own_connection(
                 }
                 _ => None,
             };
-            if let Some(setup) = setup {
-                if let Err(e) = c.execute_batch(setup) {
+            if let Some(setup) = setup
+                && let Err(e) = c.execute_batch(setup) {
                     failures.push(format!("{kind}/{variant}: setup: {e}"));
                     continue;
                 }
-            }
             if let Err(e) = c.execute_batch(&compiled.sql) {
                 failures.push(format!("{kind}/{variant}: run `{}`: {e}", compiled.sql));
                 continue;

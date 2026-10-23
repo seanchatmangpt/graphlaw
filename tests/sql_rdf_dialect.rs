@@ -891,7 +891,7 @@ ex:Q a sql:SelectStatement ;
         // eval path hashes Canon(G_AST) || P_params, so a different buffer
         // must produce a different digest even for identical SQL text.
         let compiled = compile_turtle(&base_doc()).unwrap();
-        let mut changed = compiled.params.clone();
+        let _changed = compiled.params.clone();
         // LANE BUMP minimal unblock: eval_ast_query takes `&CompiledQuery`,
         // so mutate the params ON the compiled query rather than passing a
         // bare `Vec<SqlLiteral>`.
@@ -1021,4 +1021,304 @@ ex:Q a sql:SelectStatement ;
     assert!(err.contains("REFUSAL-01"), "{err}");
     assert!(err.contains("direction"), "{err}");
     assert!(admit_bytes_tiered(doc.as_bytes(), None, None, None).is_err());
+}
+
+// ---- L163 message-verbatim refusal courts ---------------------------------
+// Lock the exact user-visible Display text per refusal class, as captured by
+// `cargo run --example refusal_probe` (ALL REFUSAL PROBES MATCHED, exit 0).
+// A message regression flips these courts. The ident-buffer truncation class
+// pins the REFUSAL_IDENT_BYTES (192) truncated prefix verbatim.
+
+/// Exact-message pin: REFUSAL-01 missing sql:statementIndex (fully
+/// deterministic — the subject IRI interpolates, no ident truncation).
+#[test]
+fn l163_msg_missing_statement_index_is_verbatim() {
+    let doc = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/queries#> .
+ex:Q a sql:SelectStatement ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList ( [ sql:columnName "batch_id" ] ) .
+"#;
+    let err = compile_turtle(doc).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "SHACL AST structural violation: [REFUSAL-01] MalformedAstRefusal:statement \
+         http://example.org/queries#Q is missing required sql:statementIndex \
+         (section 4 StatementBaseShape)"
+    );
+}
+
+/// Exact-message pin: LITERAL_NOT_INT. The aux ident is a generated
+/// blank-node id, so the stable structural prefix and suffix are pinned; the
+/// ident-buffer truncation class pins the REFUSAL_IDENT_BYTES prefix
+/// verbatim (the buffer renders the first 192 bytes and nothing more).
+#[test]
+fn l163_msg_literal_not_int_is_verbatim_with_truncated_ident() {
+    use graphlaw::sql_ast::REFUSAL_IDENT_BYTES;
+
+    let head = concat!(
+        "@prefix sql: <http://graphlaw.org/sql#> .\n",
+        "@prefix ex: <http://example.org/queries#> .\n",
+        "ex:Q a sql:SelectStatement ;\n",
+        "    sql:statementIndex 1 ;\n",
+        "    sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n",
+        "    sql:selectList ( [ sql:columnName \"batch_id\" ] ) ;\n",
+        "    sql:whereClause [\n",
+        "        sql:operator sql:GreaterThan ;\n",
+        "        sql:leftOperand [ sql:columnName \"latency_ms\" ] ;\n",
+    );
+    let tail = " ] .\n";
+    let lit = |lexical: &str| {
+        format!(
+            "{head}        sql:rightOperand [ sql:literalValue \"{lexical}\"^^\
+             <http://www.w3.org/2001/XMLSchema#integer> ]{tail}"
+        )
+    };
+
+    // Structural pin: prefix + offending lexical + suffix (short lexical).
+    let err = compile_turtle(&lit("not-a-number")).expect_err("must refuse");
+    let msg = err.to_string();
+    let prefix = "SHACL AST structural violation: [REFUSAL-01] MalformedAstRefusal:\
+                  xsd:integer literal 'not-a-number' on ";
+    assert!(msg.starts_with(prefix), "structural prefix: {msg}");
+    assert!(
+        msg.ends_with(" does not parse as an integer"),
+        "structural suffix: {msg}"
+    );
+
+    // Truncation pin: a lexical form exceeding REFUSAL_IDENT_BYTES renders as
+    // exactly the first REFUSAL_IDENT_BYTES bytes, verbatim.
+    let long = "x".repeat(REFUSAL_IDENT_BYTES + 64);
+    let msg = compile_turtle(&lit(&long)).expect_err("must refuse").to_string();
+    let expected_prefix = format!(
+        "SHACL AST structural violation: [REFUSAL-01] MalformedAstRefusal:\
+         xsd:integer literal '{}' on ",
+        "x".repeat(REFUSAL_IDENT_BYTES)
+    );
+    assert!(
+        msg.starts_with(&expected_prefix),
+        "truncated 192-byte prefix must render verbatim: {}",
+        &msg[..msg.len().min(expected_prefix.len() + 80)]
+    );
+}
+
+/// Exact-message pin: LITERAL_NOT_FLOAT — stable structural prefix and
+/// suffix of the xsd:double parse refusal (RefusalCode = 37).
+#[test]
+fn l163_msg_literal_not_float_is_verbatim() {
+    let doc = format!(
+        concat!(
+            "@prefix sql: <http://graphlaw.org/sql#> .\n",
+            "@prefix ex: <http://example.org/queries#> .\n",
+            "ex:Q a sql:SelectStatement ;\n",
+            "    sql:statementIndex 1 ;\n",
+            "    sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n",
+            "    sql:selectList ( [ sql:columnName \"batch_id\" ] ) ;\n",
+            "    sql:whereClause [\n",
+            "        sql:operator sql:GreaterThan ;\n",
+            "        sql:leftOperand [ sql:columnName \"latency_ms\" ] ;\n",
+            "        sql:rightOperand [ sql:literalValue \"{}\"^^\
+             <http://www.w3.org/2001/XMLSchema#double> ] ] ."
+        ),
+        "1.2.3 garbage"
+    );
+    let err = compile_turtle(&doc).expect_err("non-double lexical must refuse");
+    let msg = err.to_string();
+    assert!(
+        msg.starts_with(
+            "SHACL AST structural violation: [REFUSAL-01] MalformedAstRefusal:\
+             xsd:double literal '1.2.3 garbage' on "
+        ),
+        "structural prefix: {msg}"
+    );
+    assert!(
+        msg.ends_with(" does not parse as a float"),
+        "structural suffix: {msg}"
+    );
+}
+
+/// Exact-message pin: JOIN_TYPE_IRI (sql:FullJoin) — fully deterministic.
+/// ANTI-VACUITY MUTATION TWIN: the message-mutated join type (sql:InnerJoin)
+/// compiles and renders real JOIN SQL, so the court flips exactly on the
+/// refusal-message path — a refusal that never fires cannot satisfy this.
+#[test]
+fn l163_msg_join_type_iri_is_verbatim() {
+    let doc_fmt = |join_type: &str| {
+        format!(
+            concat!(
+                "@prefix sql: <http://graphlaw.org/sql#> .\n",
+                "@prefix ex: <http://example.org/queries#> .\n",
+                "ex:Q a sql:SelectStatement ;\n",
+                "    sql:statementIndex 1 ;\n",
+                "    sql:fromTable [ sql:tableName \"t1\" ] ;\n",
+                "    sql:selectList ( [ sql:columnName \"a\" ] ) ;\n",
+                "    sql:joinClause [\n",
+                "        sql:joinType <{}> ;\n",
+                "        sql:joinTable [ sql:tableName \"t2\" ] ;\n",
+                "        sql:joinCondition [\n",
+                "            sql:operator sql:Equals ;\n",
+                "            sql:leftOperand [ sql:columnName \"a\" ] ;\n",
+                "            sql:rightOperand [ sql:columnName \"b\" ] ] ] ."
+            ),
+            join_type
+        )
+    };
+    let err = compile_turtle(&doc_fmt("http://graphlaw.org/sql#FullJoin"))
+        .expect_err("unknown join-type IRI must refuse");
+    assert_eq!(
+        err.to_string(),
+        "SHACL AST structural violation: [REFUSAL-01] MalformedAstRefusal:sql:joinType \
+         IRI 'http://graphlaw.org/sql#FullJoin' is not sql:InnerJoin or sql:LeftJoin; \
+         an unknown join-type IRI refuses typed, it never silently downgrades to Inner"
+    );
+
+    // Mutation twin: sql:InnerJoin compiles to real SQL — the pinned message
+    // is unreachable for the mutated input (the court cannot pass vacuously).
+    let ok = compile_turtle(&doc_fmt("http://graphlaw.org/sql#InnerJoin"))
+        .expect("InnerJoin compiles");
+    assert!(
+        ok.sql.contains(" JOIN "),
+        "mutated join type must take the compiled path: {}",
+        ok.sql
+    );
+}
+
+/// Exact-message pin: REFUSAL-02 ConnectStatement — fully deterministic.
+#[test]
+fn l163_msg_connect_statement_is_verbatim() {
+    let doc = "@prefix sql: <http://graphlaw.org/sql#> .\n\
+               <http://example.org/s> a sql:ConnectStatement ; sql:statementIndex 1 .\n";
+    let err = compile_turtle(doc).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "compile refusal: http://graphlaw.org/sql#ConnectStatement \
+         [REFUSAL-02] UnimplementedStatementRefusal: not implemented by this DuckDB build"
+    );
+}
+
+/// Exact-message pin: REFUSAL-03 aggregate-in-WHERE — fully deterministic.
+#[test]
+fn l163_msg_aggregate_in_where_is_verbatim() {
+    let doc = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: <http://example.org/queries#> .
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList ( [ sql:columnName "batch_id" ] ) ;
+    sql:whereClause [
+        sql:operator sql:GreaterThan ;
+        sql:leftOperand [ sql:function <http://graphlaw.org/functions#SUM> ;
+                          sql:argument [ sql:columnName "latency_ms" ] ] ;
+        sql:rightOperand [ sql:literalValue "100"^^xsd:integer ] ] .
+"#;
+    let err = compile_turtle(doc).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        "SHACL AST structural violation: [REFUSAL-03] ScopeIntegrityRefusal:aggregate \
+         in a WHERE/JOIN/GROUP BY position is refused (section 1.3/5); re-scope the \
+         expression"
+    );
+}
+
+/// Exact-message pin: NO-CANONICAL-GRAPH — a sealed but graph-free
+/// CompiledQuery refuses on eval with the exact user-visible message.
+#[test]
+fn l163_msg_no_canonical_graph_is_verbatim() {
+    use graphlaw::duckdb_eval::GraphLawDuckDB;
+    use graphlaw::sql_ast::{SelectStatement, SqlExpr, TableRef};
+
+    let stmt = SelectStatement {
+        from: TableRef { name: "t".into(), alias: None, schema: None },
+        joins: Vec::new(),
+        select_list: vec![SqlExpr::ColumnRef { column: "a".into(), table_alias: None }],
+        where_clause: None,
+        group_by: Vec::new(),
+        having: None,
+        order_by: Vec::new(),
+        limit: None,
+        offset: None,
+    };
+    let q = stmt.compile().expect("hand-built statement compiles sealed");
+    let db = GraphLawDuckDB::open_in_memory().expect("db opens");
+    let err = db
+        .eval_ast_query("http://example.org/handbuilt", &q, "s", "v")
+        .expect_err("graph-free query must refuse");
+    assert_eq!(
+        err.to_string(),
+        "no canonical graph bytes — hand-built CompiledQuery must use compile_turtle \
+         (query http://example.org/handbuilt)"
+    );
+}
+
+/// Exact-message pin: admission-seal ReceiptError — tampering with the
+/// compiled sql field after compile breaks the sole-admission seal.
+#[test]
+fn l163_msg_admission_seal_mismatch_is_verbatim() {
+    use graphlaw::duckdb_eval::GraphLawDuckDB;
+
+    let doc = r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/queries#> .
+ex:Q a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList ( [ sql:columnName "batch_id" ] ) .
+"#;
+    let mut q: graphlaw::sql_ast::CompiledQuery = compile_turtle(doc).expect("compiles");
+    q.sql = q.sql.replace("batch_id", "tampered");
+    let db = GraphLawDuckDB::open_in_memory().expect("db opens");
+    let err = db
+        .eval_ast_query("http://example.org/tampered", &q, "s", "v")
+        .expect_err("seal must break on post-compile mutation");
+    assert_eq!(
+        err.to_string(),
+        "Receipt generation error: admission seal mismatch on query \
+         http://example.org/tampered: CompiledQuery is not in its admitted compile \
+         state; re-compile via compile_turtle (sole-admission path)"
+    );
+}
+
+/// SQL-in-RDF is a Turtle dataset on the same ABI path as the other RDF
+/// dialects: parse returns a canonical id, and shacl/law accept the dialect.
+#[test]
+fn sql_rdf_joins_the_rdf_dataset_path() {
+    let parsed = graphlaw::abi::call_json(&serde_json::json!({
+        "op": "parse",
+        "text": SELECT,
+        "dialect": "sql",
+    }));
+    assert_eq!(parsed["ok"], true, "{parsed}");
+    assert!(
+        parsed["id"].as_str().unwrap_or("").starts_with("blake3:"),
+        "{parsed}"
+    );
+    assert!(parsed["quads"].as_u64().unwrap_or(0) > 0, "{parsed}");
+
+    let broken = graphlaw::abi::call_json(&serde_json::json!({
+        "op": "parse",
+        "text": "@prefix sql: <http://graphlaw.org/sql#> .\n<urn:q> a sql:SelectStatement .\n",
+        "dialect": "sql",
+    }));
+    assert_eq!(broken["ok"], false, "{broken}");
+    assert!(broken.get("id").is_none(), "{broken}");
+
+    let shacl = graphlaw::abi::call_json(&serde_json::json!({
+        "op": "shacl",
+        "data": {"text": SELECT, "dialect": "sql"},
+        "shapes": include_str!("../ontologies/sql-ast.ttl"),
+    }));
+    let shacl_msg = shacl.pointer("/error/message").and_then(|m| m.as_str()).unwrap_or("");
+    assert_ne!(shacl_msg, "dialect does not denote an RDF dataset", "{shacl}");
+    assert!(shacl.get("conforms").is_some() || shacl["ok"] == true, "{shacl}");
+
+    let law = graphlaw::abi::call_json(&serde_json::json!({
+        "op": "law",
+        "data": {"text": SELECT, "dialect": "sql"},
+        "steps": [{"step": "admit-shacl", "shapes": include_str!("../ontologies/sql-ast.ttl")}],
+    }));
+    let law_msg = law.pointer("/error/message").and_then(|m| m.as_str()).unwrap_or("");
+    assert_ne!(law_msg, "dialect does not denote an RDF dataset", "{law}");
 }

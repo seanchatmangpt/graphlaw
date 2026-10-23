@@ -40,9 +40,10 @@ constitute it (per dispatch summary; receipts in [INDEX.md](INDEX.md) and
 6. **§1.4 receipt** — the receipt form specified in §1.4 of the Recommendation
    (BLAKE3(Canon(G_AST) || P_params) via `purrdf::try_canonicalize`) is
    implemented and courted.
-7. **Fail-closed sandbox** — the wasm boundary (`wasm/`, `graphlaw-wasm`)
-   stays `default-features = false`, no `duckdb` feature; SQL executes
-   host-side only. The sandbox cannot silently widen.
+7. **One wasm unit** — `graphlaw-wasm` links the same crate as the host,
+   including frozen-duckdb. SQL-in-RDF admits through `compile_turtle` inside
+   that module. `REFUSAL-04` is the non-document-backed builtin reader.
+   frozen-duckdb 2.0.2 emits `static=duckdb` for wasm32-wasip1. The link is witnessed (2026-10-22); the recorded pin `332ea218…` was not replaced. `WASI_SDK_PATH` must be a wasi-sdk root (`bin/clang`, `share/cmake/wasi-sdk-p1.cmake`). Without it, frozen-duckdb-sys `build.rs` fails typed (`WASI_SDK_PATH required`).
 8. **Courts over everything** — every claim above is backed by an execution
    court (`tests/chicago_validation.rs`, `tests/sql_rdf_dialect.rs`,
    `tests/duckdb_statement_kinds.rs`, `tests/trust_attest.rs`) plus the
