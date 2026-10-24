@@ -101,82 +101,22 @@ jobs:
           fi
           echo "version=$crate_ver" >> "$GITHUB_OUTPUT"
 
-      - name: Restore staged WASI SDK + duckdb wasm archives
-        uses: actions/cache@0c907a75c2c80ebcb7f088228285e798b750cf8f # v4
-        with:
-          path: ~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1
-          key: wasi-duckdb-v2.0.0-dev-b6013f7a-${{ hashFiles('.github/workflows/release.yml') }}
-      - name: Stage WASI SDK + duckdb wasm archives (WASI_SDK_PATH)
+      - name: Verify committed artifact bytes against the pinned blake3 (byte authority)
         run: |
           set -euo pipefail
-          CACHE="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1"
-          if [ ! -x /opt/wasi-sdk/bin/clang ] || [ ! -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake ]; then
-            curl -fsSL -o /tmp/wasi-sdk.tar.gz \
-              https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz
-            sudo mkdir -p /opt/wasi-sdk
-            sudo tar -xzf /tmp/wasi-sdk.tar.gz -C /opt/wasi-sdk --strip-components=1
-          fi
-          test -x /opt/wasi-sdk/bin/clang
-          export WASI_SDK_PATH=/opt/wasi-sdk
-          if [ -f "$CACHE/libduckdb.a" ]; then
-            echo "cached duckdb wasm32 archive admitted: $CACHE/libduckdb.a"
-          else
-            if ! command -v cmake >/dev/null; then
-              sudo apt-get update && sudo apt-get install -y cmake
-            fi
-            DUCKDB_PIN=b6013f7aa2f36caabb9466ce1791667ea8a280bb
-            TMP="$(mktemp -d)"
-            git clone --quiet https://github.com/duckdb/duckdb.git "$TMP/duckdb"
-            git -C "$TMP/duckdb" checkout --quiet "$DUCKDB_PIN"
-            grep -q 'set(CMAKE_POSITION_INDEPENDENT_CODE ON)' "$TMP/duckdb/CMakeLists.txt"
-            sed -i 's/set(CMAKE_POSITION_INDEPENDENT_CODE ON)/set(CMAKE_POSITION_INDEPENDENT_CODE OFF)/' "$TMP/duckdb/CMakeLists.txt"
-            cmake -S "$TMP/duckdb" -B "$TMP/duckdb/build-wasip1" \
-              -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
-              -DCMAKE_BUILD_TYPE=Release >/dev/null
-            cmake --build "$TMP/duckdb/build-wasip1" -- -j"$(nproc)"
-            mkdir -p "$CACHE"
-            find "$TMP/duckdb/build-wasip1/src" -name "libduckdb*.a" -exec cp {} "$CACHE/libduckdb.a" \;
-          fi
-          test -f "$CACHE/libduckdb.a"
-          echo "WASI_SDK_PATH=$WASI_SDK_PATH" >> "$GITHUB_ENV"
-
-      - name: Build wasm artifact and verify ABI surface against the pinned artifact
-        run: |
-          set -euo pipefail
-          cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
-          WASM=target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
-          [ -f "$WASM" ] || { echo "wasm artifact missing: $WASM" >&2; exit 1; }
-          # Byte authority: the COMMITTED artifact must still match the
-          # committed pin (catches hand edits / stale pins).
+          # The committed priv/graphlaw.wasm IS the courted artifact: the pin
+          # is derived by copy from the courted build, and the npm build
+          # (build.mjs) copies these bytes into the package. The wasm build
+          # is NOT byte-reproducible across hosts, so a CI-side rebuild can
+          # neither match the pin nor be staged here without the full WASI
+          # toolchain + duckdb-wasi archive (js.yml carries that gate for
+          # main pushes). Integrity = bytes == pin; the npm integrity court
+          # re-verifies artifact bytes == artifact-meta after the copy.
           committed=$(b3sum priv/graphlaw.wasm | cut -d' ' -f1)
           expected=$(cut -d' ' -f1 priv/graphlaw.wasm.blake3)
-          [ "$committed" = "$expected" ] || { echo "committed artifact drifted from pin" >&2; exit 1; }
-          # Semantic ABI gate: wasm builds are NOT byte-reproducible across
-          # host platforms (witnessed: macOS 21262fe8, CI Linux bf2bdd8f,
-          # linux-aarch64 13dab85c — the merged string-constant pool is
-          # host-dependent even with identical source+lock+toolchain). The
-          # fresh CI rebuild is compared on its import/export ABI surface
-          # instead; byte authority remains with the committed pin above.
-          # Same mechanism as js.yml's ABI-surface drift gate.
-          node -e '
-          const { createHash } = require("node:crypto");
-          const { readFileSync } = require("node:fs");
-          const abiHash = (path) => {
-            const mod = new WebAssembly.Module(readFileSync(path));
-            const exports = WebAssembly.Module.exports(mod).map(e => e.name + ":" + e.kind).sort();
-            const imports = WebAssembly.Module.imports(mod).map(e => e.module + "/" + e.name + ":" + e.kind).sort();
-            return createHash("sha256").update(exports.join("|") + "#" + imports.join("|")).digest("hex");
-          };
-          const fresh = abiHash(process.env.WASM);
-          const pinned = abiHash("priv/graphlaw.wasm");
-          console.log("fresh rebuild ABI: " + fresh);
-          console.log("pinned artifact ABI: " + pinned);
-          if (fresh !== pinned) {
-            console.error("ERROR: rebuilt wasm ABI surface differs from pinned artifact; repin priv/graphlaw.wasm");
-            process.exit(1);
-          }
-          '
-          echo "GRAPHLAW_WASM_SOURCE=$PWD/$WASM" >> "$GITHUB_ENV"
+          echo "committed artifact: $committed"
+          echo "pin file:           $expected"
+          [ "$committed" = "$expected" ] || { echo "ERROR: committed artifact drifted from pin; repin via the documented flow" >&2; exit 1; }
 
       - name: Install, build, and test the npm package
         working-directory: js/npm
