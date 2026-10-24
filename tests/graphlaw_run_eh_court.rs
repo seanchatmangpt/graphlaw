@@ -51,8 +51,11 @@ fn skip(binary_missing: bool) -> ! {
         "GRAPH LAW EH-COURT SKIP: no wasm artifact resolved (set GRAPHLAW_WASM or build target/wasm32-wasip1/wasm/graphlaw_wasm.wasm)"
     };
     eprintln!("{why}");
-    // Loud typed skip: report SKIP, not success, via the process exit.
-    std::process::exit(0);
+    // Loud typed skip: a skip must NOT read as a green exit. exit(0) from
+    // inside a test kills the whole harness before any verdict (witnessed
+    // 2026-10-23: the suite reported EXIT=0 with zero tests completed).
+    // Panic instead so cargo reports the failure loudly.
+    panic!("{why}");
 }
 
 struct Outcome {

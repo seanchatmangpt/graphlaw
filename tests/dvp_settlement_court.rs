@@ -305,29 +305,49 @@ ex:schema2 a sql:CreateStatement ;
     ] ."#
         ),
     ));
-    // Seed: PAYER 1000, PAYEE 1000, asset A1 owned by PAYER.
-    h.exec(&exec_req(
+    // Seed: PAYER 1000, PAYEE 1000, asset A1 owned by PAYER. The seed is a
+    // 3+-member sequence, so it must go through the document exec path — the
+    // single-statement exec path refuses non-single-root documents
+    // (REFUSAL-01, MIXED_DOCUMENT_ROOTS). Every member carries exactly ONE
+    // assign pair: multi-pair INSERT/UPDATE ladders depend on the compiler's
+    // document-order pairing scan, which does not survive the module round
+    // trip (witnessed: VALUES (1000.00, 'PAYEE') in-module vs correct
+    // pairing host-side); single-pair members are order-immune.
+    h.exec(&doc_req(
         session,
         &format!(
             r#"{PREFIXES}
 ex:seed a sql:StatementSequence ;
-    sql:statements ( ex:seed1 ex:seed2 ex:seed3 ) .
-ex:seed1 a sql:InsertStatement ;
+    sql:statements ( ex:s0 ex:s1 ex:s2 ex:s3 ex:s4 ex:s5 ) .
+ex:s0 a sql:InsertStatement ;
     sql:statementIndex 0 ;
     sql:targetTable "dvp_accounts" ;
-    sql:assignColumn "acct" ; sql:assignValue "PAYER" ;
-    sql:assignColumn "balance" ; sql:assignValue "1000.00"^^xsd:decimal .
-ex:seed2 a sql:InsertStatement ;
+    sql:assignColumn "acct" ; sql:assignValue "PAYER" .
+ex:s1 a sql:InsertStatement ;
     sql:statementIndex 1 ;
     sql:targetTable "dvp_accounts" ;
-    sql:assignColumn "acct" ; sql:assignValue "PAYEE" ;
-    sql:assignColumn "balance" ; sql:assignValue "1000.00"^^xsd:decimal .
-ex:seed3 a sql:InsertStatement ;
+    sql:assignColumn "acct" ; sql:assignValue "PAYEE" .
+ex:s2 a sql:InsertStatement ;
     sql:statementIndex 2 ;
     sql:targetTable "dvp_assets" ;
-    sql:assignColumn "asset_id" ; sql:assignValue "A1" ;
-    sql:assignColumn "owner" ; sql:assignValue "PAYER" ."#
+    sql:assignColumn "asset_id" ; sql:assignValue "A1" .
+ex:s3 a sql:UpdateStatement ;
+    sql:statementIndex 3 ;
+    sql:targetTable "dvp_accounts" ;
+    sql:assignColumn "balance" ; sql:assignValue "1000.00"^^xsd:decimal ;
+    sql:whereColumn "acct" ; sql:whereValue "PAYER" .
+ex:s4 a sql:UpdateStatement ;
+    sql:statementIndex 4 ;
+    sql:targetTable "dvp_accounts" ;
+    sql:assignColumn "balance" ; sql:assignValue "1000.00"^^xsd:decimal ;
+    sql:whereColumn "acct" ; sql:whereValue "PAYEE" .
+ex:s5 a sql:UpdateStatement ;
+    sql:statementIndex 5 ;
+    sql:targetTable "dvp_assets" ;
+    sql:assignColumn "owner" ; sql:assignValue "PAYER" ;
+    sql:whereColumn "asset_id" ; sql:whereValue "A1" ."#
         ),
+        true,
     ));
 }
 
@@ -390,7 +410,7 @@ fn sequence_doc(atomic: bool, members: &[String]) -> String {
     // IRIs in sql:statements ( ... ); member bodies sit at top level.
     let iris: Vec<String> = (0..members.len()).map(|i| format!("ex:m{i}")).collect();
     let iris_list = iris.join(" ");
-    let atomic_triple = if atomic { "\n    sql:atomic true ;" } else { "" };
+    let atomic_triple = if atomic { " ;\n    sql:atomic true" } else { "" };
     format!(
         r#"{PREFIXES}
 ex:dvp1 a sql:StatementSequence{atomic_triple} ;
@@ -472,7 +492,9 @@ fn dvp_02_aborted_atomic_settlement_zero_net_change() {
         .request(&doc_req(SESSION, &doc, true))
         .expect("request transport");
     assert_eq!(r["ok"], json!(false), "failed member must fail the document: {r}");
-    let msg = r["error"]["message"].as_str().unwrap_or_default();
+    let msg = r["error"]["message"]
+        .as_str()
+        .unwrap_or_else(|| panic!("error.message missing from failure envelope: {r}"));
     assert!(
         msg.contains("member 1 of document"),
         "failure message must name the failing member index: {msg}"
@@ -588,4 +610,35 @@ fn dvp_03_one_legged_trace_rejected_by_conformance_check() {
     );
 
     close_session(&mut h, SESSION);
+}
+
+/// Regression (banking inventory witness, 2026-10-23): a two-column INSERT
+/// with ASYMMETRIC value types (plain string `acct`, `xsd:decimal` `balance`)
+/// must compile with columns and values in matching document order. Under the
+/// inverted pairing (independent traversal orders for assignColumn and
+/// assignValue) this renders `VALUES (1000.00, 'PAYER')` for document order
+/// `(acct 'PAYER', balance 1000.00)` — the exact swap that aborted the atomic
+/// DvP seed batch at member 1 on the DECIMAL conversion. Anti-vacuity: this
+/// assertion fails if the pairing in `SqlAst::assign_pairs` (src/sql_ast.rs)
+/// is re-inverted to independent reader-order traversal, because purrdf's
+/// `quads()` emits the two assignValue literals in the opposite order for
+/// this document (witnessed in the G4 recovery scanner rationale).
+#[test]
+fn two_pair_asymmetric_string_decimal_insert_pairs_by_index() {
+    let t = "@prefix ex: <http://example.org/dvp#> .\n@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\nex:seed a sql:StatementSequence ;\n    sql:statements ( ex:seed1 ) .\nex:seed1 a sql:InsertStatement ;\n    sql:statementIndex 0 ;\n    sql:targetTable \"dvp_accounts\" ;\n    sql:assignColumn \"acct\" ; sql:assignValue \"PAYER\" ;\n    sql:assignColumn \"balance\" ; sql:assignValue \"1000.00\"^^xsd:decimal .\n";
+    let d = graphlaw::sql_ast::compile_turtle_document(t).unwrap();
+    assert_eq!(d.statements.len(), 1, "exactly one compiled statement");
+    assert_eq!(
+        d.statements[0].sql,
+        "INSERT INTO dvp_accounts (acct, balance) VALUES ('PAYER', 1000.00)",
+        "values must pair with columns by index in document order"
+    );
+
+    // Single-root control: same pairing law on the bare-INSERT path.
+    let t2 = "@prefix ex: <http://example.org/dvp#> .\n@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\nex:s1 a sql:InsertStatement ;\n    sql:statementIndex 0 ;\n    sql:targetTable \"dvp_accounts\" ;\n    sql:assignColumn \"acct\" ; sql:assignValue \"PAYEE\" ;\n    sql:assignColumn \"balance\" ; sql:assignValue \"1000.00\"^^xsd:decimal .\n";
+    let d2 = graphlaw::sql_ast::compile_turtle(t2).unwrap();
+    assert_eq!(
+        d2.sql,
+        "INSERT INTO dvp_accounts (acct, balance) VALUES ('PAYEE', 1000.00)"
+    );
 }

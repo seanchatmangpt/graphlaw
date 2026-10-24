@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "71219c1a0cfeb4d10a4ebcd4acc7302c9ed9343611306f08ffd98d77cdea2b9b",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T203523Z-Edit-71219c1a.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/SQLRDF-25-remaining-gaps.md",
+  "timestamp_utc": "2026-10-23T203523Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

@@ -64,6 +64,114 @@ In addition to pure RDF dataset and N3 logic dialects, GraphLaw admits declarati
   ignored).
 - **Output**: Vectorized execution directly over Parquet partitions or in-memory tables, emitting typed RDF statements accompanied by a BLAKE3 query execution receipt.
 
+### Projection surface (SQLRDF-25)
+
+Two SQLRDF-25 additions extend the projection/expression surface. Vocabulary
+is pinned in `ontologies/sql-ast.ttl`; extraction lives in `src/sql_ast.rs`
+(star/JSON/composite extractors) and `src/sql_ast/ast.rs` (operators,
+`SqlExpr::validate_composite`); the render sites are
+`src/sql_ast/serializer.rs` and `src/sql_ast.rs`.
+
+**Star modifiers** (`sql:Star` / `sql:Columns`) — projection-list-only: a
+`sql:Star` or `sql:Columns` node routed outside the projection list (e.g.
+into `sql:where`) is REFUSAL-01 (`src/sql_ast.rs`,
+`extract_select_item`). Modifiers:
+
+- `sql:exclude` — rdf:List of column nodes to drop from `*`
+  (renders `SELECT * EXCLUDE (col, ...)`). An empty `sql:exclude ()` is a
+  malformed-member REFUSAL-01.
+- `sql:replace` — rdf:List of `[ sql:expression <expr> ;
+  sql:aliasName "col" ]` members re-binding star columns; exclude/replace
+  order is preserved on render.
+- `sql:columnsPattern` — a regex string literal on a `sql:Columns` node
+  (renders `COLUMNS('^pattern')`).
+
+Exclude identifiers are strictly validated (injection fence: a column name
+carrying SQL-breakage characters is REFUSAL-01).
+
+```turtle
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:  <http://example.org/queries#> .
+
+ex:S a sql:SelectStatement ;
+    sql:statementIndex 1 ;
+    sql:fromTable [ sql:tableName "telemetry_events" ] ;
+    sql:selectList ( ex:star ) .
+
+ex:star a sql:Star ;
+    sql:exclude ( [ sql:columnName "cost" ] ) ;
+    sql:replace ( [ sql:expression [ sql:literalValue "500"^^xsd:integer ] ;
+                    sql:aliasName "cost" ] ) .
+```
+
+```turtle
+ex:cols a sql:Columns ;
+    sql:columnsPattern "^(batch|region)"^^xsd:string .
+```
+
+**JSON operators** — `sql:JsonExtract` (`->`) and `sql:JsonExtractText`
+(`->>`) are carried as binary expressions:
+`sql:operator sql:JsonExtract ; sql:leftOperand <expr> ;
+sql:rightOperand <path literal>` (`src/sql_ast/ast.rs` `Operator::JsonExtract`
+/ `JsonExtractText`; operator tokens are settled in `src/sql_ast/ast.rs`,
+read through `read_operator` in `src/sql_ast.rs`).
+
+```turtle
+[ sql:aliasName "extracted_json" ; sql:expression [
+    sql:operator sql:JsonExtract ;
+    sql:leftOperand [ sql:columnName "payload" ] ;
+    sql:rightOperand [ sql:literalValue "$.k" ] ] ]
+```
+
+**Composite literals and accessors** — discriminated by `rdf:type`
+(`composite_kind`, `src/sql_ast.rs`): `sql:StructLiteral` (fields),
+`sql:ListLiteral` (items), `sql:IndexAccess` (`base[index]` — shares the
+`->` render site with `JsonExtract`), `sql:SliceAccess`
+(`base[start:end]`).
+
+- `sql:StructLiteral` carries `sql:structFields` (rdf:List of
+  `[ sql:fieldKey "k" ; sql:fieldValue <expr> ]`); field keys must satisfy
+  strict identifier validation — a malformed member is
+  `[REFUSAL-01 arm 49 COMPOSITE_MEMBER]`, nesting beyond the cap is
+  `[REFUSAL-01 arm 48 COMPOSITE_DEPTH]` (cap `MAX_COMPOSITE_DEPTH = 64`,
+  `src/sql_ast/ast.rs`; the cap bounds recursion, so a hostile deep graph
+  cannot overflow the stack).
+- `sql:ListLiteral` carries `sql:listItems` (rdf:List of expressions).
+- `sql:IndexAccess` carries `sql:indexBase` + `sql:indexIndex`.
+- `sql:SliceAccess` carries `sql:sliceStart` (+ optional `sql:sliceEnd`).
+
+```turtle
+[ sql:aliasName "packed" ; sql:expression [
+    a sql:StructLiteral ;
+    sql:structFields ( [ sql:fieldKey "kind" ;
+                         sql:fieldValue [ sql:literalValue "batch" ] ]
+                       [ sql:fieldKey "n" ;
+                         sql:fieldValue [ sql:literalValue "3"^^xsd:integer ] ] ) ] ]
+```
+
+```turtle
+[ sql:aliasName "second_reading" ; sql:expression [
+    a sql:IndexAccess ;
+    sql:indexBase [ a sql:ListLiteral ;
+        sql:listItems ( [ sql:literalValue "10"^^xsd:integer ]
+                        [ sql:literalValue "20"^^xsd:integer ]
+                        [ sql:literalValue "30"^^xsd:integer ] ) ] ;
+    sql:indexIndex [ sql:literalValue "2"^^xsd:integer ] ] ]
+```
+
+Other malformed-composite and malformed-star refusals are the REFUSAL-01
+family (see docs/refusals.md); arms 48-52 are settled codes (48
+COMPOSITE_DEPTH, 49 COMPOSITE_MEMBER, 50 STAR_MODIFIER_POSITION,
+51 COLUMNS_LAMBDA, 52 COLUMNS_PATTERN — `src/sql_ast/refusals.rs:119-144`).
+
+Courts: `tests/composite_literal_court.rs` (Row 4: real frozen-duckdb
+readbacks, depth-overflow and malformed-key refusals),
+`tests/json_operator_court.rs` (Row 5), and the star-modifier lib tests in
+`src/sql_ast.rs` (`exclude_compiles_to_star_minus_columns`,
+`replace_compiles_and_keeps_exclude_order`,
+`exclude_identifiers_are_strictly_validated`).
+
 ### DuckDB op session mode (persistent connections)
 
 The `duckdb` ABI op (`src/duckdb_op.rs`) carries a named-session surface:

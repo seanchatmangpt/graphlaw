@@ -2106,39 +2106,39 @@
   "receipt_surface": {
     "files": [
       {
-        "blake3": "blake3:52cdcb759cf16d62e1a02ad1e303775be60cb40b57441559803d15683cecc46b",
-        "bytes": 119831,
+        "blake3": "blake3:5c4af287b7f82f31bafbd15cac9ad5d86387f52084ad43ae6f8d8ec1e346ddaf",
+        "bytes": 130677,
         "path": "src/duckdb_eval.rs"
       },
       {
-        "blake3": "blake3:26fcff71d94b7ffd5397a39b2590dd0cb868cfe8f2149790923ccab6b55bd0ca",
-        "bytes": 147962,
+        "blake3": "blake3:f98e9b5479ae42cc97b20e77ccad65c964fb838c201d06de63e096cee53d56b4",
+        "bytes": 228897,
         "path": "src/sql_ast.rs"
       },
       {
-        "blake3": "blake3:b1bb31cf7615e60093a90be5120a9b72ff076fde54e6efcfa7782fd16d7be26d",
-        "bytes": 19917,
+        "blake3": "blake3:3029dcda307c8de5182e34fa22c429e995412f77fdd875cf4a328265b89882a3",
+        "bytes": 29949,
         "path": "src/sql_ast/ast.rs"
       },
       {
-        "blake3": "blake3:059ce305fdb492b1030f3f5d849af54a6b816d373f8388eb2a309b9aa4880bc8",
-        "bytes": 32315,
+        "blake3": "blake3:b3fc38a441fcb7ca79db1bed015172b42b712f488fab6f86804904185ce60f7b",
+        "bytes": 39216,
         "path": "src/sql_ast/refusals.rs"
       },
       {
-        "blake3": "blake3:99362c3d727e40080a68d00c53501e040a65f9f9b55ef48fbff268fb445ff934",
-        "bytes": 8348,
+        "blake3": "blake3:bee91779a4faca398d7c7199aa6a8a01d41125c2cd7d511123fc15e252286094",
+        "bytes": 18909,
         "path": "src/sql_ast/serializer.rs"
       },
       {
-        "blake3": "blake3:fc5e0cf549c998ed5033215c1591d44f1449229a12ce248a5ca65935cb98d967",
-        "bytes": 21372,
+        "blake3": "blake3:e4ee566129071417acbf9d34ebde17e7bef3139340cbdbe5c65ac7b1a339297b",
+        "bytes": 44719,
         "path": "ontologies/sql-ast.ttl"
       }
     ],
     "schema": "graphlaw.receipt-surface/1"
   },
-  "receipt_surface_blake3": "blake3:c14f6b1d8f12e63e1544dcb093e2b2736237e2e340585f509837a6ba75d4bc90",
+  "receipt_surface_blake3": "blake3:3f6a98a691b9b0231ba5bf4d4360101eebfedf22beac6f924d35e981331b0cb3",
   "refusal_codes": [
     {
       "code": "Refused",
@@ -2431,7 +2431,7 @@
     "owl-rl",
     "d"
   ],
-  "registry_blake3": "blake3:cdead01f74a86a1ed7ded9a7acf2bebd99caa45221f2a0551316e35941bf59ed",
+  "registry_blake3": "blake3:51c07b33c9b5092a37634aaa2ccaf95399914eec6fdac24856fc9b1cca5dc03c",
   "schema": "graphlaw.capability-registry/1",
   "surface_blake3": "blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9"
 }

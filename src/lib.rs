@@ -93,6 +93,8 @@ pub mod abi;
 pub mod abi_manifest;
 pub mod attest;
 pub mod dialect;
+/// CanonArrow dual-witness columnar egress (ADR-CANONARROW).
+pub mod egress;
 pub mod hooks;
 pub mod law;
 pub mod plan;

@@ -40,6 +40,13 @@ pub enum Operator {
     Multiply,
     Divide,
     Modulo,
+    /// JSON extraction operator `->` (SQLRDF-25 Row 5; `sql:jsonExtract`).
+    /// Doubles as list/index access in DuckDB (shared with Row 4's
+    /// IndexAccess render site).
+    JsonExtract,
+    /// JSON extraction-as-text operator `->>` (SQLRDF-25 Row 5;
+    /// `sql:jsonExtractText`).
+    JsonExtractText,
 }
 
 impl Operator {
@@ -60,6 +67,8 @@ impl Operator {
             Self::Multiply => "*",
             Self::Divide => "/",
             Self::Modulo => "%",
+            Self::JsonExtract => "->",
+            Self::JsonExtractText => "->>",
         }
     }
 
@@ -75,6 +84,13 @@ impl Operator {
             "http://graphlaw.org/sql#And" => Ok(Self::And),
             "http://graphlaw.org/sql#Or" => Ok(Self::Or),
             "http://graphlaw.org/sql#Like" => Ok(Self::Like),
+            // SQLRDF-25 Row 5: JSON extraction operators. Both the full IRI
+            // form and the short `sql:` prefixed form admit to the same
+            // operator; any other IRI falls through to the token table.
+            "http://graphlaw.org/sql#JsonExtract" | "sql:jsonExtract" => Ok(Self::JsonExtract),
+            "http://graphlaw.org/sql#JsonExtractText" | "sql:jsonExtractText" => {
+                Ok(Self::JsonExtractText)
+            }
             _ => Self::from_token(iri),
         }
     }
@@ -99,6 +115,11 @@ impl Operator {
             "%" => Ok(Self::Modulo),
             "LIKE" => Ok(Self::Like),
             "ILIKE" => Ok(Self::ILike),
+            // SQLRDF-25 Row 5: JSON operator tokens. Legal exactly where
+            // ordinary operators are (Binary); the render site emits the
+            // token verbatim.
+            "->" => Ok(Self::JsonExtract),
+            "->>" => Ok(Self::JsonExtractText),
             other => Err(
                 AstError::new(RefusalCode::MalformedAst, refusal_arm::OPERATOR_TOKEN)
                     .with_ident(other),
@@ -294,6 +315,88 @@ pub enum SqlExpr {
         expr: Box<SqlExpr>,
         alias: String,
     },
+    /// Composite struct literal `{'k': v, ...}` (SQLRDF-25 Row 4,
+    /// `sql:structLiteral`). Field keys are strict identifiers (validated at
+    /// serialize time; the identifier charset excludes quotes, so emitting a
+    /// key verbatim inside `'…'` is injection-safe). Depth-capped — see
+    /// [`SqlExpr::validate_composite`].
+    StructLiteral {
+        fields: Vec<(String, SqlExpr)>,
+    },
+    /// Composite list literal `[a, b, ...]` (SQLRDF-25 Row 4,
+    /// `sql:listLiteral`). Depth-capped.
+    ListLiteral { items: Vec<SqlExpr> },
+    /// Element access `base[index]` (SQLRDF-25 Row 4, `sql:indexAccess`) —
+    /// the `->` operator doubles as index access in DuckDB, so this is the
+    /// shared render site with Row 5's JsonExtract token.
+    IndexAccess {
+        base: Box<SqlExpr>,
+        index: Box<SqlExpr>,
+    },
+    /// Slice access `base[start:end]` (SQLRDF-25 Row 4, `sql:sliceAccess`).
+    SliceAccess {
+        base: Box<SqlExpr>,
+        start: Box<SqlExpr>,
+        end: Option<Box<SqlExpr>>,
+    },
+}
+
+/// Maximum nesting depth of composite literal / accessor nodes
+/// (`StructLiteral` / `ListLiteral` / `IndexAccess` / `SliceAccess`).
+/// Mirrors the depth-capped RDF-list unroll discipline (cap 64).
+pub(super) const MAX_COMPOSITE_DEPTH: usize = 64;
+
+impl SqlExpr {
+    /// Validates composite literals and accessors (SQLRDF-25 Row 4):
+    /// struct field keys must satisfy [`validate_identifier`] (a malformed
+    /// member is the typed REFUSAL-01 arm `COMPOSITE_MEMBER`), and nesting
+    /// beyond [`MAX_COMPOSITE_DEPTH`] refuses with `COMPOSITE_DEPTH`.
+    /// Recursion is bounded by the same cap, so a hostile deep graph cannot
+    /// overflow the stack.
+    pub fn validate_composite(&self) -> Result<(), AstError> {
+        fn walk(expr: &SqlExpr, depth: usize) -> Result<(), AstError> {
+            if depth > MAX_COMPOSITE_DEPTH {
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::COMPOSITE_DEPTH,
+                )
+                .with_num(depth));
+            }
+            match expr {
+                SqlExpr::StructLiteral { fields } => {
+                    for (key, value) in fields {
+                        validate_identifier(key).map_err(|_| {
+                            AstError::new(
+                                RefusalCode::MalformedAst,
+                                refusal_arm::COMPOSITE_MEMBER,
+                            )
+                            .with_ident(key)
+                        })?;
+                        walk(value, depth + 1)?;
+                    }
+                }
+                SqlExpr::ListLiteral { items } => {
+                    for item in items {
+                        walk(item, depth + 1)?;
+                    }
+                }
+                SqlExpr::IndexAccess { base, index } => {
+                    walk(base, depth + 1)?;
+                    walk(index, depth + 1)?;
+                }
+                SqlExpr::SliceAccess { base, start, end } => {
+                    walk(base, depth + 1)?;
+                    walk(start, depth + 1)?;
+                    if let Some(end) = end {
+                        walk(end, depth + 1)?;
+                    }
+                }
+                _ => {}
+            }
+            Ok(())
+        }
+        walk(self, 0)
+    }
 }
 
 /// Position lattice for an aggregate ARGUMENT: under an output-position

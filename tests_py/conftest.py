@@ -8,7 +8,9 @@ pytest session.
 
 from __future__ import annotations
 
+import json
 import os
+import struct
 import subprocess
 import sys
 
@@ -70,3 +72,118 @@ def verify_fixture(graphlaw_binaries, tmp_path):
 
 def is_windows() -> bool:
     return sys.platform.startswith("win")
+
+
+# ---------------------------------------------------------------------------
+# EH module fixtures (lane pm2 — UBO sanctions pm4pytest driver)
+#
+# The collaborator is the real `graphlaw-run-eh` wasmtime-48 host speaking
+# packet-4 over binary stdio against the real DuckDB-linked wasm artifact
+# built in this lane's target root. No mocks; a missing artifact is a loud,
+# typed SKIP, never a pass.
+
+LANE_TARGET = os.path.join(REPO, "target-lane-pm2")
+WASM_ARTIFACT = os.path.join(
+    LANE_TARGET, "wasm32-wasip1", "wasm", "graphlaw_wasm.wasm"
+)
+EH_HOST = os.path.join(LANE_TARGET, "debug", "graphlaw-run-eh")
+
+
+def _wasi_sdk_path() -> str:
+    if os.path.isdir("/opt/wasi-sdk"):
+        return "/opt/wasi-sdk"
+    home_sdk = os.path.join(os.path.expanduser("~"), "wasi-sdks", "wasi-sdk-34")
+    if os.path.isdir(home_sdk):
+        return home_sdk
+    pytest.fail("no wasi-sdk found at /opt/wasi-sdk or ~/wasi-sdks/wasi-sdk-34")
+
+
+# SQLRDF-27: the wrap args must ride RUSTFLAGS on the cdylib link — a
+# dependency build script's rustc-link-arg does not reach the final link.
+_WASM_RUSTFLAGS = (
+    "-C link-arg=--wrap=open -C link-arg=--wrap=openat "
+    "-C link-arg=--whole-archive -C link-arg=-lduckdb_wasi_posix "
+    "-C link-arg=--no-whole-archive"
+)
+
+
+def _cargo(cmd, env_extra):
+    env = dict(os.environ)
+    env.update(env_extra)
+    return subprocess.run(
+        ["cargo"] + cmd, cwd=REPO, env=env, capture_output=True, text=True
+    )
+
+
+class UboModule:
+    """One persistent eh-host subprocess; packet-4 request/response."""
+
+    def __init__(self, host_path: str, wasm_path: str):
+        env = dict(os.environ)
+        env["WASI_SDK_PATH"] = _wasi_sdk_path()
+        self.proc = subprocess.Popen(
+            [host_path, "--wasm", wasm_path],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+
+    def request(self, obj: dict) -> dict:
+        body = json.dumps(obj).encode("utf-8")
+        assert self.proc.poll() is None, "eh host exited early"
+        self.proc.stdin.write(struct.pack(">I", len(body)) + body)
+        self.proc.stdin.flush()
+        len_bytes = self.proc.stdout.read(4)
+        assert len(len_bytes) == 4, "eh host closed stdout at a frame boundary"
+        (length,) = struct.unpack(">I", len_bytes)
+        chunks = []
+        got = 0
+        while got < length:
+            chunk = self.proc.stdout.read(length - got)
+            assert chunk, f"EOF mid-frame: {got}/{length}"
+            chunks.append(chunk)
+            got += len(chunk)
+        reply = json.loads(b"".join(chunks).decode("utf-8"))
+        assert reply.get("ok") is True, f"eh host framed a failure: {reply}"
+        return reply["result"]
+
+    def close(self):
+        try:
+            if self.proc.stdin and not self.proc.stdin.closed:
+                self.proc.stdin.close()
+            self.proc.wait(timeout=60)
+        except Exception:
+            self.proc.kill()
+
+
+@pytest.fixture(scope="session")
+def ubo_module(request):
+    """Build (once, if missing) and spawn the real module; typed SKIP if the
+    build toolchain is unavailable."""
+    missing = [p for p in (WASM_ARTIFACT, EH_HOST) if not os.path.isfile(p)]
+    if missing:
+        wasi = _wasi_sdk_path()
+        env = {
+            "WASI_SDK_PATH": wasi,
+            "RUSTFLAGS": _WASM_RUSTFLAGS,
+            "CARGO_TARGET_DIR": LANE_TARGET,
+        }
+        if not os.path.isfile(WASM_ARTIFACT):
+            r = _cargo(
+                ["build", "-p", "graphlaw-wasm", "--target", "wasm32-wasip1",
+                 "--profile", "wasm"],
+                env,
+            )
+            assert r.returncode == 0, (
+                "wasm artifact build failed:\n" + r.stderr[-4000:]
+            )
+        r = _cargo(
+            ["build", "--bin", "graphlaw-run-eh", "--features", "runner-eh"],
+            {"CARGO_TARGET_DIR": LANE_TARGET},
+        )
+        assert r.returncode == 0, "eh host build failed:\n" + r.stderr[-4000:]
+
+    mod = UboModule(EH_HOST, WASM_ARTIFACT)
+    request.addfinalizer(mod.close)
+    return mod

@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "ac30a0fe3bb2169f68bc78c76aee60b070ffef39b9b731689849e845865ad5e9",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T231625Z-Edit-ac30a0fe.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/pm1-stubs/glwrap.c",
+  "timestamp_utc": "2026-10-23T231625Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

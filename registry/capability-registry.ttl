@@ -2566,8 +2566,8 @@
     gac:dialectCount 14 ;
     gac:graphlawVersion "26.10.22" ;
     gac:opCount 14 ;
-    gac:receiptSurfaceBlake3 "blake3:c14f6b1d8f12e63e1544dcb093e2b2736237e2e340585f509837a6ba75d4bc90" ;
-    gac:registryBlake3 "blake3:cdead01f74a86a1ed7ded9a7acf2bebd99caa45221f2a0551316e35941bf59ed" ;
+    gac:receiptSurfaceBlake3 "blake3:3f6a98a691b9b0231ba5bf4d4360101eebfedf22beac6f924d35e981331b0cb3" ;
+    gac:registryBlake3 "blake3:51c07b33c9b5092a37634aaa2ccaf95399914eec6fdac24856fc9b1cca5dc03c" ;
     gac:schemaId "graphlaw.capability-registry/1" ;
     gac:surfaceBlake3 "blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9" .
 

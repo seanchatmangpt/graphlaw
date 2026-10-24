@@ -111,6 +111,37 @@ pub mod refusal_arm {
     /// `name AS ()`. Recovery: attach a nested `sql:SelectStatement` root via
     /// `sql:cteQuery`.
     pub const CTE_NO_QUERY: u16 = 47;
+    /// REFUSAL-01 arm (SQLRDF-25 Row 4, appended append-only): a composite
+    /// literal / accessor expression (`sql:structLiteral`, `sql:listLiteral`,
+    /// `sql:indexAccess`, `sql:sliceAccess`) nests beyond the composite depth
+    /// cap of 64 (mirroring the depth-capped RDF-list unroll discipline).
+    /// `num` carries the observed depth. Recovery: flatten the composite.
+    pub const COMPOSITE_DEPTH: u16 = 48;
+    /// REFUSAL-01 arm (SQLRDF-25 Row 4, appended append-only): a
+    /// `sql:structLiteral` field key is malformed — empty, or not a strict
+    /// identifier (`^[a-zA-Z_][a-zA-Z0-9_]*$`). The identifier charset
+    /// excludes quotes, so a validated key renders verbatim inside `'…'`
+    /// injection-safe; a malformed key refuses typed before any engine call.
+    /// Recovery: use a strict-identifier field key.
+    pub const COMPOSITE_MEMBER: u16 = 49;
+    /// REFUSAL-01 arm (SQLRDF-25 Rows 1+2, appended append-only; folded from
+    /// the interim `serializer::star_refusal_arm` table — the single source is
+    /// this module): a `sql:Star` / `sql:Columns` node (or a node carrying
+    /// `sql:exclude` / `sql:replace` / `sql:columnsPattern`) extracted through
+    /// the expression path instead of the projection-item path — star
+    /// vocabulary is projection-list-only. Recovery: place the star term in
+    /// the `sql:selectList` projection-item position.
+    pub const STAR_MODIFIER_POSITION: u16 = 50;
+    /// REFUSAL-01 arm (SQLRDF-25 Rows 1+2, appended append-only): a
+    /// `sql:columnsLambda` form on a COLUMNS projection item — the lambda
+    /// form is refused typed until specified. Recovery: use the regex form
+    /// `sql:columnsPattern` with one quoted pattern string.
+    pub const COLUMNS_LAMBDA: u16 = 51;
+    /// REFUSAL-01 arm (SQLRDF-25 Rows 1+2, appended append-only): a COLUMNS
+    /// projection item with no string `sql:columnsPattern` literal, or an
+    /// empty/whitespace one (never a silent `COLUMNS('')`). Recovery: one
+    /// quoted pattern string.
+    pub const COLUMNS_PATTERN: u16 = 52;
     // ScopeIntegrity (REFUSAL-03) arms.
     pub const AGG_IN_POSITION: u16 = 1;
     pub const ALIASED_AGG_ARG: u16 = 2;
@@ -614,6 +645,27 @@ impl fmt::Display for AstError {
                     arm::QUALIFY_EXPR => write!(
                         f,
                         "SHACL AST structural violation: {marker}sql:qualify on {id} fails to extract as one well-formed expression"
+                    ),
+                    arm::COMPOSITE_DEPTH => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}composite literal/accessor nesting depth {} exceeds the cap of 64 (SQLRDF-25 Row 4: struct/list literals and index/slice accessors are depth-capped like the RDF-list unroll)",
+                        self.ctx.num
+                    ),
+                    arm::COMPOSITE_MEMBER => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}struct literal field key '{id}' is malformed; a sql:structLiteral key must satisfy ^[a-zA-Z_][a-zA-Z0-9_]*$ (SQLRDF-25 Row 4)"
+                    ),
+                    arm::STAR_MODIFIER_POSITION => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}star/COLUMNS vocabulary on {id} is not allowed in this syntactic position (SQLRDF-25 Rows 1+2: star and COLUMNS terms are projection-list-only; the expression path refuses them)"
+                    ),
+                    arm::COLUMNS_LAMBDA => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}COLUMNS projection on {id} uses the lambda form, which is refused typed until specified (SQLRDF-25 Rows 1+2); use the regex form sql:columnsPattern"
+                    ),
+                    arm::COLUMNS_PATTERN => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}COLUMNS projection on {id} carries no non-empty string sql:columnsPattern literal; never a silent COLUMNS('') (SQLRDF-25 Rows 1+2)"
                     ),
                     arm::SHACL_DEPTH => write!(
                         f,

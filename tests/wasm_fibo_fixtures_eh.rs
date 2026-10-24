@@ -105,7 +105,8 @@ impl Host {
             }
         };
         let mut cfg = Config::new();
-        cfg.wasm_exceptions(true);
+        // DIAG-NOTE(tc08): temporarily toggled to bisect the COPY egress EINVAL.
+        cfg.wasm_exceptions(std::env::var("GRAPHLAW_DIAG_NO_EH").is_err());
         let engine = Engine::new(&cfg).map_err(|e| HostError::Fatal(format!("engine: {e}")))?;
         let module = Module::new(&engine, bytes).map_err(|e| HostError::Fatal(format!("module: {e}")))?;
         for i in module.imports() {

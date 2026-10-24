@@ -213,6 +213,19 @@ impl Host {
         let mut config = Config::new();
         config.wasm_exceptions(true);
         config.wasm_backtrace_details(WasmBacktraceDetails::Enable);
+        // Compile-time parity with the court deadline: the 46 MB
+        // DuckDB-linked artifact is JIT-compiled on every spawn, and a
+        // debug-built cranelift at `SpeedAndSize` cannot compile it within
+        // ARTIFACT_DEADLINE (observed >570 s). `OptLevel::None` moves the
+        // compile under the deadline; guest execution is interpreter-paced
+        // DuckDB work where the opt level is not load-bearing.
+        config.cranelift_opt_level(wasmtime::OptLevel::None);
+        // Persist the compiled module so repeated spawns (the exit-code
+        // courts spawn once per test) reuse the first compile instead of
+        // re-JITing the artifact every time.
+        let cache = wasmtime::Cache::new(wasmtime::CacheConfig::default())
+            .map_err(|e| RunError::WasmInvalid(format!("wasmtime cache init: {e}")))?;
+        config.cache(Some(cache));
         let engine = Engine::new(&config)
             .map_err(|e| RunError::WasmInvalid(format!("engine config: {e}")))?;
         let module = match Module::new(&engine, bytes) {

@@ -1,0 +1,51 @@
+fix(v26.10.22): SQLRDF-25 rows 1-5, refusal arms 48-52, INSERT pairing fix, receipt_v2 egress, chain re-baseline
+
+- SQLRDF-25 rows 1-5 landed with courts: pivot, star modifier, composite
+  literal, JSON operator, columns projection (tests/pivot_court.rs,
+  tests/star_modifier_court.rs, tests/composite_literal_court.rs,
+  tests/json_operator_court.rs, tests/columns_projection_court.rs;
+  gaps ledger docs/jira/v26.10.22/SQLRDF-25-remaining-gaps.md)
+- Refusal arms 48-52 folded append-only into
+  src/sql_ast/refusals.rs; register updated in docs/refusals.md
+- INSERT pairing law fix (DvP 4/4 witness):
+  tests/dvp_settlement_court.rs + receipts/2026-10-23-banking-4of4-witness.md
+- receipt_v2 + ArrowEgressHeader absorbed under v26.10.22:
+  src/egress/ (arrow.rs, mod.rs), tests/receipt_v2_court.rs,
+  ADR docs/jira/v26.10.22/ADR-canonarrow-dual-witness-egress.md
+- Conformance projection regenerated:
+  docs/reference-generated/sql-rdf-conformance.md
+- Chain re-baseline 4 documented: receipts/CHAIN.blake3 +
+  receipts/2026-10-23-chain-rebaseline-note.md
+- Whitepaper locked with claims-audit corrections:
+  docs/whitepaper-v26.10.22.md
+- New ticket docs/jira/v26.10.22/SQLRDF-27.md; INDEX/RECEIPTS updated
+- Docs/deny.toml reconciliation: docs/DIALECTS.md, docs/WASM.md,
+  docs/wasm-integration.md, docs/wasm-duckdb-integration.md,
+  docs/how-to/*.md, README.md, deny.toml, ggen/sql-dialect pack +
+  ontologies/sql-ast.ttl
+- New amortization bench + court: benches/workload_amortization.rs,
+  tests/amortization_court.rs; src/attest.rs, src/lib.rs,
+  src/sql_ast* engine surface updates; tests_py/ python courts
+
+---
+COordinator addendum 2026-10-23 (post-addendum wave, include in same commit):
+- SQLRDF-25 five-row completion: courts 17/0 (pivot 3, star 4, columns 4,
+  json 2, composite 4 incl. struct egress arm + SHACL depth route); closed
+  shapes for star/COLUMNS; PIVOT/UNPIVOT compiler dispatch (ON-IN-USING order
+  load-bearing); refusal arms 48-52 folded, register gate green.
+- SQLRDF-27 CLOSED: musl->wasi fcntl ABI bridge via standalone wrap shim
+  (tests/fixtures/wasm-shim/, sole __wrap provider; stub stripped to libc-gap
+  symbols); canonical relink-8 artifact 58,214,121 B blake3 4d9083af...;
+  FIBO 4/0 + lifecycle 3/0 + exit-codes 7/0 on it; skip() gate defect fixed
+  (panic not exit(0)).
+- ADR-CANONARROW absorbed under v26.10.22; egress header + receipt_v2
+  courted 6/6; conformance projection regenerated v26.10.22.
+- Registry regen (capabilities 6/0, registry_artifacts 22/0), ASSETS.blake3
+  regen after SHACL message rephrase; corpus stack-overflow fix (23/0);
+  npm smoke 198/198 re-confirmed; chain re-baselines 4+5 documented.
+- Whitepaper locked with claims-audit corrections (receipted actuals:
+  engine 2.5us/117us/23.13ms; egress 6.83x); banking 4/4 witnessed;
+  pm4pytest drivers BCBS+UBO ALIVE (fitness 1.0, precision 1.0, anti-vacuity
+  flips witnessed).
+- Owed non-gating: SPC Cpk solo rerun, host-contract rung, anti-vacuity
+  inversion court, amortization bench final table, memory-wall witness.

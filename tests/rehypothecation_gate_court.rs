@@ -373,13 +373,22 @@ fn parse_readback(body: &str) -> Vec<CollateralRow> {
             (Some(a), Some(b)) if b > a => line[a + 1..b].to_string(),
             _ => continue,
         };
-        let rest = &line[line.find('>').map(|i| i + 1).unwrap_or(0)..];
+        let gt = line
+            .find('>')
+            .unwrap_or_else(|| panic!("no '>' terminator on subject in line: {line}"));
+        let rest = &line[gt + 1..];
         let pred = match (rest.find('<'), rest.find('>')) {
             (Some(a), Some(b)) if b > a => &rest[a + 1..b],
             _ => continue,
         };
-        let col = pred.rsplit('/').next().unwrap_or("");
-        let objpart = &rest[rest.find('>').map(|i| i + 1).unwrap_or(0)..];
+        let col = pred
+            .rsplit('/')
+            .next()
+            .unwrap_or_else(|| panic!("empty predicate segment in line: {line}"));
+        let gt = rest
+            .find('>')
+            .unwrap_or_else(|| panic!("no '>' terminator on predicate in line: {line}"));
+        let objpart = &rest[gt + 1..];
         let lex = match (objpart.find('"'), objpart.rfind('"')) {
             (Some(a), Some(b)) if b > a => &objpart[a + 1..b],
             _ => continue,
@@ -476,7 +485,12 @@ fn check_conformance(
                 .iter()
                 .find(|a| a.id == b.id)
                 .map(|a| a != b)
-                .unwrap_or(true)
+                .unwrap_or_else(|| {
+                    panic!(
+                        "row id={} present in before-state but absent from after-state",
+                        b.id
+                    )
+                })
     });
     if encumbered_mutated {
         violations.push(format!(

@@ -48,7 +48,7 @@ Organized Diataxis-style; the hub is [docs/index.md](docs/index.md).
 |---|---|
 | **Index** | [docs/INDEX.md](docs/INDEX.md) |
 | **Tutorial** | [Quickstart](docs/quickstart.md) |
-| **How-to** | [Run the WASM module](docs/how-to/run-the-wasm-module.md) · [Signed leases](docs/how-to/authorize-with-signed-leases.md) · [Offline verification](docs/how-to/verify-without-trusting-the-operator.md) · [Knowledge hooks](docs/how-to/use-knowledge-hooks.md) · [Edge Ingestion & Compaction](docs/how-to/how-to-edge-ingestion-and-compaction.md) · [Use from JavaScript](docs/how-to/use-from-javascript.md) |
+| **How-to** | [Run the WASM module](docs/how-to/run-the-wasm-module.md) · [First in-WASM SQL lifecycle](docs/how-to/first-in-wasm-sql-lifecycle.md) · [Persistent DuckDB sessions](docs/how-to/persistent-duckdb-sessions.md) · [Document sequences](docs/how-to/document-sequences.md) · [Signed leases](docs/how-to/authorize-with-signed-leases.md) · [Offline verification](docs/how-to/verify-without-trusting-the-operator.md) · [Knowledge hooks](docs/how-to/use-knowledge-hooks.md) · [Edge Ingestion & Compaction](docs/how-to/how-to-edge-ingestion-and-compaction.md) · [Use from JavaScript](docs/how-to/use-from-javascript.md) |
 | **Reference** | [ABI reference](docs/abi-reference.md) · [Capability registry](docs/capability-registry.md) · [Refusals](docs/refusals.md) · [API stability](docs/api-stability.md) · [WASM integration](docs/wasm-integration.md) · [WASM runbook](docs/WASM.md) · [Dialects](docs/DIALECTS.md) · [Full generated reference](docs/reference-generated/reference.md) |
 | **Explanation** | [Qualification algebra](docs/QUALIFICATION_ALGEBRA.md) · [Chicago courts](docs/CHICAGO_N3_DATALOG.md) ([FIBO](docs/CHICAGO_FIBO.md), [cross-authority](docs/CHICAGO_CROSS_AUTHORITY.md)) · [Receipt fields](docs/explanation/receipt-fields.md) · [Edge Sovereignty & Compaction](docs/explanation/edge-sovereignty-and-zero-trust-compaction.md) |
 
@@ -131,7 +131,11 @@ sidecar; checked by `tests/registry_artifacts.rs` and
 `tests/abi_manifest_court`. A differential court
 (`tests/wasm_native_differential.rs`) replays canonical inputs natively
 and through the module in a real wasm runtime, asserting byte-identical
-results. Build and embed details: [docs/WASM.md](docs/WASM.md).
+results. Host runners: `graphlaw-run-eh` (wasmtime 48, `wasm_exceptions`
+enabled) is the EH host for the DuckDB-linked artifact — sessions,
+document sequences, and the SQL surface run there; the wasmi
+`graphlaw-run` serves the legacy pre-DuckDB artifact class
+(`tests/wasm_abi.rs`). Build and embed details: [docs/WASM.md](docs/WASM.md).
 
 ## Engines and authorities
 

@@ -26,6 +26,16 @@ pub use serializer::*;
 
 use ast::{aggregate_argument_pos, aggregate_from_name, canonical_graph_bytes};
 
+/// SQLRDF-25 Row 4: discriminator kinds for composite literal/accessor
+/// classes (struct literal, list literal, index/slice access).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CompositeKind {
+    Struct,
+    List,
+    Index,
+    Slice,
+}
+
 // =============================================================================
 // Graph Unrolling Helper (purrdf / RDF list extraction)
 // =============================================================================
@@ -123,6 +133,139 @@ pub trait RdfAstGraphReader {
         }
 
         Ok(items)
+    }
+
+    /// SQLRDF-25 Rows 1+2: extracts one projection item. Star vocabulary
+    /// (`sql:Star` / `sql:exclude` / `sql:replace`) and the COLUMNS item
+    /// (`sql:Columns` / `sql:columnsPattern`) are projection-list-only; the
+    /// expression path refuses them typed (REFUSAL-01
+    /// `STAR_MODIFIER_POSITION`) via the gate in [`Self::extract_expr_scoped`].
+    fn extract_select_item(&self, node: &Self::Node, depth: usize) -> Result<SelectItem, AstError> {
+        const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+        const STAR: &str = "http://graphlaw.org/sql#Star";
+        const COLUMNS: &str = "http://graphlaw.org/sql#Columns";
+        let type_iri = || {
+            self.get_single_object(node, RDF_TYPE)
+                .and_then(|t| self.get_iri(&t))
+        };
+        let has_star_type = type_iri().as_deref() == Some(STAR);
+        let has_columns_type = type_iri().as_deref() == Some(COLUMNS);
+        let has_exclude = self
+            .get_single_object(node, "http://graphlaw.org/sql#exclude")
+            .is_some();
+        let has_replace = self
+            .get_single_object(node, "http://graphlaw.org/sql#replace")
+            .is_some();
+        let has_columns_pattern = self
+            .get_datatype_literal(node, "http://graphlaw.org/sql#columnsPattern")
+            .is_some();
+
+        if has_star_type || has_exclude || has_replace {
+            let exclude = if let Some(head) =
+                self.single_object_checked(node, "http://graphlaw.org/sql#exclude")?
+            {
+                self.unroll_rdf_list(&head, 64)?
+                    .into_iter()
+                    .map(|n| {
+                        self.get_datatype_literal(&n, "http://graphlaw.org/sql#columnName")
+                            .map(|(c, _)| c)
+                            .ok_or_else(|| {
+                                AstError::MissingProperty(
+                                    "http://graphlaw.org/sql#columnName".to_string(),
+                                    n.to_string(),
+                                )
+                            })
+                    })
+                    .collect::<Result<Vec<String>, AstError>>()?
+            } else {
+                Vec::new()
+            };
+            if has_exclude && exclude.is_empty() {
+                // SQLRDF-25 malformed-member twin: `sql:exclude ()` (rdf:nil,
+                // zero EXCLUDE members) is a malformed star modifier — never a
+                // silent bare `*`. Carried on the existing star-vocabulary arm
+                // (REFUSAL-01, STAR_MODIFIER_POSITION) pending the dedicated
+                // EMPTY_EXCLUDE arm the refusals register lane assigns.
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::STAR_MODIFIER_POSITION,
+                )
+                .with_ident(node));
+            }
+            let mut replace = Vec::new();
+            if let Some(head) =
+                self.single_object_checked(node, "http://graphlaw.org/sql#replace")?
+            {
+                for member in self.unroll_rdf_list(&head, 64)? {
+                    let target = self
+                        .get_single_object(&member, "http://graphlaw.org/sql#expression")
+                        .ok_or_else(|| {
+                            AstError::MissingProperty(
+                                "http://graphlaw.org/sql#expression".to_string(),
+                                member.to_string(),
+                            )
+                        })?;
+                    let expr = self.extract_expr_scoped(&target, depth + 1, ScopePos::SelectList)?;
+                    let (name, _) = self
+                        .get_datatype_literal(&member, "http://graphlaw.org/sql#aliasName")
+                        .or_else(|| {
+                            self.get_datatype_literal(&member, "http://graphlaw.org/sql#alias")
+                        })
+                        .ok_or_else(|| {
+                            AstError::MissingProperty(
+                                "http://graphlaw.org/sql#aliasName".to_string(),
+                                member.to_string(),
+                            )
+                        })?;
+                    replace.push((expr, name));
+                }
+            }
+            return Ok(SelectItem::Star { exclude, replace });
+        }
+
+        if has_columns_type || has_columns_pattern {
+            // Lambda form: sql:columnsLambda present, or a non-literal
+            // sql:columnsPattern object — refused typed until specified.
+            let lambda = self
+                .get_single_object(node, "http://graphlaw.org/sql#columnsLambda")
+                .is_some()
+                || (self.object_count(node, "http://graphlaw.org/sql#columnsPattern") > 0
+                    && !has_columns_pattern);
+            if lambda {
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::COLUMNS_LAMBDA,
+                )
+                .with_ident(node));
+            }
+            let pattern = self
+                .get_datatype_literal(node, "http://graphlaw.org/sql#columnsPattern")
+                .map(|(p, _)| p)
+                .ok_or_else(|| {
+                    AstError::new(
+                        RefusalCode::MalformedAst,
+                        refusal_arm::COLUMNS_PATTERN,
+                    )
+                    .with_ident(node)
+                })?;
+            if pattern.trim().is_empty() {
+                // SQLRDF-25 malformed-member twin: an empty (or whitespace)
+                // `sql:columnsPattern` is no usable pattern literal — never a
+                // silent `COLUMNS('')`. REFUSAL-01, COLUMNS_PATTERN arm.
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::COLUMNS_PATTERN,
+                )
+                .with_ident(node));
+            }
+            return Ok(SelectItem::Columns(pattern));
+        }
+
+        Ok(SelectItem::Expr(self.extract_expr_scoped(
+            node,
+            depth,
+            ScopePos::SelectList,
+        )?))
     }
 
     /// Recursively extracts a `SqlExpr` from an AST node in the graph.
@@ -237,6 +380,11 @@ pub trait RdfAstGraphReader {
         .iter()
         .filter(|b| **b)
         .count();
+        // SQLRDF-25 Row 4: composite literals/accessors are discriminated by
+        // rdf:type; carrying a composite type alongside any other expression
+        // discriminator is REFUSAL-01 (the ambiguity gate stays closed).
+        let has_composite = self.composite_kind(node).is_some();
+        let discriminators = discriminators + usize::from(has_composite);
         if discriminators > 1 {
             return Err(
                 AstError::new(RefusalCode::MalformedAst, refusal_arm::DISCRIMINATORS)
@@ -259,6 +407,42 @@ pub trait RdfAstGraphReader {
                 AstError::new(RefusalCode::MalformedAst, refusal_arm::EXPRESSION_WRAPPER)
                     .with_ident(node),
             );
+        }
+
+        // SQLRDF-25 Rows 1+2: star/COLUMNS projection vocabulary reached the
+        // expression path — it is projection-list-only. The projection loop
+        // routes through extract_select_item, so a star marker here is always
+        // out of scope (WHERE / argument / wrapper laundering): REFUSAL-01.
+        {
+            let star_marker = self
+                .get_single_object(node, "http://graphlaw.org/sql#exclude")
+                .is_some()
+                || self
+                    .get_single_object(node, "http://graphlaw.org/sql#replace")
+                    .is_some()
+                || self
+                    .get_datatype_literal(node, "http://graphlaw.org/sql#columnsPattern")
+                    .is_some()
+                || self
+                    .get_single_object(node, "http://graphlaw.org/sql#columnsLambda")
+                    .is_some()
+                || {
+                    let t = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+                    matches!(
+                        self.get_single_object(node, t)
+                            .and_then(|n| self.get_iri(&n))
+                            .as_deref(),
+                        Some("http://graphlaw.org/sql#Star")
+                            | Some("http://graphlaw.org/sql#Columns")
+                    )
+                };
+            if star_marker {
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::STAR_MODIFIER_POSITION,
+                )
+                .with_ident(node));
+            }
         }
 
         // Check if node is a ColumnRef
@@ -612,6 +796,16 @@ pub trait RdfAstGraphReader {
             );
         }
 
+        // SQLRDF-25 Row 4: composite literals and accessors. The node type is
+        // the discriminator; members link through the same expression
+        // properties, so nesting validates member-by-member (rec section 4;
+        // depth/key law enforced by SqlExpr::validate_composite at serialize
+        // time and by extract_composite during extraction).
+        if let Some(kind) = self.composite_kind(node) {
+            let expr = self.extract_composite(node, kind, 0, depth, pos)?;
+            return Self::finish_alias(self, node, expr, sql_ns, pos);
+        }
+
         // D3: a bare sql:expression wrapper (no sql:aliasName, no other
         // discriminator — laundering guarded above) is transparent: extract
         // the inner expression in the SAME syntactic position, so an
@@ -623,6 +817,153 @@ pub trait RdfAstGraphReader {
         }
 
         Err(AstError::MalformedNode(node.to_string()))
+    }
+
+    /// SQLRDF-25 Row 4 discriminator: the rdf:type of `node` names a
+    /// composite literal/accessor class.
+    // CompositeKind resolves to the module-level enum (line ~35,
+    // GWS-LANE-UNBLOCK); an earlier in-impl duplicate here was illegal
+    // (`enum is not supported in impls`) and was removed by the empty-star
+    // lane under the compile-freeze SLA.
+    fn composite_kind(&self, node: &Self::Node) -> Option<CompositeKind> {
+        let t = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+        match self
+            .get_single_object(node, t)
+            .and_then(|n| self.get_iri(&n))
+            .as_deref()
+        {
+            Some("http://graphlaw.org/sql#StructLiteral") => Some(CompositeKind::Struct),
+            Some("http://graphlaw.org/sql#ListLiteral") => Some(CompositeKind::List),
+            Some("http://graphlaw.org/sql#IndexAccess") => Some(CompositeKind::Index),
+            Some("http://graphlaw.org/sql#SliceAccess") => Some(CompositeKind::Slice),
+            _ => None,
+        }
+    }
+
+    /// Extracts a composite literal/accessor subtree. `comp_depth` counts
+    /// composite nesting ONLY (so a 65-deep list refuses COMPOSITE_DEPTH, not
+    /// the shallower generic expression-recursion cap); `depth` is the
+    /// ordinary expression-recursion budget handed to non-composite leaf
+    /// extraction.
+    fn extract_composite(
+        &self,
+        node: &Self::Node,
+        kind: CompositeKind,
+        comp_depth: usize,
+        depth: usize,
+        pos: ScopePos,
+    ) -> Result<SqlExpr, AstError> {
+        if comp_depth > ast::MAX_COMPOSITE_DEPTH {
+            return Err(AstError::new(
+                RefusalCode::MalformedAst,
+                refusal_arm::COMPOSITE_DEPTH,
+            )
+            .with_num(comp_depth));
+        }
+        // A member is either itself composite (recurse on the composite
+        // depth counter) or a plain expression (ordinary extraction, one
+        // recursion-budget tick).
+        let member = |n: &Self::Node| -> Result<SqlExpr, AstError> {
+            match self.composite_kind(n) {
+                Some(k) => self.extract_composite(n, k, comp_depth + 1, depth, pos),
+                None => self.extract_expr_scoped(n, depth + 1, pos),
+            }
+        };
+        match kind {
+            CompositeKind::Struct => {
+                let head = self
+                    .single_object_checked(node, "http://graphlaw.org/sql#structFields")?
+                    .ok_or_else(|| {
+                        AstError::new(RefusalCode::MalformedAst, refusal_arm::COMPOSITE_MEMBER)
+                            .with_ident(node)
+                    })?;
+                let field_nodes = self.unroll_rdf_list(&head, 64)?;
+                let mut fields = Vec::with_capacity(field_nodes.len());
+                for field in &field_nodes {
+                    let (key, _) = self
+                        .get_datatype_literal(field, "http://graphlaw.org/sql#fieldKey")
+                        .ok_or_else(|| {
+                            AstError::new(
+                                RefusalCode::MalformedAst,
+                                refusal_arm::COMPOSITE_MEMBER,
+                            )
+                            .with_ident(field)
+                        })?;
+                    let value_node = self
+                        .single_object_checked(field, "http://graphlaw.org/sql#fieldValue")?
+                        .ok_or_else(|| {
+                            AstError::new(
+                                RefusalCode::MalformedAst,
+                                refusal_arm::COMPOSITE_MEMBER,
+                            )
+                            .with_ident(field)
+                    })?;
+                    let value = member(&value_node)?;
+                    fields.push((key, value));
+                }
+                Ok(SqlExpr::StructLiteral { fields })
+            }
+            CompositeKind::List => {
+                let head = self
+                    .single_object_checked(node, "http://graphlaw.org/sql#listItems")?
+                    .ok_or_else(|| {
+                        AstError::new(RefusalCode::MalformedAst, refusal_arm::COMPOSITE_MEMBER)
+                            .with_ident(node)
+                    })?;
+                let item_nodes = self.unroll_rdf_list(&head, 64)?;
+                let mut items = Vec::with_capacity(item_nodes.len());
+                for item in &item_nodes {
+                    items.push(member(item)?);
+                }
+                Ok(SqlExpr::ListLiteral { items })
+            }
+            CompositeKind::Index => {
+                let base_node = self
+                    .single_object_checked(node, "http://graphlaw.org/sql#indexBase")?
+                    .ok_or_else(|| {
+                        AstError::new(RefusalCode::MalformedAst, refusal_arm::COMPOSITE_MEMBER)
+                            .with_ident(node)
+                    })?;
+                let index_node = self
+                    .single_object_checked(node, "http://graphlaw.org/sql#indexIndex")?
+                    .ok_or_else(|| {
+                        AstError::new(RefusalCode::MalformedAst, refusal_arm::COMPOSITE_MEMBER)
+                            .with_ident(node)
+                    })?;
+                let base = member(&base_node)?;
+                let index = member(&index_node)?;
+                Ok(SqlExpr::IndexAccess {
+                    base: Box::new(base),
+                    index: Box::new(index),
+                })
+            }
+            CompositeKind::Slice => {
+                let base_node = self
+                    .single_object_checked(node, "http://graphlaw.org/sql#sliceBase")?
+                    .ok_or_else(|| {
+                        AstError::new(RefusalCode::MalformedAst, refusal_arm::COMPOSITE_MEMBER)
+                            .with_ident(node)
+                    })?;
+                let start_node = self
+                    .single_object_checked(node, "http://graphlaw.org/sql#sliceStart")?
+                    .ok_or_else(|| {
+                        AstError::new(RefusalCode::MalformedAst, refusal_arm::COMPOSITE_MEMBER)
+                            .with_ident(node)
+                    })?;
+                let end_node = self.single_object_checked(node, "http://graphlaw.org/sql#sliceEnd")?;
+                let base = member(&base_node)?;
+                let start = member(&start_node)?;
+                let end = match end_node {
+                    Some(n) => Some(Box::new(member(&n)?)),
+                    None => None,
+                };
+                Ok(SqlExpr::SliceAccess {
+                    base: Box::new(base),
+                    start: Box::new(start),
+                    end,
+                })
+            }
+        }
     }
 
     /// REFUSAL-03 gate: an aggregate is legal only in SELECT list, HAVING and
@@ -917,7 +1258,7 @@ pub trait RdfAstGraphReader {
         let select_nodes = self.unroll_rdf_list(&select_head, 64)?;
         let mut select_list = Vec::with_capacity(select_nodes.len());
         for node in select_nodes {
-            select_list.push(self.extract_expr_scoped(&node, 0, ScopePos::SelectList)?);
+            select_list.push(self.extract_select_item(&node, 0)?);
         }
         // D1: an empty projection list (rdf:nil head) is malformed, never
         // SELECT *: the ontology says projection is never zero-column
@@ -1284,6 +1625,25 @@ fn expr_references_target(expr: &SqlExpr, target: &TableRef) -> bool {
             expr_references_target(left, target) || expr_references_target(right, target)
         }
         SqlExpr::FunctionCall { argument, .. } => expr_references_target(argument, target),
+        // SQLRDF-25 Row 4 minimal unblock (lane sq1, compile-freeze SLA,
+        // disclosed): composites reference the target exactly when their
+        // children do.
+        SqlExpr::StructLiteral { fields } => fields
+            .iter()
+            .any(|(_, v)| expr_references_target(v, target)),
+        SqlExpr::ListLiteral { items } => {
+            items.iter().any(|i| expr_references_target(i, target))
+        }
+        SqlExpr::IndexAccess { base, index } => {
+            expr_references_target(base, target) || expr_references_target(index, target)
+        }
+        SqlExpr::SliceAccess { base, start, end } => {
+            expr_references_target(base, target)
+                || expr_references_target(start, target)
+                || end
+                    .as_ref()
+                    .is_some_and(|e| expr_references_target(e.as_ref(), target))
+        }
         SqlExpr::WindowFn {
             function,
             partition_by,
@@ -1548,8 +1908,149 @@ fn compile_statement_arm(
         {
             reader.extract_merge_statement(node)?.compile_merge()
         }
+        // SQLRDF-25 Row 3: PIVOT / UNPIVOT statement classes (shapes:
+        // ontologies/sql-ast.ttl `sql:PivotStatementShape` /
+        // `sql:UnpivotStatementShape`; rec section 4 statement-class ladder).
+        "PivotStatement" => compile_pivot_statement(reader, node),
+        "UnpivotStatement" => compile_unpivot_statement(reader, node),
         other => reader.compile_command(node, other),
     }
+}
+
+/// SQLRDF-25 Row 3 dispatch helpers (PIVOT / UNPIVOT compile arms). They live
+/// beside [`compile_statement_arm`] so the dispatch stays the single review
+/// surface; SHACL (`sql:PivotStatementShape` / `sql:UnpivotStatementShape`)
+/// has already constrained cardinality and identifier shape — the arms below
+/// extract and render, refusing typed REFUSAL-01 on the residual compiler-law
+/// cases the shapes cannot express (empty IN-list, non-enum aggregate).
+fn pivot_string_members(reader: &DatasetReader, node: &str, pred: &str) -> Vec<String> {
+    reader
+        .outgoing
+        .get(node)
+        .and_then(|preds| preds.get(pred))
+        .map(|terms| {
+            terms
+                .iter()
+                .filter_map(|t| match t {
+                    RdfTerm::Literal { lexical, .. } => Some(lexical.clone()),
+                    _ => None,
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Typed REFUSAL-01 (MalformedAstRefusal) for the pivot arms, rendered via the
+/// LEGACY_MESSAGE template (free-form tail) — codes are append-only and no
+/// existing arm renumbers.
+fn pivot_refusal(msg: String) -> AstError {
+    AstError::new(RefusalCode::MalformedAst, refusal_arm::LEGACY_MESSAGE).with_ident(msg)
+}
+
+fn compile_pivot_statement(reader: &DatasetReader, node: &str) -> Result<CompiledQuery, AstError> {
+    const NS: &str = "http://graphlaw.org/sql#";
+    const AGGREGATES: [&str; 5] = ["sum", "count", "avg", "min", "max"];
+    // Exactly one well-formed source table (shape: minCount/maxCount 1 +
+    // ident pattern; ident() re-validates and refuses MissingProperty typed).
+    let (table, _) = reader
+        .get_datatype_literal(&node.to_string(), &format!("{NS}pivotTable"))
+        .ok_or_else(|| AstError::MissingProperty(format!("{NS}pivotTable"), node.to_string()))?;
+    let table = validate_identifier(&table)?;
+    // ON column set: at least one (shape minCount 1), each a strict ident.
+    let on_cols = pivot_string_members(reader, node, &format!("{NS}pivotColumn"));
+    if on_cols.is_empty() {
+        return Err(pivot_refusal(format!(
+            "{REFUSAL_01_MALFORMED_AST} {node} carries no sql:pivotColumn literal; a PIVOT needs at least one ON column (never an implicit empty ON)"
+        )));
+    }
+    let on_cols = on_cols
+        .iter()
+        .map(|c| validate_identifier(c).map(str::to_string))
+        .collect::<Result<Vec<_>, _>>()?;
+    // USING aggregate: exactly one token from the approved enum
+    // (sum|count|avg|min|max); anything else refuses typed REFUSAL-01.
+    let aggs = pivot_string_members(reader, node, &format!("{NS}pivotAggregate"));
+    let agg = match aggs.as_slice() {
+        [one] if AGGREGATES.contains(&one.as_str()) => one.clone(),
+        [one, ..] => {
+            return Err(pivot_refusal(format!(
+                "{REFUSAL_01_MALFORMED_AST} sql:pivotAggregate '{one}' on {node} is not an approved aggregate (sum|count|avg|min|max)"
+            )))
+        }
+        [] => {
+            return Err(pivot_refusal(format!(
+                "{REFUSAL_01_MALFORMED_AST} statement {node} is missing required sql:pivotAggregate (exactly one of sum|count|avg|min|max)"
+            )))
+        }
+    };
+    // Aggregate argument column (sql:pivotAggregateColumn, e.g. "amount").
+    let (agg_col, _) = reader
+        .get_datatype_literal(&node.to_string(), &format!("{NS}pivotAggregateColumn"))
+        .ok_or_else(|| {
+            AstError::MissingProperty(format!("{NS}pivotAggregateColumn"), node.to_string())
+        })?;
+    let agg_col = validate_identifier(&agg_col)?;
+    // IN-list: at least one member (shape minCount 1). An empty IN-list
+    // (`sql:pivotInValue ( )` — the rdf:nil IRI, zero literals) refuses typed
+    // REFUSAL-01 here: the shape's minCount is satisfied by the rdf:nil triple,
+    // so the compiler is the enforcement point, never a zero-column PIVOT.
+    let in_vals = pivot_string_members(reader, node, &format!("{NS}pivotInValue"));
+    if in_vals.is_empty() {
+        return Err(pivot_refusal(format!(
+            "{REFUSAL_01_MALFORMED_AST} statement {node} carries an empty sql:pivotInValue IN-list (rdf:nil, zero literals); a PIVOT renders at least one IN member"
+        )));
+    }
+    let in_list = in_vals
+        .iter()
+        .map(|v| format!("'{}'", v.replace('\'', "''")))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let on_list = on_cols.join(", ");
+    Ok(CompiledQuery::raw_compiled(
+        format!("PIVOT {table} ON {on_list} IN ({in_list}) USING {agg}({agg_col})"),
+        Vec::new(),
+    ))
+}
+
+fn compile_unpivot_statement(
+    reader: &DatasetReader,
+    node: &str,
+) -> Result<CompiledQuery, AstError> {
+    const NS: &str = "http://graphlaw.org/sql#";
+    let (table, _) = reader
+        .get_datatype_literal(&node.to_string(), &format!("{NS}pivotTable"))
+        .ok_or_else(|| AstError::MissingProperty(format!("{NS}pivotTable"), node.to_string()))?;
+    let table = validate_identifier(&table)?;
+    let on_cols = pivot_string_members(reader, node, &format!("{NS}unpivotColumn"));
+    if on_cols.is_empty() {
+        return Err(pivot_refusal(format!(
+            "{REFUSAL_01_MALFORMED_AST} statement {node} carries no sql:unpivotColumn literal; an UNPIVOT needs at least one ON column"
+        )));
+    }
+    let on_cols = on_cols
+        .iter()
+        .map(|c| validate_identifier(c).map(str::to_string))
+        .collect::<Result<Vec<_>, _>>()?;
+    // INTO NAME / VALUE: exactly one of each (shape minCount/maxCount 1).
+    let (name_col, _) = reader
+        .get_datatype_literal(&node.to_string(), &format!("{NS}unpivotNameColumn"))
+        .ok_or_else(|| {
+            AstError::MissingProperty(format!("{NS}unpivotNameColumn"), node.to_string())
+        })?;
+    let name_col = validate_identifier(&name_col)?;
+    let (value_col, _) = reader
+        .get_datatype_literal(&node.to_string(), &format!("{NS}unpivotValueColumn"))
+        .ok_or_else(|| {
+            AstError::MissingProperty(format!("{NS}unpivotValueColumn"), node.to_string())
+        })?;
+    let value_col = validate_identifier(&value_col)?;
+    let on_list = on_cols.join(", ");
+    Ok(CompiledQuery::raw_compiled(
+        format!(
+            "UNPIVOT {table} ON {on_list} INTO NAME {name_col} VALUE {value_col}"
+        ),
+        Vec::new(),
+    ))
 }
 
 /// SQLRDF-23: compiles a Turtle AST document that may carry either a bare
@@ -1918,6 +2419,295 @@ impl DatasetReader {
             .collect()
     }
 
+    /// SQLRDF-22 G4 (order recovery): the sql:assignColumn/sql:assignValue
+    /// pairs of `node` in DOCUMENT (text) order, when the subject's
+    /// statement can be located textually; `None` when it cannot (blank-node
+    /// subjects, exotic serializations), in which case the caller falls back
+    /// to reader-order pairing (unchanged behavior, same refusal family).
+    ///
+    /// Why this exists: purrdf's `quads()` does not preserve document order
+    /// for repeated predicates (witnessed 2026-10-23: a two-pair
+    /// all-`xsd:string` seed emitted its assignValue quads reversed relative
+    /// to the document — `BOOK-A, ISIN-XX-0001` for a document ordering
+    /// `ISIN-XX-0001, BOOK-A`), so the previous reader-order-only pairing
+    /// silently crossed column/value pairs. RDF graphs are unordered sets;
+    /// the ordering source is the admitted Turtle text itself.
+    fn assign_pairs(
+        &self,
+        node: &str,
+        col: &str,
+        val: &str,
+    ) -> Result<(Vec<String>, Vec<String>), AstError> {
+        if let Some(pairs) = self.document_order_assigns(node, col, val) {
+            let mut cols = Vec::with_capacity(pairs.len());
+            let mut vals = Vec::with_capacity(pairs.len());
+            for ((c, _), (v, d)) in pairs {
+                cols.push(validate_identifier(&c).map(str::to_string)?);
+                vals.push(Self::render_scalar_literal(&v, d.as_deref()));
+            }
+            return Ok((cols, vals));
+        }
+        // Fallback: reader-order pairing (behavior and refusal family
+        // unchanged for subjects whose text form cannot be located).
+        let cols = self.all_idents(node, col)?;
+        let vals = self.all_assigns(node, val);
+        Ok((cols, vals))
+    }
+
+    /// Document-order scan of the admitted Turtle text (quote-aware,
+    /// statement-splitting tokenizer). Returns `None` when the subject's
+    /// textual statement cannot be located (blank-node subjects, exotic
+    /// serializations) — the caller falls back to reader order.
+    fn document_order_assigns(
+        &self,
+        node: &str,
+        col: &str,
+        val: &str,
+    ) -> Option<Vec<((String, Option<String>), (String, Option<String>))>> {
+        // Minimal @prefix map over the document.
+        let mut prefixes: std::collections::HashMap<&str, &str> = std::collections::HashMap::new();
+        for line in self.turtle.lines() {
+            let l = line.trim();
+            let Some(rest) = l.strip_prefix("@prefix") else { continue };
+            let Some((pfx, iri_part)) = rest.trim().split_once(':') else { continue };
+            let iri = iri_part
+                .trim()
+                .strip_prefix('<')
+                .map(|s| s.trim_end().trim_end_matches('.').trim_end())
+                .and_then(|s| s.strip_suffix('>'))
+                .map(str::trim_end);
+            if let (Some(p), Some(ns)) = (Some(pfx.trim()), iri) {
+                prefixes.insert(p, ns);
+            }
+        }
+
+        let expand = |tok: &str, prefixes: &std::collections::HashMap<&str, &str>| -> Option<String> {
+            let tok = tok.trim_end_matches(';');
+            if let Some(inner) = tok.strip_prefix('<') {
+                return inner.strip_suffix('>').map(str::to_string);
+            }
+            if let Some((pfx, local)) = tok.split_once(':') {
+                if let Some(ns) = prefixes.get(pfx) {
+                    return Some(format!("{ns}{local}"));
+                }
+            }
+            None
+        };
+
+        // Strip '#' comments (outside strings and <IRI>s) first: comment
+        // text is not Turtle syntax and must not seed statement boundaries.
+        let mut doc = String::with_capacity(self.turtle.len());
+        for line in self.turtle.lines() {
+            let lb = line.as_bytes();
+            let mut q = false;
+            let mut iri = false;
+            let mut cut = lb.len();
+            for (idx, ch) in lb.iter().enumerate() {
+                match *ch {
+                    b'"' if !iri => q = !q,
+                    b'<' if !q => iri = true,
+                    b'>' if !q => iri = false,
+                    b'#' if !q && !iri => { cut = idx; break; }
+                    _ => {}
+                }
+            }
+            doc.push_str(&line[..cut]);
+            doc.push('\n');
+        }
+
+        // Quote/IRI-aware statement splitting: a '.' outside strings and
+        // <IRI>s followed by whitespace or EOF ends a statement.
+        let b = doc.as_bytes();
+        let n = b.len();
+        let mut stmts: Vec<(usize, usize)> = Vec::new();
+        let mut start = 0usize;
+        let mut i = 0usize;
+        let mut in_string = false;
+        let mut in_iri = false;
+        while i < n {
+            let c = b[i];
+            if in_string {
+                if c == b'\\' {
+                    i += 2;
+                    continue;
+                }
+                if c == b'"' {
+                    in_string = false;
+                }
+                i += 1;
+                continue;
+            }
+            match c {
+                b'"' => { in_string = true; i += 1; }
+                b'<' => { in_iri = true; i += 1; }
+                b'>' => { in_iri = false; i += 1; }
+                b'.' if !in_iri
+                    && (i + 1 >= n || (b[i + 1] as char).is_ascii_whitespace()) =>
+                {
+                    stmts.push((start, i));
+                    start = i + 1;
+                    i += 1;
+                }
+                _ => { i += 1; }
+            }
+        }
+        if i > start {
+            stmts.push((start, i));
+        }
+
+        let mut pairs: Vec<((String, Option<String>), (String, Option<String>))> = Vec::new();
+        let mut open_col: Option<(String, Option<String>)> = None;
+        for (s0, s1) in stmts {
+            let stmt = &doc[s0..s1];
+            let mut tokens: Vec<&str> = Vec::new();
+            let bs = stmt.as_bytes();
+            let mut j = 0usize;
+            let mut instr = false;
+            let mut iniri = false;
+            let mut tok = 0usize;
+            while j < bs.len() {
+                let c = bs[j];
+                if instr {
+                    if c == b'\\' {
+                        j += 2;
+                        continue;
+                    }
+                    if c == b'"' {
+                        instr = false;
+                    }
+                    j += 1;
+                    continue;
+                }
+                match c {
+                    b'"' => { instr = true; j += 1; }
+                    b'<' => { iniri = true; j += 1; }
+                    b'>' => { iniri = false; j += 1; }
+                    c if (c as char).is_ascii_whitespace() => {
+                        if j > tok {
+                            tokens.push(&stmt[tok..j]);
+                        }
+                        j += 1;
+                        tok = j;
+                    }
+                    _ => { j += 1; }
+                }
+            }
+            if bs.len() > tok {
+                tokens.push(&stmt[tok..]);
+            }
+            if tokens.is_empty() {
+                continue;
+            }
+
+            // Directive pseudo-statements are skipped; unknown subject
+            // forms (blank nodes, collections) fall back to reader order at
+            // the caller.
+            if tokens[0].starts_with('@') {
+                continue;
+            }
+            let Some(subj) = expand(tokens[0], &prefixes) else {
+                // Unknown subject form anywhere in the document: the
+                // document-order source is unreliable, so fall back wholesale.
+                return None;
+            };
+            if subj != node {
+                continue;
+            }
+
+            // Walk predicate/object tokens in text order.
+            let mut k = 1usize;
+            while k < tokens.len() {
+                let t = expand(tokens[k], &prefixes);
+                let is_col = t.as_deref() == Some(col);
+                let is_val = t.as_deref() == Some(val);
+                if is_col || is_val {
+                    let otok = tokens.get(k + 1).map(|s| s.trim_end_matches(';'));
+                    let Some(otok) = otok else { break };
+                    let Some(lit) = Self::parse_turtle_literal_token(otok, &prefixes) else { break };
+                    if is_col {
+                        open_col = Some(lit);
+                    } else if let Some(c) = open_col.take() {
+                        pairs.push((c, lit));
+        }
+                    k += 2;
+                    continue;
+                }
+                k += 1;
+            }
+        }
+        // Integrity: the scan must have paired EVERY assignColumn and
+        // assignValue literal the reader saw; any unpaired residue (a column
+        // with no following value, a value with no preceding column, or an
+        // extra literal the tokenizer missed) makes the document-order source
+        // unreliable — fall back to reader order so the count-mismatch
+        // refusal family fires on the full vectors.
+        if open_col.is_some()
+            || pairs.len() != self.all_lits(node, col).len()
+            || pairs.len() != self.all_lits(node, val).len()
+        {
+            return None;
+        }
+        Some(pairs)
+    }
+
+    /// Parse one Turtle literal token: `"lex"` optionally `^^dtype`, or a
+    /// plain numeric/boolean token (Turtle types bare integers as
+    /// xsd:integer and decimals as xsd:decimal — mirror that).
+    fn parse_turtle_literal_token(
+        tok: &str,
+        prefixes: &std::collections::HashMap<&str, &str>,
+    ) -> Option<(String, Option<String>)> {
+        if !tok.starts_with('"') {
+            // Plain token: numeric or boolean keyword.
+            let is_bool = tok == "true" || tok == "false";
+            let all_digits = !tok.is_empty() && tok.chars().all(|c| c.is_ascii_digit());
+            let is_decimal = !tok.is_empty()
+                && tok.split('.').count() == 2
+                && tok.chars().all(|c| c.is_ascii_digit() || c == '.');
+            let dt = if is_bool {
+                Some("http://www.w3.org/2001/XMLSchema#boolean".to_string())
+            } else if all_digits {
+                Some("http://www.w3.org/2001/XMLSchema#integer".to_string())
+            } else if is_decimal {
+                Some("http://www.w3.org/2001/XMLSchema#decimal".to_string())
+            } else {
+                None
+            };
+            return Some((tok.to_string(), dt));
+        }
+        // Find the closing quote honoring backslash escapes.
+        let bytes = tok.as_bytes();
+        let mut j = 1usize;
+        let mut lex = String::new();
+        while j < bytes.len() {
+            match bytes[j] {
+                b'\\' if j + 1 < bytes.len() => {
+                    lex.push(bytes[j + 1] as char);
+                    j += 2;
+                }
+                b'"' => break,
+                c => {
+                    lex.push(c as char);
+                    j += 1;
+                }
+            }
+        }
+        let tail = &tok[j + 1..];
+        let dtype = tail.strip_prefix("^^").map(|dt| {
+            let dt = dt.trim();
+            if let Some(inner) = dt.strip_prefix('<') {
+                inner.trim_end_matches('>').to_string()
+            } else if let Some((pfx, local)) = dt.split_once(':') {
+                prefixes
+                    .get(pfx)
+                    .map(|ns| format!("{ns}{local}"))
+                    .unwrap_or_else(|| dt.to_string())
+            } else {
+                dt.to_string()
+            }
+        });
+        Some((lex, dtype))
+    }
     /// SQLRDF-22 G1: an xsd:decimal literal with a lossless decimal
     /// lexical (digits, exactly one '.', no exponent) renders as an
     /// unquoted numeric SQL literal — DuckDB coerces it to DECIMAL. A
@@ -2264,11 +3054,45 @@ impl DatasetReader {
         if stmt.select_list.is_empty() {
             sql.push('*');
         } else {
-            for (idx, node) in stmt.select_list.iter().enumerate() {
+            for (idx, item) in stmt.select_list.iter().enumerate() {
                 if idx > 0 {
                     sql.push_str(", ");
                 }
-                sql.push_str(&self.inline_expr_node(node)?);
+                match item {
+                    SelectItem::Expr(expr) => sql.push_str(&self.inline_expr_node(expr)?),
+                    SelectItem::Star { exclude, replace } => {
+                        sql.push('*');
+                        if !exclude.is_empty() {
+                            sql.push_str(" EXCLUDE (");
+                            for (i, col) in exclude.iter().enumerate() {
+                                if i > 0 {
+                                    sql.push_str(", ");
+                                }
+                                validate_identifier(col)?;
+                                sql.push_str(col);
+                            }
+                            sql.push(')');
+                        }
+                        if !replace.is_empty() {
+                            sql.push_str(" REPLACE (");
+                            for (i, (expr, name)) in replace.iter().enumerate() {
+                                if i > 0 {
+                                    sql.push_str(", ");
+                                }
+                                sql.push_str(&self.inline_expr_node(expr)?);
+                                sql.push_str(" AS ");
+                                validate_identifier(name)?;
+                                sql.push_str(name);
+                            }
+                            sql.push(')');
+                        }
+                    }
+                    SelectItem::Columns(pattern) => {
+                        sql.push_str("COLUMNS('");
+                        sql.push_str(&pattern.replace('\'', "''"));
+                        sql.push_str("')");
+                    }
+                }
             }
         }
         sql.push_str(" FROM ");
@@ -2440,6 +3264,32 @@ impl DatasetReader {
                 sql.push_str(" AS ");
                 sql.push_str(alias);
             }
+            // SQLRDF-25 Row 4 minimal unblock (lane sq1, compile-freeze SLA,
+            // disclosed): composite terms carry a typed carrier on the inline
+            // (string-interpolating) path; the parameterized serializer is
+            // the real Row 4 render site. Courts come later.
+            // PENDING-LANE: typed unsupported carriers; feature completion
+            // stays with the in-flight lane (compile-freeze SLA unblock).
+            SqlExpr::StructLiteral { .. } => {
+                return Err(AstError::UnsupportedTerm(
+                    "SqlExpr::StructLiteral (inline path)".to_string(),
+                ))
+            }
+            SqlExpr::ListLiteral { .. } => {
+                return Err(AstError::UnsupportedTerm(
+                    "SqlExpr::ListLiteral (inline path)".to_string(),
+                ))
+            }
+            SqlExpr::IndexAccess { .. } => {
+                return Err(AstError::UnsupportedTerm(
+                    "SqlExpr::IndexAccess (inline path)".to_string(),
+                ))
+            }
+            SqlExpr::SliceAccess { .. } => {
+                return Err(AstError::UnsupportedTerm(
+                    "SqlExpr::SliceAccess (inline path)".to_string(),
+                ))
+            }
         }
         Ok(())
     }
@@ -2472,18 +3322,17 @@ impl DatasetReader {
             .with_ident(node));
         }
         let sql = match kind {
-            // SQLRDF-22 G4: ALL sql:assignColumn/sql:assignValue literals are
-            // collected and paired positionally in reader order (the order
-            // `DatasetReader::from_turtle` pushed quads — RDF graphs are
-            // unordered sets and the scalar template vocabulary carries no
-            // shared discriminator, so reader-order is the documented pairing;
-            // rec 3.2). One pair renders exactly as before (backward
-            // compatible); zero pairs refuse typed REFUSAL-01 MissingProperty
-            // via `ident`/`render_assign`; mismatched column/value counts
-            // refuse typed the same way.
+            // SQLRDF-22 G4: ALL sql:assignColumn/sql:assignValue literals
+            // are paired positionally, preferring DOCUMENT order (recovered
+            // from the admitted Turtle text — see `assign_pairs`; purrdf's
+            // quads() does not preserve document order for repeated
+            // predicates) and falling back to reader order when the subject's
+            // textual statement cannot be located. One pair renders exactly
+            // as before (backward compatible); zero pairs refuse typed
+            // REFUSAL-01 MissingProperty via `ident`; mismatched column/value
+            // counts refuse typed the same way.
             "InsertStatement" => {
-                let cols = self.all_idents(node, col)?;
-                let vals = self.all_assigns(node, val);
+                let (cols, vals) = self.assign_pairs(node, col, val)?;
                 if cols.is_empty() {
                     // Zero-pair INSERT: typed refusal, never a malformed
                     // `INSERT INTO t () VALUES ()`.
@@ -2503,8 +3352,7 @@ impl DatasetReader {
                 )
             }
             "UpdateStatement" => {
-                let cols = self.all_idents(node, col)?;
-                let vals = self.all_assigns(node, val);
+                let (cols, vals) = self.assign_pairs(node, col, val)?;
                 if cols.is_empty() {
                     self.ident(node, col)?; // MissingProperty on sql:assignColumn
                 }
@@ -2730,11 +3578,11 @@ mod tests {
             },
             joins: vec![],
             select_list: vec![
-                SqlExpr::ColumnRef {
+                SelectItem::Expr(SqlExpr::ColumnRef {
                     column: "batch_id".to_string(),
                     table_alias: None,
-                },
-                SqlExpr::Alias {
+                }),
+                SelectItem::Expr(SqlExpr::Alias {
                     expr: Box::new(SqlExpr::FunctionCall {
                         function: AggregateFunction::Sum,
                         argument: Box::new(SqlExpr::ColumnRef {
@@ -2743,7 +3591,7 @@ mod tests {
                         }),
                     }),
                     alias: "total_cost".to_string(),
-                },
+                }),
             ],
             where_clause: Some(SqlExpr::Binary {
                 op: Operator::GreaterThan,
@@ -3351,6 +4199,25 @@ mod multi_column_assign_courts {
 
     const ONE_PAIR: &str =
         " ;\n    sql:assignColumn \"id\" ;\n    sql:assignValue \"1\"^^xsd:integer";
+
+    /// G4 order-recovery court (anti-vacuity twin of the swap defect): a
+    /// two-pair ALL-`xsd:string` INSERT whose document order differs from
+    /// purrdf's quad emission order must render in DOCUMENT order. This is
+    /// the exact shape the banking DvP fixtures caught (asset-seed values
+    /// emitted reversed by the parser, silently crossing columns) — under
+    /// the old reader-order-only law this assertion fails, so deleting the
+    /// recovery scanner flips this court.
+    #[test]
+    fn two_pair_all_string_insert_renders_document_order() {
+        let doc = insert_doc(
+            " ;\n    sql:assignColumn \"asset\" ;\n    sql:assignValue \"ISIN-XX-0001\" ;\n    sql:assignColumn \"holder\" ;\n    sql:assignValue \"BOOK-A\"",
+        );
+        let compiled = compile_command_of(&doc).expect("all-string two-pair compiles");
+        assert_eq!(
+            compiled.sql,
+            "INSERT INTO t (asset, holder) VALUES ('ISIN-XX-0001', 'BOOK-A')"
+        );
+    }
 
     /// Two-pair INSERT compiles to the two-column form.
     #[test]
@@ -4222,14 +5089,110 @@ mod window_qualify_courts {
         assert_eq!(sums, vec![10, 30, 60], "exact running totals");
     }
 }
+
+
+
+
 #[cfg(test)]
-mod tmp_dbg {
+mod star_modifier_tests {
+    //! SQLRDF-25 Rows 1+2: star modifiers (EXCLUDE/REPLACE) + COLUMNS
+    //! projection — compile-level tests on real graph documents (Chicago:
+    //! real `compile_turtle` documents, asserted on the compiled SQL text;
+    //! frozen-duckdb readback courts live in the test-file lanes).
+    use super::*;
+
+    const PRE: &str = "@prefix sql: <http://graphlaw.org/sql#> .\n@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n@prefix ex: <http://example.org/q#> .\n";
+
     #[test]
-    fn fixture_compiles() {
-        let t = std::fs::read_to_string("/Users/sac/graphlaw/tests/fixtures/banking/dvp_setup.ttl").unwrap();
-        match crate::sql_ast::compile_turtle_document(&t) {
-            Ok(_) => println!("OK"),
-            Err(e) => println!("ERR: {e}"),
-        }
+    fn exclude_compiles_to_star_minus_columns() {
+        let doc = format!(
+            "{PRE}ex:S a sql:SelectStatement ; sql:statementIndex 1 ;\n  sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n  sql:selectList ( ex:star ) .\nex:star a sql:Star ;\n  sql:exclude ( [ sql:columnName \"latency\" ] [ sql:columnName \"cost\" ] ) .\n"
+        );
+        let compiled = compile_turtle(&doc).expect("exclude star compiles");
+        assert_eq!(
+            compiled.sql,
+            "SELECT * EXCLUDE (latency, cost) FROM telemetry_events"
+        );
+        assert!(compiled.verify_seal());
+    }
+
+    #[test]
+    fn replace_compiles_and_keeps_exclude_order() {
+        let doc = format!(
+            "{PRE}ex:S a sql:SelectStatement ; sql:statementIndex 1 ;\n  sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n  sql:selectList ( ex:star ) .\nex:star a sql:Star ;\n  sql:exclude ( [ sql:columnName \"cost\" ] ) ;\n  sql:replace ( [ sql:expression [ sql:literalValue \"500\"^^xsd:integer ] ; sql:aliasName \"cost\" ] ) .\n"
+        );
+        let compiled = compile_turtle(&doc).expect("replace star compiles");
+        assert_eq!(
+            compiled.sql,
+            "SELECT * EXCLUDE (cost) REPLACE ($1 AS cost) FROM telemetry_events"
+        );
+        assert_eq!(compiled.params, vec![SqlLiteral::Integer(500)]);
+    }
+
+    #[test]
+    fn columns_projection_compiles_verbatim_pattern() {
+        let doc = format!(
+            "{PRE}ex:S a sql:SelectStatement ; sql:statementIndex 1 ;\n  sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n  sql:selectList ( ex:cols ) .\nex:cols a sql:Columns ;\n  sql:columnsPattern \"^(batch|region)\"^^xsd:string .\n"
+        );
+        let compiled = compile_turtle(&doc).expect("columns compiles");
+        assert_eq!(
+            compiled.sql,
+            "SELECT COLUMNS('^(batch|region)') FROM telemetry_events"
+        );
+        assert!(compiled.verify_seal());
+    }
+
+    #[test]
+    fn columns_lambda_refuses_typed() {
+        let doc = format!(
+            "{PRE}ex:S a sql:SelectStatement ; sql:statementIndex 1 ;\n  sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n  sql:selectList ( ex:cols ) .\nex:cols a sql:Columns ;\n  sql:columnsLambda [ sql:columnName \"c\" ] .\n"
+        );
+        let err = compile_turtle(&doc).expect_err("lambda refuses");
+        assert_eq!(err.ctx.shape_id, refusal_arm::COLUMNS_LAMBDA);
+    }
+
+    #[test]
+    fn empty_projection_still_refuses_even_under_star_family() {
+        // D1 intact: an rdf:nil projection list refuses EMPTY_PROJECTION even
+        // though star items now exist. A `SELECT * EXCLUDE (...)` is a
+        // non-empty projection by construction (one Star item), so the D1
+        // refusal fires exactly where it did before Rows 1+2 and never
+        // collapses a star into an implicit zero-column projection.
+        let doc = format!(
+            "{PRE}ex:S a sql:SelectStatement ; sql:statementIndex 1 ;\n  sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n  sql:selectList () .\n"
+        );
+        let err = compile_turtle(&doc).expect_err("empty projection refuses");
+        assert_eq!(err.ctx.shape_id, refusal_arm::EMPTY_PROJECTION);
+    }
+
+    #[test]
+    fn star_vocabulary_outside_projection_refuses_typed() {
+        // A sql:Star node routed into the WHERE expression path is REFUSAL-01
+        // STAR_MODIFIER_POSITION — never a silent MalformedNode.
+        let doc = format!(
+            "{PRE}ex:S a sql:SelectStatement ; sql:statementIndex 1 ;\n  sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n  sql:selectList ( [ sql:columnName \"cost\" ] ) ;\n  sql:where ex:bogus .\nex:bogus a sql:Star ;\n  sql:exclude ( [ sql:columnName \"cost\" ] ) .\n"
+        );
+        let err = compile_turtle(&doc).expect_err("star-in-where refuses");
+        assert_eq!(err.ctx.shape_id, refusal_arm::STAR_MODIFIER_POSITION);
+    }
+
+    #[test]
+    fn columns_item_outside_projection_refuses_typed() {
+        let doc = format!(
+            "{PRE}ex:S a sql:SelectStatement ; sql:statementIndex 1 ;\n  sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n  sql:selectList ( [ sql:columnName \"cost\" ] ) ;\n  sql:where ex:cols .\nex:cols a sql:Columns ;\n  sql:columnsPattern \"^c\"^^xsd:string .\n"
+        );
+        let err = compile_turtle(&doc).expect_err("columns-in-where refuses");
+        assert_eq!(err.ctx.shape_id, refusal_arm::STAR_MODIFIER_POSITION);
+    }
+
+    #[test]
+    fn exclude_identifiers_are_strictly_validated() {
+        // Injection fence: an exclude "identifier" with SQL-breakage chars
+        // refuses at serialize time (InvalidIdentifier), never interpolates.
+        let doc = format!(
+            "{PRE}ex:S a sql:SelectStatement ; sql:statementIndex 1 ;\n  sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n  sql:selectList ( ex:star ) .\nex:star a sql:Star ;\n  sql:exclude ( [ sql:columnName \"latency; DROP TABLE t; --\" ] ) .\n"
+        );
+        let err = compile_turtle(&doc).expect_err("injection exclude refuses");
+        assert_eq!(err.code, RefusalCode::InvalidIdentifier);
     }
 }

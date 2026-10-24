@@ -137,7 +137,7 @@ wasmtime validation — that failure is the law firing, not a tooling bug.
 WASI_SDK_PATH="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1" \
   CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling" \
   cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
-# -> target/wasm32-wasip1/wasm/graphlaw_wasm.wasm (~45 MB class, new-EH)
+# -> target/wasm32-wasip1/wasm/graphlaw_wasm.wasm (~58 MB class, new-EH)
 ```
 
 The `+exception-handling` RUSTFLAGS target feature is required so the

@@ -46,8 +46,28 @@ exit code.
 
 Artifact identity: `--wasm <path>`, else `GRAPHLAW_WASM`, else the working-tree
 build; `--expect-blake3` verifies loaded bytes before serving (mismatch is exit
-84, never a silent serve). The DuckDB-linked artifact class is roughly 45 MB and
-its registry re-pin is pending a witnessed digest — no digest is asserted here.
+84, never a silent serve). The DuckDB-linked artifact class is roughly 58 MB;
+its current registry pin is `fa155830…` (57,781,384 B, re-pinned 2026-10-23).
+
+## New surfaces (v26.10.22)
+
+The DuckDB-linked artifact served by `graphlaw-run-eh` carries the
+session, sequence, and document surfaces that the legacy wasmi class
+does not:
+
+- **Persistent DuckDB sessions** — `{"op":"duckdb","mode":"open/exec/
+  stream/close","session":"<name>"}` keeps one real connection across
+  wire calls. [docs/how-to/persistent-duckdb-sessions.md](persistent-duckdb-sessions.md).
+- **Document sequences** — `{"op":"duckdb","mode":"exec","document":
+  true}` runs a `sql:StatementSequence` member-by-member with a typed
+  receipt per member; `"atomic": true` (or the Turtle root
+  `sql:atomic true`) selects BEGIN/COMMIT/ROLLBACK execution over the
+  default best-effort pipeline. Unbounded UPDATE/DELETE refuses
+  `REFUSAL-05` (`UnboundedMutationRefusal`) at compile, before any
+  engine call.
+  [docs/how-to/document-sequences.md](document-sequences.md).
+
+End-to-end tutorial: [docs/how-to/first-in-wasm-sql-lifecycle.md](first-in-wasm-sql-lifecycle.md).
 
 ## Host call contract
 

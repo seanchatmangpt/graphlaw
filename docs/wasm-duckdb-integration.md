@@ -46,7 +46,7 @@ lands on disk; no receipt, no flip.
 | Item | Scope | Landed artifact base | Status |
 |---|---|---|---|
 | GWS-1 | Integration map / lane partition | specs above | PENDING-GWS-1 |
-| GWS-2 | Build outcomes (single `graphlaw-wasm` module, frozen-duckdb as normal dependency; wasm32-wasip1 link is GREEN with `WASI_SDK_PATH` set — exits 0 as of 2026-10-22, full DuckDB linked; fails typed at frozen-duckdb-sys `build.rs` without it; re-pin pending the reproducible-SDK rebuild) | `wasm/Cargo.toml`, smalt `lib/smalt/wasm/` | PENDING-GWS-2 |
+| GWS-2 | Build outcomes (single `graphlaw-wasm` module, frozen-duckdb as normal dependency; wasm32-wasip1 link is GREEN with `WASI_SDK_PATH` set — exits 0 as of 2026-10-22, full DuckDB linked; fails typed at frozen-duckdb-sys `build.rs` without it; new-EH artifact re-pinned 2026-10-23, `fa155830…` 57,781,384 B) | `wasm/Cargo.toml`, smalt `lib/smalt/wasm/` | PENDING-GWS-2 |
 | GWS-3 | ABI `duckdb-op` design | `docs/wasm-integration.md` gl_* ABI | PENDING-GWS-3 |
 | GWS-4 | Data-injection design (Parquet/views into guest linear memory) | COLDCHAIN-CASE-STUDY.md §2 | PENDING-GWS-4 |
 | GWS-5 | SHACL in-wasm court | `shapes/ast_governance.ttl` (case study §4) | PASS — `tests/wasm_governance_preflight.rs` 3/3 (re-run 2026-10-21, this flip) |
@@ -82,9 +82,9 @@ or amended by the GWS-1 receipt before it is treated as authoritative.
    `gl_alloc`/`gl_call`/`gl_free`; lane byte count in `docs/WASM.md`). Without
    `WASI_SDK_PATH`, the build fails typed at frozen-duckdb-sys `build.rs`
    (`WASI_SDK_PATH required`) — no `-lduckdb` linker scatter. The
-   reproducible-SDK rebuild receipt is still GWS-2's deliverable; until it
-   lands the on-disk `priv/graphlaw.wasm` pin (`332ea218…`) remains the last
-   linked artifact and re-pin is pending (never claim re-pin done without the
+   reproducible-SDK rebuild receipt is still GWS-2's deliverable; the on-disk
+   `priv/graphlaw.wasm` pin (`fa155830…`, 57,781,384 B) is the new-EH
+   DuckDB-linked mint re-pinned 2026-10-23 (never claim re-pin done without the
    real artifact).
 3. Extend the gl_* JSON ABI with a `duckdb-op` request kind (GWS-3's
    deliverable): request names the registered query artifact and its

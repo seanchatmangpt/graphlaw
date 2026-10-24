@@ -7,6 +7,18 @@
 all-features = true
 
 [advisories]
+ignore = [
+    # RUSTSEC-2026-0258 h2 0.3.27 (unbounded empty DATA frames, DoS):
+    # transitive via frozen-duckdb -> reqwest ^0.11; h2 0.4 is
+    # semver-incompatible with that pin. NOT on the in-WASM runtime
+    # execution or receipt-signing path (host tooling only).
+    # Expiry: 2026-11-23 (30-day window for upstream reconciliation).
+    "RUSTSEC-2026-0258",
+    # unmaintained warnings (transitive, host tooling only); expiry 2026-11-23
+    "RUSTSEC-2025-0134",
+    "RUSTSEC-2024-0449",
+]
+
 version = 2
 yanked = "deny"
 

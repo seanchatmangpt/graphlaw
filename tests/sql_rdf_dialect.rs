@@ -1316,7 +1316,7 @@ ex:Q a sql:SelectStatement ;
 #[test]
 fn l163_msg_no_canonical_graph_is_verbatim() {
     use graphlaw::duckdb_eval::GraphLawDuckDB;
-    use graphlaw::sql_ast::{SelectStatement, SqlExpr, TableRef};
+    use graphlaw::sql_ast::{SelectItem, SelectStatement, SqlExpr, TableRef};
 
     let stmt = SelectStatement {
         // Minimal shared-compile unblock (compile-freeze SLA, window lane,
@@ -1330,10 +1330,13 @@ fn l163_msg_no_canonical_graph_is_verbatim() {
             schema: None,
         },
         joins: Vec::new(),
-        select_list: vec![SqlExpr::ColumnRef {
+        // Minimal shared-compile unblock (compile-freeze SLA, lane-green,
+        // disclosed): select_list is now Vec<SelectItem>; wrapping matches
+        // the struct's type, semantics unchanged.
+        select_list: vec![SelectItem::Expr(SqlExpr::ColumnRef {
             column: "a".into(),
             table_alias: None,
-        }],
+        })],
         where_clause: None,
         group_by: Vec::new(),
         having: None,

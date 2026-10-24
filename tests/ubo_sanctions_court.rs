@@ -337,7 +337,9 @@ fn seed_session(h: &mut Host, session: &str) {
 /// A full-table readback: rows_emitted + the streamed ntriples body.
 fn read_table(h: &mut Host, session: &str, table: &str, columns: &[&str]) -> (usize, String) {
     let sel = exec_ast(h, session, &select_doc(table, columns));
-    let n = sel["rows_emitted"].as_u64().unwrap_or(0) as usize;
+    let n = sel["rows_emitted"]
+        .as_u64()
+        .unwrap_or_else(|| panic!("rows_emitted missing from select envelope: {sel}")) as usize;
     let cur = sel["cursor"].as_str().expect("select cursor").to_string();
     (n, h.stream_all(session, &cur))
 }
@@ -359,10 +361,17 @@ fn parse_edges(body: &str) -> Vec<(String, String, f64)> {
         }
         let subj = parts[0];
         let pred = parts[1].trim_matches(|c| c == '<' || c == '>');
-        let col = pred.rsplit(['/', '#']).next().unwrap_or(pred);
+        let col = pred
+            .rsplit(['/', '#'])
+            .next()
+            .unwrap_or_else(|| panic!("empty predicate segment in line: {line}"));
         let obj = parts[2].trim_end_matches(" .").trim();
         let value = if let Some(rest) = obj.strip_prefix('"') {
-            rest.split("\"^^").next().unwrap_or(rest).trim_end_matches('"').to_string()
+            rest.split("\"^^")
+                .next()
+                .unwrap_or_else(|| panic!("empty literal lexeme in object: {obj}"))
+                .trim_end_matches('"')
+                .to_string()
         } else {
             obj.to_string()
         };

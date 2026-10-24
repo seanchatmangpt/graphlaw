@@ -818,6 +818,41 @@ fn xsd_cell(lexical_form: String, datatype: &str) -> TermValue {
     }
 }
 
+/// Stringify a DuckDB STRUCT cell to DuckDB struct text, `{'k': v, ...}`,
+/// one entry per field in declaration order. A `NULL` field value renders
+/// as `NULL` (DuckDB's own spelling); a field column the display bridge
+/// cannot format makes the whole cell a null projection (the same
+/// refusal/None semantics as the shared nested-value fallback). Text
+/// values are single-quoted with embedded quotes doubled, matching
+/// DuckDB's struct rendering.
+fn struct_cell_to_string(sa: &frozen_duckdb::arrow::array::StructArray, idx: usize) -> Option<String> {
+    use frozen_duckdb::arrow::util::display::{ArrayFormatter, FormatOptions};
+
+    let mut out = String::from("{");
+    for (i, field) in sa.fields().iter().enumerate() {
+        if i > 0 {
+            out.push_str(", ");
+        }
+        let formatter = ArrayFormatter::try_new(sa.column(i), &FormatOptions::default()).ok()?;
+        let is_null = sa.column(i).is_null(idx);
+        let cell = formatter.value(idx).to_string();
+        let is_text = matches!(
+            sa.column(i).data_type(),
+            frozen_duckdb::arrow::datatypes::DataType::Utf8 | frozen_duckdb::arrow::datatypes::DataType::LargeUtf8
+        );
+        let rendered = if is_null {
+            "NULL".to_string()
+        } else if is_text {
+            format!("'{}'", cell.replace('\'', "''"))
+        } else {
+            cell
+        };
+        out.push_str(&format!("'{}': {}", field.name(), rendered));
+    }
+    out.push('}');
+    Some(out)
+}
+
 /// `YYYY-MM-DD` from DuckDB `Date32`: days since the Unix epoch
 /// (1970-01-01). The day count is the engine's own value; this is the
 /// civil rendering of that count (Howard Hinnant), the same epoch
@@ -1427,13 +1462,19 @@ impl GraphLawDuckDB {
                         format!("({months},{days},{nanos})"),
                         "http://www.w3.org/2001/XMLSchema#string",
                     )),
+                    // STRUCT cells stringify field-by-field to DuckDB struct
+                    // text (`{'k': v, ...}`); see `struct_cell_to_string`.
+                    Ok(frozen_duckdb::duckdb::types::ValueRef::Struct(sa, idx)) => {
+                        struct_cell_to_string(sa, idx).map(|val| {
+                            xsd_cell(val, "http://www.w3.org/2001/XMLSchema#string")
+                        })
+                    }
                     // Nested values have no XSD datatype in this projection.
                     // Naming each variant keeps a new `ValueRef` arm a compile
                     // failure instead of a silent string.
                     Ok(
                         frozen_duckdb::duckdb::types::ValueRef::List(..)
                         | frozen_duckdb::duckdb::types::ValueRef::Enum(..)
-                        | frozen_duckdb::duckdb::types::ValueRef::Struct(..)
                         | frozen_duckdb::duckdb::types::ValueRef::Array(..)
                         | frozen_duckdb::duckdb::types::ValueRef::Map(..)
                         | frozen_duckdb::duckdb::types::ValueRef::Union(..)

@@ -1,0 +1,38 @@
+{
+  "receipt": "spc",
+  "date": "2026-10-23",
+  "bench": "tc_hot_01",
+  "leg": "clone_path",
+  "mode": "SMOKE",
+  "inject_outlier": false,
+  "usl_ns": 250.0,
+  "cpk_min": 1.33,
+  "mean_ns": 210.397,
+  "stddev_ns": 16282.667,
+  "cpk": 0.0008,
+  "p50_ns": 166,
+  "p95_ns": 167,
+  "p99_ns": 209,
+  "p999_ns": 291,
+  "max_ns": 7483391,
+  "iterations": 1000000,
+  "samples": 999999,
+  "shewhart": {
+    "rule1_beyond_3sigma": {
+      "flagged": true,
+      "count": 33,
+      "lcl_ns": -48637.604,
+      "ucl_ns": 49058.398
+    },
+    "rule2_monotonic_run_8": {
+      "flagged": false,
+      "longest_run": 6,
+      "direction": "down"
+    },
+    "assignable_cause_detected": true
+  },
+  "verdict": "FAIL",
+  "reasons": [
+    "cpk 0.0008 < 1.33"
+  ]
+}

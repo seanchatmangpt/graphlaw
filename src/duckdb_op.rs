@@ -1,8 +1,8 @@
 //! ABI op `duckdb`: cursor-streamed analytical eval over frozen-duckdb.
-//! Host-only dispatch: the module is cfg-gated out of the wasm build
-//! (`src/lib.rs`), so in-wasm callers receive the typed Unsupported
-//! "unknown op" refusal at the EH wall; in-wasm execution awaits the
-//! emsdk rebuild (docs/jira/v26.10.22/designs/residual-unknowns.md row 1).
+//! Op `duckdb` (op-15) dispatches inside the module on every target; the
+//! gates that compiled that dispatch arm out of wasm32 are removed. It is
+//! unadvertised from `capabilities.ops` (and stays off the hashed 14-op
+//! table) by digest-stability choice — not because the op is host-only.
 //!
 //! Wire (JSON over the standard ABI):
 //! - `exec`: `{"op":"duckdb","mode":"exec","views":[{name,glob,hive}],

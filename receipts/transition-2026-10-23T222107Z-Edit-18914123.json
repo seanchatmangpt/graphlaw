@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "18914123ffc49121c6a4e1da937840812d1563a7f8d957e57dbdc94e3ba59223",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-23T222107Z-Edit-18914123.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/receipts/2026-10-23-banking-4of4-witness.md",
+  "timestamp_utc": "2026-10-23T222107Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

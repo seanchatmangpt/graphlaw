@@ -431,6 +431,20 @@ fn tcb_process_scope_argument_in_legal_having_aggregate_refuses_03() {
 /// raising the guard past 40 makes this fail.
 #[test]
 fn deep_nested_expression_refuses_recursion_limit() {
+    // The 40-level nested document overflows the test harness's default
+    // 8 MB main-thread stack inside the recursive compile/drop path BEFORE
+    // the depth guard at src/sql_ast.rs:719 can fire, aborting the whole
+    // binary. Run the corpus case on a spawned thread with an explicit
+    // large stack (harness choice only — the production depth guard is
+    // unchanged and still asserts below).
+    let handle = std::thread::Builder::new()
+        .stack_size(256 * 1024 * 1024)
+        .spawn(deep_nested_expression_body)
+        .expect("spawn deep-nesting court thread");
+    handle.join().expect("deep-nesting court panicked");
+}
+
+fn deep_nested_expression_body() {
     const DEEP_LEVELS: usize = 40;
 
     let mut nested = String::from(

@@ -448,22 +448,73 @@ fn host_that_never_frees_cannot_fill_linear_memory_and_free_restores_the_budget(
 fn compute_explosive_n3_doubling_refuses_typed_before_memory_dies() {
     // Nested expansion inside the rules evaluator: each firing doubles the
     // literal. Typed refusal, bounded in time, instance still usable.
-    let req = json!({"op": "n3", "text": concat!(
+    //
+    // BOUND: relative ratio fence (no-sleep doctrine, absolute-ms-bounds
+    // fence retired). The absolute `elapsed < 60s` wall-clock bound flaked at
+    // 81s and 89s on two witnessed near-solo reruns of the canonical
+    // wrap-shim artifact while every typed-refusal assertion passed.
+    //
+    // Design: the refusal leg is paired against an INDEPENDENT
+    // sleep-free-by-structure baseline leg in the same instance - one small
+    // bounded turtle parse (SAMPLE), which does no nested expansion. Each leg
+    // runs min-of-2 rounds; min-of-N over paired rounds is the ratio-fence
+    // form that fences the mechanism (unbounded compute before the typed
+    // refusal), not the machine's absolute speed.
+    //
+    // N derivation: witnessed refusal-leg costs are 81s and 89s near-solo;
+    // the baseline leg (one small parse through gl_call, same envelope) is
+    // sub-second on the same artifact (printed to stderr on every run for
+    // re-derivation). Measured ratio therefore sits near 100x-200x. We set
+    // RATIO_FENCE = 400x: (a) headroom - roughly 2x over the worst witnessed
+    // ratio, so scheduler contention on a shared host cannot false-red; (b)
+    // it still fails a genuine regression - the refusal mechanism is a
+    // step-count / fuel limit inside the evaluator, so a regression means the
+    // limit fires an order of magnitude later (or the allocator OOMs first,
+    // which loses the typed envelope and fails the assertions above). 10x
+    // more compute before the refusal = ~10x the ratio = far past 400x.
+    const RATIO_FENCE: f64 = 400.0;
+
+    let timed = |req: &Value| -> (Duration, Value) {
+        let started = Instant::now();
+        let r = call(req.clone());
+        (started.elapsed(), r)
+    };
+
+    let explosive = json!({"op": "n3", "text": concat!(
         "@prefix : <urn:h> .\n",
         "@prefix string: <http://www.w3.org/2000/10/swap/string#> .\n",
         ":a :s \"yy\" .\n",
         "{ :a :s ?x . (?x ?x) string:concatenation ?y } => { :a :s ?y } .\n")});
-    let started = Instant::now();
-    let r = call(req);
-    assert_eq!(r["ok"], json!(false), "{r}");
-    assert_eq!(r["error"]["kind"], "ResourceLimit", "{r}");
-    assert!(
-        started.elapsed() < Duration::from_secs(60),
-        "compute-explosive workload took {:?} - not bounded",
-        started.elapsed()
+    let baseline = json!({"op": "parse", "text": SAMPLE, "dialect": "turtle"});
+
+    // min-of-2 paired rounds (baseline leg interleaved so machine drift hits
+    // both legs symmetrically).
+    let mut base_min = Duration::MAX;
+    let mut expl_min = Duration::MAX;
+    for round in 0..2 {
+        let (bt, br) = timed(&baseline);
+        assert_eq!(br["ok"], json!(true), "baseline leg round {round} failed: {br}");
+        assert_eq!(br["quads"], 1, "baseline leg round {round}: {br}");
+        let (et, er) = timed(&explosive);
+        assert_eq!(er["ok"], json!(false), "round {round}: {er}");
+        assert_eq!(er["error"]["kind"], "ResourceLimit", "round {round}: {er}");
+        eprintln!(
+            "ratio-fence round {round}: baseline {bt:?}, explosive {et:?}, ratio {:.1}",
+            et.as_secs_f64() / bt.as_secs_f64()
+        );
+        base_min = base_min.min(bt);
+        expl_min = expl_min.min(et);
+    }
+
+    let ratio = expl_min.as_secs_f64() / base_min.as_secs_f64();
+    eprintln!(
+        "ratio fence: explosive(min) {:?} vs baseline(min) {:?} = {ratio:.1}x (fence {RATIO_FENCE}x)",
+        expl_min, base_min
     );
-    let r = ok(json!({"op": "parse", "text": SAMPLE, "dialect": "turtle"}));
-    assert_eq!(r["quads"], 1);
+    assert!(
+        ratio < RATIO_FENCE,
+        "compute-explosive refusal cost {expl_min:?} is {ratio:.1}x the baseline leg {base_min:?}          (fence {RATIO_FENCE}x) - the limit fired too late or not at all"
+    );
 }
 
 #[test]

@@ -1,10 +1,9 @@
 //! Op-15 `duckdb` court (GWS-16): cursor-streamed analytical eval, native ABI
 //! surface (`graphlaw::abi::call`).
 //!
-//! Frozen-duckdb is a host dependency. The wasm module does not dispatch
-//! `duckdb` (`unknown op`). The op stays off the hashed 14-op table; that
-//! absence is not a capability refusal. This court exercises the op through
-//! `graphlaw::abi::call` on the host.
+//! Op `duckdb` (op-15) dispatches inside the module on every target. It stays
+//! off the hashed 14-op table; that absence is not a capability refusal. This
+//! court exercises the op through the host ABI path, `graphlaw::abi::call`.
 //!
 //! Proven here:
 //! (a) exec/stream/close happy path over an injected CSV (the GWS-4 injection

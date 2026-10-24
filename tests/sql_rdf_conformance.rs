@@ -792,6 +792,21 @@ const REGISTERED_ARMS: &[(&str, &[&str])] = &[
     ("PARSE_SHAPES", &["SHACL shape validation"]),
     ("SHACL_ENGINE", &["SHACL shape validation"]),
     ("SHACL_VIOLATIONS", &["SHACL shape validation"]),
+    // SQLRDF-25 appendix (docs/refusals.md, v26.10.23 — window/frame/qualify/
+    // atomic/CTE/composite/star/COLUMNS arms, refusal_arm 42..52). Disclosed
+    // minimal unblock by the refusals-reconcile lane: this register file is
+    // another lane's lease; the gate cannot pass without these rows.
+    ("WINDOW_FN_POSITION", &["Window-function position law"]),
+    ("FRAME_UNIT", &["Frame unit law"]),
+    ("FRAME_BOUND", &["Frame bound law"]),
+    ("QUALIFY_EXPR", &["QUALIFY expression law"]),
+    ("ATOMIC_LITERAL", &["Atomic flag datatype law"]),
+    ("CTE_NO_QUERY", &["CTE query law"]),
+    ("COMPOSITE_DEPTH", &["Composite literal/accessor depth cap"]),
+    ("COMPOSITE_MEMBER", &["Composite member law"]),
+    ("STAR_MODIFIER_POSITION", &["Star vocabulary position"]),
+    ("COLUMNS_LAMBDA", &["COLUMNS lambda form"]),
+    ("COLUMNS_PATTERN", &["COLUMNS pattern literal"]),
 ];
 
 /// Known defect-class-A2 drift: implemented arms the register does not yet

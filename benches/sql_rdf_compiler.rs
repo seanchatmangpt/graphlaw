@@ -133,7 +133,8 @@ fn serialize_only(b: Bencher) {
                     column: "balance".into(),
                     table_alias: None,
                 }),
-            }],
+            }
+            .into()],
             where_clause: None,
             group_by: Vec::new(),
             having: None,

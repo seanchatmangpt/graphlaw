@@ -654,3 +654,138 @@ pub fn verify_lease(signed: &SignedLease, trusted: &TrustedKeys) -> Result<(), A
         trusted,
     )
 }
+
+// ---------------------------------------------------------------------------
+// Versioned dual-witness receipt envelope (ADR-CANONARROW Phase 3)
+// ---------------------------------------------------------------------------
+/// Receipt-fold constructors for the versioned dual-witness envelope.
+///
+/// `receipt_v1 = BLAKE3(H_query ∥ H_pre ∥ H_post ∥ H_triples ∥ epoch)`
+/// (ADR-CANONARROW §3.1, legacy shape, unchanged). `receipt_v2` prepends the
+/// 15-byte domain-separation constant `b"GLAW_RECEIPT_V2"` and inserts
+/// `H_columnar` before `epoch`, so the two folds cannot collide under any
+/// permutation of their inputs. `epoch` folds as 8 bytes, little-endian.
+pub mod receipt_fold {
+    /// Domain-separation prefix for `receipt_v2` — exactly 15 bytes
+    /// (ADR-CANONARROW §3.1).
+    pub const GLAW_RECEIPT_V2: &[u8; 15] = b"GLAW_RECEIPT_V2";
+
+    /// Domain null digest for non-tabular results:
+    /// `CANON_ARROW_EMPTY_V1 = BLAKE3(b"CANON_ARROW_EMPTY_V1")` (ADR §3.1).
+    /// Delegates to the canonical arm in `crate::egress::arrow`
+    /// (`src/egress/arrow.rs::canon_arrow_empty_v1`, ADR Phase 1).
+    pub fn canon_arrow_empty_v1() -> [u8; 32] {
+        *crate::egress::arrow::canon_arrow_empty_v1()
+    }
+
+    /// The legacy v1 receipt fold (ADR §3.1): five fields, no prefix, no
+    /// columnar witness. Frozen wire shape — any change here breaks every
+    /// pinned v1 chain hash.
+    pub fn receipt_v1(
+        h_query: &[u8; 32],
+        h_pre: &[u8; 32],
+        h_post: &[u8; 32],
+        h_triples: &[u8; 32],
+        epoch: u64,
+    ) -> [u8; 32] {
+        let mut h = blake3::Hasher::new();
+        h.update(h_query);
+        h.update(h_pre);
+        h.update(h_post);
+        h.update(h_triples);
+        h.update(&epoch.to_le_bytes());
+        *h.finalize().as_bytes()
+    }
+
+    /// The v2 dual-witness receipt fold (ADR §3.1):
+    /// `BLAKE3("GLAW_RECEIPT_V2" ∥ H_query ∥ H_pre ∥ H_post ∥ H_triples ∥
+    ///  H_columnar ∥ epoch)`. `receipt_v1` verifiers are untouched: this is
+    /// a new constructor, not a modification of [`receipt_v1`].
+    pub fn receipt_v2(
+        h_query: &[u8; 32],
+        h_pre: &[u8; 32],
+        h_post: &[u8; 32],
+        h_triples: &[u8; 32],
+        h_columnar: &[u8; 32],
+        epoch: u64,
+    ) -> [u8; 32] {
+        let mut h = blake3::Hasher::new();
+        h.update(GLAW_RECEIPT_V2);
+        h.update(h_query);
+        h.update(h_pre);
+        h.update(h_post);
+        h.update(h_triples);
+        h.update(h_columnar);
+        h.update(&epoch.to_le_bytes());
+        *h.finalize().as_bytes()
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use crate::attest::hex_encode;
+
+        /// Deterministic 32-byte test input from a counter.
+        fn test_digest(seed: u8) -> [u8; 32] {
+            *blake3::hash(&[seed]).as_bytes()
+        }
+
+        /// Preservation proof: the v1 fold output is pinned to a golden
+        /// digest computed and embedded at introduction time. Any change to
+        /// the fold order, the epoch encoding, or the input layout flips
+        /// this test.
+        #[test]
+        fn v1_fold_is_pinned() {
+            let h_query = test_digest(1);
+            let h_pre = test_digest(2);
+            let h_post = test_digest(3);
+            let h_triples = test_digest(4);
+            let d = receipt_v1(&h_query, &h_pre, &h_post, &h_triples, 7);
+            // Golden minted at introduction with b3sum over the exact fold
+            // input BLAKE3(0x01) ∥ BLAKE3(0x02) ∥ BLAKE3(0x03) ∥ BLAKE3(0x04)
+            // ∥ epoch=7u64_le.
+            assert_eq!(
+                hex_encode(&d),
+                "63bff90dee1c16beb2881e11664a1e8c0b6942abe39ba5726d9ce1f9708a8ffe"
+            );
+        }
+
+        /// v2 ≠ v1 for identical inputs, and the v2 prefix is exactly 15
+        /// bytes and domain-separated.
+        #[test]
+        fn v2_differs_from_v1_and_prefix_is_15_bytes() {
+            assert_eq!(GLAW_RECEIPT_V2.len(), 15);
+            assert_eq!(b"GLAW_RECEIPT_V2", GLAW_RECEIPT_V2);
+            let (a, b, c, d) = (test_digest(1), test_digest(2), test_digest(3), test_digest(4));
+            let v1 = receipt_v1(&a, &b, &c, &d, 7);
+            let v2 = receipt_v2(&a, &b, &c, &d, &test_digest(5), 7);
+            assert_ne!(v1, v2);
+        }
+
+        /// The empty-columnar arm: v2 over `CANON_ARROW_EMPTY_V1` equals a
+        /// v2 computed with that exact digest, and equals itself
+        /// (determinism), per ADR §3.1.
+        #[test]
+        fn v2_empty_columnar_arm_is_deterministic() {
+            let (a, b, c, d) = (test_digest(1), test_digest(2), test_digest(3), test_digest(4));
+            let empty = canon_arrow_empty_v1();
+            // CANON_ARROW_EMPTY_V1 itself is pinned (minted with b3sum over
+            // the literal bytes b"CANON_ARROW_EMPTY_V1").
+            assert_eq!(
+                hex_encode(&empty),
+                "db2da6fc6ec068a661a7028f220524ea6fad4b3cbf7f72df336dd99fd44f7b0c"
+            );
+            let sealed = receipt_v2(&a, &b, &c, &d, &empty, 0);
+            let again = receipt_v2(&a, &b, &c, &d, &empty, 0);
+            assert_eq!(sealed, again);
+            // Full v2 golden over the same pinned inputs, epoch = 0.
+            assert_eq!(
+                hex_encode(&sealed),
+                "f67aa8f58af1bb1c0927db5906e1133e95b4f816f5b2dc4d1c2997d5e65d5060"
+            );
+            // and a different epoch flips it (the fold is injective enough
+            // on its inputs that a single flipped byte shows separation)
+            assert_ne!(sealed, receipt_v2(&a, &b, &c, &d, &empty, 1));
+        }
+    }
+}

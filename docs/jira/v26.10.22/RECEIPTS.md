@@ -1365,3 +1365,126 @@ re-pin held.
   static read). Exonerations now: EH flavor, LTO, table encoding,
   gc-sections, compat archive, atexit stride misread (musl layout correct).
   Re-pin held.
+- W59 RECEIPT — wave-close receipt for integration commit 0d11bc3 filed at
+  `receipts/2026-10-23-wave-close.md` (b3sum-embedded companion
+  `receipts/2026-10-23-eh-closure-wave.md` =
+  `933a6e46c070f98d663c45101437560d43283bf021cd0396c4593199b8d0e504`;
+  git log -3 embedded; landed surfaces §2; still-open rows with owners §3:
+  tc08 egress EINVAL → EH-19, run_eh stdin 3/7 → EH-08, FIBO 3/4 → EH-19,
+  gws4 1/2 → EH-11). Append-only pointer; statuses unchanged.
+
+## 2026-10-23 banking battery witness — DvP 4/4 GREEN
+
+Witness receipt: `receipts/2026-10-23-banking-4of4-witness.md` =
+`f3570f15d3d98ad52af83187404d8cdf99b1ad7f36ddcdac4cb9f55d3f77920d`.
+Court: `cargo test --test dvp_settlement_court` on target-lane-wit —
+`test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s`.
+Confirms prior DvP 4/4 claim (target-lane-dvp2); pairing law = assign_pairs by
+index via document_order_assigns, quote-aware scan. BCBS/Rehypo/UBO 3/3 each
+stand as prior banking-inventory witness (target-pub), not re-run.
+
+## 2026-10-23 ledger-sync wave (W60-W64, lane: ledger)
+
+- **W60 GREEN** — receipt_v2 court 6/6 with corrected goldens: this lane ran
+  `CARGO_TARGET_DIR=target-lane-ledger cargo test --test receipt_v2_court` →
+  `test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s`.
+  Covers `V2_GOLDEN` byte-exact golden vector, 15-byte `GLAW_RECEIPT_V2`
+  domain-separation literal, v1-preservation, and `CANON_ARROW_EMPTY_V1` null
+  digests (`tests/receipt_v2_court.rs:52,:111-124`). Companion full
+  `cargo test --test trust_attest` re-run: 12 passed; 0 failed.
+- **W61 GREEN (count corrected)** — pack dry-run gates, real output embedded:
+  `cargo package --allow-dirty --no-verify` → `Packaged 360 files, 143.9MiB
+  (7.4MiB compressed)` — **360, not the previously quoted 363**; warning
+  emitted: ``ignoring benchmark `workload_amortization` as
+  `benches/workload_amortization.rs` is not included in the published package``.
+  npm: typed N/A — no `package.json` at repo root (checked on disk); W51's
+  npm 198/198 stands as-of its own receipt, not re-run.
+- **W62 RED (new defect, owner needed)** — amortization court fails:
+  `cargo test --test amortization_court` → `0 passed; 1 failed` (64.71s),
+  panic at `tests/amortization_court.rs:155`: `per-query bump must leave zero
+  live entries — left: 1, right: 0`. Bench + court files are landed
+  (`benches/workload_amortization.rs`, `tests/amortization_court.rs`); bench
+  measurement still pending. Court is NOT vacuous — it flipped on real state.
+- **W63 GREEN** — whitepaper claims audit (`docs/whitepaper-v26.10.22.md`),
+  rows checked against witnessed state: (1) §5 receipt_v2 row ("Defined and
+  unit-tested") — now court-witnessed 6/6, row understates (upgrade allowed,
+  not required); (2) §6 line 86 "npm packaging (198/198)" — as-of W51 only,
+  today's root npm gate is N/A (no package.json); (3) "Packaged 363 files"
+  class claims — corrected to 360 per W61; (4) §5 Steady-State P1 123 µs →
+  amortization measurement pending (W62 RED blocks the curve receipt);
+  (5) §7 CHAIN VERIFIED 2026-10-23 — consistent with W52/W57 (840 receipts,
+  head `c2d79ff2…`). No unreceipted overclaim found beyond (3).
+- **W64 GREEN** — SQLRDF-27 ticket + INDEX row exist on disk
+  (`docs/jira/v26.10.22/SQLRDF-27.md`, `INDEX.md:567`, status
+  "Open (fix probe-validated at C level; verdict pending relink)"); ledger
+  sync complete, statuses unchanged elsewhere.
+
+## 2026-10-23 SQLRDF-25 close-out (append-only pointer row)
+
+- **SQLRDF-25 close-out GREEN (5/5 courts)** — Rows 1-5 of
+  `SQLRDF-25-remaining-gaps.md` court-witnessed this session: pivot 3/3,
+  star_modifier 4/4, columns_projection 4/4, json_operator 2/2,
+  composite_literal 4/4 (17 passed, 0 failed; exit 0 each, embedded
+  verbatim tails in the receipt). Arms 48-52 fold reconciled (48/49
+  composite, 50-52 star arms). Shapes pinned: `ontologies/sql-ast.ttl`
+  blake3 `e4ee5661…39297b`; `ggen/sql-dialect/statement_classes.ttl`
+  blake3 `464ef4e7…7531d3`, matching ggen pack graph_hash
+  `2ab3f9fe…d80027` latest output. Struct readback not failing.
+  Receipt: `receipts/2026-10-23-sqlrdf25-close.md`. Open rungs not
+  witnessed here: wasm one-unit court, shape mutation court.
+
+## 2026-10-23 SQLRDF-27 FIBO-leg close (append-only pointer row)
+
+- **SQLRDF-27 Closed-FIBO-leg (GREEN)** — wrap-shim relink exit 0;
+  artifact `target-coord/wasm32-wasip1/wasm/graphlaw_wasm.wasm` blake3
+  `4d9083af…eb67b`, 58,214,121 B; FIBO battery
+  `test result: ok. 4 passed; 0 failed` incl.
+  `tc_fibo_08_copy_executes_with_pid_keyed_egress` (re-run this
+  session, output embedded in receipt). Final topology: rlib stub =
+  libc-gap symbols only; standalone `/tmp/glaw_wrap_shim.o` sole
+  `__wrap_*` provider (whole-archive); `--wrap=open,--wrap=openat`.
+  OPEN on same ticket: lifecycle 3/0, host-contract rung, anti-vacuity
+  inversion on final topology. REQUIRED INTEGRATION: commit
+  `/tmp/glaw_wrap_shim.c` in-tree (artifact not replayable until then).
+  Receipt: `receipts/2026-10-23-sqlrdf27-verdict.md`.
+- **Shim-artifact re-witness / identity unification** — canonical identity
+  = relink-8 recipe; shim sources committed at
+  `tests/fixtures/wasm-shim/` (`glaw_wrap_shim.c` blake3 `06456ccf…1c43d`,
+  `glaw_open_shim.c` blake3 `10579bb9…e1f90`, digests embedded from this
+  lane's `b3sum` run), closing the SQLRDF-27 REQUIRED INTEGRATION item.
+  Aggregates: boundary fuzz 1,172 frames / 0 defects (shim-family artifact
+  `33083b92…`, target-lane-fz2, plain-shim + `--allow-multiple-definition`
+  variant — figures carried from fuzz-lane dispatch, lane receipt owed);
+  FIBO 4/0 on canonical relink-8 artifact `4d9083af…eb67b` (cited to
+  `2026-10-23-sqlrdf27-verdict.md`). OPEN: memory-wall + lifecycle
+  witnesses on canonical; SPC Cpk FAIL under load needs solo-machine rerun.
+  Receipt: `receipts/2026-10-23-shim-artifact-rewitness.md`.
+
+- 2026-10-23 terminal witnesses (`receipts/2026-10-23-terminal-witnesses.md`):
+  EH courts log ends mid-test after `exit0_clean_empty_stdin ...` — no
+  `test result:` line; matches `tests/graphlaw_run_eh_court.rs:47-56`
+  skip() `process::exit(0)` defect (court cannot exit 1 on skip), flagged
+  for typed-non-zero-skip fix. Lifecycle run was a wrong-package invocation
+  (`-p graphlaw-wasm` vs root `graphlaw`), cargo refused target, 0 tests
+  executed. Both witnesses PENDING; nothing claimed ALIVE.
+
+- 2026-10-23 SQLRDF-27 lifecycle witness attempt (`receipts/2026-10-23-sqlrdf27-verdict.md`,
+  RESOLUTION section): `/tmp/lifecycle.log` holds NO `test result:` line —
+  wrong-package invocation (`-p graphlaw-wasm`; target lives in root
+  `graphlaw` package), cargo refused target, 0 tests executed. Canonical
+  artifact re-hashed `4d9083af…eb67b` unchanged. Lifecycle 3/0 NOT witnessed;
+  close condition not met; status stays Open on the lifecycle leg. Recovery:
+  `cargo test --test wasm_duckdb_lifecycle_eh` from repo root (no `-p`
+  flag), rerun witness owed. PENDING, nothing claimed ALIVE.
+
+- 2026-10-23 SQLRDF-27 lifecycle GREEN, ticket CLOSED (amendment to
+  `receipts/2026-10-23-sqlrdf27-verdict.md`): corrected rerun
+  `/tmp/lifecycle2.log` (b3sum `170797c7…1d876`) witnessed
+  court_a_ddl_dml_select_receipt_lifecycle / court_b_whereless_update_refused_and_table_unchanged /
+  court_c_module_instantiates_under_wasmtime_with_exceptions all ok,
+  `test result: ok. 3 passed; 0 failed; ... finished in 284.03s`, root
+  `graphlaw` package on canonical artifact `4d9083af…eb67b` (re-hashed
+  unchanged). Supersedes the prior PENDING row (stale wrong-package log).
+  Both close conditions (FIBO 4/0 + lifecycle 3/0) met; SQLRDF-27.md
+  flipped to Closed receipt-gated on that amendment. Owed non-gating:
+  host-contract `-p graphlaw-wasm` rung + anti-vacuity inversion court.

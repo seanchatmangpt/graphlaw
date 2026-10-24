@@ -55,7 +55,9 @@ fn build_setup() -> Setup {
         let db = GraphLawDuckDB::open_in_memory().expect("in-memory frozen-duckdb");
         db.raw_connection()
             .execute(
-                &format!("CREATE TABLE t AS SELECT i AS id, i*1.5 AS val FROM range({ROWS}) t(i)"),
+                &format!(
+                    "CREATE TABLE t AS SELECT i AS id, (i*1.5)::DOUBLE AS val FROM range({ROWS}) t(i)"
+                ),
                 [],
             )
             .expect("seed 10k-row table");

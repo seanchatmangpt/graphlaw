@@ -14,7 +14,11 @@ pub struct SelectStatement {
     pub ctes: Vec<Cte>,
     pub from: TableRef,
     pub joins: Vec<JoinClause>,
-    pub select_list: Vec<SqlExpr>,
+    /// SQLRDF-25 Rows 1+2: projection items — plain expressions plus the
+    /// star-modifier vocabulary (`* [EXCLUDE (...)] [REPLACE (...)]`) and the
+    /// `COLUMNS('pattern')` item. The D1 empty-projection law is unchanged:
+    /// an empty `select_list` refuses `EMPTY_PROJECTION` at extraction.
+    pub select_list: Vec<SelectItem>,
     pub where_clause: Option<SqlExpr>,
     pub group_by: Vec<SqlExpr>,
     /// `sql:having` / `sql:havingClause` predicate (aggregates legal here).
@@ -29,8 +33,84 @@ pub struct SelectStatement {
     pub qualify: Option<SqlExpr>,
 }
 
+/// One projection item (SQLRDF-25 Rows 1+2): a plain expression, a star term
+/// with EXCLUDE/REPLACE modifiers, or a `COLUMNS('pattern')` item.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SelectItem {
+    Expr(SqlExpr),
+    /// `* [EXCLUDE (col, …)] [REPLACE (expr AS name, …)]` — the only lawful
+    /// carrier of the `sql:star` / `sql:exclude` / `sql:replace` vocabulary.
+    Star {
+        exclude: Vec<String>,
+        replace: Vec<(SqlExpr, String)>,
+    },
+    /// `COLUMNS('pattern')` — regex form only; the lambda form refuses typed
+    /// (`refusal_arm::COLUMNS_LAMBDA`) until specified.
+    Columns(String),
+}
+
+impl From<SqlExpr> for SelectItem {
+    fn from(expr: SqlExpr) -> Self {
+        Self::Expr(expr)
+    }
+}
+
 impl SelectStatement {
     const MAX_DEPTH: usize = 64;
+
+    /// Serializes one projection item (SQLRDF-25 Rows 1+2). Star modifiers
+    /// render DuckDB-exact: `* EXCLUDE (a, b) REPLACE (expr AS name)`; the
+    /// COLUMNS pattern is single-quote-escaped verbatim, never concatenated
+    /// SQL.
+    fn serialize_select_item(
+        item: &SelectItem,
+        sql: &mut String,
+        params: &mut Vec<SqlLiteral>,
+        depth: usize,
+    ) -> Result<(), AstError> {
+        if depth > Self::MAX_DEPTH {
+            return Err(AstError::RecursionLimitExceeded(Self::MAX_DEPTH));
+        }
+        match item {
+            SelectItem::Expr(expr) => {
+                Self::serialize_expr(expr, sql, params, depth, ScopePos::SelectList)
+            }
+            SelectItem::Star { exclude, replace } => {
+                sql.push('*');
+                if !exclude.is_empty() {
+                    sql.push_str(" EXCLUDE (");
+                    for (idx, col) in exclude.iter().enumerate() {
+                        if idx > 0 {
+                            sql.push_str(", ");
+                        }
+                        validate_identifier(col)?;
+                        sql.push_str(col);
+                    }
+                    sql.push(')');
+                }
+                if !replace.is_empty() {
+                    sql.push_str(" REPLACE (");
+                    for (idx, (expr, name)) in replace.iter().enumerate() {
+                        if idx > 0 {
+                            sql.push_str(", ");
+                        }
+                        Self::serialize_expr(expr, sql, params, depth + 1, ScopePos::SelectList)?;
+                        sql.push_str(" AS ");
+                        validate_identifier(name)?;
+                        sql.push_str(name);
+                    }
+                    sql.push(')');
+                }
+                Ok(())
+            }
+            SelectItem::Columns(pattern) => {
+                sql.push_str("COLUMNS('");
+                sql.push_str(&pattern.replace('\'', "''"));
+                sql.push_str("')");
+                Ok(())
+            }
+        }
+    }
 
     /// Compiles the AST into parameterized SQL compatible with DuckDB
     /// prepared statements (`$1, $2, ...`).
@@ -95,7 +175,7 @@ impl SelectStatement {
                 if idx > 0 {
                     sql.push_str(", ");
                 }
-                 Self::serialize_expr(item, sql, params, 0, ScopePos::SelectList)?;
+                Self::serialize_select_item(item, sql, params, 0)?;
             }
         }
 
@@ -322,6 +402,49 @@ impl SelectStatement {
                     serialize_frame(frame, sql, params, depth + 1)?;
                 }
                 sql.push(')');
+            }
+            SqlExpr::StructLiteral { fields } => {
+                expr.validate_composite()?;
+                sql.push('{');
+                for (idx, (key, value)) in fields.iter().enumerate() {
+                    if idx > 0 {
+                        sql.push_str(", ");
+                    }
+                    sql.push('\'');
+                    sql.push_str(&key.replace('\'', "''"));
+                    sql.push_str("': ");
+                    Self::serialize_expr(value, sql, params, depth + 1, pos)?;
+                }
+                sql.push('}');
+            }
+            SqlExpr::ListLiteral { items } => {
+                expr.validate_composite()?;
+                sql.push('[');
+                for (idx, item) in items.iter().enumerate() {
+                    if idx > 0 {
+                        sql.push_str(", ");
+                    }
+                    Self::serialize_expr(item, sql, params, depth + 1, pos)?;
+                }
+                sql.push(']');
+            }
+            SqlExpr::IndexAccess { base, index } => {
+                expr.validate_composite()?;
+                Self::serialize_expr(base, sql, params, depth + 1, pos)?;
+                sql.push('[');
+                Self::serialize_expr(index, sql, params, depth + 1, pos)?;
+                sql.push(']');
+            }
+            SqlExpr::SliceAccess { base, start, end } => {
+                expr.validate_composite()?;
+                Self::serialize_expr(base, sql, params, depth + 1, pos)?;
+                sql.push('[');
+                Self::serialize_expr(start, sql, params, depth + 1, pos)?;
+                if let Some(end) = end {
+                    sql.push(':');
+                    Self::serialize_expr(end, sql, params, depth + 1, pos)?;
+                }
+                sql.push(']');
             }
             SqlExpr::Alias { expr, alias } => {
                 if pos == ScopePos::AggregateArgument {

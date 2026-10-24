@@ -138,26 +138,27 @@ required-features = ["abi"]
 # bench binary (custom main, not libtest). It times the receipt fold and
 # the refusal render. DuckDB scan and prepare timing is not a graphlaw bench.
 [[bench]]
-name = "tc_hot_01"
+name = "sql_rdf_compiler"
 harness = false
 
-# Engine-frontier lane: graph-backed eval vs raw engine prepared floor
-# (divan, harness=false like tc_hot_01).
 [[bench]]
 name = "sql_rdf_engine"
 harness = false
 
-# Compiler cost-split lane (P1): compile_turtle internal cost isolation
-# (divan, harness=false).
 [[bench]]
-name = "sql_rdf_compiler"
+name = "workload_amortization"
 harness = false
 
-# Egress-serialization lane (P2): result_triples materialization + N-Triples
-# rendering vs raw value-bytes BLAKE3 digest (columnar-digest proxy) - divan,
-# harness=false like tc_hot_01.
 [[bench]]
 name = "sql_rdf_egress"
+harness = false
+
+[[bench]]
+name = "sql_rdf_admission"
+harness = false
+
+[[bench]]
+name = "tc_hot_01"
 harness = false
 
 [package.metadata.docs.rs]

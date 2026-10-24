@@ -20,13 +20,34 @@ share a connection and must be receipted as a unit:
   exists between members on the same connection.
 
 Use N separate single-statement execs when you need per-call wire
-`params`, per-call cursors, or transactionality. The document form:
+`params`, per-call cursors, or atomic mode with a single statement.
+The document form:
 
 - refuses wire `params` (each member's literals live in the Turtle AST
   document itself — `src/duckdb_op.rs:479-487`);
 - has no cursor (results ride each member's `result_triples`);
-- is best-effort autocommit, not a transaction (see below). A caller
-  needing rollback must not use the batch form.
+- defaults to best-effort autocommit (pipeline mode, below); pass
+  `"atomic": true` for BEGIN/COMMIT/ROLLBACK semantics.
+
+## Atomic vs pipeline (SQLRDF-26)
+
+Two execution modes share one wire surface, selected per request:
+
+- **Pipeline** (default, `atomic` absent or false): the SQLRDF-23
+  best-effort sequential autocommit path, byte-identical when the flag
+  is absent. Committed members survive a later member's failure — see
+  Partial-commit semantics.
+- **Atomic**: `"atomic": true` on the wire, or `sql:atomic true` on the
+  Turtle root; the two OR together (`src/duckdb_op.rs:493-508`). The
+  whole sequence runs inside BEGIN/COMMIT/ROLLBACK in
+  `eval_ast_document`: on a member failure the partial receipt is
+  marked `status: "aborted"` with `state_delta: 0` (rollback), and on
+  success the envelope carries `status` and `state_delta`
+  (`state_delta` = committed member count).
+
+Refusal surfaces: unbounded UPDATE/DELETE members refuse `REFUSAL-05`
+(`UnboundedMutationRefusal`, `docs/refusals.md`) at compile, before
+any engine call, in both modes.
 
 Single-root documents without the flag are untouched (court at
 `src/duckdb_op.rs:1236`,
@@ -99,6 +120,8 @@ envelope IRI plus `#member-N`, with `query_hash`, `sql_statement`,
 `rows_emitted`, `result_triples`, `cached`.
 
 ## Partial-commit semantics
+
+Pipeline mode only; atomic mode rolls back instead (see above).
 
 Best-effort sequential autocommit on one real connection
 (`src/duckdb_eval.rs:402-406`). Members execute in spine order; each

@@ -40,8 +40,8 @@ use wasmtime_wasi::p1::{WasiP1Ctx, add_to_linker_sync};
 /// sync, no sleeps).
 static ENGINE_LOCK: Mutex<()> = Mutex::new(());
 
-/// Lock without poison cascade: a court that panics (e.g. pending-artifact
-/// `unknown op`) must not fail its siblings with PoisonError — each court
+/// Lock without poison cascade: a court that panics (e.g. the historical
+/// pending-artifact `unknown op`) must not fail its siblings with PoisonError — each court
 /// reports its own outcome.
 fn engine_lock() -> std::sync::MutexGuard<'static, ()> {
     ENGINE_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner)

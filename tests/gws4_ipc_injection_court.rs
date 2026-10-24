@@ -20,7 +20,7 @@
 //!     that cross the wasm boundary; the corpus→duckdb_eval injection leg runs
 //!     through the HOST dispatch path (`graphlaw::abi::call_json`, op-15 exec
 //!     with a `.csv` view mount). The same bytes cross the *compiled* wasm
-//!     module's boundary and get a TYPED REFUSAL for the host-only op.
+//!     module's boundary and get a TYPED REFUSAL from the duckdb op.
 //!     Equivalence is whole-corpus `eval_ast_query` against the
 //!     facility-partitioned chunks on the same bytes. A hand-rolled aggregator
 //!     is not the oracle. The compiled module is hosted by wasmtime 48 with
@@ -465,6 +465,83 @@ fn gws4_a_corpus_injected_as_linear_memory_buffer_loads_into_duckdb_eval() {
     assert_eq!(nt.matches("<urn:gws4:v/n>").count(), 4, "{nt}");
     assert!(nt.contains("\"25\""), "{nt}");
     let _ = std::fs::remove_dir_all(&dir);
+
+    // (a''') typed refusals on the duckdb exec path (GWS-4 flip follow-through):
+    // the op dispatches in-module (src/duckdb_op.rs), so hostile duckdb
+    // envelopes get the op's own TYPED refusals — never `unknown op
+    // \`duckdb\``, never a generic error.
+    //
+    // (1) raw `ast.text` SQL stays a typed SQLRDF-17 refusal over the wire:
+    // the Turtle AST document is the admission record; hand-built SQL text is
+    // not an admitted admission path.
+    let r = call_json(&json!({
+        "op": "duckdb",
+        "mode": "exec",
+        "query_ast": "urn:gws4:q_evil",
+        "ast": {"text": "SELECT 42; DROP TABLE cold_chain"},
+        "subject_prefix": "urn:gws4:r",
+        "vocab_prefix": "urn:gws4:v",
+    }));
+    assert_eq!(r["ok"], false, "{r}");
+    assert_eq!(r["error"]["kind"], "DuckDb", "{r}");
+    let message = r["error"]["message"]
+        .as_str()
+        .expect("error envelope carries a message string");
+    assert!(
+        message.contains("SQLRDF-17 refused: legacy `ast.text` raw SQL"),
+        "raw ast.text must stay a typed SQLRDF-17 refusal: {r}"
+    );
+
+    // (2) path-traversal ATTACH is a typed refusal, fail-closed: the court
+    // process runs with GRAPHLAW_ATTACH_ROOTS unset, so every ATTACH —
+    // including a `../` traversal outside any root — refuses typed with the
+    // stable policy message carrying the raw path.
+    assert!(
+        std::env::var("GRAPHLAW_ATTACH_ROOTS").is_err(),
+        "court assumes GRAPHLAW_ATTACH_ROOTS is unset (fail-closed default)"
+    );
+    let traversal = "../../../etc/passwd";
+    let r = call_json(&json!({
+        "op": "duckdb",
+        "mode": "exec",
+        "query_ast": "urn:gws4:q_attach_traversal",
+        "ast": {"turtle": format!(r#"
+@prefix sql: <http://graphlaw.org/sql#> .
+@prefix ex: <http://example.org/attach#> .
+ex:A a sql:AttachStatement ;
+    sql:statementIndex 1 ;
+    sql:attachTarget [ sql:databasePath "{traversal}" ; sql:attachAlias "g4trav" ] .
+"#)},
+        "subject_prefix": "urn:gws4:r",
+        "vocab_prefix": "urn:gws4:v",
+    }));
+    assert_eq!(r["ok"], false, "{r}");
+    assert_eq!(r["error"]["kind"], "DuckDb", "{r}");
+    let message = r["error"]["message"]
+        .as_str()
+        .expect("error envelope carries a message string");
+    assert!(
+        message.contains("attach path outside GRAPHLAW_ATTACH_ROOTS allowlist")
+            && message.contains(traversal),
+        "path-traversal ATTACH must be a typed attach-policy refusal: {r}"
+    );
+    // The op surface stays unpoisoned after both refusals: a benign exec
+    // through the same dispatch path still succeeds.
+    let dir2 = std::env::temp_dir().join(format!("gws4_unpoison_{}", std::process::id()));
+    std::fs::create_dir_all(&dir2).expect("temp dir");
+    let csv_path2 = dir2.join("cold_chain.csv");
+    std::fs::write(&csv_path2, &csv).expect("write corpus csv");
+    let r = call_json(&json!({
+        "op": "duckdb",
+        "mode": "exec",
+        "views": [{"name": "cold_chain", "glob": csv_path2.to_str().unwrap()}],
+        "query_ast": "urn:gws4:q_unpoison",
+        "ast": {"turtle": AGG_TURTLE},
+        "subject_prefix": "urn:gws4:r",
+        "vocab_prefix": "urn:gws4:v",
+    }));
+    assert_eq!(r["ok"], true, "surface unpoisoned after refusals: {r}");
+    let _ = std::fs::remove_dir_all(&dir2);
 
     // (b') a buffer the module DOES accept, at corpus scale, crosses and
     // processes fully inside wasm: the case-study RDF projection of the same
