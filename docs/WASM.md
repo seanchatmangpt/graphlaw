@@ -208,8 +208,14 @@ does not ship.
 Protocol (all integers are wasm `i32`/`i64`):
 
 1. `gl_alloc(len) -> ptr` — host reserves `len` bytes, writes a UTF-8 JSON
-   request there. Returns null above `MAX_REQUEST_BYTES` (16 MiB) or when the
-   outstanding-byte cap (`MAX_OUTSTANDING_BYTES`, 256 MiB) would be exceeded.
+   request there. Returns null above `MAX_REQUEST_BYTES` (16 MiB,
+   `src/abi.rs:48`) or when the outstanding-byte cap
+   (`MAX_OUTSTANDING_ALLOC_BYTES`, 16 MiB, `src/abi.rs:73`) would be
+   exceeded. The 16 MiB request and 16 MiB outstanding caps are uniform
+   across targets: the generated `abi_meta` mirrors them
+   (`wasm/src/abi_meta.rs:20` request, `wasm/src/abi_meta.rs:29`
+   outstanding) and `wasm/src/lib.rs:32-33` asserts the equality at
+   compile time, so native and wasm builds present one limit set.
 2. `gl_call(ptr, len) -> packed` — runs the request and consumes (frees) the
    request buffer. `packed = (out_ptr << 32) | out_len`.
 3. Host reads `out_len` bytes at `out_ptr` (UTF-8 JSON response), then

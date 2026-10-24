@@ -13,10 +13,11 @@ Standing: OPERATOR-CHARTER — documented from landed artifacts only
 `docs/jira/v26.10.21/COLDCHAIN-CASE-STUDY.md`; graphlaw-repo:
 `docs/wasm-integration.md`, `wasm/src/*.rs`). Every wave item carries a typed
 status token (`PENDING-GWS-n` until its receipt lands, then replaced by the
-typed verdict from that receipt). Flip state as of 2026-10-21 (WRAP-2):
-GWS-5, GWS-6, GWS-9, GWS-10, GWS-11, GWS-12 have landed receipts/courts and
-are flipped below; GWS-1, GWS-2, GWS-3, GWS-4, GWS-7, GWS-8 remain
-`PENDING-GWS-n`.
+typed verdict from that receipt). Flip state as of 2026-10-24 (doc-impl
+reconciliation): GWS-2 and GWS-3 flipped PASS on landing receipts (terminal
+receipt §1 re-pin; SQLRDF-21 sovereign in-WASM duckdb ABI + gws-16 op-15);
+GWS-5, GWS-6, GWS-9..12 were already flipped (2026-10-21); GWS-1, GWS-4,
+GWS-7, GWS-8 remain honestly `PENDING-GWS-n` with dated re-check tokens.
 Context: full · Milestone window: v26.10.21 (smalt) / graphlaw
 
 ## 1. What is landed vs pending
@@ -45,14 +46,14 @@ lands on disk; no receipt, no flip.
 
 | Item | Scope | Landed artifact base | Status |
 |---|---|---|---|
-| GWS-1 | Integration map / lane partition | specs above | PENDING-GWS-1 |
-| GWS-2 | Build outcomes (single `graphlaw-wasm` module, frozen-duckdb as normal dependency; wasm32-wasip1 link is GREEN with `WASI_SDK_PATH` set — exits 0 as of 2026-10-22, full DuckDB linked; fails typed at frozen-duckdb-sys `build.rs` without it; new-EH artifact re-pinned 2026-10-23, `fa155830…` 57,781,384 B) | `wasm/Cargo.toml`, smalt `lib/smalt/wasm/` | PENDING-GWS-2 |
-| GWS-3 | ABI `duckdb-op` design | `docs/wasm-integration.md` gl_* ABI | PENDING-GWS-3 |
-| GWS-4 | Data-injection design (Parquet/views into guest linear memory) | COLDCHAIN-CASE-STUDY.md §2 | PENDING-GWS-4 |
+| GWS-1 | Integration map / lane partition | specs above | PENDING-GWS-1 (re-checked 2026-10-24, no owning receipt) |
+| GWS-2 | Build outcomes (single `graphlaw-wasm` module, frozen-duckdb as normal dependency; wasm32-wasip1 link is GREEN with `WASI_SDK_PATH` set — exits 0 as of 2026-10-22, full DuckDB linked; fails typed at frozen-duckdb-sys `build.rs` without it) | `wasm/Cargo.toml`, smalt `lib/smalt/wasm/` | PASS — final artifact re-pinned `472d5557…bf80ea` (58,121,500 B) at commit `d9cab2f`; receipts/2026-10-23-v26.10.22-terminal.md §1; RECEIPTS.md §(a) |
+| GWS-3 | ABI `duckdb-op` design | `docs/wasm-integration.md` gl_* ABI | PASS — sovereign in-WASM duckdb ABI landed (SQLRDF-21, commit `0d11bc3`); receipts/gws-16-wasm-duckdb-op15.md (native op-15 PARTIAL_ALIVE, in-guest EH wall closed per docs/WASM.md superseded-banner); receipts/2026-10-23-eh-closure-wave.md |
+| GWS-4 | Data-injection design (Parquet/views into guest linear memory) | COLDCHAIN-CASE-STUDY.md §2 | PENDING-GWS-4 (re-checked 2026-10-24, no owning receipt) — still open for in-guest injection; native view-injection (CSV read_csv_auto / register_parquet_view) witnessed by gws-16 receipt; residual carried in terminal receipt §2 |
 | GWS-5 | SHACL in-wasm court | `shapes/ast_governance.ttl` (case study §4) | PASS — `tests/wasm_governance_preflight.rs` 3/3 (re-run 2026-10-21, this flip) |
 | GWS-6 | N3 in-wasm court | `rules/gxp_compliance.n3` (case study §5) | PASS — `tests/wasm_n3_admission.rs` 3/3 incl. native differential (re-run 2026-10-21; receipt: GWS-12 finding 3) |
-| GWS-7 | Bridge alignment (smalt_wasm_bridge ↔ gl_* ABI) | `lib/smalt/wasm/bridge.ex` | PENDING-GWS-7 |
-| GWS-8 | Perf differential (guarded vs raw, and wasm vs native) | GRAPHLAW-SPEC GL-9 methodology | PENDING-GWS-8 |
+| GWS-7 | Bridge alignment (smalt_wasm_bridge ↔ gl_* ABI) | `lib/smalt/wasm/bridge.ex` | PENDING-GWS-7 (re-checked 2026-10-24, no owning receipt; bridge alignment unadjudicated) |
+| GWS-8 | Perf differential (guarded vs raw, and wasm vs native) | GRAPHLAW-SPEC GL-9 methodology | PENDING-GWS-8 (re-checked 2026-10-24, no owning receipt; GL-9 methodology unchanged) |
 | GWS-9 | Security fuzz | GL-10 skeptic methodology | PASS — receipt `receipts/gws-9-wasm-boundary-fuzz.md`; 312 hostile calls / 0 panics, `tests/wasm_boundary_fuzz.rs` 2/2 (re-run 2026-10-21) |
 | GWS-10 | E2E (wire → pool → wasm → refusal envelope) | WASM-SANDBOX-SPEC 3-gate court | PASS — receipt `receipts/gws-10-e2e-coldchain-wasm.md`; `tests/wasm_coldchain_e2e.rs` 3/3 (re-run 2026-10-21); duckdb phases 3-5 typed PENDING-GWS-3/4 (host stub, honestly carried) |
 | GWS-11 | Memory wall (64 MiB hard limit) | WASM-SANDBOX-SPEC gate 2 | PASS — receipt smalt `receipts/gws11-wasm-memory-wall.md`; 7/7 with `GRAPHLAW_WASM=priv/graphlaw.wasm` (re-run 2026-10-21); enforced-boundary map in receipt |
@@ -83,9 +84,10 @@ or amended by the GWS-1 receipt before it is treated as authoritative.
    `WASI_SDK_PATH`, the build fails typed at frozen-duckdb-sys `build.rs`
    (`WASI_SDK_PATH required`) — no `-lduckdb` linker scatter. The
    reproducible-SDK rebuild receipt is still GWS-2's deliverable; the on-disk
-   `priv/graphlaw.wasm` pin (`fa155830…`, 57,781,384 B) is the new-EH
-   DuckDB-linked mint re-pinned 2026-10-23 (never claim re-pin done without the
-   real artifact).
+   `priv/graphlaw.wasm` pin (`472d5557…bf80ea`, 58,121,500 B) is the final
+   artifact re-pinned at `d9cab2f` (receipt `receipts/2026-10-23-v26.10.22-terminal.md`
+   §1; the earlier `fa155830…`/`332ea218…` identities are historical —
+   RECEIPTS.md §(d)/§doc-impl-reconciliation).
 3. Extend the gl_* JSON ABI with a `duckdb-op` request kind (GWS-3's
    deliverable): request names the registered query artifact and its
    parameters; the guest runs frozen-duckdb pushdown and returns rows or a

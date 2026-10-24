@@ -149,7 +149,7 @@ import { ABI_VERSION, LIMITS } from 'graphlaw';
 
 ABI_VERSION; // 1
 LIMITS.max_request_bytes; // 16777216 (16 MiB)
-LIMITS.max_outstanding_alloc_bytes; // 256 MiB
+LIMITS.max_outstanding_alloc_bytes; // 16777216 (16 MiB)
 // plus hooks_*, n3_*, max_plan_*, max_policy_entries, max_atoms_per_field,
 // max_json_depth — mirrored from the registry and test-verified against it.
 ```

@@ -65,6 +65,32 @@ What the bundled EH runner (`src/bin/graphlaw_run_eh.rs`, feature `runner-eh`) d
 - Request-size wall: requests above `WALL_BYTES` (64 MiB,
   `src/bin/graphlaw_run_eh.rs:28`) are rejected before `gl_alloc`.
 
+### Imported WASI capability inventory
+
+The shipped artifact (`priv/graphlaw.wasm`, b3sum
+`472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea`,
+58,121,500 B) imports 28 functions, all `wasi_snapshot_preview1`
+(`wasm-objdump -x priv/graphlaw.wasm`, `Import[28]`):
+
+`random_get`, `environ_get`, `environ_sizes_get`, `clock_time_get`,
+`fd_close`, `fd_datasync`, `fd_fdstat_get`, `fd_fdstat_set_flags`,
+`fd_filestat_get`, `fd_filestat_set_size`, `fd_pread`,
+`fd_prestat_get`, `fd_prestat_dir_name`, `fd_pwrite`, `fd_read`,
+`fd_readdir`, `fd_seek`, `fd_write`, `path_create_directory`,
+`path_filestat_get`, `path_open`, `path_readlink`,
+`path_remove_directory`, `path_rename`, `path_unlink_file`,
+`poll_oneoff`, `proc_exit`, `sched_yield`.
+
+The file-descriptor and `path_*` imports are the full ambient file-I/O
+surface (open, read, write, seek, rename, unlink, directory create/
+remove/readdir), and `environ_get` reads the host environment. This is
+what the module is *capable of requesting* from any host; the EH
+runner's zero-preopen posture is the containment — with no preopened
+directory, `path_open` and the fd calls have no reachable filesystem
+root, and the import allowlist still fail-closes anything outside
+`wasi_snapshot_preview1`. Hosts that preopen a directory (or inherit
+the env) grant exactly these calls real reach.
+
 What it does NOT provide — do not over-assume:
 
 - NO fuel or epoch metering. `graphlaw-run-eh` sets neither `Config::consume_fuel` nor

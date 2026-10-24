@@ -925,7 +925,7 @@ from the lanes' own embedded-output receipts, not session memory.
 - **K3 — wasm ALIVE on Node.** graphlaw.wasm loads and runs on real Node with
   7 WASI stubs; wasmtime loads the same artifact; the M-wave node-rejection
   verdict did not reproduce on re-run. Evidence: `priv/graphlaw.wasm`
-  artifact pin 332ea218…2c30c (byte-exact match, this file, prior section);
+  artifact pin 332ea218…2c30c (byte-exact match, this file, prior section); # historical (superseded by 472d5557…bf80ea, see §doc-impl-reconciliation)
   `designs/m4-wasm-boundary-receipt.md`.
 - **K4 — receipts reproduce verbatim.** Four cited receipts reproduced
   byte-verbatim on re-run (embedded output matched the on-disk files).
@@ -963,7 +963,7 @@ from the lanes' own embedded-output receipts, not session memory.
   ENOSPC-class block per the disk-discipline law; no run executed.
 - **K12 — no pin lie.** Artifact pins checked against live digests; no pin
   claimed a state the tree did not carry. Evidence: `priv/graphlaw.wasm`
-  pin `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`
+  pin `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c` # historical (superseded by 472d5557…bf80ea, see §doc-impl-reconciliation)
   (b3sum, prior section inline output);
   `designs/receipt-surface-pin.md`.
 
@@ -1238,7 +1238,7 @@ witnessed output only; OPEN rows name the blocking fact.
   session section; SQLRDF-21 notes; superseded banners; index;
   CHANGELOG/MIGRATION entries.
 - **W27 GREEN** — receipts draft with witnessed values: built digest
-  `259cf5b0…`, Tag×1, wasmtime compile-validate exit 0.
+  `259cf5b0…`, Tag×1, wasmtime compile-validate exit 0. # historical (superseded by 472d5557…bf80ea, see §doc-impl-reconciliation)
 - **W28 GREEN** — js pack-smoke PASS after THESIS.md drop (npm
   packaging unblocked).
 - **W29 GREEN** — npm dual-class re-band: 4 passed / 0 failed.
@@ -1448,7 +1448,7 @@ stand as prior banking-inventory witness (target-pub), not re-run.
 
 - **SQLRDF-27 Closed-FIBO-leg (GREEN)** — wrap-shim relink exit 0;
   artifact `target-coord/wasm32-wasip1/wasm/graphlaw_wasm.wasm` blake3
-  `4d9083af…eb67b`, 58,214,121 B; FIBO battery
+  `4d9083af…eb67b`, 58,214,121 B; FIBO battery # historical (superseded by 472d5557…bf80ea, see §doc-impl-reconciliation)
   `test result: ok. 4 passed; 0 failed` incl.
   `tc_fibo_08_copy_executes_with_pid_keyed_egress` (re-run this
   session, output embedded in receipt). Final topology: rlib stub =
@@ -1464,7 +1464,7 @@ stand as prior banking-inventory witness (target-pub), not re-run.
   `glaw_open_shim.c` blake3 `10579bb9…e1f90`, digests embedded from this
   lane's `b3sum` run), closing the SQLRDF-27 REQUIRED INTEGRATION item.
   Aggregates: boundary fuzz 1,172 frames / 0 defects (shim-family artifact
-  `33083b92…`, target-lane-fz2, plain-shim + `--allow-multiple-definition`
+  `33083b92…`, target-lane-fz2, plain-shim + `--allow-multiple-definition` # historical (superseded by 472d5557…bf80ea, see §doc-impl-reconciliation)
   variant — figures carried from fuzz-lane dispatch, lane receipt owed);
   FIBO 4/0 on canonical relink-8 artifact `4d9083af…eb67b` (cited to
   `2026-10-23-sqlrdf27-verdict.md`). OPEN: memory-wall + lifecycle
@@ -1667,3 +1667,115 @@ open items; the p99 budget leg is PASS.
   exit 0, read `mutants.out/{caught,missed}.txt`; falsifier = terminal
   receipt §Falsifiers; standing = §1 CONFORMANT-ON-OBSERVED-OUTPUT,
   §4 PENDING, §5 owed.
+
+---
+
+# 2026-10-24 doc-impl reconciliation (append-only pointer row)
+
+Identity of record for this wave: HEAD `b1c5c4d` ("fix(v26.10.22):
+mutation-court drift check scoped to src/; terminal receipt"); final
+artifact pin `472d5557…bf80ea` (58,121,500 B) — verified live this lane:
+`b3sum priv/graphlaw.wasm` =
+`472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea`,
+pin file `priv/graphlaw.wasm.blake3` byte-identical. Zero prior rows
+rewritten; supersessions are line-end marker appends and pointer rows
+only.
+
+## Line-end historical markers (append-only; characters added at line end, no prior characters removed)
+
+Five identity-marker line ranges now carry the tail
+`# historical (superseded by 472d5557…bf80ea, see §doc-impl-reconciliation)`:
+
+- Lines 927-929 (K3 wasm-ALIVE row): digest-bearing line 928
+  (`332ea218…2c30c`) marked historical.
+- Lines 962-968 (K12 no-pin-lie row): digest-bearing line 966 (full
+  64-hex `332ea2188faf…fe2c30c`) marked historical.
+- Lines 1240-1241 (W27 receipts-draft row): digest-bearing line 1241
+  (`259cf5b0…`) marked historical.
+- Lines 1448-1452 (SQLRDF-27 close row): digest-bearing line 1451
+  (`4d9083af…eb67b`, relink-8 canonical) marked historical.
+- Lines 1463-1467 (shim-artifact re-witness aggregates row):
+  digest-bearing line 1467 (`33083b92…`, fuzz-lane variant) marked
+  historical.
+
+Scope note: the doc-staleness gate R2 regex matches unbroken 64-hex
+digests only — abbreviated `332ea218…2c30c`-class forms do not fire R2.
+These markers are therefore coherence-lane completeness (the no-pin-lie
+checklist), not gate findings; line 966 carries the one unbroken 64-hex
+form and is R2-relevant.
+
+## INDEX.md in-place corrections (INDEX is a status index, not append-only; each correction recorded here as a pointer row)
+
+- INDEX rows 83/95/43 corrected in place this wave; diff witnessed by
+  this lane (no cargo/no git lease):
+  - Row 83 (wave-2 stale-claims bullet): "rewritten to the live pin"
+    → "rewritten to the then-live pin … (historical — superseded by
+    final pin `472d5557…bf80ea`, this section)".
+  - Row 95 (wave-3 C9 closure): appended the clause recording that the
+    wasm pin row was untouched at wave-3 time and is superseded by the
+    final pin.
+  - Row 43 (SQLRDF-18): TC-HOT clause resolved per §(f) — the filed
+    TC_HOT_FULL receipt governs: p99 209 ns PASS durable; variance
+    26.91% and SPC Cpk FAIL legs open.
+- Blanket line-3 status sentence updated for SQLRDF-26 (ALIVE) and the
+  ADR (absorbed into the v26.10.22 release boundary, 26.10.23 moniker
+  deferred).
+- SQLRDF-23 row-48 landed/Open drift fixed: compile + eval + wire
+  LANDED (courts `sql_ast` 32/0, `duckdb_eval` 18/0, `duckdb_op` 16/0;
+  SHACL sequence vocabulary landed), matching the 2026-10-23 status
+  refresh and [SQLRDF-23.md](SQLRDF-23.md) "Implementation progress".
+- Orphan rows appended to the extended ticket table: SQLRDF-26 (atomic
+  document execution — ALIVE, receipts inline in the ticket),
+  SQLRDF-25-remaining-gaps (five actionable rows LANDED in `88d6665`,
+  receipt `receipts/2026-10-23-sqlrdf25-close.md`, 5/5 courts 17/0),
+  and ADR-canonarrow-dual-witness-egress (absorbed into the v26.10.22
+  release boundary; receipt_v2 landed, W60 6/6).
+
+## GWS register flips (docs/wasm-duckdb-integration.md; flip law: witness receipt or no flip)
+
+- GWS-2 → PASS — final artifact re-pinned `472d5557…bf80ea`
+  (58,121,500 B) at `d9cab2f`; witness:
+  `receipts/2026-10-23-v26.10.22-terminal.md` §1 (§(a) re-pin row
+  above). Stale in-row digest `fa155830…` replaced by the final pin.
+- GWS-3 → PASS — sovereign in-WASM duckdb ABI landed (SQLRDF-21,
+  commit `0d11bc3`); witnesses: `receipts/gws-16-wasm-duckdb-op15.md`
+  (native op-15 PARTIAL_ALIVE; in-guest EH wall closed per the
+  docs/WASM.md superseded banner) + `receipts/2026-10-23-eh-closure-wave.md`.
+- GWS-1/4/7/8 stay `PENDING-GWS-n` (no owning witness receipt), each
+  with a dated re-check token `(re-checked 2026-10-24, no owning
+  receipt)`; GWS-4 annotated with the gws-16 native-view witness and
+  the residual carried in terminal receipt §2.
+
+## docs/refusals.md:80 (REFUSAL-05 receipt metadata, in-place correction)
+
+- "Receipt: pending DFLSS-GL integration receipt (2026-10-23 wave)" →
+  durable pointer: `receipts/2026-10-23-eh-closure-wave.md` (W11/W18:
+  REFUSAL-05 pins re-landed 36/0; register row landed W7/W25, no
+  renumbering). Codes remain append-only; this is metadata, recorded
+  here per the pointer-row law.
+
+## Receipt fields (this section)
+
+- **Identity**: doc lane over HEAD `b1c5c4d`; artifact pin
+  `472d5557…bf80ea` verified live (b3sum above); files touched:
+  `docs/jira/v26.10.22/RECEIPTS.md` (append + 5 line-end markers),
+  `docs/jira/v26.10.22/INDEX.md`, `docs/wasm-duckdb-integration.md`,
+  `docs/refusals.md:80`.
+- **Authority**: lane lease = the four files named in the dispatch;
+  no cargo, no git.
+- **Consequence**: 5 line-end historical markers; 1 appended section;
+  3 INDEX in-place corrections + blanket status + 1 drift fix + 3
+  orphan rows; 2 GWS flips + 4 dated re-checks + header paragraph
+  update; 1 refusals metadata pointer. Zero prior rows rewritten.
+- **Replay**: `b3sum priv/graphlaw.wasm` = pin file; `git rev-parse
+  --short HEAD` = `b1c5c4d`; `grep -c 'historical (superseded by
+  472d5557' docs/jira/v26.10.22/RECEIPTS.md` = 5 (+ historical rows in
+  §(d)); read the four named receipt files on disk.
+- **Falsifiers**: (a) any of the five marker lines losing prior
+  characters (append-only violation) — this section is FAIL; (b) an
+  INDEX correction not matching the on-disk row text named here — FAIL;
+  (c) a GWS flip without its witness receipt on disk — the flip is
+  FAIL and reverts.
+- **Standing**: reconciliation APPLIED; GWS-2/3 PASS (receipt-gated);
+  GWS-1/4/7/8 honestly PENDING; SQLRDF-26 ALIVE; SQLRDF-25-RG five
+  rows LANDED; ADR absorbed.

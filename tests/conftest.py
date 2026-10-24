@@ -22,17 +22,21 @@ WASI_SDK = os.environ.get(
                  "v2.0.0-dev-wasm32-wasip1"),
 )
 # SQLRDF-27 wrap link args: the musl->wasi fcntl translation must reach the
-# final cdylib link. Witnessed (this lane): the ticket's `--whole-archive
-# -lduckdb_wasi_posix` form duplicates the rlib-bundled wasi_posix.o symbols,
-# and wasm-ld does not extract archive members for --wrap/-u/--export
-# references — so the wrap shim is linked as a direct object
-# (/tmp/pm1-stubs/glwrap.o, built from /tmp/pm1-stubs/glwrap.c with the cache
-# clang), which defines only __wrap_open/__wrap_openat and defers to
-# __real_open/__real_openat. +exception-handling per docs/WASM.md runbook.
+# final cdylib link. The wrap shim is the committed in-tree object
+# tests/fixtures/wasm-shim/glaw_wrap_shim.o (docs/WASM.md:20-36); it defines
+# only __wrap_open/__wrap_openat and defers to __real_open/__real_openat.
+# It is never recompiled here. The frozen-duckdb stub wasi_posix.c provides no
+# __wrap_* symbols (docs/WASM.md:38-46), so a `--whole-archive
+# -lduckdb_wasi_posix` form is wrong: it duplicates the rlib-bundled
+# wasi_posix.o symbols, and wasm-ld does not extract archive members for
+# --wrap/-u/--export references anyway. +exception-handling per docs/WASM.md.
+SHIM_OBJ = os.path.join(
+    REPO, "tests", "fixtures", "wasm-shim", "glaw_wrap_shim.o"
+)
 WRAP_RUSTFLAGS = (
     "-C target-feature=+exception-handling "
     "-C link-arg=--wrap=open -C link-arg=--wrap=openat "
-    "-C link-arg=/tmp/pm1-stubs/glwrap.o"
+    f"-C link-arg={SHIM_OBJ}"
 )
 # CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS is what carries the recipe (RUSTFLAGS
 # would also poison any host build sharing the invocation).
@@ -48,6 +52,15 @@ def host_bin() -> str:
 
 
 def wasm_artifact() -> str:
+    """Resolve the wasm artifact: GRAPHLAW_WASM override first (typed failure
+    if set-but-missing — never a silent pass), else the lane-root artifact."""
+    p = os.environ.get("GRAPHLAW_WASM")
+    if p:
+        if not os.path.isfile(p):
+            pytest.fail(
+                f"GRAPHLAW_WASM is set but the artifact is missing: {p}"
+            )
+        return p
     return os.path.join(
         lane_root(), "wasm32-wasip1", "wasm", "graphlaw_wasm.wasm"
     )
@@ -67,6 +80,12 @@ def bcbs_binaries():
     """Build the runner-eh host and the wrap-enabled wasm artifact once."""
     root = lane_root()
     os.makedirs(root, exist_ok=True)
+
+    if not os.path.isfile(SHIM_OBJ):
+        pytest.fail(
+            f"wrap shim object missing: {SHIM_OBJ} "
+            "(build per docs/WASM.md:20-23; it is never recompiled here)"
+        )
 
     host = host_bin()
     if not os.path.exists(host):

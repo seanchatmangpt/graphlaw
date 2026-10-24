@@ -39,7 +39,9 @@ state. Keep the whole lifecycle inside one host process.
 
 - **16 live sessions max** (`MAX_SESSIONS`, `src/duckdb_op.rs:79`); the
   17th open is a `duckdb_sessions` ResourceLimit refusal
-  (`src/duckdb_op.rs:622`).
+  (`src/duckdb_op.rs:622`). Session state is process-local and
+  crash-only — it dies with the host instance, never persists to disk;
+  a restarted host starts with zero sessions.
 - **Duplicate open** is refused: "session `<name>` already exists (close
   it before reopening)" (`src/duckdb_op.rs:618-621`).
 - **Unknown or expired session** on `exec` with `"session"`:

@@ -42,3 +42,5 @@ __pycache__/
 .cursor/
 tests_py/__pycache__/
 tests_py/.pytest_cache/
+
+*.output

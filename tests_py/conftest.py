@@ -82,7 +82,9 @@ def is_windows() -> bool:
 # built in this lane's target root. No mocks; a missing artifact is a loud,
 # typed SKIP, never a pass.
 
-LANE_TARGET = os.path.join(REPO, "target-lane-pm2")
+LANE_TARGET = os.environ.get(
+    "GRAPHLAW_TARGET_DIR", os.path.join(REPO, "target-lane-pm2")
+)
 WASM_ARTIFACT = os.path.join(
     LANE_TARGET, "wasm32-wasip1", "wasm", "graphlaw_wasm.wasm"
 )
@@ -90,20 +92,39 @@ EH_HOST = os.path.join(LANE_TARGET, "debug", "graphlaw-run-eh")
 
 
 def _wasi_sdk_path() -> str:
-    if os.path.isdir("/opt/wasi-sdk"):
-        return "/opt/wasi-sdk"
-    home_sdk = os.path.join(os.path.expanduser("~"), "wasi-sdks", "wasi-sdk-34")
-    if os.path.isdir(home_sdk):
-        return home_sdk
-    pytest.fail("no wasi-sdk found at /opt/wasi-sdk or ~/wasi-sdks/wasi-sdk-34")
+    # WASI_SDK_PATH override first; default is the frozen-duckdb cache SDK —
+    # the only sysroot with the legacy-EH C++ runtime matching libduckdb.a
+    # (docs/WASM.md:38-46). The wasi-sdk-34 fallback is the known-failing
+    # new-EH-only sysroot, so a missing default is a typed failure.
+    sdk = os.environ.get(
+        "WASI_SDK_PATH",
+        os.path.join(os.path.expanduser("~"), ".frozen-duckdb", "cache",
+                     "v2.0.0-dev-wasm32-wasip1"),
+    )
+    if not os.path.isdir(sdk):
+        pytest.fail(
+            f"no wasi-sdk at {sdk} (set WASI_SDK_PATH; see docs/WASM.md)"
+        )
+    return sdk
 
 
-# SQLRDF-27: the wrap args must ride RUSTFLAGS on the cdylib link — a
-# dependency build script's rustc-link-arg does not reach the final link.
+# SQLRDF-27: the wrap args must ride the target-scoped RUSTFLAGS on the
+# cdylib link — a dependency build script's rustc-link-arg does not reach the
+# final link, and plain RUSTFLAGS is silently ignored for targets when the
+# target-scoped variable exists. The shim is the committed in-tree object
+# tests/fixtures/wasm-shim/glaw_wrap_shim.o (docs/WASM.md:20-36), never
+# recompiled; it defines only __wrap_open/__wrap_openat and defers to
+# __real_open/__real_openat. The frozen-duckdb stub wasi_posix.c provides no
+# __wrap_* symbols (docs/WASM.md:38-46), so `--whole-archive
+# -lduckdb_wasi_posix` is wrong on both counts.
+SHIM_OBJ = os.path.join(
+    REPO, "tests", "fixtures", "wasm-shim", "glaw_wrap_shim.o"
+)
+WRAP_ENV_KEY = "CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS"
 _WASM_RUSTFLAGS = (
+    "-C target-feature=+exception-handling "
     "-C link-arg=--wrap=open -C link-arg=--wrap=openat "
-    "-C link-arg=--whole-archive -C link-arg=-lduckdb_wasi_posix "
-    "-C link-arg=--no-whole-archive"
+    f"-C link-arg={SHIM_OBJ}"
 )
 
 
@@ -163,10 +184,15 @@ def ubo_module(request):
     build toolchain is unavailable."""
     missing = [p for p in (WASM_ARTIFACT, EH_HOST) if not os.path.isfile(p)]
     if missing:
+        if not os.path.isfile(SHIM_OBJ):
+            pytest.fail(
+                f"wrap shim object missing: {SHIM_OBJ} "
+                "(build per docs/WASM.md:20-23; it is never recompiled here)"
+            )
         wasi = _wasi_sdk_path()
         env = {
             "WASI_SDK_PATH": wasi,
-            "RUSTFLAGS": _WASM_RUSTFLAGS,
+            WRAP_ENV_KEY: _WASM_RUSTFLAGS,
             "CARGO_TARGET_DIR": LANE_TARGET,
         }
         if not os.path.isfile(WASM_ARTIFACT):
