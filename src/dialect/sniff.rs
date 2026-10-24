@@ -248,19 +248,36 @@ fn route_sql_rdf(head: &str) -> Option<Result<Dialect, Refusal>> {
 
     // Whitespace-collapsed token stream: assertions and usages may span lines.
     // Turtle comments are stripped first (`#` to end of line, but never inside
-    // a `<...>` IRI, where `#` is a fragment separator).
+    // a `<...>` IRI, where `#` is a fragment separator). String literals
+    // (`"..."` or `"""..."""`) are also stripped so mentions inside comments
+    // or literal documentation strings (e.g. rdfs:comment) never trigger false usage.
     let mut stripped = String::with_capacity(head.len());
     let mut in_iri = false;
     let mut in_comment = false;
+    let mut in_str = false;
+    let mut prev_char = '\0';
     for c in head.chars() {
         if in_comment {
             if c == '\n' {
                 in_comment = false;
                 stripped.push(c);
             }
+            prev_char = c;
+            continue;
+        }
+        if in_str {
+            if c == '"' && prev_char != '\\' {
+                in_str = false;
+                stripped.push(' ');
+            }
+            prev_char = c;
             continue;
         }
         match c {
+            '"' => {
+                in_str = true;
+                stripped.push(' ');
+            }
             '<' => {
                 in_iri = true;
                 stripped.push(c);
@@ -276,6 +293,7 @@ fn route_sql_rdf(head: &str) -> Option<Result<Dialect, Refusal>> {
             }
             _ => stripped.push(c),
         }
+        prev_char = c;
     }
     let toks: Vec<&str> = stripped.split_whitespace().collect();
 
