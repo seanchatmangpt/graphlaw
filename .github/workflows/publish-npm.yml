@@ -101,6 +101,45 @@ jobs:
           fi
           echo "version=$crate_ver" >> "$GITHUB_OUTPUT"
 
+      - name: Restore staged WASI SDK + duckdb wasm archives
+        uses: actions/cache@0c907a75c2c80ebcb7f088228285e798b750cf8f # v4
+        with:
+          path: ~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1
+          key: wasi-duckdb-v2.0.0-dev-b6013f7a-${{ hashFiles('.github/workflows/release.yml') }}
+      - name: Stage WASI SDK + duckdb wasm archives (WASI_SDK_PATH)
+        run: |
+          set -euo pipefail
+          CACHE="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1"
+          if [ ! -x /opt/wasi-sdk/bin/clang ] || [ ! -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake ]; then
+            curl -fsSL -o /tmp/wasi-sdk.tar.gz \
+              https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz
+            sudo mkdir -p /opt/wasi-sdk
+            sudo tar -xzf /tmp/wasi-sdk.tar.gz -C /opt/wasi-sdk --strip-components=1
+          fi
+          test -x /opt/wasi-sdk/bin/clang
+          export WASI_SDK_PATH=/opt/wasi-sdk
+          if [ -f "$CACHE/libduckdb.a" ]; then
+            echo "cached duckdb wasm32 archive admitted: $CACHE/libduckdb.a"
+          else
+            if ! command -v cmake >/dev/null; then
+              sudo apt-get update && sudo apt-get install -y cmake
+            fi
+            DUCKDB_PIN=b6013f7aa2f36caabb9466ce1791667ea8a280bb
+            TMP="$(mktemp -d)"
+            git clone --quiet https://github.com/duckdb/duckdb.git "$TMP/duckdb"
+            git -C "$TMP/duckdb" checkout --quiet "$DUCKDB_PIN"
+            grep -q 'set(CMAKE_POSITION_INDEPENDENT_CODE ON)' "$TMP/duckdb/CMakeLists.txt"
+            sed -i 's/set(CMAKE_POSITION_INDEPENDENT_CODE ON)/set(CMAKE_POSITION_INDEPENDENT_CODE OFF)/' "$TMP/duckdb/CMakeLists.txt"
+            cmake -S "$TMP/duckdb" -B "$TMP/duckdb/build-wasip1" \
+              -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
+              -DCMAKE_BUILD_TYPE=Release >/dev/null
+            cmake --build "$TMP/duckdb/build-wasip1" -- -j"$(nproc)"
+            mkdir -p "$CACHE"
+            find "$TMP/duckdb/build-wasip1/src" -name "libduckdb*.a" -exec cp {} "$CACHE/libduckdb.a" \;
+          fi
+          test -f "$CACHE/libduckdb.a"
+          echo "WASI_SDK_PATH=$WASI_SDK_PATH" >> "$GITHUB_ENV"
+
       - name: Build wasm artifact and verify ABI surface against the pinned artifact
         run: |
           set -euo pipefail
