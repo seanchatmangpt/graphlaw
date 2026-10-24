@@ -53,3 +53,22 @@ transitions. All counts and digests below are re-read from disk at use time.
   `receipts-untracked=155`, `untracked-total=158`,
   `modified-src-count=0`
 - `grep -rn 'changed by cargo-mutants' src/ | wc -l` → `0`
+
+## Post-audit resolution addendum (2026-10-24, closeout)
+
+`tests/zz_setop_probe.rs` (check 5) was deleted at the set-operations
+integration (`6da1d33`, 03:45:14-0700), per this audit's own
+"Delete at integration" action. It was never tracked, so `git log --all`
+shows nothing — "was on disk at 03:26" and "absent now" are both true.
+
+Correction to the check-5 evidence note: an untracked file under
+`tests/` cannot enter the `graphlaw` .crate while the manifest include
+whitelist stands — `Cargo.toml [package] include` omits `/tests/**`
+(verified), so `tests/` residue is packaging-inert. Untracked files are
+packaging-relevant only under include-covered paths (`src/`, `docs/`,
+`examples/`, `ontologies/`, `ggen/`) or as whitelisted root filenames.
+The check-8 lane-root count has also moved since (coordinator lane-root
+cleanup at integration).
+
+Verdict cells above are untouched; this addendum is appended, not
+rewritten.

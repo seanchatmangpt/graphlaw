@@ -16,9 +16,12 @@ npm i @seanchatmangpt/graphlaw
 
 Node >= 20.
 
-**Publish state**: the latest published version on npm is `26.10.14`. The sources in
-this directory are version `26.10.22` and are **not yet published**; `npm i` today
-gets the older `26.10.14` artifact.
+**Publish state** (verified 2026-10-24): the latest published version on npm is
+`26.10.14` (published pre-OIDC). The sources in this directory are version
+`26.10.22`; that version is packed and CI-validated (`publish-npm` run
+40084544193, validate-and-pack GREEN) but its publish is typed-blocked on the
+one-time npm Trusted Publisher configuration (E404,
+`docs/jira/v26.10.23/PUBLISH-STATUS.md`) — `npm i` today gets `26.10.14`.
 
 ## Quickstart
 
@@ -129,17 +132,23 @@ you; if you drive them yourself, the discipline is:
 ## WASM artifact state
 
 The shipped `wasm/graphlaw.wasm` is pinned by BLAKE3
-`472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea`
-(58,121,500 B; the DuckDB-linked new-EH artifact)
-(`src/generated/artifact-meta.ts`; the digest is re-pinned on every
-`npm run build`). wasmi 2.0.0 loads these bytes. A SQL-in-RDF document
+`58a4409505f32b5d9aebc8c0ce2e2adeaba05c8c4b55f951a244ab4ad7d2280a`
+(58,124,612 B; the DuckDB-linked new-EH artifact; verified across all four
+pin surfaces including this generated file — `src/generated/artifact-meta.ts`;
+the digest is re-pinned on every
+`npm run build`). The host for these bytes is the wasmtime-48 EH runner
+(`graphlaw-run-eh`); the wasmi runner was retired 2026-10-24
+(`docs/jira/v26.10.23/ADR-wasmi-retirement.md`). A SQL-in-RDF document
 parsed as `sql` returns the same dataset id as the same bytes parsed as
 Turtle.
 
-Historical pins:
+Historical pins (prior generations, superseded):
 
+- `472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea`
+  (58,121,500 B — the settle-commit pin at `d9cab2f`, superseded by the
+  security-wave re-pin)
 - `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`
-  (57,781,384 B)
+  (57,781,384 B — the EH-closure settle pin)
 - `f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e`
   (7,104,147 B)
 - `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`

@@ -49,7 +49,9 @@ Real output (this build, 2026-10-23):
     WASI_SDK_PATH="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1" \
     cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 
-Real output (this build, 2026-10-23):
+Real output (build captured 2026-10-23 on the 0.7.8 tree; the current tree
+compiles `graphlaw-eyeron v0.7.9` — the captured line reads `Compiling
+graphlaw-eyeron v0.7.8 (...)`, same recipe otherwise):
 
     Compiling graphlaw-eyeron v0.7.8 (/Users/sac/graphlaw/crates/graphlaw-eyeron)
     Compiling purrdf v2.0.2

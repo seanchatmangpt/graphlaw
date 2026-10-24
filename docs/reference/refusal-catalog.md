@@ -180,6 +180,31 @@ sql:StatementSequence <seq1> has an empty sql:statements list; a document \
 sequence carries at least one member
 ```
 
+## Set-operation codes (`SQLRDF-27`, appended)
+
+Typed refusal arms for `sql:SetOperationStatement` documents (`UNION` /
+`INTERSECT` / `EXCEPT`), appended with the v26.10.23 set-operation surface.
+All are MalformedAst (`REFUSAL-01`) family refusals carried by
+`sql_ast::AstError` with `shape_id` naming the arm, the `[REFUSAL-01]`
+marker in the message — refused at compile, zero engine contact. The
+normative rows (with numeric arm discriminants) live in
+[`docs/refusals.md`](../refusals.md).
+
+| code | what it means | recovery |
+|---|---|---|
+| `SET_OP_NO_RIGHT` | The set-operation statement carries no `sql:setRight` — the right operand is missing, so the rendered SQL would be `( SELECT … ) UNION ` with an empty right operand. A set operation is binary by construction. | Attach a nested `sql:SelectStatement` via `sql:setRight`. |
+| `SET_OP_KIND_TOKEN` | The `sql:setOperator` token is not `UNION`, `INTERSECT` or `EXCEPT` (case-insensitive). | Use one of the three admitted operator tokens. |
+| `SET_OP_FLAG_LEX` | A `sql:setAll` / `sql:byName` flag literal is not an `xsd:boolean` `true`/`false` lexical. | Write `sql:setAll` / `sql:byName` with an `xsd:boolean` `true`/`false` literal. |
+| `SET_OP_BY_NAME_KIND` | `sql:byName true` beside a non-UNION `sql:setOperator` — only `UNION` admits `BY NAME` (the engine rejects `INTERSECT BY NAME` / `EXCEPT BY NAME` as parser errors). | Drop the `sql:byName` flag, or use `UNION`. |
+
+Example message:
+
+```text
+SHACL AST structural violation: [REFUSAL-01] MalformedAstRefusal: \
+sql:SetOperationStatement <s1> carries no sql:setRight; a set operation \
+is binary by construction
+```
+
 ## Runtime surfaces
 
 Refusals raised while executing an admitted query against the DuckDB

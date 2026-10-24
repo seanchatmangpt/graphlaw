@@ -4,28 +4,25 @@ Operator runbook for releasing and publishing graphlaw. Mechanism verified
 against `.github/workflows/release.yml` and `.github/workflows/publish-npm.yml`
 at the current tree; every step cites file:line.
 
-## Known name discrepancy (fix before first publish)
+## Name resolution (settled 2026-10-24)
 
-- `js/npm/package.json:2` declares the package as the scoped
-  `@seanchatmangpt/graphlaw`, but the `publish-npm.yml` header
-  (`.github/workflows/publish-npm.yml:9`) instructs configuring a Trusted
-  Publisher for the unscoped name `graphlaw`. npm Trusted Publishers are
-  configured per exact package name; configuring `graphlaw` will not admit
-  OIDC publishes of `@seanchatmangpt/graphlaw`. Configure the Trusted
-  Publisher on `@seanchatmangpt/graphlaw`.
-- Secondary: the pack step's tarball assertion
-  (`.github/workflows/publish-npm.yml:131-133`) expects `graphlaw-$VERSION.tgz`,
-  but `npm pack` of a scoped package produces
-  `seanchatmangpt-graphlaw-$VERSION.tgz` (scope becomes a directory-like
-  prefix with `/` flattened to `-`). With the current scoped name this
-  assertion fails the validate job every run. Either unscope the package or
-  fix the expected tarball name before relying on this pipeline.
+The scoped name is the package name and the pipeline proves it:
+`js/npm/package.json:2` declares `@seanchatmangpt/graphlaw`, and CI run
+40084544193 (tag `v26.10.22`, head `29c6d98`) passed the validate-and-pack
+job end to end — deterministic pack of the scoped tarball
+(`seanchatmangpt-graphlaw-26.10.22.tgz` shape), the pack-step tarball
+assertion, and the cross-job blake3 gate — before the publish job's
+registry `PUT` failed E404 on the then-unconfigured Trusted Publisher
+(`docs/jira/v26.10.23/PUBLISH-STATUS.md`). The former "known name
+discrepancy" section here described a pre-`29c6d98` state of
+`publish-npm.yml`; the scoped-name resolution is proven green in that run
+and no naming fix is owed. Configure the Trusted Publisher on
+`@seanchatmangpt/graphlaw` (exactly this name — see One-time setup 1).
 
 ## One-time setup
 
 1. **npm Trusted Publisher** (`.github/workflows/publish-npm.yml:3-14`).
-   On npmjs.com, under the SCOPED package `@seanchatmangpt/graphlaw`
-   (see discrepancy above), set:
+   On npmjs.com, under the SCOPED package `@seanchatmangpt/graphlaw`, set:
    - repository: `seanchatmangpt/graphlaw`
    - workflow: `publish-npm.yml`
    - environment: `npm`

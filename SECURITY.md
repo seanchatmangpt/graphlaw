@@ -64,13 +64,32 @@ What the bundled EH runner (`src/bin/graphlaw_run_eh.rs`, feature `runner-eh`) d
   filesystem unless YOU preopen a directory in your own host embedding.
 - Request-size wall: requests above `WALL_BYTES` (64 MiB,
   `src/bin/graphlaw_run_eh.rs:28`) are rejected before `gl_alloc`.
+- Frame bound: a frame whose 4-byte length prefix exceeds
+  `graphlaw::abi::MAX_REQUEST_BYTES` is refused with exit 92 before any body
+  allocation (`read_frame`; court `tests/wasm_frame_bound_court.rs` 8/0 —
+  at-cap admitted, cap+1 → 92, 0xFFFFFFFF → 92 pre-body, zero-len → 0;
+  `docs/reference/wasm-gap-register.md` G4 CLOSED, 03:20 flip log).
+- Sterile environment: the WASI context is built with no `inherit_env` /
+  `env` / `envs` call at all — the guest environment is empty, so no host
+  variable (keys, tokens, paths) reaches the module
+  (`src/bin/graphlaw_run_eh.rs:292-300`; court
+  `tests/wasm_env_isolation_court.rs` 3/0 with a positive-control leg,
+  gap-register 03:20 entry).
+- Fuel metering: every guest request runs under a 100,000,000,000-unit
+  wasmtime fuel budget (`FUEL_PER_REQUEST`,
+  `src/bin/graphlaw_run_eh.rs:46`); exhaustion is a typed exit 98, never a
+  raw trap or an unbounded hang. The budget was calibrated against the
+  pinned artifact on a red→red→green ladder (10M red, 1B red, 100B green;
+  `receipts/2026-10-24-fuel-calibration.md`).
 
 ### Imported WASI capability inventory
 
 The shipped artifact (`priv/graphlaw.wasm`, b3sum
-`472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea`,
-58,121,500 B) imports 28 functions, all `wasi_snapshot_preview1`
-(`wasm-objdump -x priv/graphlaw.wasm`, `Import[28]`):
+`58a4409505f32b5d9aebc8c0ce2e2adeaba05c8c4b55f951a244ab4ad7d2280a`,
+58,124,612 B — the live pin, 4-surface verified) imports 28 functions, all
+`wasi_snapshot_preview1`. Re-witnessed on this exact pin with
+`wasm-objdump -x priv/graphlaw.wasm` on 2026-10-24 (`Import[28]`; all 28
+names below match the live section, no non-WASI import modules):
 
 `random_get`, `environ_get`, `environ_sizes_get`, `clock_time_get`,
 `fd_close`, `fd_datasync`, `fd_fdstat_get`, `fd_fdstat_set_flags`,
@@ -93,17 +112,16 @@ the env) grant exactly these calls real reach.
 
 What it does NOT provide — do not over-assume:
 
-- NO fuel or epoch metering. `graphlaw-run-eh` sets neither `Config::consume_fuel` nor
-  epoch-deadline trapping; a wasm-infinite loop pins the thread until the operator kills it.
-  Hosts needing CPU bounds must add their own metering.
+- NO wall-clock bound that can fire. The runner arms an epoch deadline
+  (`store.set_epoch_deadline`, `src/bin/graphlaw_run_eh.rs:306`), but no
+  watchdog calls `Engine::increment_epoch`, so the epoch counter never
+  advances and the deadline cannot fire today. Fuel (above) is the live CPU
+  bound; a host needing a time-based bound must drive `increment_epoch`
+  from its own timer thread.
 - NO linear-memory ceiling is enforced on the store. `WALL_BYTES` caps the request frame,
   not guest heap growth; the module was only measured against a 64 MiB wall
   (`docs/WASM.md`, "smalt sandbox spec"). Do not feed it adversarial inputs expecting an
   OOM trap.
-- `inherit_env()` passes the FULL host environment to the guest
-  (`src/bin/graphlaw_run_eh.rs:236`). Any secret in the process env is readable by the
-  module. Strip the environment (build your own `WasiCtxBuilder` without `inherit_env`)
-  before running untrusted graphs.
 - `GRAPHLAW_ATTACH_ROOTS` is a HOST-LIBRARY control: `enforce_attach_policy` runs in
   `src/duckdb_op.rs` before the engine sees a statement, on the host side of the
   boundary. It is NOT enforced inside the wasm sandbox; if you preopen the database

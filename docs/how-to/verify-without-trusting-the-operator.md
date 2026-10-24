@@ -30,7 +30,9 @@ Build with `--features abi`. Usage/I-O errors (including no `--trusted-key`) exi
 
 ## Worked example
 
-`tests/verify_cli.rs` (6 tests, verified 2026-10-10: `6 passed; 0 failed`) drives the
+`tests/verify_cli.rs` (7 tests, re-witnessed 2026-10-24: `cargo test
+--features abi --test verify_cli` → `7 passed; 0 failed; 0 ignored;
+0 measured; 0 filtered out`, exit 0) drives the
 real binary end to end: a robot-move plan admitted over N-Triples, every receipt signed
 by a seeded Ed25519 key, written via `ReceiptStore::put_signed`, then verified:
 

@@ -107,9 +107,16 @@ conformance fixtures carry their own provenance and license
 1. **Publish order: `graphlaw-eyeron` → `graphlaw`.** eyeron keeps its own
    independent, upstream-vendored version (currently 0.7.8, per CHANGELOG
    versioning policy) and must be published first; `graphlaw` depends on it.
-2. **cargo-deny residual decision.** The deny.toml residual advisories need an
-   explicit operator decision (accept/diagnose) recorded before publish — a
-   silent `cargo deny check` pass is not a decision.
+2. **cargo-deny residual decision — DECIDED-2026-10-24.** The three residual
+   advisories are accepted by operator decision (authority: operator
+   directive 2026-10-24, publish order —
+   `docs/jira/v26.10.23/compliance-final-verdict.md` §R-2 DISCHARGE,
+   lines 374-388), dated-ignored in `deny.toml [advisories]` with expiry
+   **2026-11-23** (re-review required on expiry; no silent renewal).
+   Receipt: `receipts/2026-10-24-r2-deny-decision.md`
+   (`cargo deny check advisories` → `advisories ok`, bare exit 0;
+   `cargo audit` exit 1 is the expected divergence — it does not read
+   deny.toml).
 3. **wasm link state at publish time.** RED as checked live 2026-10-22
    (lane-isolated build, `CARGO_TARGET_DIR=target-lane-notes`):
    `frozen-duckdb-sys/build.rs:101` panics — "WASI_SDK_PATH is required to link

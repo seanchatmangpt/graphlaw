@@ -197,6 +197,60 @@ contention (all five runs measured Cpk ≤ 0 under contention,
 
 **DECISION (operator):** (a)/(b)/(c): ______  date: __________
 
+### Decision memo filed 2026-10-24 (closeout docs lane — evidence only, no decision authored here)
+
+This memo discharges the docs lane's evidence duty for OD-4. The DECISION
+line above stays BLANK: the note at the head of this file governs — nothing
+is decided by a docs lane. The operator fills the line (and summary row
+below); runbook step S3
+(`docs/jira/v26.10.23/OPERATOR-RUNBOOK-v26.10.22-PUBLISH.md`) carries the
+act.
+
+**Evidence table** (every row re-read on disk 2026-10-24):
+
+| # | Observation | Value | Locus |
+|---|---|---|---|
+| 1 | Latest SPC receipt (solo rerun, SMOKE 1M iters) | Cpk **0.632** — honest FAIL (exit 1); mean 128.2 ns, **sd 64.24 ns**, p99 167 ns (inside USL 250 ns); 283 Shewhart rule-1 samples | `receipts/2026-10-24-spc-solo-rerun.md` + machine JSON `receipts/spc-2026-10-24T032511.json` |
+| 2 | Quiet-machine witness in the standing set | Cpk **1.7573 PASS** @ sd **23.3 ns** (03:54 quiet run) — the same gate, same fold path | `receipts/spc-2026-10-23T035422.json` |
+| 3 | Gate bistability | PASS at sd 23.3 ns vs FAIL at sd ≥ 48.8 ns; threshold: sd ≤ **30.5 ns** (derived from the Cpk arithmetic at the observed mean) | rows 1-2 arithmetic |
+| 4 | sd root cause, primary | **Timer quantization**: 41.667 ns tick clock (14.318 MHz); every observed quantile is a tick multiple; 2×`Instant::now` contributes ~20-40 ns of the measured number; single-sample noise floor ~12.5 ns | receipts 1-2 quantile tables |
+| 5 | Secondary | IRQ shoulder: 283 rule-1 samples, rule-2 never fires — isolated spikes, not drift | receipt 1 |
+| 6 | Fuel-boundary coherence | p99 167 ns is deep inside the 250 ns USL; the 10M-era exit-98 red is resolved by the 100B calibration (`receipts/2026-10-24-fuel-calibration.md`) — SPC standing is not a correctness gate | `receipts/2026-10-24-fuel-calibration.md` |
+| 7 | FULL mode | **Never receipted at FULL** (every standing receipt is SMOKE); SD rung 9's "FULL" asks stay open | register row 4 |
+
+**Root-cause line**: the gate is bistable on sd alone; sd is dominated by
+timer-tick quantization (41.667 ns) plus an IRQ shoulder, so the FAIL is a
+measurement-method property of a loaded/SMOKE run, not a change in the
+measured code — the fold path is verified allocation-free (cause-4
+hypothesis falsified by inspection).
+
+**Options** (unchanged from the register, now informed by rows 1-7):
+
+- **(a) Full charter closure** — quiet-machine FULL-mode 10M-iteration
+  capability re-measure + the `RefusalMessage::Static` fast path + the 25M
+  TC_HOT_FULL run, all three CTQs gated. Consequence: largest scope,
+  dedicated quiet windows; closes the charter honestly. Consequence of NOT
+  (a): charter CTQs stay open past this release (posture-P follow-up).
+- **(b) SPC-gate closure only** — quiet-machine re-measure until Cpk ≥ 1.33
+  on the fold path. Consequence: cheapest honest green IF quiet-machine sd
+  reliably lands ≤ 30.5 ns (the W57 witness says it can); leaves
+  refusal-latency + throughput CTQs open as registered residuals.
+- **(c) Re-baseline the bar** — accept the measured intrinsic cost as the
+  new USL basis (rewrite charter §5.2/§1.2). Consequence: needs operator
+  authority over the charter text; converts the FAIL into an honest
+  re-baseline instead of a chase against a 41.667 ns tick.
+
+**Falsifier for the choice**: two consecutive quiet FULL-mode FAILs at sd
+45-70 ns with p99 ≤ 167 ns → (b) is unreachable as written → sign (c)
+(re-baseline per the F1a amortized-window fix) — or fund (a). A single
+noisy-window FAIL falsifies nothing; the gate is load-bistable by rows 1-3.
+
+**Consequences of leaving it OPEN (posture P)**: the SPC gate stays an
+honest red on the latest receipt; release standing is unaffected because
+the gate is registered as a non-blocking follow-up (GO-NO-GO v5 §A row G2/
+G3 class), but OD-4 remains an open operator debt in this register and the
+runbook's S3 step stays owed.
+
 ---
 
 ## OD-5. Absolute paths in wasm/ggen.toml (commit as-is vs tempath-ize)
@@ -277,7 +331,27 @@ commit them as repo policy or keep local?
 already-committed policy text; committing them closes a doc/behavior divergence, and
 `__pycache__/` joins `.gitignore` alongside `scheduled_tasks.lock`.
 
-**DECISION (operator):** (a) wasmtime 48 + `wasm_exceptions` single DuckDB-linked artifact (archive law `-mllvm -wasm-use-legacy-eh=0`); Route C stood down. Date: 2026-10-23. Witness: eh-runner-decision-memo DECISION block; artifact 46,015,267 B / Tag x1, wasmtime CLI validation exit 0.
+**ANOMALY RECORD 2026-10-24**: the bracketed line below was filled with
+OD-1 text in commit `0d11bc3`; it signed nothing for OD-6. It is retained
+verbatim as evidence and superseded by the re-presented block under it.
+
+> **[ANOMALOUS LINE — OD-1 TEXT, SIGNS NOTHING FOR OD-6]** **DECISION
+> (operator):** (a) wasmtime 48 + `wasm_exceptions` single DuckDB-linked
+> artifact (archive law `-mllvm -wasm-use-legacy-eh=0`); Route C stood
+> down. Date: 2026-10-23. Witness: eh-runner-decision-memo DECISION block;
+> artifact 46,015,267 B / Tag x1, wasmtime CLI validation exit 0.
+
+> **DECISION (operator):** ______ (option (a) recorded-as-executed — see
+> the execution-state witness below) date: __________
+> signature: __________
+
+**Execution state (witnessed, independent of the blank signature)**:
+option (a) is de-facto EXECUTED on this tree — `.claude/settings.json`,
+`.claude/hooks/disk_guard.py`, `.claude/hooks/manifest_guard.py` are all
+tracked (`git ls-files .claude/`), the `.claude/` commit landed at
+`dab6a73`, and `__pycache__/` is ignored (`__pycache__/` at `.gitignore:39`).
+The re-presented block above exists so the signature debt can be discharged
+without retroactively validating the corrupted line.
 
 ---
 
@@ -288,9 +362,9 @@ already-committed policy text; committing them closes a doc/behavior divergence,
 | OD-1 | EH route pick | wasm tier, smalt 3/7 | C now + A1' engine backend | ADMITTED-as-executed (wasmtime 48 single artifact; Route C stood down) |
 | OD-2 | D1–D6 defaults | executes OD-1 | all defaults | NO SIGN-OFF — SUPERSEDED with the Route C stand-down |
 | OD-3 | registry re-pin timing | ARTIFACTS.blake3 churn | (b) single split+re-pin commit | ADMITTED-as-executed (re-pin landed without any split) |
-| OD-4 | Cpk/CTQ production bar | charter closure | (a) full closure; (b) minimum | OPEN — latest SPC witness FAIL (Cpk 0.0008, `receipts/spc-2026-10-23T152558.json`) |
+| OD-4 | Cpk/CTQ production bar | charter closure | (a) full closure; (b) minimum | memo filed 2026-10-24 (evidence table + root cause + falsifier, above); DECISION line BLANK — decision pending |
 | OD-5 | ggen.toml absolute paths | portability | (b), fallback (a) registered | ADMITTED-as-executed (tempath-ize landed, L160) |
-| OD-6 | .claude/ commit | repo-policy parity | (a) commit + gitignore __pycache__ | ANOMALOUS — line filled with OD-1 text; .claude/ subject itself unsigned/open |
+| OD-6 | .claude/ commit | repo-policy parity | (a) commit + gitignore __pycache__ | anomaly recorded 2026-10-24; re-presented with BLANK decision/date/signature; signature pending |
 
 ## See Also
 

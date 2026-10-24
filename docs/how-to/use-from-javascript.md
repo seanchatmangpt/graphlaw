@@ -1,14 +1,15 @@
-# Use graphlaw from JavaScript or TypeScript
+# Use @seanchatmangpt/graphlaw from JavaScript or TypeScript
 
 Call the full GraphLaw engine (parse, SPARQL, SHACL, ShEx, N3, entailment,
-datalog, hooks, law, policy) from Node or the browser through the `graphlaw`
+datalog, hooks, law, policy) from Node or the browser through the
+`@seanchatmangpt/graphlaw`
 npm package: typed methods over the same JSON ABI the WASM module exposes.
 Reference: [abi-reference](../abi-reference.md) · [refusals](../refusals.md).
 
 ## Install
 
 ```sh
-npm i graphlaw
+npm i @seanchatmangpt/graphlaw
 ```
 
 Node >= 20 is required for the Node entry point (`engines.node: ">=20"`).
@@ -21,7 +22,7 @@ Create one client per process; the WASM module is loaded and instantiated once
 and cached. Every method returns typed response objects.
 
 ```ts
-import { createClient } from 'graphlaw';
+import { createClient } from '@seanchatmangpt/graphlaw';
 
 const gl = await createClient();
 
@@ -61,7 +62,7 @@ Every method also has a `tryX()` variant that returns the envelope as a
 `Result` instead of throwing — pick one style per call site, not both.
 
 ```ts
-import { GraphlawRefusalError } from 'graphlaw';
+import { GraphlawRefusalError } from '@seanchatmangpt/graphlaw';
 
 try {
   await gl.parse({ text: 'just some prose, not RDF' });
@@ -89,12 +90,12 @@ full taxonomy: [refusals](../refusals.md).
 ## Raw passthrough
 
 When you need the JSON ABI verbatim (scripting, golden tests, or ops the typed
-client does not wrap yet), use the `graphlaw/raw` entry point. It returns the
+client does not wrap yet), use the `@seanchatmangpt/graphlaw/raw` entry point. It returns the
 envelope as-is and never throws for ABI outcomes — refusals come back as
 `{ok: false, error: ...}` values, not exceptions.
 
 ```ts
-import { callRaw, callRawJson } from 'graphlaw/raw';
+import { callRaw, callRawJson } from '@seanchatmangpt/graphlaw/raw';
 
 const envelope = await callRaw({
   op: 'sniff',

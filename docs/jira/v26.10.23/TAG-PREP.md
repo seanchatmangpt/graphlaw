@@ -5,6 +5,13 @@ Scope: prepare the `v26.10.22` annotated tag — no tag commands run, no cargo.
 Every claim below was re-read from disk or a live registry query on 2026-10-24;
 receipts embed the real output.
 
+> **Pin update (2026-10-24, closeout)**: the artifact pin moved after this
+> document was written. The digest cited below as current (`472d5557…bf80ea`,
+> 58,121,500 B) is the superseded settle pin; the shipped artifact is
+> `58a44095…d2280a` (58,124,612 B), verified one-digest across all four pin
+> surfaces (`docs/jira/v26.10.23/final-tree-audit.md` check 2). Sections 3/4/5
+> read as-of their writing; the live pin governs.
+
 ## 1. Version triple — verified on disk 2026-10-24
 
 ```

@@ -2044,3 +2044,52 @@ verbatim.
   `71512d894a1bce181f0717baf4af592d059d1ba9cb1ce32409f39a46f053e1d2`).
   tc08 egress stays OPEN on SQLRDF-27 (fuel-independent typed EINVAL;
   registered at witnessed strength in the same receipt).
+
+## R-2 cargo-deny decision pointer row (appended 2026-10-24, finD execution lane)
+
+- **Date**: 2026-10-24. **Subject**: R-2 cargo-deny residual-advisory
+  operator decision (publish-order gate).
+- **Receipt**: `receipts/2026-10-24-r2-deny-decision.md`.
+- **Verdict**: DECIDED-2026-10-24 — `cargo deny check advisories` →
+  `advisories ok`, bare exit **0** under the three dated ignores
+  (RUSTSEC-2026-0258 h2 0.3.27 ACCEPTED RISK — host-side tooling only, not
+  on the in-WASM path; RUSTSEC-2025-0134 rustls-pemfile ACCEPTED
+  unmaintained; RUSTSEC-2024-0449 unsafe-libyaml ACCEPTED unmaintained);
+  expiry **2026-11-23**, re-review on expiry. Authority: operator directive
+  2026-10-24 (publish order),
+  `docs/jira/v26.10.23/compliance-final-verdict.md:374-388`.
+  RELEASE-NOTES-26.10.22.md checklist item 2 flipped to the DECIDED
+  pointer. `cargo audit` exit 1 = expected divergence (does not read
+  deny.toml).
+
+## SPC FULL-mode pointer row (appended 2026-10-24, finD execution lane)
+
+- **Date**: 2026-10-24. **Subject**: SPC gate FULL mode (10M iterations),
+  tc_hot_01 clone_path — pre-registered predictions
+  (`receipts/2026-10-24-spc-full.md`, birth 2026-10-24T10:14:13-0700,
+  before the run).
+- **Receipts**: `receipts/2026-10-24-spc-full.md`; machine receipt
+  `receipts/spc-2026-10-24T102226.json` (sha256
+  `cb1db77466fae723125ccf347f5da28ce18b6494c875219799f3260bbb87d02b`).
+- **Verdict**: **FAIL** — bare exit 1; `SPC_MODE=FULL
+  CARGO_TARGET_DIR=target-lane-finD bash scripts/spc_court.sh` →
+  mean 128.964ns, **sd 66.026ns**, Cpk **0.6111 < 1.33** (p99 167ns in
+  spec; VARIANCE_SELF_CHECK 0.00% PASS; bench-internal gates all PASS).
+  Deciding statistic sd agrees with the solo SMOKE rerun
+  (`spc-2026-10-24T032511.json`, sd 64.24/Cpk 0.632) and disagrees with
+  the W57 PASS (`spc-2026-10-23T035422.json`, sd 23.349/Cpk 1.7573) — the
+  high-variance regime now has two 2026-10-24 observations. Honest FAIL
+  stands; no rerun-to-green.
+- **CHAIN COLLISION DISCLOSURE (finD lane)**: a concurrent lane's
+  `receipt_chain_sync` (CHAIN.blake3 mtime 10:22:12 PDT) chained
+  `receipts/2026-10-24-spc-full.md` at its mid-flight predictions-only
+  state (chain digest `1c84c52a4a310614758839cf3d1874bd0146b90e54311ed5e53d3a51e585f350`);
+  the lane then lawfully completed the receipt with the run output and
+  verdict (final digest
+  `05630d725ad7eb747e2470d7371a48ac901dfc9703099e983383400fde1aa0ec`),
+  so `receipt_chain_sync --check` now reports one TAMPER-DETECTED line for
+  exactly this file — the chain entry is a stale mid-flight digest, not a
+  tamper event; the file was never altered after completion. Coordinator
+  action at integration: refresh this one chain entry (documented
+  re-baseline/extend precedent), then sync. The receipt is final and
+  frozen from this lane.

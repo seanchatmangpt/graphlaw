@@ -1,6 +1,6 @@
 ---
 name: wasm-op
-description: Work on the wasm boundary — wasm/ crate, the single-unit build (typecheck AND link), capability refusals, wasmi stdio runner (graphlaw-run), ABI ops. Use when tickets touch the sandbox boundary or REFUSAL-04.
+description: Work on the wasm boundary — wasm/ crate, the single-unit build (typecheck AND link), capability refusals, wasmtime stdio runner (graphlaw-run-eh), ABI ops. Use when tickets touch the sandbox boundary or REFUSAL-04.
 tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 

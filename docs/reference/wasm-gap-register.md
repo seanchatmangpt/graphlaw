@@ -18,7 +18,7 @@ only on a landed receipt.
 | G8 | sniff literal/IRI gaps | sniff.rs:252-279 | C | OPEN | twins; corpus_conformance |
 | D1 | WASI inventory absent | SECURITY.md | A | OPEN | count receipt; gate |
 | D2 | 256 MiB doc errors | WASM.md:206 | A + C | OPEN | delta; pointer rows |
-| D3 | GWS stale; INDEX orphans | integration.md:49 | A | OPEN | appends; GWS-2/3 flip |
+| D3 | GWS stale; INDEX orphans | docs/wasm-duckdb-integration.md:45-60 (wave item register; PENDING-GWS-1/4/7/8 tokens at 49-56) | A | OPEN | appends; GWS-2/3 flip |
 | D4 | witnesses not durable | terminal receipt 2 | A | OPEN | rerun on 472d5557 |
 | BB1 | blackbox pins wasmi | tests_py blackbox | F | OPEN | host flip; tree -i |
 | UU1 | unknown-unknown smoke | audit, deferred | E | PENDING | battery re-run |
@@ -158,3 +158,13 @@ mutation of the `read_frame` bound / `leading_sql_token` classifier that
 its court fails to invert on, reopens the row via a new append. Row count
 unchanged (17); this entry appends only — no table row or prior log entry
 rewritten.
+
+### 2026-10-24 — D3 evidence-locus citation repair (register lane, write lease = this file only)
+
+The D3 row's evidence locus cited `integration.md:49` — an unresolvable
+short form (no such bare path at the repo root; the intended referent is
+`docs/wasm-duckdb-integration.md`). Citation repaired in place to
+`docs/wasm-duckdb-integration.md:45-60 (wave item register;
+PENDING-GWS-1/4/7/8 tokens at 49-56)`. **Citation fix only — status
+unchanged (D3 stays OPEN)**; no other row, prior log entry, or closing
+witness was touched. Row count unchanged (17).

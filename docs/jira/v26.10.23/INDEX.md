@@ -2,9 +2,12 @@
 
 Registered 2026-10-24. This window is the post-v26.10.22 wave: ADRs, design
 specs, release gates, and the compliance program. Every markdown doc in
-`docs/jira/v26.10.23/` is registered below — 23 docs, read from disk at use
-time. Statuses are the docs' own self-declared standing on disk, not verdicts
-by this index.
+`docs/jira/v26.10.23/` is registered below — doc count re-read from disk
+2026-10-24 (closeout lane): 26 non-INDEX docs, all registered (the prior
+"23" figure and the final-tree-audit check-7 "24 = 23 + INDEX" note predate
+the final-tree-audit, risk-management-plan, and the operator-runbook
+registrations). Statuses are the docs' own self-declared standing on disk,
+not verdicts by this index.
 
 `PUBLISH-STATUS.md` landed in this window at 2026-10-24 03:20, while this
 register was being written; it is registered below (the dispatch listed it
@@ -33,6 +36,24 @@ as "if landed").
   eyeron `0.7.8` / graphlaw `26.10.21` with local `0.7.9` / `26.10.22`
   publishable; npm publish CI run `40084544193` RED (E404, typed-blocked on
   operator act).
+- [OPERATOR-RUNBOOK-v26.10.22-PUBLISH.md](OPERATOR-RUNBOOK-v26.10.22-PUBLISH.md)
+  — Runbook (2026-10-24, closeout docs lane).
+  Instance-bound execution half of PUBLISH-STATUS: S0 pre-flight table +
+  S1-S6 operator acts (npm Trusted Publisher + rerun; crates.io publish from
+  the tag; OD-4 letter; OD-6 signature; mutation sweep solo; post-act
+  verification + follow-up receipts), each with commands/expected/typed
+  failures; flips no register.
+- [final-tree-audit.md](final-tree-audit.md) — Audit (2026-10-24, HEAD
+  `4df19b5`).
+  Adversarial audit of the released tree: 8-check verdict table — version
+  coherence CLEAN, pin chain one-digest CLEAN (check 2 = the 4-surface
+  `58a44095…`/58,124,612 B agreement), no leaked mutants, no
+  reconstituted-crate refs, publish paths clean, COPY-egress disclosure
+  CLEAN, compliance registration CLEAN, untracked accumulation CLASSIFIED.
+- [risk-management-plan.md](risk-management-plan.md) — Plan (2026-10-24).
+  Standalone risk-management plan for the kernel + release train (closes
+  G-A9-1, files G-A9-8 determinations, structural half of R-26); R-1/R-2
+  dispositions and the residual register with per-risk owners.
 
 ## Register: ADRs
 
@@ -120,6 +141,11 @@ projected 7 matrices; disk holds 6 — all are registered).
 
 ## Counts
 
-- Docs on disk in this window: 23 (all registered above; this INDEX.md is the
-  24th .md file and is the register itself).
+- Docs on disk in this window: 27 `.md` files including this INDEX.md —
+  26 non-INDEX docs, all registered above; verified by per-file link check
+  2026-10-24 (closeout lane; `final-tree-audit.md` and
+  `risk-management-plan.md` were on disk unregistered before this pass and
+  are now registered).
 - PUBLISH-STATUS.md: landed 2026-10-24 03:20 — registered.
+- OPERATOR-RUNBOOK-v26.10.22-PUBLISH.md: landed 2026-10-24 — registered
+  (flips no register; the runbook is a runbook, not a verdict).

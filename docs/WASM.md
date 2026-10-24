@@ -71,19 +71,34 @@ the module dispatches `duckdb` itself. The `duckdb` op is module-owned and
 unadvertised: it stays off the hashed 14-op table in
 `contracts/abi-manifest.json`. The hosting runtime is wasmtime 48
 (`graphlaw-run-eh`, feature `runner-eh`) with `wasm_exceptions` enabled;
-wasmi 2.0.0 remains only for legacy pre-duckdb artifact courts and rejects
-the DuckDB-linked artifact (`exceptions proposal not enabled`).
+it is the sole packet-4 stdio runner — the wasmi-based `graphlaw-run` was
+retired 2026-10-24 (`docs/jira/v26.10.23/ADR-wasmi-retirement.md`; it
+rejected the DuckDB-linked artifact — `exceptions proposal not enabled` —
+and the EH runner is a wire-superset with the same exit-code contract).
 
 ### Sandbox qualification: what the EH host does and does not contain
 
 `graphlaw-run-eh` (wasmtime 48) fail-closes imports to
 `wasi_snapshot_preview1` (`src/bin/graphlaw_run_eh.rs:222-231`) and
-preopens no directories. That is the whole containment. It does NOT
-provide: fuel or epoch metering (a wasm-infinite loop pins the thread);
-a linear-memory ceiling (the 64 MiB `WALL_BYTES` caps the request frame
-only, `src/bin/graphlaw_run_eh.rs:28`); environment isolation
-(`inherit_env()` hands the guest the full host env,
-`src/bin/graphlaw_run_eh.rs:236`). `GRAPHLAW_ATTACH_ROOTS` is a host
+preopens no directories. It provides: a request-frame bound — a frame
+prefix above `MAX_REQUEST_BYTES` is refused with exit 92 before any body
+allocation (`read_frame`, court `tests/wasm_frame_bound_court.rs` 8/0,
+gap-register G4 CLOSED `docs/reference/wasm-gap-register.md` 03:20 flip);
+per-request fuel metering — 100B wasmtime fuel units per request, a guest
+that exhausts it gets typed exit 98, never an unbounded hang
+(`FUEL_PER_REQUEST`, `src/bin/graphlaw_run_eh.rs:46`; calibration ladder
+10M red → 1B red → 100B green, `receipts/2026-10-24-fuel-calibration.md`);
+and a sterile environment — the WASI context carries no `inherit_env` /
+`env` / `envs` call at all, so the guest sees an empty environment
+(`src/bin/graphlaw_run_eh.rs:292-300`; court
+`tests/wasm_env_isolation_court.rs` 3/0, gap-register 03:20 entry). It
+arms an epoch deadline but the epoch cannot fire: no watchdog calls
+`Engine::increment_epoch`, so the deadline never advances
+(`src/bin/graphlaw_run_eh.rs:306`; hosts needing a wall-clock bound must
+drive `increment_epoch` themselves). It does NOT provide: a linear-memory
+ceiling (the 64 MiB `WALL_BYTES` caps the request frame
+only, `src/bin/graphlaw_run_eh.rs:28`).
+`GRAPHLAW_ATTACH_ROOTS` is a host
 library control and is not enforced inside the sandbox — preopening a
 directory for the runner bypasses the attach allowlist entirely
 (SECURITY.md "EH host sandbox";
@@ -102,13 +117,16 @@ WASI_SDK_PATH="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1" \
   cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 ```
 
-The DuckDB-linked artifact is 57,781,384 B (~58 MB class, from the 7.1 MB
-tag-section-0 pin). The current pin is `fa155830…` (57,781,384 B),
-re-pinned 2026-10-23 in both
-`registry/ARTIFACTS.blake3` and `priv/graphlaw.wasm.blake3`
-(`receipts/2026-10-23-eh-closure-wave.md`). The prior
-tag-section-0 pin `f149433c…` (7,104,147 B) and the DuckDB-linked lane link
-witness `9d299ed8…` (45,162,366 B, 2026-10-22) are historical. The smalt
+The DuckDB-linked artifact is 58,124,612 B (~58 MB class). The current pin
+is `58a44095…d2280a` (58,124,612 B), verified live on all four pin surfaces
+(`priv/graphlaw.wasm.blake3`, the `registry/ARTIFACTS.blake3` wasm row,
+`js/npm/src/generated/artifact-meta.ts`, and a live `b3sum` of
+`priv/graphlaw.wasm`; final-tree-audit check 2,
+`docs/jira/v26.10.23/final-tree-audit.md`). Historical pins (prior
+generations, superseded): the EH-closure settle pin `fa155830…`
+(57,781,384 B), the tag-section-0 pin `f149433c…` (7,104,147 B), and the
+DuckDB-linked lane link witness `9d299ed8…` (45,162,366 B, 2026-10-22).
+The smalt
 sandbox's 64 MiB linear-memory wall
 (`/Users/sac/smalt/docs/jira/v26.10.21/WASM-SANDBOX-SPEC.md`) is the
 ceiling this module was measured against.
@@ -146,16 +164,23 @@ separate target dirs or machines.
 
 ### Pin currency (on-disk pins, header `pin-source=26.10.22`)
 
-The on-disk pins read `fa155830…` (57,781,384 B), the new-EH DuckDB-linked
-mint re-pinned 2026-10-23 (`registry/ARTIFACTS.blake3` wasm row; matches
-`priv/graphlaw.wasm`; `receipts/2026-10-23-eh-closure-wave.md`). This
+The on-disk pins read `58a44095…d2280a` (58,124,612 B), the shipped
+new-EH DuckDB-linked mint carried by tag `v26.10.22` (`registry/ARTIFACTS.blake3`
+wasm row; matches `priv/graphlaw.wasm` live;
+`js/npm/src/generated/artifact-meta.ts`; verified across all four surfaces,
+`docs/jira/v26.10.23/final-tree-audit.md` check 2). This
 section is refreshed by the re-pin procedure in the upgrade checklist,
-never hand-written from a guess. The
-previous workspace pin
+never hand-written from a guess. Historical pins (prior generations,
+each superseded): the EH-closure settle pin
+`fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`
+(57,781,384 B); the pre-26.10.22 workspace pin
 `74ec3c8d6cdb3db1ff1869ac8b2454c2cf94d08f2a211b0b7d2af2c36b08a7a5`
-(7,098,370 B) was minted before the version string became 26.10.22.
+(7,098,370 B);
 `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`
-(6,793,617 B) is historical.
+(6,793,617 B). Pin identity is not reproducibility: the
+reproducible-SDK rebuild receipt (byte-identical rebuild from declared
+inputs on a second target dir/machine) remains a GWS-2 deliverable and is
+**pending**.
 
 ## Unknown-unknown status (G13, v26.10.20)
 
@@ -196,10 +221,11 @@ write_manifest -- --exact`.
 `tests/wasm_native_differential.rs` (W08) is the upgrade gate: 35 canonical,
 keyless/clockless inputs (every law request carries an explicit `now_unix`)
 run natively via `graphlaw::abi::call` and through the compiled wasm module
-in a real wasmi runtime, with a raw-byte `assert_eq` per case — the two
-execution paths must produce **byte-identical** responses. (wasmi-hosted as
-of writing; the DuckDB-linked new-EH artifact is hosted by wasmtime instead
-— same byte-identity law, different runner.) Skips are loud
+in a real wasm runtime, with a raw-byte `assert_eq` per case — the two
+execution paths must produce **byte-identical** responses. (wasmi-hosted
+when this court was written; the wasmi runner retired 2026-10-24, so the
+DuckDB-linked new-EH artifact is hosted by wasmtime 48 via
+`graphlaw-run-eh` — same byte-identity law, different runner.) Skips are loud
 and counted, never silent. If it does not pass byte-identical, the artifact
 does not ship.
 
@@ -257,11 +283,12 @@ Run in order; each step gates the next:
 4. `cargo test --test wasm_native_differential` — 35 cases byte-identical
    native vs wasm; the upgrade witness (W08). Skips must be zero or loud.
 5. `cargo test --test wasm_abi` — drives every op and dialect through the
-   compiled module in wasmi exactly as a host would (`GRAPHLAW_WASM=<path>`
-   to test the prebuilt artifact instead of a fresh build). wasmi 2.0.0
-   caveat: it rejects the DuckDB-linked new-EH artifact; wasmi courts are
-   for the legacy pre-duckdb pin only — the current artifact's host is
-   `graphlaw-run-eh` (wasmtime 48).
+   compiled module exactly as a host would (`GRAPHLAW_WASM=<path>`
+   to test the prebuilt artifact instead of a fresh build). Historical
+   caveat, now moot: wasmi 2.0.0 rejected the DuckDB-linked new-EH
+   artifact, which is why the wasmi runner was retired 2026-10-24 — the
+   current artifact's host (and the sole packet-4 stdio runner) is
+   `graphlaw-run-eh` (wasmtime 48), `docs/jira/v26.10.23/ADR-wasmi-retirement.md`.
 6. `cargo test --test abi_manifest_court` — manifest regenerates
    byte-identical (or additive-only) against the new version.
 7. Update the pin section of [wasm-integration.md](wasm-integration.md).

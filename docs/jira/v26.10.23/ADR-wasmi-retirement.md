@@ -1,6 +1,13 @@
 # ADR: Retire the wasmi Execution Path
 
-- **Status**: Proposed
+- **Status**: Implemented (2026-10-24). Witnesses: step-2 green run
+  `receipts/2026-10-24-wasmi-retirement-step2-green-witness.md` (pytest
+  19/0 ×2, runner-eh); deletion receipt
+  `receipts/2026-10-24-wasmi-retirement-deletion.md` (`cargo tree -i
+  wasmi` absent-from-graph, pre-delete blob b3sum embedded); consumer
+  flip zero-ref greps in the same receipts. R1 note: `6da1d33` deleted
+  the runner source ahead of the step-2 witness — disclosed in the
+  witness receipt; no further deletion lands on an unrun flip.
 - **Date**: 2026-10-23
 - **Milestone**: v26.10.23
 - **Class**: ERRC — Eliminate

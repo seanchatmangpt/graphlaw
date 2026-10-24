@@ -49,7 +49,7 @@ untouched by that pass.
 | `ResourceLimit` | `RefusalKind::ResourceLimit` | `limit`, `observed`, `max` (N3 limits always carry `max`) | Shrink the request. Limits: `request_bytes`, `json_depth`, `atoms_per_field`, `plan_actions`, `policy_entries` (constants `abi::MAX_*`), plus the N3 reasoner limits `n3_iterations`, `n3_match_steps`, `n3_term_bytes`, `n3_total_bytes`, `n3_derived_facts` (constants `law::N3_*`). |
 | `Refused` | `LawError::Refused` | `kind` | Upstream engine or routing refusal raised inside a `law` step; `kind` is a `RefusalKind` name (below). |
 | `PolicyRefused` | `policy::PolicyRefused` | `policy_kind`, `state`, `action` | See policy kinds below. |
-| `DuckDb` | `RefusalKind::DuckDb` | `message` | The DuckDB substrate (ABI op `duckdb`, `src/duckdb_op.rs`) failed or the request misused it — unknown/expired cursor, bad view mount, unsupported param, engine error. Never traps. Chunk limits ride `ResourceLimit` with `limit` = `duckdb_chunk_rows` / `duckdb_chunk_bytes` / `duckdb_views`. Absence from the hashed 14-op list is not this refusal. Promoted 2026-10-23 (in-module execution, wasmtime 48 + new W3C EH archive): the op now dispatches inside the wasm unit on every target, and `RefusalKind::DuckDb` fires in-module too — a wasm caller no longer gets `Unsupported` / `unknown op`. Receipt: pending DFLSS-GL integration receipt (2026-10-23 wave). |
+| `DuckDb` | `RefusalKind::DuckDb` | `message` | The DuckDB substrate (ABI op `duckdb`, `src/duckdb_op.rs`) failed or the request misused it — unknown/expired cursor, bad view mount, unsupported param, engine error. Never traps. Chunk limits ride `ResourceLimit` with `limit` = `duckdb_chunk_rows` / `duckdb_chunk_bytes` / `duckdb_views`. Absence from the hashed 14-op list is not this refusal. Promoted 2026-10-23 (in-module execution, wasmtime 48 + new W3C EH archive): the op now dispatches inside the wasm unit on every target, and `RefusalKind::DuckDb` fires in-module too — a wasm caller no longer gets `Unsupported` / `unknown op`. Receipt: `receipts/2026-10-23-eh-closure-wave.md` §4/§8 (duckdb_op 16/0 W46, duckdb_eval 18/0, sql_ast 32/0 W48; canonical pin §8) and `receipts/2026-10-23-wave-close.md` §2. |
 | `AstError` | `sql_ast::AstError` | `reason` (Display of the variant) | Refusal during SQL AST validation before query dispatch to `frozen-duckdb`. Post SQLRDF-18
 (anchor correction 2026-10-22, lane V-L11) `AstError` is a pure-data struct `{code:
 RefusalCode, ctx: RefusalContext}` (`src/sql_ast/refusals.rs`), not an enum; the names below
@@ -97,7 +97,7 @@ lexical form, and the AST node.
 
 Typed refusal codes appended to the `sql_ast::RefusalCode` arm namespace at
 `= 39` / `= 40` / `= 41` (`src/sql_ast/refusals.rs`, `refusal_arm` constants).
-Receipt: pending DFLSS-GL integration receipt (2026-10-23 wave).
+Receipt: `receipts/2026-10-23-eh-closure-wave.md` §5 (G5 arms registered; PINNED_GAPS→REGISTERED_ARMS flip witnessed, W44).
 
 | code | name | trigger | carrier | recovery |
 |---|---|---|---|---|
@@ -127,9 +127,39 @@ time before any external serialization of the interim numbers).
 | `STAR_MODIFIER_POSITION` (`refusal_arm = 50`) | Star vocabulary position (SQLRDF-25 Rows 1+2) | A `sql:Star`/`sql:Columns` node (or a node carrying `sql:exclude`/`sql:replace`/`sql:columnsPattern`) extracted through the expression path instead of the projection-item path — star vocabulary is projection-list-only. | `sql_ast::AstError` with `code: RefusalCode::MalformedAst`, `shape_id: refusal_arm::STAR_MODIFIER_POSITION` | Place the star term in the `sql:selectList` projection-item position. |
 | `COLUMNS_LAMBDA` (`refusal_arm = 51`) | COLUMNS lambda form (SQLRDF-25 Rows 1+2) | A `sql:columnsLambda` form on a COLUMNS projection item — the lambda form is refused typed until specified. | `sql_ast::AstError` with `code: RefusalCode::MalformedAst`, `shape_id: refusal_arm::COLUMNS_LAMBDA` | Use the regex form `sql:columnsPattern` with one quoted pattern string. |
 | `COLUMNS_PATTERN` (`refusal_arm = 52`) | COLUMNS pattern literal (SQLRDF-25 Rows 1+2) | A COLUMNS projection item with no string `sql:columnsPattern` literal, or an empty/whitespace one — never a silent `COLUMNS('')`. | `sql_ast::AstError` with `code: RefusalCode::MalformedAst`, `shape_id: refusal_arm::COLUMNS_PATTERN` | One quoted pattern string. |
-| `STAR_MODIFIER_POSITION` (`refusal_arm = 50`) | Star vocabulary position (SQLRDF-25 Rows 1+2) | A `sql:Star`/`sql:Columns` node (or a node carrying `sql:exclude`/`sql:replace`/`sql:columnsPattern`) extracted through the expression path instead of the projection-item path — star vocabulary is projection-list-only. | `sql_ast::AstError` with `code: RefusalCode::MalformedAst`, `shape_id: refusal_arm::STAR_MODIFIER_POSITION` | Place the star term in the `sql:selectList` projection-item position. |
-| `COLUMNS_LAMBDA` (`refusal_arm = 51`) | COLUMNS lambda form (SQLRDF-25 Rows 1+2) | A `sql:columnsLambda` form on a COLUMNS projection item — the lambda form is refused typed until specified. | `sql_ast::AstError` with `code: RefusalCode::MalformedAst`, `shape_id: refusal_arm::COLUMNS_LAMBDA` | Use the regex form `sql:columnsPattern` with one quoted pattern string. |
-| `COLUMNS_PATTERN` (`refusal_arm = 52`) | COLUMNS pattern literal (SQLRDF-25 Rows 1+2) | A COLUMNS projection item with no string `sql:columnsPattern` literal, or an empty/whitespace one — never a silent `COLUMNS('')`. | `sql_ast::AstError` with `code: RefusalCode::MalformedAst`, `shape_id: refusal_arm::COLUMNS_PATTERN` | One quoted pattern string. |
+
+### Appended register-reconciliation note (2026-10-24 doc-currency pass) — appended, never renumbered
+
+(i) **Dedupe disclosure**: the second copies of the `STAR_MODIFIER_POSITION`
+(`refusal_arm = 50`), `COLUMNS_LAMBDA` (`= 51`) and `COLUMNS_PATTERN` (`= 52`)
+rows — byte-identical duplicates of the rows above them, born duplicated in
+commit `88d6665` — were removed this pass. No codes changed; nothing was
+renumbered; the register stays append-only. (witnessed this pass: the
+duplicate block was byte-identical to rows 127-129 under `diff`.)
+
+(ii) **Arm-38 note**: the 37→39 skip in the arm namespace is a NAMESPACE
+fact, not a gap: `refusal_arm::UNBOUNDED_MUTATION = 38`
+(`src/sql_ast/refusals.rs:69`) is the internal rendering-arm `shape_id`
+behind REFUSAL-05 (a WHERE-less UPDATE/DELETE), NOT a `RefusalCode` enum
+discriminant (enum arms are 1-5, 16-21, 36, 37). Recovery: see the
+REFUSAL-05 row.
+
+### Appended set-operation discriminants (v26.10.23, SQLRDF-27 gap #1) — appended, never renumbered
+
+MalformedAst (REFUSAL-01) rendering arms appended at
+`src/sql_ast/refusals.rs:150-165` (`refusal_arm` table, SQLRDF-27 dialect
+gap #1). Each is `sql_ast::AstError` with `code: RefusalCode::MalformedAst`
++ `shape_id` naming the arm; the message carries the `[REFUSAL-01]` marker;
+refused at compile, zero engine contact. Witness court:
+`tests/set_operations_court.rs`. No `receipts/` entry this wave — same
+disclosed integration item as the REFUSAL-05/G5 flips above.
+
+| code | name | trigger | carrier | recovery |
+|---|---|---|---|---|
+| `SET_OP_NO_RIGHT` (`refusal_arm = 53`) | Set-operation right operand law (SQLRDF-27 gap #1) | A `sql:SetOperationStatement` node carries no `sql:setRight` — the rendered SQL would be `( SELECT … ) UNION ` with an empty right operand. A set operation is binary by construction. | `sql_ast::AstError` with `code: RefusalCode::MalformedAst`, `shape_id: refusal_arm::SET_OP_NO_RIGHT` | Attach a nested `sql:SelectStatement` via `sql:setRight`. |
+| `SET_OP_KIND_TOKEN` (`refusal_arm = 54`) | Set-operator token law (SQLRDF-27 gap #1) | The `sql:setOperator` token is not `UNION`, `INTERSECT` or `EXCEPT` (case-insensitive). | `sql_ast::AstError` with `code: RefusalCode::MalformedAst`, `shape_id: refusal_arm::SET_OP_KIND_TOKEN` | Use one of the three admitted tokens. |
+| `SET_OP_FLAG_LEX` (`refusal_arm = 55`) | Set-op flag datatype law (SQLRDF-27 gap #1) | A `sql:setAll` / `sql:byName` flag literal is not an `xsd:boolean` `true`/`false` lexical. `ident` carries the predicate, `aux_ident` the statement node. | `sql_ast::AstError` with `code: RefusalCode::MalformedAst`, `shape_id: refusal_arm::SET_OP_FLAG_LEX` | Write `sql:setAll` / `sql:byName` with an `xsd:boolean` `true`/`false` literal. |
+| `SET_OP_BY_NAME_KIND` (`refusal_arm = 56`) | BY NAME / operator coherence law (SQLRDF-27 gap #1) | `sql:byName true` beside a non-UNION `sql:setOperator`. Engine-witnessed (frozen-duckdb probe): `INTERSECT BY NAME` / `EXCEPT BY NAME` are real parser errors, so the compile refuses typed before any engine call. | `sql_ast::AstError` with `code: RefusalCode::MalformedAst`, `shape_id: refusal_arm::SET_OP_BY_NAME_KIND` | Drop the `sql:byName` flag or use `UNION`. |
 
 ### Appended evaluator/attestation refusals (v26.10.22, lane L72) — appended, never renumbered
 
@@ -151,12 +181,12 @@ are deliberately kept out of the numeric register above.
 |---|---|---|---|---|
 | `WASI_PATCH_BUILD_REFUSED` | `build.rs` (wasi-patched-deps feature) | The `wasi-patched-deps` feature is enabled but the required WASI SDK patch input is missing. | cargo build script failure | Set up the WASI SDK patch input per `docs/WASM.md`, or drop the feature. |
 | `MUTATION-COURT-DIRTY-TREE` | `scripts/mutation_court.sh` | Uncommitted work under `src/` while the court runs `--in-place` (false-red channel); bypassed only with `--force`. | 6 | Commit the work, or pass `--force` deliberately. |
-| `GRAPHLAW-WASM-BUILD-FAILED` / `BLOCKED-LINK` | `tests/common/mod.rs` wasm harness | `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` fails with the typed frozen-duckdb-sys `build.rs` refusal (`WASI_SDK_PATH required`): without a wasi-sdk root on `WASI_SDK_PATH` (`bin/clang`, `share/cmake/wasi-sdk-p1.cmake`) the build script refuses before any compilation. (Historical, 2026-10: the pre-typed-refusal failure mode was the linker failing to resolve `-lduckdb`; that class is superseded by the typed build.rs refusal.) The harness also panics when cargo reports success and the artifact is missing. Update 2026-10-23 (EH wall closed by uniform new-EH rebuild, wasmtime 48): the link now succeeds with `WASI_SDK_PATH=<staging> CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling"`; wasmi remains unable to host — wasmtime 48 is the host. Receipt: pending DFLSS-GL integration receipt (2026-10-23 wave). | test panic (loud) | Recovery: `docs/WASM.md` (WASI_SDK_PATH setup; the engine cache is not a wasi-sdk). |
+| `GRAPHLAW-WASM-BUILD-FAILED` / `BLOCKED-LINK` | `tests/common/mod.rs` wasm harness | `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` fails with the typed frozen-duckdb-sys `build.rs` refusal (`WASI_SDK_PATH required`): without a wasi-sdk root on `WASI_SDK_PATH` (`bin/clang`, `share/cmake/wasi-sdk-p1.cmake`) the build script refuses before any compilation. (Historical, 2026-10: the pre-typed-refusal failure mode was the linker failing to resolve `-lduckdb`; that class is superseded by the typed build.rs refusal.) The harness also panics when cargo reports success and the artifact is missing. Update 2026-10-23 (EH wall closed by uniform new-EH rebuild, wasmtime 48): the link now succeeds with `WASI_SDK_PATH=<staging> CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling"`; wasmi remains unable to host — wasmtime 48 is the host. Receipt: `receipts/2026-10-23-eh-closure-wave.md` §1 (opcode EH gate try_table=99/legacy=0 PASS; wasmtime 48.0.1 EH-OK probe exit 0) + §8 (canonical pin as-of-2026-10-23, superseded by 58a44095…d2280a 2026-10-24). | test panic (loud) | Recovery: `docs/WASM.md` (WASI_SDK_PATH setup; the engine cache is not a wasi-sdk). |
 | `DOC-STALENESS-FINDINGS` | `scripts/doc_staleness_gate.sh` | Rules R1-R4 fire: unresolvable fenced commands, unregistered 64-hex digests, banned stale strings, or count/digest claims without a `receipts/` pointer. | 1 (findings), 0 (clean), 2 (startup failure, e.g. cd) | Fix each finding line; re-run the gate to exit 0. |
 | `MANIFEST-REFUSED` / `DISK-REFUSED` | `docs/jira/v26.10.22/designs/rules-pruner-design.md` only | DESIGN-STAGE — not implemented on disk as of v26.10.22; listed here so the codes stay claimed and stable. | n/a | Implement behind a receipted ticket; flip this row with a receipt. |
 | `GRAPHLAW-RUN-EH-REQUIRED` | `src/bin/graphlaw_run.rs` (`has_tag_section` pre-flight, `RunError::EhArtifact`) | Legacy-host scope: `graphlaw-run` (wasmi host) is given a wasm artifact carrying a wasm Tag(13) section (EH-class artifact). The pre-flight refuses before any parse attempt — wasmi cannot host these — with the message `EH-class artifact requires graphlaw-run-eh`. Witnessed exit 96 against the 46 MB EH artifact (2026-10-23 wave). | 96 | Run the artifact under `graphlaw-run-eh` (wasmtime 48 host). |
 | `GRAPHLAW-RUN-EH` (exit trio 95/96/97) | `src/bin/graphlaw_run_eh.rs` (`RunError` mapping) | The `runner-eh` host surface (wasmtime 48): 95 — bytes are not a valid wasm module (`WasmInvalid`); 96 — module failed to instantiate/link/export the graphlaw ABI, including refusal of a non-wasi import (`WasmInstantiation`); 97 — guest ABI call or linear-memory access faulted (`AbiFault`). Each failure prints one typed one-line stderr diagnostic. Cross-ref: the EH-class pre-flight row above (`GRAPHLAW-RUN-EH-REQUIRED`). | 95 / 96 / 97 | Fix the artifact (95), the imports/exports vs the graphlaw ABI (96), or the guest fault site (97). |
-| document-sequence wire surface (`BatchReceipt` / `BatchMemberFailed`) | `src/duckdb_op.rs` document execution | mode `exec` with `document:true` answers the `BatchReceipt` response shape (per-member `rows_emitted`); a failing member mid-sequence returns the typed `BatchMemberFailed` details `{code, member, partial_receipt}` naming the failing member and the receipt for the prefix that did run. Receipt: pending DFLSS-GL integration receipt (2026-10-23 wave). | ABI envelope | Fix the failing member's statement; replay resumes from the named member. |
+| document-sequence wire surface (`BatchReceipt` / `BatchMemberFailed`) | `src/duckdb_op.rs` document execution | mode `exec` with `document:true` answers the `BatchReceipt` response shape (per-member `rows_emitted`); a failing member mid-sequence returns the typed `BatchMemberFailed` details `{code, member, partial_receipt}` naming the failing member and the receipt for the prefix that did run. Receipt: `receipts/2026-10-23-eh-closure-wave.md` §4 (duckdb_op 16/0, duckdb_eval 18/0, sql_ast 32/0 — W48; session ABI 9/9 — W20) and `receipts/2026-10-23-wave-close.md` §2. | ABI envelope | Fix the failing member's statement; replay resumes from the named member. |
 | session-surface refusals (`DuckDb` / `ResourceLimit`) | `src/duckdb_op.rs` session registry | DuckDB session surface refusals, all typed: `unknown or expired session \`<name>\`` (`DuckDb`, session get after expiry/drop), duplicate session name on open (`DuckDb`), and the 16-session cap via `check_limit("duckdb_sessions", …, MAX_SESSIONS)` (`ResourceLimit`, `limit` = `duckdb_sessions`). Session state is process-local and crash-only, like cursor state. | ABI envelope | Use a live session name; open under a fresh name; close a session to free a slot. |
 
 ## Conformance note: `Σ_PQC` is UNMET (SQLRDF-10)
@@ -186,7 +216,7 @@ ticket.
 here, for example blank nodes in plan atoms, or a malformed ABI request), `ResourceLimit`,
 `TierMismatch` (the document belongs to the other semantic tier, R04: e.g. N3 logic given to an
 RDF parser — see `src/tier.rs`),
-`DuckDb` (the DuckDB substrate failed; op `duckdb` — dispatched inside the wasm unit on every target as of the 2026-10-23 promotion; receipt: pending DFLSS-GL integration receipt (2026-10-23 wave)).
+`DuckDb` (the DuckDB substrate failed; op `duckdb` — dispatched inside the wasm unit on every target as of the 2026-10-23 promotion; receipt: `receipts/2026-10-23-eh-closure-wave.md` §4/§8).
 Source of truth: `src/dialect/refusal.rs` `RefusalKind` (7 arms).
 
 ## Lease reasons (`LeaseRefused.reason`)

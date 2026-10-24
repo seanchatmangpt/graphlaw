@@ -1,6 +1,18 @@
 # SQL-in-RDF tickets — v26.10.22
 
-Status of every ticket: **Open**, except SQLRDF-08 (withdrawn: DuckDB is inside the wasm unit), SQLRDF-27 (Closed 2026-10-23, receipt-gated on FIBO 4/0 + lifecycle 3/0 — see RECEIPTS.md "2026-10-23 ledger truth-sync"), and SQLRDF-26 (ALIVE — atomic document execution landed, verification receipts inline in [SQLRDF-26.md](SQLRDF-26.md)). The CanonArrow ADR ([ADR-canonarrow-dual-witness-egress.md](ADR-canonarrow-dual-witness-egress.md)) is absorbed into the v26.10.22 release boundary — the 26.10.23 moniker is deferred.
+Status of every ticket: as recorded in the dispatch-era tables below
+(kept as-written; this index is append-only), with the **closeout standing
+of all 32 rows recorded in the [WRAP section](#wrap--v261022-closeout-2026-10-24)
+(2026-10-24, closeout lane)** — 15 Closed / 13 Deferred / 1 Withdrawn /
+1 Absorbed / 2 program no-flip, each flip receipt-cited there. Prior
+exceptions: SQLRDF-08 (withdrawn: DuckDB is inside the wasm unit), SQLRDF-27
+(Closed 2026-10-23, receipt-gated on FIBO 4/0 + lifecycle 3/0 — see
+RECEIPTS.md "2026-10-23 ledger truth-sync"), SQLRDF-26 (ALIVE — atomic
+document execution landed, verification receipts inline in
+[SQLRDF-26.md](SQLRDF-26.md)). The CanonArrow ADR
+([ADR-canonarrow-dual-witness-egress.md](ADR-canonarrow-dual-witness-egress.md))
+is absorbed into the v26.10.22 release boundary — the 26.10.23 moniker is
+deferred.
 
 The conformance target is the pasted sql-rdf Recommendation, the conformance text for v26.10.22. Section citations in the tickets point at that text. SQLRDF-12 files it at `docs/reference/sql-rdf-rec.md`.
 
@@ -54,7 +66,10 @@ Compiler files the tickets point at:
 Wave map: 8 build lanes + 13 per-ticket DoD courts over one canonical checkout
 (`/Users/sac/graphlaw`). Ticket Status fields stay **Open**; the coordinator
 flips them at integration. Latest observed verdicts per ticket live in
-[RECEIPTS.md](RECEIPTS.md).
+[RECEIPTS.md](RECEIPTS.md). [WRAP closeout, 2026-10-24]: the integration flip
+pass ran as the WRAP section's receipt-cited flip table below — the table
+cells above stay as-filed (append-only index); the WRAP table is the
+authoritative end-state.
 
 | Lane | Scope | Tickets / files |
 | --- | --- | --- |
@@ -410,14 +425,19 @@ hook runs after the tool. `src/abi/lease.rs` is not turned on.
 ### Window files (index re-sync, 2026-10-22, lane D3)
 
 Re-synced against `ls docs/jira/v26.10.22/`: every ticket and file named above
-exists on disk; all 61 relative `.md` links in this index resolve (verified by
-`test -f` per link). Top-level files present on disk but not named anywhere
+exists on disk. Link-resolve claim, re-verified 2026-10-24 (closeout lane):
+182 unique relative `.md` links in this index, 182 resolve, 0 missing after
+the :420 stale-row repair (`RELEASE-NOTES-DRAFT-26.10.21.md` did not exist;
+index now points at `RELEASE-NOTES-26.10.22.md`) — verified by `test -f` per
+link. The 2026-10-22 "all 61 links resolve" figure was true for that
+sync's link set and is superseded by this count. Top-level files present on
+disk but not named anywhere
 above:
 
 - [`_LANES.md`](_LANES.md) — lane lease map for this window
 - [`CHARTER-DFLSS.md`](CHARTER-DFLSS.md) — DFLSS charter
 - [`DFLSS-DOSSIER.md`](DFLSS-DOSSIER.md) — DFLSS dossier (Define/Measure/Explore/Develop/Implement records)
-- [`RELEASE-NOTES-DRAFT-26.10.21.md`](RELEASE-NOTES-DRAFT-26.10.21.md) — release-notes draft
+- [`RELEASE-NOTES-26.10.22.md`](RELEASE-NOTES-26.10.22.md) — release notes (v26.10.22; the `RELEASE-NOTES-DRAFT-26.10.21.md` name this row carried at the 2026-10-22 sync does not exist on disk — citation repaired 2026-10-24, closeout lane)
 - [`RUST-4-PHASE2-HARDENING.md`](RUST-4-PHASE2-HARDENING.md) — Rust phase-2 hardening ticket
 
 (`DISSERTATION.md`, `PRD-P28-SIL.md`, `RECEIPTS.md`, `THESIS.md`,
@@ -612,3 +632,62 @@ Receipts: [RECEIPTS.md](RECEIPTS.md) §"2026-10-23 ledger-sync wave".
   amendment); ticket flipped receipt-gated; final artifact identity is
   the settle-commit pin `472d5557…bf80ea` (58,121,500 B, commit
   `d9cab2f`). Owed non-gating rungs remain open.
+
+### WRAP — v26.10.22 closeout (2026-10-24)
+
+Closeout lane receipt: this section is the window's integration flip pass.
+Every table cell above stays as-filed (this index is append-only; prior
+sections were never rewritten and none is rewritten now) — the WRAP table
+below is the authoritative per-ticket end-state, each row citing its
+receipt path. Ground ledger (G1 DISCHARGED / G2-G3 REMAINING / G4 SPLIT):
+[GO-NO-GO-v26.10.22.md](../v26.10.23/GO-NO-GO-v26.10.22.md) §A (v5).
+OD-4 memo filed + OD-6 anomaly recorded:
+[designs/OPERATOR-DECISIONS.md](designs/OPERATOR-DECISIONS.md) — both
+DECISION lines left BLANK for the operator (runbook S3/S4:
+`docs/jira/v26.10.23/OPERATOR-RUNBOOK-v26.10.22-PUBLISH.md`). Residuals
+hand off to the v26.10.23 window: mutation-court verdict (G2), FULL battery
+on the shipped pin (G3), R-1 rungs (G4/R-1), SPC FULL + OD-4 letter, the two
+operator credential acts (PUBLISH-STATUS rows 2/6), registry
+receipt-surface resync, refusals arms 53-56 register rows,
+docs/reference-generated refresh.
+
+End-state: **15 Closed / 13 Deferred / 1 Withdrawn / 1 Absorbed / 2 program
+no-flip** (32 rows). Count law note: the dispatch projected 18/10; rows
+SQLRDF-22/23/25 fall to DEFAULT-DEFERRED under their own decision rules on
+disk evidence (below), and a conditional row is never silently Closed —
+the honest count governs.
+
+| Row | Was | End state | Receipt / decision rule |
+|---|---|---|---|
+| SQLRDF-01 | Open | **Closed** | Compiler-side hop closed, dialect court 33/0 exit 0 — `receipts/sql-rdf-dialect-2026-10-22.md` (INDEX row) |
+| SQLRDF-02 | Open | **Closed** | Shapes landed + conformance 7/0 — `receipts/sql-rdf-conformance-2026-10-22.md`; dialect 33/0 `receipts/sql-rdf-dialect-2026-10-22.md` |
+| SQLRDF-03 | Open | **Closed** | HAVING/ORDER BY/from compiler, courted 33/0 final 2026-10-22 — same dialect receipt |
+| SQLRDF-04 | Open | **Closed** | Parameterized MERGE, chicago_validation 9/9 + receipt courts — INDEX row |
+| SQLRDF-05 | Open | **Closed** | Expression-level graphs, 6/0 + `.gram` env exception cleared — `receipts/duckdb-statement-kinds-2026-10-22.md` |
+| SQLRDF-06 | Open | **Closed** | Register-aligned REFUSAL-02 carrier, courted branches — `tests/sql_rdf_dialect.rs` |
+| SQLRDF-07 | Open | **Closed** | Select-list scope integrity, 9/9 + evasion/join courts — INDEX row |
+| SQLRDF-08 | Withdrawn | **Withdrawn** (no change) | Contradicts the one-unit law; `REFUSAL-04` is the non-document-backed reader (preamble) |
+| SQLRDF-09 | Open | **Closed** | Canonical-AST formula hash + dialect 33/0 — INDEX row |
+| SQLRDF-10 | Open | **Closed** | §1.4 conformance note filed, attestation courts 10/0 (Σ_PQC achievement itself stays a program-level disclosure, refusals register) |
+| SQLRDF-11 | Open | **Closed** | §6.2 courts on compiled AST graphs over real frozen-duckdb — INDEX row |
+| SQLRDF-12 | Open | **Closed** | `docs/reference/sql-rdf-rec.md` filed + citation gates — INDEX row |
+| SQLRDF-13 | Open (follow-up) | **Deferred** | Shapes withheld at `ontologies/sql-ast.ttl:315-330`; successor work, not v26.10.22 acceptance |
+| SQLRDF-14 | Open (follow-up) | **Deferred** | PEG leaf re-parenting; follow-up |
+| SQLRDF-15 | Open (follow-up) | **Deferred** | sf=0.01 divergence unadjudicated (frozen pin sources absent) |
+| SQLRDF-16 | Open (follow-up) | **Deferred** | Moonshot backlog, BLOCKED-BY integration commit |
+| SQLRDF-17 | Open (follow-up) | **Deferred** | C2 hole P1; `src/duckdb_op.rs:198-219` raw-SQL arm still open |
+| SQLRDF-18 | Open (successor program) | **Deferred** | TC_HOT_FULL variance 26.91% + SPC Cpk legs open (OD-4 class) |
+| SQLRDF-19 | Open (follow-up) | **Deferred** | Untested feature cells; release-only combos |
+| SQLRDF-20 | Open (follow-up) | **Deferred** | BEAM hot-upgrade protocol |
+| SQLRDF-21 | Open (courts landing this wave) | **Closed** | EH-closure wave: gates removed, wasmtime host, session surface, op courts 16/0, lifecycle 3/0 amendment, re-pin landed — `receipts/2026-10-23-eh-closure-wave.md` §8; W13→W40 supersession RECEIPTS.md:1539 |
+| SQLRDF-22 | Open | **Deferred** (rule) | Rule: Closed iff all six audited gaps land typed + courted. Observed: G1/G3/G4/G6 landed with courts (INDEX status refresh 2026-10-23; G6 receipted `docs/jira/v26.10.22/RECEIPTS.md:1883-1891`), G5 filed forward as SQLRDF-23, **G2 COPY egress policy not witnessed landed** (no COPY policy arm in `docs/refusals.md`, no COPY-policy court) → DEFAULT DEFERRED |
+| SQLRDF-23 | Open | **Deferred** (rule) | Rule: Closed iff court plan (a)-(f) closes. Observed: compile+eval+wire LANDED with courts (`sql_ast` 32/0, `duckdb_eval` 18/0, `duckdb_op` 16/0; RECEIPTS.md:1723-1726) but mutation-court inversions for (b)/(f) still pending and the last suite run was DISK-BLOCKED (SQLRDF-23.md "Implementation progress") → DEFAULT DEFERRED |
+| SQLRDF-24 | Open | **Closed** (rule met) | Rule: trap root-caused + fixed + artifact links/executes/pins. Evidence: CONFIRMED + FIXED (atexit member swap + reactor-contract completion), re-pin superseded the hold, lifecycle 3/3 — `receipts/2026-10-23-eh-closure-wave.md` §8; RECEIPTS.md:1516-1521; shipped pin `58a44095` 4-surface |
+| SQLRDF-25 | Open | **Deferred** | Rows 1-5 landed in `88d6665` (17/0, `receipts/2026-10-23-sqlrdf25-close.md`) but window OVER/frames, QUALIFY, CTEs not witnessed landed; remainder tracked in SQLRDF-25-RG |
+| SQLRDF-26 | ALIVE | **Closed** | Atomic document execution landed, verification receipts inline in [SQLRDF-26.md](SQLRDF-26.md) |
+| SQLRDF-27 | Closed 2026-10-23 | **Closed** (no change) | Close condition met (`receipts/2026-10-23-sqlrdf27-verdict.md` + lifecycle amendment); owed rungs = GO-NO-GO G4/R-1, not this ticket |
+| SQLRDF-28 | Open | **Deferred** | Acceptance = mutation rerun moves all 11 survivors to caught; kill court landed 10/0 (`b499fb7`, `tests/abi_response_builders_court.rs`) but the sweep has no completed verdict (ENOSPC; GO-NO-GO G2) — closes with the G2 receipt |
+| PRD-P28-SIL | Open | **program no-flip** | Filed verbatim as the operative PRD for the successor program; the register rows are the flip surface, not this filing row |
+| DISSERTATION | Open (filed) | **program no-flip** | Filed verbatim; chapter→artifact map is the standing record |
+| SQLRDF-25-RG | Open (rows 1-5 LANDED) | **Deferred** | Open rungs: wasm one-unit court, shape mutation court (INDEX row) |
+| ADR-CANONARROW | Absorbed | **Absorbed** (no change) | Absorbed into the v26.10.22 release boundary (26.10.23 moniker deferred); receipt_v2 court 6/6 (W60) |

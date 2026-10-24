@@ -2,7 +2,25 @@
 
 This file mirrors the Rust workspace CHANGELOG at the repository root. The npm
 package version always equals the crates.io `graphlaw` version it wraps; release
-entries are copied verbatim from the root CHANGELOG.
+entries are condensed from the root CHANGELOG, filtered to what a JS consumer
+sees.
+
+## [26.10.22] - 2026-10-24
+
+Version `26.10.22` of the workspace line; the npm tarball is packed and
+CI-validated (`publish-npm` run 40084544193, validate-and-pack GREEN) with the
+npm publish typed-blocked on the one-time Trusted Publisher configuration
+(status: `docs/jira/v26.10.23/PUBLISH-STATUS.md`).
+
+### Added
+
+- SQL-in-RDF executes inside the wasm module: the DuckDB-linked artifact
+  compiles and runs admitted SQL statements in-module (new-EH artifact hosted
+  by the wasmtime-48 EH runner; the wasmi runner cannot host it).
+- Persistent DuckDB sessions, document sequences, and an atomic document mode
+  (`"atomic": true` — BEGIN/COMMIT/ROLLBACK with typed partial-failure
+  receipts). Unbounded UPDATE/DELETE refuses `REFUSAL-05` at compile, before
+  any engine call.
 
 ## [Unreleased]
 

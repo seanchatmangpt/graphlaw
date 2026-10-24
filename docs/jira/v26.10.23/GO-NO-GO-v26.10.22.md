@@ -230,3 +230,89 @@ in CI, deterministic pack + drift check). Tag v26.10.22 at 669c817+.
 The workflow fixes landed en route (ABI-surface gate port, byte-authority
 gate, scoped-tarball name + pack order + mkdir fixes, staging attempts
 documented). The publish completes with those two operator acts.
+
+---
+## v5 CLOSEOUT GO/NO-GO (2026-10-24, closeout lane)
+
+Closeout read over `/Users/sac/graphlaw` at HEAD `6da1d33` (dirty working
+tree = in-flight wasmi retirement, disclosed and load-bearing; no cargo, no
+git transitions, no publish executed by this lane). Every count and pointer
+below was re-read from disk this session. This section appends only; v3's
+four grounds, v4's terminal state, and PUBLISH-STATUS.md's live rows are not
+rewritten by it.
+
+## A. Ground ledger (v3 grounds, closeout state)
+
+| # | Ground (v3 §1.x) | State at closeout | Evidence (re-read 2026-10-24) |
+|---|---|---|---|
+| G1 | Security wave + re-pin + pin-currency docs (v3 item 1/5) | **DISCHARGED** | Wave committed (`679299d` scanner, `907e663` EH mirror + ATTACH courts; v3 §1.1). Re-pin landed: all four surfaces agree live — `priv/graphlaw.wasm.blake3` = `registry/ARTIFACTS.blake3:13` = `js/npm/src/generated/artifact-meta.ts:3` = live `b3sum` = `58a44095…d2280a`, 58,124,612 B (re-run this session). Courts receipted: `wasm_frame_bound_court` 8/0, `attach_bypass_court` 3/0, `wasm_env_isolation_court` 3/0, `graphlaw_run_eh_court` 7/0 (`docs/reference/wasm-gap-register.md` 03:20 flip log, G4/SEC1/INC1 CLOSED). Fuel calibrated 10M red → 1B red → 100B green (`receipts/2026-10-24-fuel-calibration.md`). Pin-currency truth-sync landed (README / docs/WASM.md / SECURITY.md / ARCHITECTURE / js/npm README; historical pins demoted to marked sentences; the GWS-2 reproducible-SDK-rebuild marker stays PENDING — pin identity is not reproducibility). |
+| G2 | Mutation-court verdict (v3 item 3) | **REMAINING** — owner: coordinator, solo window | Latest sweep died ENOSPC at build phase (2026-10-24 11:10:03Z; outcomes.json ABSENT, caught/missed empty, no process — not PENDING, INCOMPLETE). Expected receipt path: solo window with `git status --porcelain -- src/` empty; `bash scripts/mutation_court.sh` to verdict (exit ∈ {0,2}, zero gate-relevant misses, `outcomes.json` end_time set); durable `receipts/` file with kill counts. The 11 known `src/abi.rs` survivors (`SQLRDF-28.md:16-27`) should now KILL — the kill court `tests/abi_response_builders_court.rs` (10/0 witnessed, `b499fb7`) is committed in the tagged tree. Gate-relevant survivor (registry.rs / abi.rs dispatch / capabilities) → STOP-and-decide, never silent-accept. |
+| G3 | Post-security-wave FULL battery receipt (v3 item 4) | **REMAINING** — owner: coordinator | Last landed FULL battery is RED (battery9: dvp 2/2 failed, fixed since by the INSERT pairing fix — banking 4/0 receipt exists on historical `f3570f15`); no battery receipt on the shipped pin `58a44095` exists. Expected receipt path: battery re-run with `GRAPHLAW_WASM=priv/graphlaw.wasm` in every invocation (no new artifact identity minted); dvp court must stay 4/0; per-item durable receipts + one consolidated pointer row flipping terminal-receipt §2 TRANSCRIPT → DURABLE. |
+| G4 | Pre-tag gates R-1/R-2 (v3 item 5/6) | **SPLIT** | **R-2 DISCHARGED** — dated per-advisory operator decision: `docs/jira/v26.10.23/compliance-final-verdict.md:374-388` (3 advisories dispositioned, expiry 2026-11-23) + `deny.toml:10-20` dated ignores. **R-1 rungs REMAINING** — host-contract `cargo test -p graphlaw-wasm` (no SDK needed; host-target build) + one anti-vacuity inversion on the wrap-enabled artifact (admit exit 0 → mutated /tmp copy exit 84 with got == b3sum(mutated) → restore proven), embedded in RECEIPTS.md. Same rungs close SQLRDF-27's owed leg — one execution, two ledgers. |
+
+## A.1 Terminal-addendum disposition (v4)
+
+v4's TERMINAL STATE recorded the publish pipeline machine-green through
+validate-and-pack (run 40084544193) with the two operator credential acts
+outstanding. That state is NOT restated here: the live publish-state record
+is [`PUBLISH-STATUS.md`](PUBLISH-STATUS.md) (status table + falsifiers keyed
+to its six rows). Where v4 prose and PUBLISH-STATUS disagree, PUBLISH-STATUS
+governs — it is the queried-at-use-time locus.
+
+## B. Posture verdict block (fill-in)
+
+Closeout standing: every machine gate is green or typed-blocked-on-operator
+except G2/G3/R-1, which posture P carries as non-blocking follow-up receipts.
+The operator picks the posture; the lane files evidence, never the decision.
+
+- **POSTURE**: ______ (P = finish v26.10.22 from tag `29c6d98`: publish once
+  the credential acts land, gate receipts G2/G3/R-1 land as immediate
+  follow-ups; G = G2/G3/R-1 receipts land BEFORE any publish)
+- **DATE**: __________
+- **Vacating falsifier**: any S0 pre-flight value in
+  [`PUBLISH-STATUS.md`](PUBLISH-STATUS.md) flipping before the operator acts
+  (npm dist-tag, crates.io max_version, run 40084544193 conclusion, tag ref,
+  4-surface pin) re-opens this section — the verdict is valid only for the
+  state it was read on. A G2/G3/R-1 receipt landing under posture P does not
+  flip this block; it discharges its ledger row in §A.
+
+## C. Receipt fields
+
+- **Identity**: closeout read over `/Users/sac/graphlaw` HEAD `6da1d33`
+  (dirty worktree: wasmi retirement in flight, disclosed), read window
+  2026-10-24; subject = v3's four go/no-go grounds at closeout.
+- **Authority**: write lease = this file, APPEND ONLY (v3/v4 bodies
+  untouched); no cargo, no git transitions, no publish executed by this
+  lane.
+- **Consequence**: one append to this file; the §A table, §A.1 pointer, §B
+  fill-in block, §C, §D. No code, no registry, no receipts/ writes.
+- **Replay** (re-read at use time):
+  `b3sum priv/graphlaw.wasm && cat priv/graphlaw.wasm.blake3`;
+  `sed -n '13p' registry/ARTIFACTS.blake3`; `sed -n '3p'
+  js/npm/src/generated/artifact-meta.ts`;
+  `grep -c "FrameOversize" src/bin/graphlaw_run_eh.rs`;
+  `sed -n '103,160p' docs/reference/wasm-gap-register.md`;
+  `ls receipts/2026-10-24-fuel-calibration.md`;
+  `sed -n '374,388p' docs/jira/v26.10.23/compliance-final-verdict.md`;
+  `python3 -c "import json;print(json.load(open('mutants.out/outcomes.json')).get('end_time'))"`
+  (expect absent/error until G2 closes);
+  `docs/jira/v26.10.23/PUBLISH-STATUS.md` status table re-read.
+- **Falsifiers**: (a) outcomes.json gaining `end_time` with zero gated
+  misses → G2 flips DISCHARGED; (b) a durable battery receipt on pin
+  `58a44095` → G3 flips; (c) R-1's two rungs with embedded output in
+  RECEIPTS.md → the R-1 half of G4 flips; (d) any live value contradicting
+  a §A evidence cell invalidates that cell — re-derive from disk.
+- **Standing**: closeout read as of 2026-10-24, HEAD `6da1d33`; G1
+  DISCHARGED on observed evidence, G2/G3/R-1 REMAINING receipt-gated;
+  publish standing lives in PUBLISH-STATUS.md and moves with its own
+  falsifiers.
+
+## D. See Also
+
+- `/Users/sac/graphlaw/docs/jira/v26.10.23/PUBLISH-STATUS.md`
+- `/Users/sac/graphlaw/docs/jira/v26.10.23/OPERATOR-RUNBOOK-v26.10.22-PUBLISH.md`
+- `/Users/sac/graphlaw/docs/jira/v26.10.22/designs/OPERATOR-DECISIONS.md`
+- `/Users/sac/graphlaw/docs/jira/v26.10.23/compliance-final-verdict.md`
+- `/Users/sac/graphlaw/docs/reference/wasm-gap-register.md` (03:20 flip log)
+- `/Users/sac/graphlaw/receipts/2026-10-24-fuel-calibration.md`
+- `/Users/sac/graphlaw/docs/jira/v26.10.23/ADR-wasmi-retirement.md`

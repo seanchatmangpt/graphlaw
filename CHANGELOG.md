@@ -4,7 +4,7 @@ All notable changes to this project are documented here, in the
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
 Versioning policy (stated once, applies to every entry): `graphlaw-eyeron` keeps its own
-independent, upstream-vendored version (currently 0.7.8) and is not coupled to the
+independent, upstream-vendored version (currently 0.7.9) and is not coupled to the
 workspace calendar version; "Published as crates.io" lines refer to the `graphlaw` crate.
 
 ## [26.10.22] - 2026-10-22

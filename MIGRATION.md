@@ -100,6 +100,12 @@ is `#[cfg(not(target_arch = "wasm32"))]`-gated (`src/abi.rs:334-335`), and
 through `compile_turtle` unchanged; what is absent inside wasm is the
 frozen-duckdb execution step.
 
+> **SUPERSEDED (2026-10-23, SQLRDF-21 EH closure)**: the section below
+> described the 26.10.22 mid-wave state, in which the `duckdb` op was
+> host-only. It is superseded by "EH closure and in-module `duckdb`
+> promotion" further down: the cfg gates are gone and the op runs inside the
+> module. Retained for migration-path provenance; do not act on it.
+
 Callers invoking op-15 (`"op": "duckdb"`) through the wasm artifact
 (`priv/graphlaw.wasm` / `graphlaw-run` wasmi runner) must move the execution
 call to the **host dispatch** (native `graphlaw::abi::call` with the
@@ -134,7 +140,7 @@ Migration: qualify the `ON` condition to at least one target column, e.g.
 `ON t.id = s.id` instead of `ON $1 = $2`. See the REFUSAL-03 recovery text in
 `docs/refusals.md`.
 
-## EH closure and in-module `duckdb` promotion (26.10.22 -> 2026-10-23, SQLRDF-21)
+## EH closure and in-module `duckdb` promotion (26.10.22, SQLRDF-21)
 
 Reference: `docs/jira/v26.10.22/SQLRDF-21.md`. The exception-handling wall is
 closed: the archive rebuild carries `-mllvm -wasm-use-legacy-eh=0` (new-EH
@@ -146,11 +152,14 @@ SQLRDF-17 stands.
 
 What consumers must change:
 
-1. **wasmi-hosted callers must move to `graphlaw-run-eh`.** The linked
-   artifact now uses new EH; wasmi cannot host it. If you drive the module
-   through the wasmi-based `graphlaw-run` runner, switch to the
+1. **wasmi-hosted callers had to move to `graphlaw-run-eh`.** The linked
+   artifact uses new EH; wasmi cannot host it. If you drove the module
+   through the wasmi-based `graphlaw-run` runner: that binary (and its
+   `runner` cargo feature) was retired 2026-10-24
+   (`docs/jira/v26.10.23/ADR-wasmi-retirement.md`); the
    wasmtime-48-based `graphlaw-run-eh` binary (cargo feature `runner-eh`) or
-   a wasmtime 48 host with `wasm_exceptions` enabled.
+   a wasmtime 48 host with `wasm_exceptions` enabled is the replacement —
+   it is a wire-superset with the same exit-code contract.
 2. **Archive rebuilds must carry the flag.** Any rebuild of the wasm artifact
    from the frozen-duckdb archive must pass `-mllvm
    -wasm-use-legacy-eh=0`; a legacy-EH rebuild produces an artifact no

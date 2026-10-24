@@ -62,11 +62,15 @@ GraphLaw unconditionally embeds the **`frozen-duckdb 2.0`** analytical engine, u
   compilation for SELECT and the command classes, typed `REFUSAL-01..04` refusals, and
   BLAKE3 receipts binding the canonical AST graph + parameters.
 * **Signed Semantic Compaction**: Massive event bursts reduce to minimal, cryptographically verifiable RDF facts sealed with BLAKE3 execution receipts. A 500,000-event telemetry burst compresses to ~1 KB of signed triples before syncing across intermittent/DDIL networks.
-* **WASM size**: The pinned artifact in `registry/ARTIFACTS.blake3` is **57,781,384 bytes**
-  (blake3 `fa155830…`, byte-identical to `priv/graphlaw.wasm` on this tree) — the
-  DuckDB-linked new-EH artifact (Tag(13) section count 1, wasm_audit PASS), re-pinned
-  2026-10-23 (`receipts/2026-10-23-eh-closure-wave.md`; the pre-closure pin `991b2bee…`,
-  46,138,360 B, and legacy pin `f149433c…`, 7,104,147 B, are historical). The ~58 MB
+* **WASM size**: The pinned artifact in `registry/ARTIFACTS.blake3` is **58,124,612 bytes**
+  (blake3 `58a44095…d2280a`, byte-identical to `priv/graphlaw.wasm` on this tree) — the
+  shipped DuckDB-linked new-EH artifact, verified live on all four pin surfaces
+  (`priv/graphlaw.wasm.blake3`, `registry/ARTIFACTS.blake3` wasm row,
+  `js/npm/src/generated/artifact-meta.ts`, live `b3sum`; final-tree-audit check 2,
+  `docs/jira/v26.10.23/final-tree-audit.md`). Historical pins (prior artifact
+  generations, each superseded and retained here only for provenance): the EH-closure
+  settle pin `fa155830…` (57,781,384 B), the pre-closure pin `991b2bee…`
+  (46,138,360 B), and the legacy pre-DuckDB pin `f149433c…` (7,104,147 B). The ~58 MB
   size class vs the 46 MB pre-closure pin is the wave's own statically-registered
   core_functions/icu extensions + statement-sequence/REFUSAL-05 code under LTO
   (libc swap effect measured at −106 B). The size court ceiling is the 64 MiB sandbox wall
@@ -79,21 +83,25 @@ See [docs/how-to/how-to-edge-ingestion-and-compaction.md](docs/how-to/how-to-edg
 
 ## JavaScript / TypeScript
 
-The WASM module is also wrapped as the npm package `graphlaw`, so the same law-state
-surface can be driven from Node or the browser without touching Rust. See
+The WASM module is also wrapped as the npm package
+`@seanchatmangpt/graphlaw`, so the same law-state surface can be driven from
+Node or the browser without touching Rust. See
 [docs/how-to/use-from-javascript.md](docs/how-to/use-from-javascript.md).
 
-> **Not yet published**: the npm package is built and tested locally but has not
-> been published to the npm registry yet (publish fires on `v*` tags; none has
-> been pushed for the JS package). `npm i graphlaw` will fail until the operator
-> pushes the publish tag.
+> **Publish state** (verified 2026-10-24): the package IS published — latest
+> on npm is `26.10.14` (published pre-OIDC). Version `26.10.22` is packed and
+> CI-validated (`publish-npm` run 40084544193: validate-and-pack GREEN;
+> tag `v26.10.22` pushed at `29c6d98`), but its publish is typed-blocked on
+> the one-time npm Trusted Publisher configuration (E404, machine-impossible
+> by design). Until that lands, `npm i @seanchatmangpt/graphlaw` installs
+> `26.10.14`. Status locus: `docs/jira/v26.10.23/PUBLISH-STATUS.md`.
 
 ```sh
-npm i graphlaw  # NOT YET PUBLISHED
+npm i @seanchatmangpt/graphlaw  # published: 26.10.14 (26.10.22 publishes after the Trusted Publisher act)
 ```
 
 ```js
-import { createClient } from 'graphlaw'
+import { createClient } from '@seanchatmangpt/graphlaw'
 ```
 
 ## The law-state loop
@@ -131,18 +139,20 @@ sidecar; checked by `tests/registry_artifacts.rs` and
 `tests/abi_manifest_court`. A differential court
 (`tests/wasm_native_differential.rs`) replays canonical inputs natively
 and through the module in a real wasm runtime, asserting byte-identical
-results. Host runners: `graphlaw-run-eh` (wasmtime 48, `wasm_exceptions`
-enabled) is the EH host for the DuckDB-linked artifact — sessions,
-document sequences, and the SQL surface run there; the wasmi
-`graphlaw-run` serves the legacy pre-DuckDB artifact class
-(`tests/wasm_abi.rs`). Build and embed details: [docs/WASM.md](docs/WASM.md).
+results. Host runner: `graphlaw-run-eh` (wasmtime 48, `wasm_exceptions`
+enabled) is the sole packet-4 stdio runner — it hosts the DuckDB-linked
+artifact; sessions, document sequences, and the SQL surface run there. The
+wasmi-based `graphlaw-run` binary was retired 2026-10-24
+(`docs/jira/v26.10.23/ADR-wasmi-retirement.md`; the EH runner is a
+wire-superset with the same exit-code contract). Build and embed details:
+[docs/WASM.md](docs/WASM.md).
 
 ## Engines and authorities
 
 Capability | Authority
 ---|---
 RDF 1.2, codecs, SPARQL 1.1/1.2, SHACL, ShEx 2.1, Datalog/stratified fixpoint, RDF/RDFS/OWL-RL entailment | PurRDF 2.0.2 (`purrdf = "=2.0.2"`)
-Notation3 parsing/reasoning/proofs | Eyeron 0.7.8 (vendored `crates/graphlaw-eyeron` from upstream 0.7.7 @ `eyereasoner/eyeron@d6568f65`; see its `UPSTREAM.md`)
+Notation3 parsing/reasoning/proofs | Eyeron 0.7.9 (vendored `crates/graphlaw-eyeron` from upstream 0.7.7 @ `eyereasoner/eyeron@d6568f65`; see its `UPSTREAM.md`)
 Vectorized columnar execution, Parquet scan pipelines, SIMD aggregations | DuckDB 2.0 (`frozen-duckdb = "2.0"`)
 
 GraphLaw owns the composition boundary and semantic assets (ontologies, packs,

@@ -191,9 +191,9 @@ Feature gates: `abi` (default), `qualification`, `registry`,
   The frozen-duckdb wasm staticlib is rebuilt with `-fwasm-exceptions
   -mllvm -wasm-use-legacy-eh=0` (uniform W3C exceptions) and is hosted by
   wasmtime 48 with `Config::wasm_exceptions` (`runner-eh` feature, bin
-  `graphlaw-run-eh`); wasmi 2.0.0 has no EH support and no exceptions knob,
-  so it is retained only for the legacy pre-duckdb artifact courts
-  (tests/wasm_abi.rs).
+  `graphlaw-run-eh`) — the sole packet-4 stdio runner. wasmi 2.0.0 has no
+  EH support and no exceptions knob; the wasmi-based `graphlaw-run` was
+  retired 2026-10-24 (`docs/jira/v26.10.23/ADR-wasmi-retirement.md`).
 - Generated shell: `wasm/src/ffi.rs` and `wasm/src/abi_meta.rs` are
   ggen-rendered from ontologies/graphlaw-wasm.ttl. Compile-time asserts
   (wasm/src/lib.rs:31) pin the rendered limits to `graphlaw::abi`, the
@@ -201,20 +201,25 @@ Feature gates: `abi` (default), `qualification`, `registry`,
 - Protocol: JSON over linear memory (`gl_alloc`/`gl_call`/`gl_free`,
   wasm/src/lib.rs:27), always-JSON responses.
 - Digest pins: `registry/ARTIFACTS.blake3` and `priv/graphlaw.wasm.blake3`
-  are `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`
-  (57,781,384 B, tag section count 1) — the DuckDB-linked new-EH artifact,
-  re-pinned 2026-10-23 after the SQLRDF-24 root cause was CONFIRMED and
-  FIXED (musl atexit `slot` re-attach reset + walker fn-read offsets; also
-  static extension registration + atexit-family no-op overrides in
-  wasm/src/lib.rs per the reactor contract; clean trap table witnessed,
-  `receipts/2026-10-23-eh-closure-wave.md`; registry `graphlaw-registry
-  --check` exit 0). The legacy pin `f149433c…` (7,104,147 B,
-  `pin-source=26.10.22`, tag section count 0) is historical.
-- Host-side runners are host-only (`runner` / `runner-eh` features, root
-  Cargo.toml:99) — neither emulator compiles for wasm32. `graphlaw-run`
-  (wasmi) replays the legacy pre-duckdb artifact courts through the smalt
-  sandbox packet-4 stdio protocol; `graphlaw-run-eh` (wasmtime 48,
-  `Config::wasm_exceptions`) hosts the current DuckDB-linked artifact.
+  are `58a4409505f32b5d9aebc8c0ce2e2adeaba05c8c4b55f951a244ab4ad7d2280a`
+  (58,124,612 B) — the shipped DuckDB-linked new-EH artifact, carried by tag
+  `v26.10.22` and verified live on all four pin surfaces (the two files
+  above plus `js/npm/src/generated/artifact-meta.ts` and a live `b3sum`;
+  final-tree-audit check 2). Historical pins (prior generations,
+  superseded): the EH-closure settle pin `fa155830…` (57,781,384 B, tag
+  section count 1) — minted 2026-10-23 after the SQLRDF-24 root cause was
+  CONFIRMED and FIXED (musl atexit `slot` re-attach reset + walker fn-read
+  offsets; also static extension registration + atexit-family no-op
+  overrides in wasm/src/lib.rs per the reactor contract; clean trap table
+  witnessed, `receipts/2026-10-23-eh-closure-wave.md`); the legacy pin
+  `f149433c…` (7,104,147 B, `pin-source=26.10.22`, tag section count 0).
+- Host-side runners are host-only (`runner-eh` feature, root
+  Cargo.toml:75/96; `[[bin]] graphlaw-run-eh` at Cargo.toml:116-119) — the
+  runner does not compile for wasm32. `graphlaw-run-eh` (wasmtime 48,
+  `Config::wasm_exceptions`) hosts the current DuckDB-linked artifact and
+  is the sole packet-4 stdio runner; the wasmi-based `graphlaw-run` and its
+  `runner` feature were retired 2026-10-24
+  (`docs/jira/v26.10.23/ADR-wasmi-retirement.md`).
 
 ## 5. System diagram
 
