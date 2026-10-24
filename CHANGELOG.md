@@ -280,6 +280,43 @@ compiler, parameterized MERGE), typed refusal register, and receipt-hash pinning
   workspace pin `74ec3c8d…` carried the 26.10.21 version string. `332ea218…`
   (6,793,617 B) is historical.
 
+### Terminal integration (2026-10-23)
+
+- Full-interception wrap shim (`__wrap_open`/`__wrap_openat` in
+  `frozen-duckdb-sys/wasi_posix.c` + raw-lld `--wrap` link args via
+  RUSTFLAGS): closes the musl-vs-wasi-libc fcntl ABI mismatch behind
+  SQLRDF-27. Closed receipt-gated: FIBO 4/0 + lifecycle 3/0 on the
+  wrap-enabled artifact, ×3 court passes
+  (`receipts/2026-10-23-sqlrdf27-verdict.md`).
+- Final artifact pin `472d5557…bf80ea` (58,121,500 B) at commit `d9cab2f`;
+  registry + npm re-pinned (npm 198/198, W51; `b3sum priv/graphlaw.wasm`
+  re-verified on disk this entry). Prior identities (`4d9083af…`,
+  `332ea218…`, `33083b92…`, `259cf5b0…`) marked historical.
+- Publish pipeline: `publish-npm.yml` scoped-tarball fix (npm pack of a
+  scoped package emits `seanchatmangpt-graphlaw-*.tgz`; the old
+  `graphlaw-$VERSION.tgz` assertion failed validate every run) plus the
+  operator runbook `docs/how-to/release-publish.md`
+  (commit `7267c47`).
+- DvP fixture alignment: banking battery 11/2 pre-fix → 4/0 after the DvP
+  pairing fix; the multi-root refusal law (`MIXED_DOCUMENT_ROOTS`,
+  `src/sql_ast/refusals.rs:75`) is courted with an anti-vacuity twin
+  (`tests/dvp_settlement_court.rs:629-644`).
+- Memory-wall ratio fence: never-block property as dev ratio leg vs
+  independent baseline (floored at 100ns) + release absolute leg
+  (`tests/evidentiary_ring_court.rs:227,:415`; 1.584 µs < 10 µs);
+  wasmtime port 8/0.
+- Whitepaper receipted-actuals corrections: final-artifact pin, npm
+  198/198 marked as-of W51, "Packaged 363 files" → 360, SPC honest-FAIL
+  state, CHAIN immutability wording softened (W63 audit; commit
+  `7267c47`).
+- Ledger truth-sync: 18 coherence-lane findings applied append-only to
+  `docs/jira/v26.10.22/RECEIPTS.md` (wasm re-pin supersessions, W9-W14
+  PENDING rows closed with landing evidence, artifact lineage marked
+  historical). Exit-codes court 7/0 ×3 passes stands as
+  witnessed-transcript, terminal-receipt pending
+  (RECEIPTS.md §e). 9 drafts archived to
+  `docs/archive/designs-2026-10-23/`.
+
 ## [26.10.21] - 2026-10-21
 
 Wave release: Unconditional `frozen-duckdb 2.0` integration, zero-trust semantic compaction, and

@@ -187,7 +187,7 @@ OUTPUT_DIR="${MUTANTS_OUTPUT:-$ROOT}"
 GUARDED=(src/registry.rs src/abi.rs)
 SNAP="$(mktemp -d "${TMPDIR:-/tmp}/mutation-court.XXXXXX")"
 STATUS_BEFORE="$SNAP/status.before"
-git status --porcelain >"$STATUS_BEFORE" 2>/dev/null || : >"$STATUS_BEFORE"
+git status --porcelain -- src/ >"$STATUS_BEFORE" 2>/dev/null || : >"$STATUS_BEFORE"
 
 # sha256 of each guarded file at baseline — restore is verified against these.
 SHA_BEFORE="$SNAP/sha.before"
@@ -228,9 +228,13 @@ restore() {
     sha_fail=1
   fi
   local after="$SNAP/status.after"
-  git status --porcelain >"$after" 2>/dev/null || : >"$after"
+  # Drift check is scoped to src/ — the court's own trust boundary. Untracked
+  # receipts/transition-*.json churn from the session receipt hook during the
+  # court's in-place mutations is not tree drift (witnessed 2026-10-23: a
+  # repo-wide check forced exit 4 on every run while src/ stayed byte-exact).
+  git status --porcelain -- src/ >"$after" 2>/dev/null || : >"$after"
   if ! cmp -s "$STATUS_BEFORE" "$after"; then
-    echo "mutation_court: WARNING git status changed during the court:" >&2
+    echo "mutation_court: WARNING git status (src/) changed during the court:" >&2
     diff "$STATUS_BEFORE" "$after" >&2 || true
     [ "$rc" -eq 0 ] && rc=4
   elif [ "$restored" -eq 0 ] && [ "$sha_fail" -eq 0 ]; then

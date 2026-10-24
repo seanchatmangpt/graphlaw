@@ -1622,3 +1622,48 @@ open items; the p99 budget leg is PASS.
 - **Standing**: re-pin LANDED; W9-W14 superseded-LANDED on cited evidence;
   SQLRDF-27 Closed (non-gating rungs owed); 5 items terminal-receipt
   pending; TC-HOT p99 PASS / variance+SPC FAIL open.
+
+## 2026-10-24 terminal receipt filed (assembly lane, append-only pointer row)
+
+- **TERMINAL RECEIPT LANDED** — `receipts/2026-10-23-v26.10.22-terminal.md`
+  (assembly lane, no cargo/no git; all figures re-read from disk at
+  assembly time, witness class per item):
+  - §1 Final artifact identity verified live: `b3sum priv/graphlaw.wasm` =
+    **`472d5557…bf80ea`**, 58,121,500 B, pin file matches byte-for-byte,
+    pinned at `d9cab2f`; `js/npm/src/generated/artifact-meta.ts` embeds the
+    same digest on disk; npm 198/198 stays W51 as-of (terminal-receipt-
+    pending class, per §(e)).
+  - §2 Battery witness-class map on the final identity: lifecycle 3/0
+    DURABLE (SQLRDF-27 amendment); fuzz 1172/0, memory-wall 8/0,
+    exit-codes 7/0 ×3, receipt_v2 6/6, trust_attest 12/0, banking
+    11/2→4/0, pm4pytest 5/0 = TRANSCRIPT/as-of classes carried honestly;
+    **dialect census 69/0 marked UNRECEIPTED-AS-OF-DISPATCH** (no durable
+    69/0 locus found on disk; durable on-disk counts are 34/0, 33/0).
+  - §3 Non-battery gates: chain VERIFIED live this lane (1550 receipts,
+    head `38422ef5…87129`, `--check` exit 0, re-baseline 6 documented);
+    cargo-deny residual FAIL carries an owed operator decision; pack
+    dry-run 360 files (W61); include-fix dry-run exit-0 marked
+    carried-from-dispatch (no durable locus); staleness R2/R4 + adversarial
+    reviews (NO-GO→settle closure, whitepaper W63 findings applied).
+  - §4 Mutation court **IN PROGRESS / PENDING**: 88 mutants inventoried,
+    caught.txt 29 / missed.txt 11 as of the terminal receipt's read (40 of
+    88; all misses in `src/abi.rs`, incl. `152:5 limit_response`); gate =
+    zero misses in `src/registry.rs` or `abi.rs capabilities()/dispatch()`,
+    exit 0/2 accepted, 3 fail. No register row flipped; coordinator
+    amends on the completed-sweep verdict.
+  - §5 Operator checklist: tag `v26.10.22`; Trusted Publisher scoped name
+    (publish-npm.yml fixed in `7267c47`); crates.io order eyeron→graphlaw;
+    RELEASE_HOLD absent before tagging; open items listed (deny decision,
+    mutation verdict, SPC solo rerun, host-contract + anti-vacuity rungs).
+- **Supersedes the "5 items terminal-receipt pending" marker** in §(e):
+  those items are now classified per-item in the terminal receipt §2; the
+  durable-receipt rungs themselves remain owed until their own receipts
+  land. The §(e) rows are not rewritten.
+- **Receipt fields (this row)**: identity = pointer row over HEAD `7267c47`
+  tree (dirty: CHANGELOG, src/abi.rs, CHAIN.blake3, residual-unknowns —
+  sibling lanes, disclosed); authority = terminal lane lease; consequence =
+  one new receipts/ file + this row, zero status flips; replay =
+  `b3sum priv/graphlaw.wasm`, `bash scripts/receipt_chain_sync.sh --check`
+  exit 0, read `mutants.out/{caught,missed}.txt`; falsifier = terminal
+  receipt §Falsifiers; standing = §1 CONFORMANT-ON-OBSERVED-OUTPUT,
+  §4 PENDING, §5 owed.

@@ -1,13 +1,26 @@
 # Residual unknowns — honest list (Lane T3, DOC) — 2026-10-22
 
+**Terminal-wave update 2026-10-24**: rows 1-7 re-adjudicated against the
+EH-closure/settle wave (`0d11bc3..d9cab2f`, pin `472d5557…bf80ea`, 58,121,500 B)
+and the RECEIPTS.md coherence truth-sync section (a)-(f). Row 8 and the
+non-rows are carried as-of 2026-10-22 (not re-verified this update).
+
 Scope: what is still UNKNOWN / BLOCKED / UNVERIFIED on this tree after ~5,000
 lane-receipts of work today. Lease: this file only. Each row: claim, why open,
 what closes it. Nothing here is a pass; an absence of red is not a green.
 
 ## 1. EH wall — duckdb op host-only; in-wasm SQL execution awaits emsdk rebuild
-- **STATUS FLIP 2026-10-23**: RESOLVED 2026-10-23: EH wall closed by uniform
-  new-EH rebuild + wasmtime 48 host; residual: duckdb-open execution trap under
-  diagnosis (see `eh-runner-decision-memo.md` DECISION block).
+- **RESOLVED 2026-10-23/24 (terminal wave)**: EH wall closed by uniform new-EH
+  rebuild + wasmtime 48 host; duckdb-open trap closed by the `__wrap_open`/
+  `__wrap_openat` fcntl-ABI translation shim (SQLRDF-27, receipt-gated flip on
+  FIBO 4/0 + lifecycle 3/0 — `receipts/2026-10-23-sqlrdf27-verdict.md`;
+  `court_c` witnesses wasmtime instantiation with exceptions). Canonical pin
+  `472d5557…bf80ea` at `d9cab2f`; `4d9083af…` and `332ea218…` marked
+  historical-superseded in RECEIPTS.md §(d). In-wasm execution runs (commit
+  `0d11bc3` "sovereign in-WASM DuckDB — EH closure, sequences, SQLRDF-21..25").
+- **Owes (non-gating, per INDEX/RECEIPTS)**: host-contract rung
+  (`cargo test -p graphlaw-wasm`) and anti-vacuity inversion on the wrap-enabled
+  artifact — explicitly NOT closed by the SQLRDF-27 flip.
 - **Claim**: the DuckDB-linked `graphlaw-wasm` engine artifact (mixed legacy+new
   EH) is hostable by NO staged runtime (wasmi 2.0.0 no exceptions knob; node 26
   rejects; wasmtime legacy_exceptions fails). In-wasm SQL execution does not run.
@@ -22,6 +35,13 @@ what closes it. Nothing here is a pass; an absence of red is not a green.
   real module load + one real eval frame on node or modern wasmtime, 3x.
 
 ## 2. Mutation court full sweep — attempt ran, incomplete (DISK-BLOCKED)
+- **STATUS 2026-10-24**: OPEN — full sweep re-attempted post-settle
+  (`0d11bc3..d9cab2f` unblocked the clean-tree precondition, W14): 88 mutants
+  inventoried, sweep IN PROGRESS at this writing. Bar for the verdict:
+  gate-relevant misses must be ZERO — any surviving gate-relevant mutant is
+  either killed by a new test or accepted with operator sign-off before the
+  register row can flip. The historical `src/abi.rs:152:5` MISSED remains the
+  named gate-relevant survivor to discharge.
 - **Claim**: a full-sweep attempt ran (T1,
   `designs/t1-mutation-full-receipt.md`): unmutated baseline ok (72s build +
   34s test), 88 mutants inventoried (not the 319 cited earlier), first verdict
@@ -38,7 +58,10 @@ what closes it. Nothing here is a pass; an absence of red is not a green.
   test or accepted with operator sign-off.
 
 ## 3. cargo-mutants sweep incomplete (disk-blocked, one MISSED verdict)
-- **Claim**: no `cargo-mutants` sweep has produced a COMPLETED verdict on this
+- **STATUS 2026-10-24**: OPEN — same sweep as row 2 (one court, one verdict
+  channel). Closed together with row 2 at the completed-sweep verdict;
+  DISK precondition now met (clean tree + lane build roots reclaimed at
+  settle).
   tree. The T1 attempt (`t1-mutation-full-receipt.md`) executed 1 of 88
   mutants before DISK-BLOCKED; that one verdict is MISSED
   (`src/abi.rs:152:5`).
@@ -49,6 +72,15 @@ what closes it. Nothing here is a pass; an absence of red is not a green.
   enough runtime (~3-4.5 h); receipt with kill counts.
 
 ## 4. TC-HOT bench gate FAIL under load variance — CLOSED as measured, OPEN as performance question
+- **STATUS 2026-10-24**: OPEN as performance question — SPC Cpk FAIL under
+  load reproduced as the standing state (Cpk 0.001 vs 1.33, batch variance
+  26.91% vs 5% on the shared tree). **Owes: solo rerun** on a quiet machine;
+  the verdict must be taken from that run, not from any load-contaminated
+  split. RECEIPTS §(f) resolved the 292ns vs 209ns contradiction in favor of
+  the filed full receipt (p99 leg PASS; variance + SPC legs FAIL).
+  Separately GREEN this wave: the workload **amortization bench** witnessed
+  GREEN with its curve, and the W62 anti-vacuity court (was RED at
+  `tests/amortization_court.rs:155`) is fixed.
 - **Claim**: CLOSED (post-edit): the 10M-iteration full bench was re-run after
   today's edits with `TC_HOT_FULL=1` and a fresh SPC receipt landed —
   `designs/tc-hot-01-errc-receipt.md` + `receipts/spc-2026-10-22T191548.json`.
@@ -67,6 +99,12 @@ what closes it. Nothing here is a pass; an absence of red is not a green.
   gate question explicitly.
 
 ## 5. js publish flow untested end-to-end
+- **STATUS 2026-10-24**: OPEN, converted to an **operator checklist** item:
+  dist-bundler dead weight and the scoped-name Trusted Publisher
+  configuration were flagged this wave as operator-side actions, not lane
+  work. No lane receipt can close this row; it closes when the operator
+  executes the checklist (publish dry-run against the real package.json) —
+  receipt both steps.
 - **Claim**: `js/npm` publish (sync-version → build → pack → publish) has
   never been executed end-to-end in this cycle.
 - **Why open**: receipts cover generated-artifact sync and tests
@@ -77,6 +115,14 @@ what closes it. Nothing here is a pass; an absence of red is not a green.
   `npm publish --dry-run` against the real package.json; receipt both steps.
 
 ## 6. wasm4pm oracle legs (fuzz / memory-wall) BLOCKED on EH
+- **STATUS 2026-10-24**: EXECUTION UNBLOCKED, RECEIPTS OWED. Blocker (a) is
+  gone (EH closed, row 1); the fuzz and memory-wall legs executed for real on
+  the final pin `472d5557…bf80ea` (lifecycle/exit-codes also witnessed): fuzz
+  1,172 frames / 0 defects; memory-wall 8/0; exit-codes 7/0 ×3; banking 11/2
+  → DvP pairing fix → 4/0 — all in lane transcripts (RECEIPTS §(e)). They
+  stand as **witnessed-transcript claims, terminal-receipt pending**, until
+  the durable `receipts/` files land. Blocker (b) FILE_MISSING status for the
+  wasm4pm oracle file is not re-verified this update.
 - **Claim**: cross-repo oracle gates cannot run.
 - **Why open**: two independent blockers. (a) EH wall (row 1) — oracle legs
   that need the engine artifact hosted have no host. (b) FILE_MISSING —
@@ -88,6 +134,13 @@ what closes it. Nothing here is a pass; an absence of red is not a green.
   witness; fuzz and memory-wall legs then run for real.
 
 ## 7. gws4 court — stale contract CLOSED (S1 landed); in-wasm SQL parse sub-claim remains
+- **STATUS 2026-10-24**: in-wasm execution sub-claim RESOLVED by row 1's
+  closure (in-wasm SQL execution witnessed: `0d11bc3` sovereign in-WASM
+  DuckDB, SQLRDF-21..25; lifecycle `court_c` wasmtime instantiation with
+  exceptions on the pinned artifact). The row's original host-only-fail-close
+  contract remains asserted by `tests/gws4_ipc_injection_court.rs`; a fresh
+  run of that court on the post-EH tree is implied by the wave receipts, not
+  independently re-run for this row.
 - **Stale-contract half CLOSED**: the court was written against a contract the
   tree no longer has (it expected `duckdb` dispatch in-wasm). S1 rewrote it to
   the real boundary contract: the duckdb op is HOST-ONLY (`src/abi.rs`
@@ -142,6 +195,24 @@ what closes it. Nothing here is a pass; an absence of red is not a green.
 - **M17 bins gate UNFILED**: witnessed by a receipt-section run only, no
   dedicated receipt file (`RECEIPTS.md` Wave M). Closes: dedicated receipt or
   explicit waiver.
+
+## 9. New residuals discovered this wave (2026-10-24)
+- **N9 — non-reproducible wasm builds; pins are copy-only**: the artifact pin
+  (`472d5557…bf80ea`) is a copied-bytes pin, not a rebuild-from-source
+  identity — a fresh build of the same tree is not witnessed to reproduce it
+  (wrap-shim RUSTFLAGS, frozen-duckdb cache, and link ordering are
+  environment-bound). **Closes it**: a rebuild-reproducibility witness
+  (rebuild on a clean window, digest-compare against the pin) or an explicit
+  operator acceptance that pins are copy-only for this cycle.
+- **N10 — conftests do not honor `GRAPHLAW_WASM`**: the python/conftest layer
+  ignores the `GRAPHLAW_WASM` selection, so wasm-vs-host test routing cannot
+  be driven from the environment. **Closes it**: conftest reads
+  `GRAPHLAW_WASM` and routes the engine binding accordingly, with a flip
+  witness both directions.
+- **N11 — `tests_py` blackbox 12-fail vs legacy host, pending pin flip**: the
+  blackbox suite shows 12 failures against the legacy host path; the fix path
+  is the pin flip to the current artifact, not per-test patches. **Closes
+  it**: flip the pin, re-run `tests_py` blackbox to 0-fail, receipt the run.
 
 ## Non-rows (explicitly closed today, listed to prevent re-opening)
 - Cross-authority court 71/0 re-witnessed against real frozen-duckdb
