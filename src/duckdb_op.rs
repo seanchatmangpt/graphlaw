@@ -279,6 +279,54 @@ pub fn leading_sql_token(sql: &str) -> Option<String> {
     }
 }
 
+/// Count top-level `;` separators — quote- and comment-aware (the scanner's
+/// state machine minus the token capture). A `;` inside a string literal or
+/// comment does not separate statements.
+fn top_level_semicolon_count(sql: &str) -> usize {
+    let b: Vec<char> = sql.chars().collect();
+    let n = b.len();
+    let mut i = 0;
+    let mut in_line_comment = false;
+    let mut block_depth = 0usize;
+    let mut in_single = false;
+    let mut in_double = false;
+    let mut count = 0usize;
+    while i < n {
+        let c = b[i];
+        if in_line_comment {
+            if c == '\n' { in_line_comment = false; }
+            i += 1;
+            continue;
+        }
+        if block_depth > 0 {
+            if c == '/' && i + 1 < n && b[i + 1] == '*' { block_depth += 1; i += 2; continue; }
+            if c == '*' && i + 1 < n && b[i + 1] == '/' { block_depth -= 1; i += 2; continue; }
+            i += 1;
+            continue;
+        }
+        if in_single {
+            if c == '\'' {
+                if i + 1 < n && b[i + 1] == '\'' { i += 2; continue; }
+                in_single = false;
+            }
+            i += 1;
+            continue;
+        }
+        if in_double {
+            if c == '"' { in_double = false; }
+            i += 1;
+            continue;
+        }
+        if c == '-' && i + 1 < n && b[i + 1] == '-' { in_line_comment = true; i += 2; continue; }
+        if c == '/' && i + 1 < n && b[i + 1] == '*' { block_depth += 1; i += 2; continue; }
+        if c == '\'' { in_single = true; i += 1; continue; }
+        if c == '"' { in_double = true; i += 1; continue; }
+        if c == ';' { count += 1; }
+        i += 1;
+    }
+    count
+}
+
 fn enforce_attach_policy_with(sql: &str, roots: Option<&str>) -> Result<(), Fail> {
     fn outside(path: &str) -> Fail {
         duckdb_fail(format!(
@@ -287,6 +335,16 @@ fn enforce_attach_policy_with(sql: &str, roots: Option<&str>) -> Result<(), Fail
     }
     if leading_sql_token(sql).as_deref() != Some("ATTACH") {
         return Ok(());
+    }
+    // Multi-statement guard (SQLRDF-22 G6 red-team v20-v22): frozen-duckdb's
+    // prepare executes all INTERMEDIATE statements of a multi-statement
+    // string before the final one reaches this policy. A benign-leading
+    // `SELECT 1; ATTACH 'f' AS evil` would run the attach inside prepare,
+    // past this allowlist. Fail closed: op-15 admits single statements only.
+    if top_level_semicolon_count(sql) > 1 {
+        return Err(duckdb_fail(
+            "multi-statement SQL is not admitted through op-15; admit each statement separately",
+        ));
     }
     // Same single-quote rule as the COPY digest lane's `copy_to_path`
     // (`''` inside a literal renders one `'`).
