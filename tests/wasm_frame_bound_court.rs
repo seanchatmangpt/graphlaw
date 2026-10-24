@@ -307,6 +307,27 @@ fn run_frame(bin: &Path, artifact: &Path, plan: StdinPlan, deadline: Duration) -
         }
         // Padded: the handle stays in `si` — the pipe stays OPEN.
     }
+    let child_stdout = child.stdout.take();
+    let child_stderr = child.stderr.take();
+    // Drain both pipes CONCURRENTLY with the wait: a refusal path that emits
+    // a large diagnostic (e.g. a per-frame guest backtrace) can saturate the
+    // 64 KiB pipe buffer; a saturation deadlock would masquerade as a hang.
+    let stdout_handle = std::thread::spawn(move || {
+        let mut buf = Vec::new();
+        if let Some(mut o) = child_stdout {
+            use std::io::Read;
+            let _ = o.read_to_end(&mut buf);
+        }
+        buf
+    });
+    let stderr_handle = std::thread::spawn(move || {
+        let mut s = String::new();
+        if let Some(mut e) = child_stderr {
+            use std::io::Read;
+            let _ = e.read_to_string(&mut s);
+        }
+        s
+    });
     let start = Instant::now();
     let status = loop {
         match child.try_wait().expect("poll runner") {
@@ -333,16 +354,8 @@ fn run_frame(bin: &Path, artifact: &Path, plan: StdinPlan, deadline: Duration) -
             }
         }
     };
-    let mut stdout = Vec::new();
-    if let Some(mut o) = child.stdout.take() {
-        use std::io::Read;
-        let _ = o.read_to_end(&mut stdout);
-    }
-    let mut stderr = String::new();
-    if let Some(mut e) = child.stderr.take() {
-        use std::io::Read;
-        let _ = e.read_to_string(&mut stderr);
-    }
+    let stdout = stdout_handle.join().expect("stdout reader thread");
+    let stderr = stderr_handle.join().expect("stderr reader thread");
     Outcome {
         code: status.code().unwrap_or_else(|| panic!("no exit code: {status}")),
         stdout,

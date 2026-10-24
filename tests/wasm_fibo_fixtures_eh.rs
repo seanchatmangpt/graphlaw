@@ -17,10 +17,9 @@
 //!   per the matrix correction — the SHACL layer fires first, so the wire
 //!   code is MalformedAst/SHACL_VIOLATIONS; do NOT assert
 //!   RefusalCode::UnboundedMutation on the wire), twin readback unchanged.
-//! - TC-FIBO-08-compile: tc08_copy compiles and executes against a session;
-//!   the egress file lands under /tmp in a pid-keyed path (the fixture's
-//!   literal path is rewritten to the pid-keyed twin before admission — the
-//!   fixture file itself is read-only court capital) and must carry bytes.
+//! - TC-FIBO-08 lives in `tests/wasm_fibo_egress_eh.rs`: it runs in its own
+//!   integration-test process — WASI p1 fd-table state left by TC-FIBO-01..03
+//!   in-process broke the pid-keyed COPY egress (lock `Invalid argument`).
 //!
 //! Typed loud SKIP discipline: when the artifact is missing, or when the
 //! first gl_call traps on an uninitialized element (stale/mismatched
@@ -495,50 +494,6 @@ fn tc_fibo_03_unbounded_delete_refused_and_table_unchanged() {
         body.contains("1250.5"),
         "pre-update balance must survive the refused mutation: {body}"
     );
-
-    close_session(&mut h, SESSION);
-}
-
-// ------------------------------------------------------- TC-FIBO-08-compile
-
-#[test]
-fn tc_fibo_08_copy_executes_with_pid_keyed_egress() {
-    let _guard = engine_lock();
-    let Some(mut h) = host_or_skip("TC-FIBO-08-compile") else { return };
-    const SESSION: &str = "fibo-08";
-
-    // Pid-keyed egress twin of the fixture's literal /tmp path. The fixture
-    // file is court capital (read-only); the path is rewritten in the
-    // admitted document only.
-    let egress = format!("/tmp/fibo_accounts_{}.csv", std::process::id());
-    let _ = std::fs::remove_file(&egress);
-    let doc = fixture("tc08_copy.ttl").replace("/tmp/fibo_accounts.csv", &egress);
-    assert!(
-        doc.contains(&egress),
-        "egress path rewrite must land in the admitted document"
-    );
-
-    // Seed the table the COPY exports.
-    open_session(&mut h, SESSION);
-    h.exec(&exec_req(SESSION, &fixture("tc01_create.ttl")));
-    h.exec(&exec_req(SESSION, &fixture("tc01_insert.ttl")));
-
-    let cp = h.exec(&exec_req(SESSION, &doc));
-    assert!(
-        cp["receipt"].is_string() && cp["query_hash"].is_string(),
-        "COPY receipt fields missing: {cp}"
-    );
-
-    // Real egress artifact: bytes on disk. If the G3 receipt carries a digest
-    // field, assert its presence (blake3 is not a dev-dependency — the
-    // independent digest cross-check lands when the manifest adds it).
-    let meta = std::fs::metadata(&egress)
-        .unwrap_or_else(|e| panic!("COPY egress file {egress} missing: {e}"));
-    assert!(meta.len() > 0, "egress artifact must carry bytes");
-    if let Some(digest) = cp["digest"].as_str() {
-        assert!(!digest.is_empty(), "G3 receipt digest present but empty: {cp}");
-    }
-    let _ = std::fs::remove_file(&egress);
 
     close_session(&mut h, SESSION);
 }

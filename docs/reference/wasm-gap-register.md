@@ -23,10 +23,68 @@ only on a landed receipt.
 | BB1 | blackbox pins wasmi | tests_py blackbox | F | OPEN | host flip; tree -i |
 | UU1 | unknown-unknown smoke | audit, deferred | E | PENDING | battery re-run |
 | W08 | differential no receipt | common/mod.rs:20 | C | OPEN | differential receipt |
+| SEC1 | ATTACH allowlist bypass: whitespace-only leading-token classifier skipped the allowlist on comment-camouflaged ATTACH (`/* */`, `--`, `/*!*/`) | duckdb_op.rs `leading_sql_token` (:235) + `enforce_attach_policy_with` (:437 as of read); seam courts `src/duckdb_op.rs::tests`; wire court `tests/attach_bypass_court.rs` | SEC | OPEN | green-court receipt for the hardened classifier (W15 `2026-10-23-eh-closure-wave.md:59` predates the hardening) |
+| INC1 | tree-revert incident: verified security fixes destroyed in-tree (~00:48-00:56 Oct 24), re-landed as `679299d` + `907e663` | GO-NO-GO-v26.10.22.md §1.1-1.2 (v3, incident note) | SEC | OPEN | re-land + green courts + incident note (re-land and note witnessed; green courts receipt pending) |
 
-Row count: 15 (G1-G8, D1-D4, BB1, UU1, W08).
+Row count: 17 (G1-G8, D1-D4, BB1, UU1, W08, SEC1, INC1).
 
 Behavioral-audit deferred witness classes: G1 = emission-site court (Twin
 A), G2 = columnar-bytes twins (Twin B + pinned-view), G3 = env-matrix
 pytest (set/unset), BB1 = host-flip green + absence-from-graph witness,
 UU1 = full-battery re-run, W08 = run+receipt against the pinned artifact.
+
+## Flip log
+
+### 2026-10-24 — security-wave landing observed; flips held on the receipt gate (register lane, write lease = this file only)
+
+Gate: the security-wave fixes landed and are committed — `679299d`
+(`leading_sql_token` scanner, 00:56:43) and `907e663` (EH-host frame-bound
+mirror + ATTACH unit courts, 01:09:56). This register lane ran seven bounded
+poll windows (00:59-01:33 PDT) watching the landing markers
+(`leading_sql_token`, `RunError::FrameOversize`) and receipts. **No durable
+green-court receipt for the security-wave courts had landed by authoring**
+(GO-NO-GO v3 read-close 01:15 independently records "no landed green
+receipt"; the courts were witnessed mid-run at 01:21 via process table), so
+**zero status flips this session** — the register's gate is "a row flips
+only on a landed receipt". The flips fire on the receipt; each names its
+exact pending gate:
+
+- **G4 (read_frame unbounded alloc) — flip held, stays OPEN.** The fix is
+  verified on disk by this lane: both hosts bound the untrusted 4-byte
+  prefix BEFORE any body allocation, cap single-sourced from
+  `graphlaw::abi::MAX_REQUEST_BYTES` (no local duplicate), coherence asserts
+  vs the 64 MiB wall, exit-92 rows in both `code()` tables, len+cap
+  diagnostics, mirrored `read_frame` bodies. Loci (as of read):
+  `src/bin/graphlaw_run.rs:105,123,152,176,484-491`;
+  `src/bin/graphlaw_run_eh.rs:40,70,97,123-125,407-420`. Design:
+  `docs/jira/v26.10.23/design-read-frame-bound.md` (SPEC now implemented).
+  Pending gate: a receipt embedding `tests/wasm_frame_bound_court.rs` output
+  (at-cap admitted end to end / cap+1 → exit 92 / 0xFFFFFFFF → exit 92 with
+  length+cap+no-reply, zero-len → exit 0, both hosts). The court file is
+  landed; its green receipt is not.
+- **SEC1 — new row, OPEN.** Scanner landed: `leading_sql_token`
+  (`src/duckdb_op.rs:235`, comment-camouflage-immune: whitespace, `--`
+  line comments, nesting-aware `/* */`, quote-aware stop), consumed by
+  `enforce_attach_policy_with` (:437); seam courts :1336+
+  (`attach_behind_block_comment_hits_policy` etc.); wire court
+  `tests/attach_bypass_court.rs` (typed DuckDb refusal envelope + liveness
+  corpus + document-member gate). Pending gate: a receipt embedding the
+  seam + wire court output on the HARDENED classifier — W15
+  (`receipts/2026-10-23-eh-closure-wave.md:59`, 13/0) predates the
+  hardening edit (GO-NO-GO v2 §2), so it cannot witness this closure.
+- **INC1 — new row, OPEN.** Fixes destroyed post-verification: the
+  v2-era working-tree hardening was reverted out of the tree ~00:48-00:56
+  (GO-NO-GO v3 §1.1 "present→absent→present"); the mc4 mutation-court
+  exit-137 leak put the json_depth shim into `b4283a3` (recovered by
+  `16678de`). Re-land: `679299d` + `907e663` — witnessed by this lane's
+  poll (wasmi bound 00:54:50, scanner 00:57:23, EH plumbing 01:00:47, EH
+  body check by 01:10, seam courts + frame court file 01:02-01:18) and
+  GO-NO-GO §1.1 live grep counts. Incident note: GO-NO-GO v3 §1.1-1.2.
+  Third closure condition (green courts receipt) pending — same gate as
+  G4/SEC1.
+
+Falsifiers for this flip-log entry: (a) a durable receipt embedding the
+frame-bound court output lands → G4 flips OPEN → CLOSED in a new append;
+(b) a durable receipt embedding the attach seam+wire court output lands →
+SEC1 flips; (c) both plus the incident-note citation stand → INC1 flips.
+No existing row was rewritten; row count 15 → 17 reflects appends only.
