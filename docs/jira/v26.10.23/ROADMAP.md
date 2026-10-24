@@ -3,7 +3,7 @@
 Milestone v26.10.23 — post-v26.10.22 wave: wasm gap closures + Phase-2
 CanonArrow. Derived from the approved plan
 (`~/.claude/plans/here-is-the-voice-golden-bengio.md`). v26.10.22 is
-witnessed end-to-end on the final artifact identity `472d5557…`
+witnessed end-to-end through the pre-security-wave pin `472d5557…`; the shipped artifact is `58a44095…d2280a` (post ATTACH-scanner + multi-statement guard + EH hardening)
 (58,121,500 B, full-interception wrap shim, pinned by copy at `priv/` +
 registry + npm 198/198); only its solo mutation-court verdict remains.
 

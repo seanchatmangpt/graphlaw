@@ -463,6 +463,104 @@ impl SelectStatement {
     }
 }
 
+/// SQLRDF-27 dialect gap #1: the set-operation combinator (`UNION`,
+/// `INTERSECT`, `EXCEPT`). Rendered uppercase between parenthesized operands;
+/// the missing/malformed token refusals are typed REFUSAL-01 arms
+/// (`refusal_arm::SET_OP_KIND_TOKEN`), never a silent default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SetOpKind {
+    Union,
+    Intersect,
+    Except,
+}
+
+impl SetOpKind {
+    pub fn as_sql(&self) -> &'static str {
+        match self {
+            Self::Union => "UNION",
+            Self::Intersect => "INTERSECT",
+            Self::Except => "EXCEPT",
+        }
+    }
+
+    /// Parses the `sql:setOperator` token (case-insensitive, matching the
+    /// `sql:direction` ASC/DESC lexing law). Any other token is the typed
+    /// REFUSAL-01 arm `SET_OP_KIND_TOKEN`.
+    pub fn from_token(token: &str) -> Result<Self, AstError> {
+        if token.eq_ignore_ascii_case("UNION") {
+            Ok(Self::Union)
+        } else if token.eq_ignore_ascii_case("INTERSECT") {
+            Ok(Self::Intersect)
+        } else if token.eq_ignore_ascii_case("EXCEPT") {
+            Ok(Self::Except)
+        } else {
+            Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::SET_OP_KIND_TOKEN)
+                    .with_ident(token),
+            )
+        }
+    }
+}
+
+/// SQLRDF-27 dialect gap #1: a top-level set operation over two full
+/// [`SelectStatement`] operands (`UNION [ALL] [BY NAME]`, `INTERSECT [ALL]`,
+/// `EXCEPT [ALL]`). Compiled by [`SetOperationStatement::compile_set_operation`].
+///
+/// Engine-witnessed law (frozen-duckdb probe, this checkout): `BY NAME` is a
+/// UNION-form flag — `INTERSECT BY NAME` is a real engine parser error, so a
+/// `by_name` flag beside a non-UNION kind refuses typed at compile time
+/// (`refusal_arm::SET_OP_BY_NAME_KIND`), never as a generic DB error at
+/// prepare time. `ALL` is engine-legal with all three kinds.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SetOperationStatement {
+    pub left: SelectStatement,
+    pub kind: SetOpKind,
+    /// `sql:setAll true` → `ALL` (dedup suppression: `UNION ALL` keeps
+    /// duplicate rows; `INTERSECT ALL`/`EXCEPT ALL` are engine-legal too).
+    pub all: bool,
+    /// `sql:byName true` → `BY NAME` (UNION-only; positional kinds refuse).
+    pub by_name: bool,
+    pub right: SelectStatement,
+}
+
+impl SetOperationStatement {
+    /// Compiles the set operation to parameterized DuckDB SQL: each operand
+    /// serializes in full (its own WITH clause included) inside parentheses,
+    /// the combinator and flags render between them. Placeholder numbering is
+    /// GLOBAL across both operands — `serialize_expr` numbers `$n` from the
+    /// shared buffer's length at push time, and operands render left-then-
+    /// right, so text order and buffer order agree exactly as DuckDB's
+    /// positional prepared protocol requires.
+    ///
+    /// This is a composite (non-`SelectStatement`) arm: `CompiledQuery::
+    /// raw_compiled` keeps `cacheable: false`, the C1-a memo never admits it,
+    /// and `compile_turtle` stamps the receipt anchor
+    /// `h_ast = BLAKE3(Canon(G_AST))` on the returned query unchanged
+    /// (sql-rdf Rec. section 1.4 receipt law).
+    pub fn compile_set_operation(&self) -> Result<CompiledQuery, AstError> {
+        let mut params = Vec::new();
+        let mut sql = String::with_capacity(256);
+        sql.push('(');
+        self.left.compile_into(&mut sql, &mut params)?;
+        sql.push(')');
+        sql.push(' ');
+        sql.push_str(self.kind.as_sql());
+        if self.all {
+            sql.push_str(" ALL");
+        }
+        if self.by_name {
+            sql.push_str(" BY NAME");
+        }
+        sql.push(' ');
+        sql.push('(');
+        self.right.compile_into(&mut sql, &mut params)?;
+        sql.push(')');
+        sql.push(';');
+        // C1-a classification: composite statement arm, never cacheable.
+        Ok(CompiledQuery::raw_compiled(sql, params))
+    }
+}
+
 /// Serializes a window frame spec (SQLRDF-25): `ROWS BETWEEN a AND b` in the
 /// two-bound form, `ROWS a` in the single-bound form.
 fn serialize_frame(

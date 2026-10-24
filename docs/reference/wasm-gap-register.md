@@ -99,3 +99,62 @@ exhausted its 10,000,000 budget on the pinned-artifact capabilities leg
 green as of this addendum; the G4/SEC1/INC1 gates (green-court receipts)
 remain unmet on current evidence, and this conflict (fuel budget vs the
 pinned-artifact leg) must be resolved before any flip.
+
+### 2026-10-24 03:20 PDT — green-court receipts landed; G4/SEC1/INC1 flip OPEN → CLOSED (register lane, write lease = this file only)
+
+Gate: all courts below ran on the settled tree at HEAD
+`4df19b5b1d2480d50851e7c0e0bf855802a2c46a` (working tree clean at every
+cited locus — tested tree == committed tree). Exit codes captured via zsh
+`${pipestatus[1]}`, never a pipe tail.
+
+- **G4 → CLOSED.** Receipt:
+  `GRAPHLAW_WASM=priv/graphlaw.wasm GRAPHLAW_RUN_EH=target-coord/debug/graphlaw-run-eh CARGO_TARGET_DIR=target-coord cargo test --test wasm_frame_bound_court`
+  → `running 8 tests` / `test result: ok. 8 passed; 0 failed; 0 ignored;
+  0 measured; 0 filtered out; finished in 0.36s`, exit 0. Discharges the
+  pending gate named in the 01:33 entry: at-cap frame admitted and answered
+  end to end (both hosts), cap+1 → exit 92, 0xFFFFFFFF → exit 92 before
+  body, zero-len → exit 0 — `wasmi_at_cap_frame_admitted_and_answered`,
+  `eh_at_cap_frame_admitted_and_answered`, `wasmi_over_cap_by_one_exit92`,
+  `eh_over_cap_by_one_exit92`, `wasmi_oversize_0xffffffff_exit92_before_body`,
+  `eh_oversize_0xffffffff_exit92_before_body`, `wasmi_zero_len_frame_clean_exit0`,
+  `eh_zero_len_frame_clean_exit0`.
+- **SEC1 → CLOSED.** Receipt:
+  `CARGO_TARGET_DIR=target-coord cargo test --test attach_bypass_court`
+  → `test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured;
+  0 filtered out; finished in 0.40s`, exit 0. Tests:
+  `camouflage_attack_strings_are_engine_live_attach_statements` (the
+  `/* */` / `--` / `/*!*/` camouflaged strings proven engine-live ATTACH),
+  `wire_fail_closed_refusal_then_inside_root_attach_executes` (typed
+  refusal envelope + inside-root liveness),
+  `wire_document_member_attach_refuses_typed`. This is the seam+wire
+  output on the HARDENED classifier — the W15 predates-hardening objection
+  is discharged.
+- **INC1 → CLOSED.** Triad complete: (1) re-land `679299d` + `907e663`
+  (witnessed by the prior entry's poll); (2) green courts = the G4 + SEC1
+  receipts above; (3) the 01:55 addendum's blocking red witness resolved by
+  rerun on the settled tree:
+  `GRAPHLAW_WASM=priv/graphlaw.wasm CARGO_TARGET_DIR=target-coord cargo test --test graphlaw_run_eh_court -- --test-threads=1`
+  → `test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured;
+  0 filtered out; finished in 21.23s`, exit 0 —
+  `pending_artifact_pin_capabilities_frame_exit97_uninitialized_element`
+  now exits 97 as specified; the 01:52 exit-98 fuel exhaustion no longer
+  reproduces. Note: without `GRAPHLAW_WASM` set this court loud-SKIPs
+  (`GRAPH LAW EH-COURT SKIP: no wasm artifact resolved`, exit 101); that
+  skip is typed and was not counted as a witness.
+
+Supporting runs, same window (not flips):
+`cargo test --test abi_response_builders_court` → `test result: ok. 10
+passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in
+0.00s`, exit 0 — **G7 stays OPEN**: its named closing witness is "builders
+court; mut rerun" and the mutation-court rerun is still owed.
+`cargo test --test wasm_env_isolation_court` → `test result: ok. 3 passed;
+0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 162.69s`,
+exit 0 (two tests polled >60s under bounded observable polling; positive
+control `checker_positive_control_detects_a_real_env_echo` passed, so the
+court is non-vacuous).
+
+Reopen conditions: any court above returning red on the same loci, or a
+mutation of the `read_frame` bound / `leading_sql_token` classifier that
+its court fails to invert on, reopens the row via a new append. Row count
+unchanged (17); this entry appends only — no table row or prior log entry
+rewritten.

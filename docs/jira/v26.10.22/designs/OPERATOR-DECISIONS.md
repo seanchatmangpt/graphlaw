@@ -5,6 +5,13 @@ Status: **DECISION REGISTER — nothing decided by this lane.** Every entry: que
 evidence (receipt file:line, verified resolving on disk this session), options with costs,
 coordinator recommendation, fill-in decision line. Ordered by blocking impact.
 
+Sign-off pass 2026-10-24 (closes audit row R-25,
+`docs/jira/v26.10.23/compliance-final-verdict.md:228-230`): OD-1, OD-3, OD-5
+ADMITTED-as-executed with landing commits + receipt loci; OD-2 recorded SUPERSEDED —
+no sign-off, its Route-C policy was stood down before execution; OD-4 and OD-6's
+own subject remain open. Authority for every 2026-10-24 completion: operator
+publish directive 2026-10-24 (`compliance-final-verdict.md:388`).
+
 ---
 
 ## OD-1. EH route for the wasm artifact (blocks the wasm tier and smalt pairing)
@@ -50,7 +57,21 @@ with A1' as the engine-tier backend candidate — per
 materially stronger since L144's probes: the compile/link flag is witnessed to flip
 opcode encoding and run on both hosts. Route B stays ranked last.
 
-**DECISION (operator):** route = ______________  date: __________
+**DECISION (operator):** ADMITTED-as-executed — route = wasmtime 48 +
+`wasm_exceptions(true)` hosting the SINGLE DuckDB-linked artifact, executed
+through the A1' try_table archive law (`-fwasm-exceptions
+-mllvm -wasm-use-legacy-eh=0`); Route C (dual-artifact) STOOD DOWN.
+Signed off 2026-10-24 under the operator publish directive 2026-10-24
+(authorizing act: `docs/jira/v26.10.23/compliance-final-verdict.md:388`).
+Sign-off record: operator decision dated 2026-10-23,
+`docs/archive/designs-2026-10-23/eh-runner-decision-memo.md:134-160`;
+landing commits `16678de`→`679299d`→`e94d9bd`→`907e663` (EH-closure wave;
+`GO-NO-GO-v26.10.22.md:7-8,33-37`); 4-surface re-pin to `58a44095…`
+(58,124,612 B) committed ahead of tag v26.10.22 at `669c817+`
+(`registry/ARTIFACTS.blake3:13`, `priv/graphlaw.wasm.blake3`,
+`js/npm/src/generated/artifact-meta.ts:3`; `GO-NO-GO-v26.10.22.md:82-89`);
+receipts `receipts/2026-10-23-eh-closure-wave.md` + GO-NO-GO §v4
+(published-by-machine through validate-and-pack green, CI run 40084544193).
 
 ---
 
@@ -88,7 +109,15 @@ opcode encoding and run on both hosts. Route B stays ranked last.
 policy execute with zero un-witnessed assertions; D1a tightening and D4 follow A1'
 outcomes.
 
-**DECISION (operator):** D1 ___ D2 ___ D3 ___ D4 ___ D5 ___ D6 ___  date: __________
+**DECISION (operator):** NO SIGN-OFF — SUPERSEDED, not executed. The OD-1
+decision STOOD DOWN Route C (`docs/archive/designs-2026-10-23/eh-runner-decision-memo.md:134-160`),
+so D1–D6 lapsed as parameters of a policy that never landed; no letter was
+picked and none is admitted here. The pin state OD-2 would have governed
+was resolved by the EH-closure re-pin instead: single registry row
+`wasm 58a44095…` 58,124,612 B (`registry/ARTIFACTS.blake3:12-13`; the
+`wasm-pure`/`wasm-engine` row split never landed). Disposition recorded
+2026-10-24; authority: operator publish directive 2026-10-24
+(`compliance-final-verdict.md:388`). Disposition record, not an admission.
 
 ---
 
@@ -123,7 +152,14 @@ OD-2 row split and the owned-row re-pin, satisfying W09 same-commit law and halv
 pin churn. If the operator wants the registry green before any split work starts,
 fall back to (a); the flow is receipted either way.
 
-**DECISION (operator):** (a) or (b): ______  date: __________
+**DECISION (operator):** ADMITTED-as-executed (resolved by execution; no
+(a)/(b) letter was picked): the re-pin landed 2026-10-23 WITHOUT any
+dual-artifact split — the option-(a)-shaped outcome. Single `wasm 58a44095…`
+row moved with the EH-closure wave (commits `e94d9bd`→`907e663`; 4-surface
+re-pin ahead of tag `669c817+`). Receipt locus: `registry/ARTIFACTS.blake3:7,12-13`
+(26.10.22 pin marked superseded 2026-10-23) + `GO-NO-GO-v26.10.22.md:82-89`.
+Signed off 2026-10-24 under the operator publish directive 2026-10-24
+(`compliance-final-verdict.md:388`).
 
 ---
 
@@ -200,7 +236,15 @@ receipt; if path indirection is UNSUPPORTED, fall back to (a) and register the
 divergence. Do NOT hand-patch the generated `sql_statement_kinds.rs:66` — that fix
 belongs in `extract_statements.py`'s example-string sanitization at next regen.
 
-**DECISION (operator):** (a)/(b)/(c): ______  date: __________
+**DECISION (operator):** ADMITTED-as-executed (resolved by execution; no
+(a)/(b)/(c) letter was picked): option (b) tempath-ize landed — all
+`wasm/ggen.toml` paths are relative to wasm/ (L160 normalization
+2026-10-22, `wasm/ggen.toml:13-21`), CLEARED in the commit manifest
+(`designs/commit-manifest.md:103,119`; landing batch 5 "wasm link-green +
+js/npm + CI", `designs/commit-manifest.md:42`). Determinism receipt
+embedded at `wasm/ggen.toml:5-7` (b3sum `9dcab4e4…`). Signed off
+2026-10-24 under the operator publish directive 2026-10-24
+(`compliance-final-verdict.md:388`).
 
 ---
 
@@ -239,14 +283,14 @@ already-committed policy text; committing them closes a doc/behavior divergence,
 
 ## Summary table
 
-| ID | Decision | Blocks | Rec |
-|---|---|---|---|
-| OD-1 | EH route pick | wasm tier, smalt 3/7 | C now + A1' engine backend |
-| OD-2 | D1–D6 defaults | executes OD-1 | all defaults |
-| OD-3 | registry re-pin timing | ARTIFACTS.blake3 churn | (b) single split+re-pin commit |
-| OD-4 | Cpk/CTQ production bar | charter closure | (a) full closure; (b) minimum |
-| OD-5 | ggen.toml absolute paths | portability | (b), fallback (a) registered |
-| OD-6 | .claude/ commit | repo-policy parity | (a) commit + gitignore __pycache__ |
+| ID | Decision | Blocks | Rec | Sign-off (2026-10-24) |
+|---|---|---|---|---|
+| OD-1 | EH route pick | wasm tier, smalt 3/7 | C now + A1' engine backend | ADMITTED-as-executed (wasmtime 48 single artifact; Route C stood down) |
+| OD-2 | D1–D6 defaults | executes OD-1 | all defaults | NO SIGN-OFF — SUPERSEDED with the Route C stand-down |
+| OD-3 | registry re-pin timing | ARTIFACTS.blake3 churn | (b) single split+re-pin commit | ADMITTED-as-executed (re-pin landed without any split) |
+| OD-4 | Cpk/CTQ production bar | charter closure | (a) full closure; (b) minimum | OPEN — latest SPC witness FAIL (Cpk 0.0008, `receipts/spc-2026-10-23T152558.json`) |
+| OD-5 | ggen.toml absolute paths | portability | (b), fallback (a) registered | ADMITTED-as-executed (tempath-ize landed, L160) |
+| OD-6 | .claude/ commit | repo-policy parity | (a) commit + gitignore __pycache__ | ANOMALOUS — line filled with OD-1 text; .claude/ subject itself unsigned/open |
 
 ## See Also
 

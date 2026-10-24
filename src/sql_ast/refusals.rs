@@ -137,11 +137,27 @@ pub mod refusal_arm {
     /// form is refused typed until specified. Recovery: use the regex form
     /// `sql:columnsPattern` with one quoted pattern string.
     pub const COLUMNS_LAMBDA: u16 = 51;
-    /// REFUSAL-01 arm (SQLRDF-25 Rows 1+2, appended append-only): a COLUMNS
-    /// projection item with no string `sql:columnsPattern` literal, or an
-    /// empty/whitespace one (never a silent `COLUMNS('')`). Recovery: one
-    /// quoted pattern string.
-    pub const COLUMNS_PATTERN: u16 = 52;
+    /// REFUSAL-01 arm (SQLRDF-27 dialect gap #1, appended append-only): a
+    /// `sql:SetOperationStatement` node carries no `sql:setRight` — the
+    /// rendered SQL would be `( SELECT … ) UNION ` with an empty right
+    /// operand. A set operation is binary by construction. Recovery: attach
+    /// a nested `sql:SelectStatement` via `sql:setRight`.
+    pub const SET_OP_NO_RIGHT: u16 = 53;
+    /// REFUSAL-01 arm (SQLRDF-27 dialect gap #1, appended append-only): the
+    /// `sql:setOperator` token is not `UNION`, `INTERSECT` or `EXCEPT`
+    /// (case-insensitive). Recovery: one of the three admitted tokens.
+    pub const SET_OP_KIND_TOKEN: u16 = 54;
+    /// REFUSAL-01 arm (SQLRDF-27 dialect gap #1, appended append-only): a
+    /// `sql:setAll` / `sql:byName` flag literal is not an `xsd:boolean`
+    /// `true`/`false` lexical. `ident` carries the predicate, `aux_ident` the
+    /// statement node. Recovery: write `true` or `false`.
+    pub const SET_OP_FLAG_LEX: u16 = 55;
+    /// REFUSAL-01 arm (SQLRDF-27 dialect gap #1, appended append-only):
+    /// `sql:byName true` beside a non-UNION `sql:setOperator`. Engine-witnessed
+    /// (frozen-duckdb probe): `INTERSECT BY NAME` / `EXCEPT BY NAME` are real
+    /// parser errors, so the compile refuses typed before any engine call.
+    /// Recovery: drop the flag or use UNION.
+    pub const SET_OP_BY_NAME_KIND: u16 = 56;
     // ScopeIntegrity (REFUSAL-03) arms.
     pub const AGG_IN_POSITION: u16 = 1;
     pub const ALIASED_AGG_ARG: u16 = 2;
@@ -666,6 +682,22 @@ impl fmt::Display for AstError {
                     arm::COLUMNS_PATTERN => write!(
                         f,
                         "SHACL AST structural violation: {marker}COLUMNS projection on {id} carries no non-empty string sql:columnsPattern literal; never a silent COLUMNS('') (SQLRDF-25 Rows 1+2)"
+                    ),
+                    arm::SET_OP_NO_RIGHT => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}set-operation statement {id} carries no sql:setRight; a UNION/INTERSECT/EXCEPT is binary by construction, the rendered SQL would end at the combinator with an empty right operand (SQLRDF-27)"
+                    ),
+                    arm::SET_OP_KIND_TOKEN => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}sql:setOperator '{id}' is not UNION, INTERSECT or EXCEPT; an unknown set-operation kind refuses typed, it never silently defaults (SQLRDF-27)"
+                    ),
+                    arm::SET_OP_FLAG_LEX => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}{id} on {aux} must be an xsd:boolean true/false literal (SQLRDF-27 set-operation flag)"
+                    ),
+                    arm::SET_OP_BY_NAME_KIND => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}sql:byName on {id} pairs only with sql:setOperator UNION; INTERSECT/EXCEPT BY NAME is a real engine parser error, so the compile refuses typed before any engine call (SQLRDF-27)"
                     ),
                     arm::SHACL_DEPTH => write!(
                         f,
