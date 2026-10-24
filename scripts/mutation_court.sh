@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# Native mutation court over the ABI registry surface (src/registry.rs, src/abi.rs).
+# Native mutation court over the ABI registry surface (src/registry.rs,
+# src/registry/*.rs, src/abi.rs).
 #
 #   scripts/mutation_court.sh            run the court, print the summary
 #   scripts/mutation_court.sh --list     list mutants only (no test run)
 #   scripts/mutation_court.sh --check    run the court; exit 3 when any mutant in
-#                                        src/registry.rs or in the capabilities()/
-#                                        dispatch() bodies of src/abi.rs is MISSED
+#                                        src/registry.rs, in src/registry/*.rs,
+#                                        or in the capabilities()/dispatch()
+#                                        bodies of src/abi.rs is MISSED
 #   scripts/mutation_court.sh --leg callsite-revert
 #                                        run ONLY the callsite-revert leg: patch
 #                                        law.rs authority_for_capability to return
@@ -184,7 +186,12 @@ fi
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target-mutants}"
 OUTPUT_DIR="${MUTANTS_OUTPUT:-$ROOT}"
 
-GUARDED=(src/registry.rs src/abi.rs)
+# LOAD-BEARING: GUARDED must cover every file matched by examine_globs in
+# .cargo/mutants.toml. cargo-mutants runs --in-place, so a widened inventory
+# behind a narrower restore set LEAKS MUTATED FILES on SIGKILL (the EXIT trap
+# is skipped; mc4 precedent). Any glob added to examine_globs gets a
+# corresponding concrete entry here.
+GUARDED=(src/registry.rs src/registry/definitions.rs src/registry/emit_json.rs src/registry/emit_ttl.rs src/abi.rs)
 SNAP="$(mktemp -d "${TMPDIR:-/tmp}/mutation-court.XXXXXX")"
 STATUS_BEFORE="$SNAP/status.before"
 git status --porcelain -- src/ >"$STATUS_BEFORE" 2>/dev/null || : >"$STATUS_BEFORE"
@@ -194,7 +201,9 @@ SHA_BEFORE="$SNAP/sha.before"
 : >"$SHA_BEFORE"
 for f in "${GUARDED[@]}"; do
   if [ -f "$f" ]; then
-    mkdir -p "$SNAP/src"
+    # Guarded files may be nested (src/registry/*.rs): create the file's own
+    # directory inside the snapshot, not a hardcoded SNAP/src.
+    mkdir -p "$SNAP/$(dirname "$f")"
     cp -p "$f" "$SNAP/$f"
     printf '%s  %s\n' "$(shasum -a 256 "$f" | awk '{print $1}')" "$f" >>"$SHA_BEFORE"
   fi
@@ -317,10 +326,10 @@ MISSED="$OUT/missed.txt"
 [ -f "$MISSED" ] || { echo "mutation_court: no missed.txt at $MISSED" >&2; exit 2; }
 # Gated surface: everything in registry.rs, and mutants whose description names
 # capabilities() or dispatch() in abi.rs.
-GATED="$(grep -E '(^|/)src/registry\.rs:|^src/abi\.rs:.*(\bcapabilities\b|\bdispatch\b)' "$MISSED" || true)"
+GATED="$(grep -E '(^|/)src/registry\.rs:|(^|/)src/registry/[^:]*\.rs:|^src/abi\.rs:.*(\bcapabilities\b|\bdispatch\b)' "$MISSED" || true)"
 if [ -n "$GATED" ]; then
   echo "mutation_court: MISSED gated mutants:" >&2
   printf '%s\n' "$GATED" >&2
   exit 3
 fi
-echo "mutation_court: no MISSED mutants in src/registry.rs or capabilities()/dispatch()" >&2
+echo "mutation_court: no MISSED mutants in src/registry.rs, src/registry/*.rs, or capabilities()/dispatch()" >&2

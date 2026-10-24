@@ -5,7 +5,7 @@
 # "killed" by a missing GRAPHLAW_WASM and never survives for lack of one.
 # Run through scripts/mutation_court.sh (in-place: no copies, no worktrees).
 
-examine_globs = ["src/registry.rs", "src/abi.rs"]
+examine_globs = ["src/registry.rs", "src/abi.rs", "src/registry/*.rs"]
 
 test_tool = "cargo"
 
@@ -22,6 +22,10 @@ additional_cargo_test_args = [
   "--test", "policy_admission",
   "--test", "knowledge_hooks",
   "--test", "law_state",
+  # SQLRDF-28 killer: pins the exact bytes of limit_response /
+  # missing_buffer_response / unknown_buffer_response and the spec_of
+  # string-arm + guard paths (docs/jira/v26.10.22/SQLRDF-28.md).
+  "--test", "abi_response_builders_court",
 ]
 
 # Rebuilding purrdf/eyeron after each mutation is slow: scale the baseline

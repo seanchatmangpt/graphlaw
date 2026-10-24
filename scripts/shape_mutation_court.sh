@@ -52,8 +52,11 @@ restore() {
 trap restore EXIT
 
 mutate_m1() {
-  # M1: remove LIKE/ILIKE from the sh:in operator list.
-  perl -pi -e 's/ "LIKE" "ILIKE"(?=\s*\))//' "$SHAPE"
+  # M1: remove LIKE/ILIKE from the sh:in operator list. Successor-anchored:
+  # the enum grew set-op tokens, sql-ast.ttl:490 now reads
+  # ..."LIKE" "ILIKE" "->" "->>" — anchor the lookahead on those successors
+  # (a trailing-\) anchor no longer matches and M1 would "not apply" -> exit 5).
+  perl -pi -e 's/ "LIKE" "ILIKE"(?= "->" "->>" \))//' "$SHAPE"
 }
 mutate_m2() {
   # M2: drop sh:minCount 1 from the from-clause branches of
