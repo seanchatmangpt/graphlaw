@@ -86,5 +86,16 @@ exact pending gate:
 Falsifiers for this flip-log entry: (a) a durable receipt embedding the
 frame-bound court output lands → G4 flips OPEN → CLOSED in a new append;
 (b) a durable receipt embedding the attach seam+wire court output lands →
-SEC1 flips; (c) both plus the incident-note citation stand → INC1 flips.
+SEC1 flips; (c) both plus the incident-note closure triad → INC1 flips.
 No existing row was rewritten; row count 15 → 17 reflects appends only.
+
+Addendum 01:55 PDT — red witness on the re-landed tree. The coordinator's
+`cargo test --test graphlaw_run_eh_court -- --test-threads=1` (log
+`/tmp/coord_t3.log`, finished 01:52) returned **FAILED, 6 passed / 1
+failed**: `pending_artifact_pin_capabilities_frame_exit97_uninitialized_element`
+expected exit 97, observed 98 — the C0c fuel metering (landed `907e663`)
+exhausted its 10,000,000 budget on the pinned-artifact capabilities leg
+("guest exhausted fuel budget 10000000"). The re-land is therefore not
+green as of this addendum; the G4/SEC1/INC1 gates (green-court receipts)
+remain unmet on current evidence, and this conflict (fuel budget vs the
+pinned-artifact leg) must be resolved before any flip.
