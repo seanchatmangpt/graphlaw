@@ -4,7 +4,7 @@ version = "26.10.22"
 edition = "2024"
 rust-version = "1.96"
 authors = ["Sean Chatman"]
-license = "MIT AND LicenseRef-P28-SIL-2.1.0"
+license = "MIT"
 description = "GraphLaw: library-backed RDF law-state composition over PurRDF and Eyeron"
 readme = "README.md"
 include = ["/src/**", "/build.rs", "/Cargo.toml", "/README.md", "/LICENSE.md", "/MIGRATION.md", "/CHANGELOG.md", "/SECURITY.md", "/CONTRIBUTING.md", "/docs/**", "/examples/**", "/ontologies/**", "/ggen/**"]
@@ -92,11 +92,6 @@ abi = []
 # Asserts that the build applied the vendored WASI clock patch (see
 # vendor/README.md). Only the repo workspace (crates.io ignores [patch]) sets it.
 wasi-patched-deps = []
-# GWS-18: `graphlaw-run` — a packet-4 stdio host for the compiled wasm module
-# (wasmi, mirroring tests/wasm_abi.rs's Host), speaking the smalt sandbox
-# runner protocol. Host-only (wasmi cannot compile for wasm32), so the deps are
-# target-scoped and optional; off by default, on via --features runner.
-runner = ["dep:wasmi", "dep:wasmi_wasi"]
 # Wasmtime-based EH host for the DuckDB-linked artifact (bin graphlaw-run-eh).
 runner-eh = ["dep:wasmtime", "dep:wasmtime-wasi"]
 
@@ -115,15 +110,9 @@ name = "graphlaw-verify"
 path = "src/bin/graphlaw_verify.rs"
 required-features = ["abi"]
 
-# GWS-18: stdio runner/adapter between the smalt sandbox port driver
-# (packet-4 JSON over stdio) and the real compiled wasm module via wasmi.
-[[bin]]
-name = "graphlaw-run"
-path = "src/bin/graphlaw_run.rs"
-required-features = ["runner"]
-
 # EH-capable host (wasmtime 48, new W3C exceptions) for the DuckDB-linked
-# artifact — successor to graphlaw-run for the pinned module.
+# artifact — the sole packet-4 stdio runner after the wasmi retirement
+# (docs/jira/v26.10.23/ADR-wasmi-retirement.md).
 [[bin]]
 name = "graphlaw-run-eh"
 path = "src/bin/graphlaw_run_eh.rs"
@@ -161,17 +150,17 @@ harness = false
 name = "tc_hot_01"
 harness = false
 
+# docs.rs cannot take all-features: wasi-patched-deps makes the root build.rs
+# panic (WASI_PATCH_BUILD_REFUSED without vendor/, and crates.io builds ignore
+# [patch]); frozen-duckdb-sys has a DOCS_RS branch that skips native builds, so
+# the native toolchain docs.rs uses is fine — the feature set is what needs pinning.
 [package.metadata.docs.rs]
-all-features = true
+features = ["abi", "evidentiary-ring", "pack-tools"]
 
-# Host-side wasm runtime for the `runner` feature (graphlaw-run) and the abi
-# integration tests. Optional in [dependencies] (bins cannot see dev-deps);
+# Host-side wasm runtime for the `runner-eh` feature (graphlaw-run-eh) and the
+# abi integration tests. Optional in [dependencies] (bins cannot see dev-deps);
 # tests keep their unconditional dev-dependency below.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-# wasmi 2.0.0 has no EH support and no exceptions config knob; it stays only
-# for the historical pre-duckdb artifact courts (tests/wasm_abi.rs).
-wasmi = { version = "2", optional = true }
-wasmi_wasi = { version = "2", optional = true }
 wasmtime = { version = "48", optional = true, features = ["runtime"] }
 wasmtime-wasi = { version = "48", optional = true }
 # GWS-18 successor: hosts the DuckDB-linked wasm artifact with wasmtime 48
@@ -182,12 +171,10 @@ wasmtime-wasi = { version = "48", optional = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 divan = "0.1"
 
-wasmi = "2"
 # EH lifecycle court (tests/wasm_duckdb_lifecycle_eh.rs): hosts the
 # DuckDB-linked artifact under wasmtime 48 with new W3C exceptions.
 wasmtime = { version = "48", features = ["runtime"] }
 wasmtime-wasi = "48"
-wasmi_wasi = "2"
 serde_json = "1"
 hdrhistogram = "7"
 
@@ -202,34 +189,6 @@ purrdf-sparql-eval = { path = "vendor/purrdf-sparql-eval" }
 # integration-test binaries huge (tens of GB across the suite).
 [profile.dev]
 debug = "line-tables-only"
-
-# The wasm runtime used by tests/wasm_abi.rs is an interpreter; unoptimised it
-# is ~50x slower and makes the suite take minutes.
-# debug-assertions must also be off: wasmi 2's default dispatch is tail-call
-# threaded and relies on LLVM sibling-call optimisation. With the dev profile's
-# debug assertions on, the handlers are not tail-called, every wasm instruction
-# adds a native frame, and any non-trivial guest call overflows the test
-# thread's 2 MiB stack ("fatal runtime error: stack overflow").
-[profile.dev.package.wasmi]
-opt-level = 3
-overflow-checks = false
-debug-assertions = false
-[profile.dev.package.wasmi_core]
-opt-level = 3
-overflow-checks = false
-debug-assertions = false
-[profile.dev.package.wasmi_ir]
-opt-level = 3
-overflow-checks = false
-debug-assertions = false
-[profile.dev.package.wasmi_collections]
-opt-level = 3
-overflow-checks = false
-debug-assertions = false
-[profile.dev.package.wasmi_wasi]
-opt-level = 3
-overflow-checks = false
-debug-assertions = false
 
 [[bin]]
 name = "sa2a-portability-verify"

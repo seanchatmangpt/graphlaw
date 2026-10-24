@@ -36,7 +36,7 @@ jobs:
   release:
     name: release if unreleased (tag + GitHub release with blake3 sidecars)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     env:
       GH_TOKEN: ${{ github.token }}
       RELEASE_HOLD: ${{ vars.RELEASE_HOLD }}
@@ -48,10 +48,9 @@ jobs:
         with:
           toolchain: 1.96.0
           targets: wasm32-wasip1
-      # WASI setup (L113): same staged-SDK + duckdb wasm32-archive recipe as
-      # ci.yml — the wasm link refuses to build without WASI_SDK_PATH and the
-      # compiled duckdb archives. PATCH-ON-L109-LANDING: swap for frozen-duckdb
-      # scripts/build_wasi_duckdb.sh when L109 lands.
+      # WASI setup: same staged-SDK + duckdb wasm32-archive recipe as ci.yml,
+      # extracted into one composite action — the wasm link refuses to build
+      # without WASI_SDK_PATH and the compiled duckdb archives.
       - name: Decide what is unreleased
         id: plan
         shell: bash
@@ -82,72 +81,9 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
 
-      - name: Restore staged WASI SDK + duckdb wasm archives
-        uses: actions/cache@0c907a75c2c80ebcb7f088228285e798b750cf8f # v4
-        with:
-          path: ~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1
-          key: wasi-duckdb-v2.0.0-dev-b6013f7a-${{ hashFiles('.github/workflows/release.yml') }}
-      - name: Stage WASI SDK + duckdb wasm archives (WASI_SDK_PATH)
+      - name: Stage WASI SDK + duckdb wasm archives
         if: steps.plan.outputs.work == 'yes'
-        run: |
-          set -euo pipefail
-          CACHE="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1"
-          # Fail-closed admission of a cached archive: it must be an ar archive
-          # of wasm32 objects — mirrors frozen-duckdb-builder archive_is_wasm32
-          # (ar magic + \0asm wasm magic, and REFUSES Mach-O/ELF magics; a host
-          # archive or binary is the historical false-pass).
-          is_wasm32_ar() { # exact port of frozen-duckdb-builder archive_is_wasm32
-            python3 - "$1" <<'PY'
-          import sys
-          b = open(sys.argv[1], "rb").read(64 * 1024 * 1024)
-          ok = (b.startswith(b"!<arch>\n") and b"\0asm" in b
-                and not any(m in b for m in (b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\x7fELF")))
-          sys.exit(0 if ok else 1)
-          PY
-          }
-          # WASI_SDK_PATH is a wasi-sdk root. Install it even when the DuckDB
-          # archive is already cached; the cache directory is not a wasi-sdk.
-          if [ ! -x /opt/wasi-sdk/bin/clang ] || [ ! -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake ]; then
-            curl -fsSL -o /tmp/wasi-sdk.tar.gz \
-              https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz
-            sudo mkdir -p /opt/wasi-sdk
-            sudo tar -xzf /tmp/wasi-sdk.tar.gz -C /opt/wasi-sdk --strip-components=1
-          fi
-          test -x /opt/wasi-sdk/bin/clang
-          test -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake
-          if [ -f "$CACHE/libduckdb.a" ] && is_wasm32_ar "$CACHE/libduckdb.a"; then
-            echo "cached duckdb wasm32 archive admitted: $CACHE/libduckdb.a"
-          else
-            if ! command -v cmake >/dev/null; then
-              sudo apt-get update
-              sudo apt-get install -y cmake
-            fi
-            # 2. Compile the pinned DuckDB source to the wasm32-wasip1 static
-            #    archive (frozen-duckdb-builder compile_wasip1_static recipe).
-            DUCKDB_PIN=b6013f7aa2f36caabb9466ce1791667ea8a280bb
-            TMP="$(mktemp -d)"
-            git clone --quiet https://github.com/duckdb/duckdb.git "$TMP/duckdb"
-            git -C "$TMP/duckdb" checkout --quiet "$DUCKDB_PIN"
-            grep -q 'set(CMAKE_POSITION_INDEPENDENT_CODE ON)' "$TMP/duckdb/CMakeLists.txt" # PIC patch pre-check
-            sed -i 's/set(CMAKE_POSITION_INDEPENDENT_CODE ON)/set(CMAKE_POSITION_INDEPENDENT_CODE OFF)/' "$TMP/duckdb/CMakeLists.txt"
-            cmake -S "$TMP/duckdb" -B "$TMP/duckdb/build-wasip1" \
-              -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=OFF -DBUILD_EXTENSIONS= -DBUILD_SHELL=OFF \
-              -DBUILD_UNITTESTS=OFF -DENABLE_EXTENSION_AUTOLOADING=OFF \
-              -DENABLE_EXTENSION_AUTOINSTALL=OFF -DBUILD_HTTPFS=OFF \
-              -DBUILD_JEMALLOC=OFF -DDISABLE_THREADS=ON
-            cmake --build "$TMP/duckdb/build-wasip1" --target duckdb_static -j "$(nproc)" \
-              || cmake --build "$TMP/duckdb/build-wasip1" --target duckdb -j "$(nproc)"
-            mkdir -p "$CACHE"
-            AR="$TMP/duckdb/build-wasip1/src/libduckdb_static.a"
-            [ -f "$AR" ] || AR="$TMP/duckdb/build-wasip1/src/libduckdb.a"
-            is_wasm32_ar "$AR" || { echo "REFUSED: built archive is not wasm32 ar" >&2; exit 1; }
-            cp "$AR" "$CACHE/libduckdb.a"
-            find "$TMP/duckdb/build-wasip1" -name 'lib*_extension.a' -exec cp -n {} "$CACHE/" \;
-          fi
-          echo "WASI_SDK_PATH=/opt/wasi-sdk" >> "$GITHUB_ENV"
-          echo "staged: $(ls "$CACHE")"
+        uses: ./.github/actions/wasi-duckdb
       # Release assets carry .blake3 sidecars (b3sum format). The runner has
       # rust, so the canonical tool is `cargo install b3sum --locked`.
       - name: Install b3sum (cargo install b3sum --locked)
@@ -155,6 +91,8 @@ jobs:
 
       - name: Build and test (only when there is something to release)
         if: steps.plan.outputs.work == 'yes'
+        env:
+          CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS: -C target-feature=+exception-handling
         run: |
           set -euo pipefail
           cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
@@ -162,21 +100,26 @@ jobs:
           cargo package -p graphlaw-eyeron -p graphlaw
 
       - name: Tag and create the GitHub release
-        if: steps.plan.outputs.tag_exists == 'no'
+        if: steps.plan.outputs.work == 'yes'
         run: |
           set -euo pipefail
+          v="v${{ steps.plan.outputs.graphlaw }}"
+          if gh release view "$v" >/dev/null 2>&1; then
+            echo "release $v exists; nothing to do"
+            exit 0
+          fi
           mkdir dist
           cp target/wasm32-wasip1/wasm/graphlaw_wasm.wasm dist/graphlaw.wasm
           for f in capability-registry.json capability-registry.ttl op-examples.json; do
             cp "registry/$f" "dist/$f"
           done
           (cd dist && for f in graphlaw.wasm capability-registry.json capability-registry.ttl op-examples.json; do b3sum "$f" > "$f.blake3"; done)
-          gh release create "v${{ steps.plan.outputs.graphlaw }}" \
+          gh release create "$v" \
             dist/graphlaw.wasm dist/graphlaw.wasm.blake3 \
             dist/capability-registry.json dist/capability-registry.json.blake3 \
             dist/capability-registry.ttl dist/capability-registry.ttl.blake3 \
             dist/op-examples.json dist/op-examples.json.blake3 \
-            --target "$(git rev-parse HEAD)" --generate-notes --title "graphlaw v${{ steps.plan.outputs.graphlaw }}"
+            --target "$(git rev-parse HEAD)" --generate-notes --title "graphlaw $v"
 
       - name: Publish (refused in CI)
         if: steps.plan.outputs.eyeron_published == 'no' || steps.plan.outputs.graphlaw_published == 'no'

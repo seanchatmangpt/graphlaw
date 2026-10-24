@@ -37,6 +37,9 @@ jobs:
         with:
           toolchain: 1.96.0
           targets: wasm32-wasip1
+      # DuckDB wasm archives + WASI_SDK_PATH for the graphlaw-wasm link
+      # (frozen-duckdb-sys build.rs requires both on the wasm32 target).
+      - uses: ./.github/actions/wasi-duckdb
       - name: Build WASI module (wasm profile)
         run: cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm --locked
       # BLAKE3 is the artifact-digest algorithm (priv/graphlaw.wasm.blake3,
@@ -200,6 +203,9 @@ jobs:
         with:
           toolchain: 1.96.0
           targets: wasm32-wasip1
+      # DuckDB wasm archives + WASI_SDK_PATH for the graphlaw-wasm rebuild
+      # in the artifact-meta gate below.
+      - uses: ./.github/actions/wasi-duckdb
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 22

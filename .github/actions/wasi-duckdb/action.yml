@@ -1,0 +1,147 @@
+name: 'Stage WASI SDK + DuckDB wasm archives'
+description:
+  >-
+  One staged-recipe composite shared by ci.yml (native, wasm-court) and
+  release.yml: installs wasi-sdk 34 at /opt/wasi-sdk (fail-closed admission:
+  bin/clang + share/cmake/wasi-sdk-p1.cmake must exist), restores the cached
+  DuckDB wasm32-wasip1 static archive, or compiles the pinned DuckDB source
+  (b6013f7a) with the witnessed uniform new-EH flag set, gates the archive's
+  EH flavor by opcode BEFORE any cache admission (try_table > 0, legacy try
+  == 0, else exit 1 without copying), and exports WASI_SDK_PATH for later
+  steps. Do not add -lwasi-emulated-* link flags: frozen-duckdb-sys
+  wasi_posix.c already stubs those symbols.
+
+runs:
+  using: composite
+  steps:
+    - name: Restore staged WASI SDK + duckdb wasm archives
+      uses: actions/cache@0c907a75c2c80ebcb7f088228285e798b750cf8f # v4
+      with:
+        path: ~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1
+        # hashFiles is workspace-relative, so the key is identical across every
+        # calling workflow and changes whenever this recipe changes. NO
+        # restore-keys: a stale EH-flavor archive must never be silently
+        # restored; admission is exact-key only.
+        key: wasi-duckdb-v2.0.0-dev-b6013f7a-sdk34-wasm32-wasip1-${{ hashFiles('.github/actions/wasi-duckdb/action.yml') }}
+
+    - name: Stage WASI SDK + duckdb wasm archives (WASI_SDK_PATH)
+      shell: bash
+      run: |
+        set -euo pipefail
+        CACHE="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1"
+        # Fail-closed admission of a cached archive: it must be an ar archive
+        # of wasm32 objects — mirrors frozen-duckdb-builder archive_is_wasm32
+        # (ar magic + \0asm wasm magic, and REFUSES Mach-O/ELF magics; a host
+        # archive or binary is the historical false-pass).
+        is_wasm32_ar() { # exact port of frozen-duckdb-builder archive_is_wasm32
+          python3 - "$1" <<'PY'
+        import sys
+        b = open(sys.argv[1], "rb").read(64 * 1024 * 1024)
+        ok = (b.startswith(b"!<arch>\n") and b"\0asm" in b
+              and not any(m in b for m in (b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\x7fELF")))
+        sys.exit(0 if ok else 1)
+        PY
+        }
+        # WASI_SDK_PATH is a wasi-sdk root. Install it even when the DuckDB
+        # archive is already cached; the cache directory is not a wasi-sdk.
+        if [ ! -x /opt/wasi-sdk/bin/clang ] || [ ! -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake ]; then
+          curl -fsSL -o /tmp/wasi-sdk.tar.gz \
+            https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz
+          sudo mkdir -p /opt/wasi-sdk
+          sudo tar -xzf /tmp/wasi-sdk.tar.gz -C /opt/wasi-sdk --strip-components=1
+        fi
+        test -x /opt/wasi-sdk/bin/clang
+        test -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake
+        if [ -f "$CACHE/libduckdb.a" ] && is_wasm32_ar "$CACHE/libduckdb.a"; then
+          echo "cached duckdb wasm32 archive admitted: $CACHE/libduckdb.a"
+        else
+          rm -f "$CACHE/libduckdb.a"
+          if ! command -v cmake >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y cmake
+          fi
+          # Compile the pinned DuckDB source to the wasm32-wasip1 static
+          # archive (frozen-duckdb-builder compile_wasip1_static recipe).
+          DUCKDB_PIN=b6013f7aa2f36caabb9466ce1791667ea8a280bb
+          TMP="$(mktemp -d)"
+          git clone --quiet https://github.com/duckdb/duckdb.git "$TMP/duckdb"
+          git -C "$TMP/duckdb" checkout --quiet "$DUCKDB_PIN"
+          # DuckDB root CMakeLists sets POSITION_INDEPENDENT_CODE ON, which
+          # compiles wasm objects as -fPIC (env.__memory_base); patch before
+          # configure (same patch the builder applies; refuse if absent).
+          grep -q 'set(CMAKE_POSITION_INDEPENDENT_CODE ON)' "$TMP/duckdb/CMakeLists.txt"
+          sed -i 's/set(CMAKE_POSITION_INDEPENDENT_CODE ON)/set(CMAKE_POSITION_INDEPENDENT_CODE OFF)/' "$TMP/duckdb/CMakeLists.txt"
+          # wasi_compat34.h shim: wasi-sdk 34 libc lacks TIOCGWINSZ and a
+          # `struct winsize` compatible with what DuckDB's terminal probing
+          # expects, and sched_getcpu has no WASI definition. The -include
+          # flag forces it into every C++ TU (C TUs get the emulated-OS
+          # defines via CFLAGS and never include this header).
+          cat > "$TMP/wasi_compat34.h" <<'EOF'
+        #include <signal.h>
+        #include <sys/resource.h>
+        #include <unistd.h>
+        #ifndef TIOCGWINSZ
+        #define TIOCGWINSZ 0x40087468
+        #endif
+        struct wasi_compat_winsize { unsigned short ws_row, ws_col, ws_xpixel, ws_ypixel; };
+        #define winsize wasi_compat_winsize
+        #ifdef __cplusplus
+        extern "C" int sched_getcpu(void);
+        #endif
+        EOF
+          # WITNESSED FLAG SET (SQLRDF-24 / EH closure 2026-10-23): the core is
+          # compiled with the four WASI emulated-OS feature defines; C++ TUs
+          # additionally force uniform NEW W3C exception handling
+          # (-fwasm-exceptions -mllvm -wasm-use-legacy-eh=0) and pre-include
+          # the shim header. Legacy EH objects mixed with new-EH objects are
+          # the witnessed uninitialized-element dtor trap, so the EH-FLAVOR
+          # GATE below refuses any archive that is not uniformly new-EH.
+          CFLAGS="-D_WASI_EMULATED_MMAN -D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_PROCESS_CLOCKS -D_WASI_EMULATED_GETPID" \
+          CXXFLAGS="-D_WASI_EMULATED_MMAN -D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_PROCESS_CLOCKS -D_WASI_EMULATED_GETPID -fwasm-exceptions -mllvm -wasm-use-legacy-eh=0 -include $TMP/wasi_compat34.h" \
+          cmake -S "$TMP/duckdb" -B "$TMP/duckdb/build-wasip1" \
+            -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF -DBUILD_EXTENSIONS="core_functions;icu" -DBUILD_SHELL=OFF \
+            -DBUILD_UNITTESTS=OFF -DENABLE_EXTENSION_AUTOLOADING=OFF \
+            -DENABLE_EXTENSION_AUTOINSTALL=OFF -DBUILD_HTTPFS=OFF \
+            -DBUILD_JEMALLOC=OFF -DDISABLE_THREADS=ON
+          cmake --build "$TMP/duckdb/build-wasip1" --target duckdb_static core_functions_extension icu_extension -j "$(nproc)" \
+            || cmake --build "$TMP/duckdb/build-wasip1" --target duckdb core_functions_extension icu_extension -j "$(nproc)"
+          mkdir -p "$CACHE"
+          AR="$TMP/duckdb/build-wasip1/src/libduckdb_static.a"
+          [ -f "$AR" ] || AR="$TMP/duckdb/build-wasip1/src/libduckdb.a"
+          is_wasm32_ar "$AR" || { echo "REFUSED: built archive is not wasm32 ar" >&2; exit 1; }
+          # EH-FLAVOR GATE (fail-closed, BEFORE cache admission): disassemble
+          # the first archive member; it must carry new-EH try_table opcodes
+          # and zero legacy `try` opcodes. On failure exit 1 WITHOUT copying
+          # into the cache — a legacy-flavor archive is the witnessed
+          # uninitialized-element dtor trap, and a cached bad archive would
+          # poison every later run. Personality-symbol references are NOT a
+          # gate input: they are a false-positive heuristic (witnessed:
+          # ub_duckdb_parser.cpp.obj references __gxx_wasm_personality_v0
+          # while carrying 701 try_table / 0 legacy try).
+          OD=/opt/wasi-sdk/bin/llvm-objdump
+          AR_TOOL=/opt/wasi-sdk/bin/llvm-ar
+          test -x "$OD" || { echo "REFUSED: EH gate requires /opt/wasi-sdk/bin/llvm-objdump" >&2; exit 1; }
+          test -x "$AR_TOOL" || { echo "REFUSED: EH gate requires /opt/wasi-sdk/bin/llvm-ar" >&2; exit 1; }
+          first_member="$("$AR_TOOL" t "$AR" | head -1)"
+          mem="$(basename "$first_member")"
+          EHGATE="$(mktemp -d)"
+          "$AR_TOOL" p "$AR" "$mem" > "$EHGATE/$mem"
+          tt="$("$OD" -d "$EHGATE/$mem" | grep -c try_table || true)"
+          legacy="$("$OD" -d "$EHGATE/$mem" | grep -cE '^[[:space:]]*[0-9a-f]+: try[[:space:]]' || true)"
+          echo "EH-gate member $mem: try_table=$tt legacy=$legacy"
+          rm -rf "$EHGATE"
+          if [ "$tt" -le 0 ] || [ "$legacy" != "0" ]; then
+            echo "REFUSED: libduckdb.a EH flavor suspect (member $mem try_table=$tt legacy=$legacy; expected try_table>0, legacy=0) — nothing copied to cache" >&2
+            exit 1
+          fi
+          cp "$AR" "$CACHE/libduckdb.a"
+          # Extension archives staged alongside the core (copy_extension_archives).
+          find "$TMP/duckdb/build-wasip1" -name 'lib*_extension.a' -exec cp -n {} "$CACHE/" \;
+        fi
+        echo "staged: $(ls "$CACHE")"
+
+    - name: Export WASI_SDK_PATH
+      shell: bash
+      run: echo "WASI_SDK_PATH=/opt/wasi-sdk" >> "$GITHUB_ENV"

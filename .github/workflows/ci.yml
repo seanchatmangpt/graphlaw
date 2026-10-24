@@ -10,8 +10,8 @@ permissions:
 
 jobs:
   # Local equivalent: cargo fmt --check && cargo clippy --all-targets
-  # --features pack-tools,abi,wasi-patched-deps,evidentiary-ring,runner -- -D warnings
-  # && cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring,runner
+  # --features pack-tools,abi,wasi-patched-deps,evidentiary-ring -- -D warnings
+  # && cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring
   native:
     name: native (fmt + clippy + full host suite + registry check)
     runs-on: ubuntu-latest
@@ -23,96 +23,27 @@ jobs:
           toolchain: 1.96.0
           components: rustfmt, clippy
           targets: wasm32-wasip1
-      # WASI setup (L113): the wasm link REQUIRES a staged toolchain
-      # (WASI_SDK_PATH with bin/clang + libc++ for wasm32-wasip1) AND the
-      # compiled DuckDB wasm archives in ~/.frozen-duckdb/cache
-      # (frozen-duckdb-sys/build.rs + frozen-duckdb-builder compile_wasip1_static
-      # recipe). Only the DuckDB engine archives are restored from the cache
+      # WASI setup: the wasm link REQUIRES a staged toolchain (WASI_SDK_PATH
+      # with bin/clang + libc++ for wasm32-wasip1) AND the compiled DuckDB wasm
+      # archives in ~/.frozen-duckdb/cache. One composite action now owns the
+      # whole recipe (SDK install, archive build with the witnessed uniform
+      # new-EH flag set, opcode-level EH-flavor gate before cache admission,
+      # WASI_SDK_PATH export); the cache key hashes the action recipe itself.
+      # Only the DuckDB engine archives are restored from the cache
       # (~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1 is the engine archive,
-      # NOT the SDK); the cache key hashes this workflow file (source pin +
-      # SDK version) and the recipe hash. The SDK itself is wasi-sdk 34
-      # installed fresh at /opt/wasi-sdk, never cached.
-      # PATCH-ON-L109-LANDING: swap this inline recipe for
-      # frozen-duckdb scripts/build_wasi_duckdb.sh (L109) once it lands.
-      - name: Restore staged WASI SDK + duckdb wasm archives
-        uses: actions/cache@0c907a75c2c80ebcb7f088228285e798b750cf8f # v4
-        with:
-          path: ~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1
-          key: wasi-duckdb-v2.0.0-dev-b6013f7a-${{ hashFiles('.github/workflows/ci.yml') }}
-      - name: Stage WASI SDK + duckdb wasm archives (WASI_SDK_PATH)
-        run: |
-          set -euo pipefail
-          CACHE="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1"
-          # Fail-closed admission of a cached archive: it must be an ar archive
-          # of wasm32 objects — mirrors frozen-duckdb-builder archive_is_wasm32
-          # (ar magic + \0asm wasm magic, and REFUSES Mach-O/ELF magics; a host
-          # archive or binary is the historical false-pass).
-          is_wasm32_ar() { # exact port of frozen-duckdb-builder archive_is_wasm32
-            python3 - "$1" <<'PY'
-          import sys
-          b = open(sys.argv[1], "rb").read(64 * 1024 * 1024)
-          ok = (b.startswith(b"!<arch>\n") and b"\0asm" in b
-                and not any(m in b for m in (b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\x7fELF")))
-          sys.exit(0 if ok else 1)
-          PY
-          }
-          # WASI_SDK_PATH is a wasi-sdk root. Install it even when the DuckDB
-          # archive is already cached; the cache directory is not a wasi-sdk.
-          if [ ! -x /opt/wasi-sdk/bin/clang ] || [ ! -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake ]; then
-            curl -fsSL -o /tmp/wasi-sdk.tar.gz \
-              https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz
-            sudo mkdir -p /opt/wasi-sdk
-            sudo tar -xzf /tmp/wasi-sdk.tar.gz -C /opt/wasi-sdk --strip-components=1
-          fi
-          test -x /opt/wasi-sdk/bin/clang
-          test -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake
-          if [ -f "$CACHE/libduckdb.a" ] && is_wasm32_ar "$CACHE/libduckdb.a"; then
-            echo "cached duckdb wasm32 archive admitted: $CACHE/libduckdb.a"
-          else
-            rm -f "$CACHE/libduckdb.a"
-            if ! command -v cmake >/dev/null; then
-              sudo apt-get update
-              sudo apt-get install -y cmake
-            fi
-            # 2. Compile the pinned DuckDB source to the wasm32-wasip1 static
-            #    archive (frozen-duckdb-builder compile_wasip1_static recipe).
-            DUCKDB_PIN=b6013f7aa2f36caabb9466ce1791667ea8a280bb
-            TMP="$(mktemp -d)"
-            git clone --quiet https://github.com/duckdb/duckdb.git "$TMP/duckdb"
-            git -C "$TMP/duckdb" checkout --quiet "$DUCKDB_PIN"
-            # DuckDB root CMakeLists sets POSITION_INDEPENDENT_CODE ON, which
-            # compiles wasm objects as -fPIC (env.__memory_base); patch before
-            # configure (same patch the builder applies; refuse if absent).
-            grep -q 'set(CMAKE_POSITION_INDEPENDENT_CODE ON)' "$TMP/duckdb/CMakeLists.txt"
-            sed -i 's/set(CMAKE_POSITION_INDEPENDENT_CODE ON)/set(CMAKE_POSITION_INDEPENDENT_CODE OFF)/' "$TMP/duckdb/CMakeLists.txt"
-            cmake -S "$TMP/duckdb" -B "$TMP/duckdb/build-wasip1" \
-              -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=OFF -DBUILD_EXTENSIONS= -DBUILD_SHELL=OFF \
-              -DBUILD_UNITTESTS=OFF -DENABLE_EXTENSION_AUTOLOADING=OFF \
-              -DENABLE_EXTENSION_AUTOINSTALL=OFF -DBUILD_HTTPFS=OFF \
-              -DBUILD_JEMALLOC=OFF -DDISABLE_THREADS=ON
-            cmake --build "$TMP/duckdb/build-wasip1" --target duckdb_static -j "$(nproc)" \
-              || cmake --build "$TMP/duckdb/build-wasip1" --target duckdb -j "$(nproc)"
-            mkdir -p "$CACHE"
-            AR="$TMP/duckdb/build-wasip1/src/libduckdb_static.a"
-            [ -f "$AR" ] || AR="$TMP/duckdb/build-wasip1/src/libduckdb.a"
-            is_wasm32_ar "$AR" || { echo "REFUSED: built archive is not wasm32 ar" >&2; exit 1; }
-            cp "$AR" "$CACHE/libduckdb.a"
-            # Extension archives staged alongside the core (copy_extension_archives).
-            find "$TMP/duckdb/build-wasip1" -name 'lib*_extension.a' -exec cp -n {} "$CACHE/" \;
-          fi
-          echo "WASI_SDK_PATH=/opt/wasi-sdk" >> "$GITHUB_ENV"
-          echo "staged: $(ls "$CACHE")"
+      # NOT the SDK); the SDK itself is wasi-sdk 34, installed fresh at
+      # /opt/wasi-sdk, never cached.
+      - name: Stage WASI SDK + duckdb wasm archives
+        uses: ./.github/actions/wasi-duckdb
       - name: Resolve dependency graph
         run: cargo metadata --format-version 1
       - name: Format
         run: cargo fmt --check
       - name: Clippy
         # castle-diff excluded: pulls nightly-only wasm4pm-compat (E0554 on stable).
-        # evidentiary-ring (native SPSC ring) and runner (host-only wasmi runner)
-        # are host-buildable and must not dodge the gate (RUST-8 lane L7).
-        run: cargo clippy --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring,runner -- -D warnings
+        # evidentiary-ring (native SPSC ring) is host-buildable and must not
+        # dodge the gate (RUST-8 lane L7).
+        run: cargo clippy --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring -- -D warnings
       - name: Build WASI module
         # The DuckDB-linked artifact requires the exception-handling target
         # feature at link time (new-EH duckdb wasm archive; wasmtime 48 hosts
@@ -125,7 +56,7 @@ jobs:
       - name: Test backend authorities
         env:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
-        run: cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring,runner
+        run: cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring
       - name: Upload WASI module
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -150,6 +81,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: nightly
+      # frozen-duckdb-sys host cmake fails on ubuntu-24.04 with
+      # "Could NOT find CURL"; install it before the build runs.
+      - name: Install libcurl dev + pkg-config (frozen-duckdb-sys host cmake)
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev pkg-config
       - name: Run castle-diff court
         working-directory: courts/castle-diff
         run: cargo +nightly test
@@ -176,73 +111,10 @@ jobs:
         with:
           toolchain: 1.96.0 # pinned: matches rust-toolchain.toml
           targets: wasm32-wasip1, wasm32-unknown-unknown
-      # WASI setup (L113) — same staged-SDK + duckdb-archive recipe as the
-      # native job above. PATCH-ON-L109-LANDING: swap for frozen-duckdb
-      # scripts/build_wasi_duckdb.sh when L109 lands.
-      - name: Restore staged WASI SDK + duckdb wasm archives
-        uses: actions/cache@0c907a75c2c80ebcb7f088228285e798b750cf8f # v4
-        with:
-          path: ~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1
-          key: wasi-duckdb-v2.0.0-dev-b6013f7a-${{ hashFiles('.github/workflows/ci.yml') }}
-      - name: Stage WASI SDK + duckdb wasm archives (WASI_SDK_PATH)
-        run: |
-          set -euo pipefail
-          CACHE="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1"
-          # Fail-closed admission of a cached archive: it must be a wasm32 ar
-          # archive (a host archive shares the !<arch> magic and is the
-          # historical false-pass; frozen-duckdb-builder archive_is_wasm32).
-          is_wasm32_ar() { # exact port of frozen-duckdb-builder archive_is_wasm32
-            python3 - "$1" <<'PY'
-          import sys
-          b = open(sys.argv[1], "rb").read(64 * 1024 * 1024)
-          ok = (b.startswith(b"!<arch>\n") and b"\0asm" in b
-                and not any(m in b for m in (b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\x7fELF")))
-          sys.exit(0 if ok else 1)
-          PY
-          }
-          # WASI_SDK_PATH is a wasi-sdk root. Install it even when the DuckDB
-          # archive is already cached; the cache directory is not a wasi-sdk.
-          if [ ! -x /opt/wasi-sdk/bin/clang ] || [ ! -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake ]; then
-            curl -fsSL -o /tmp/wasi-sdk.tar.gz \
-              https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-34/wasi-sdk-34.0-x86_64-linux.tar.gz
-            sudo mkdir -p /opt/wasi-sdk
-            sudo tar -xzf /tmp/wasi-sdk.tar.gz -C /opt/wasi-sdk --strip-components=1
-          fi
-          test -x /opt/wasi-sdk/bin/clang
-          test -f /opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake
-          if [ -f "$CACHE/libduckdb.a" ] && is_wasm32_ar "$CACHE/libduckdb.a"; then
-            echo "cached duckdb wasm32 archive admitted: $CACHE/libduckdb.a"
-          else
-            if ! command -v cmake >/dev/null; then
-              sudo apt-get update
-              sudo apt-get install -y cmake
-            fi
-            # 2. Compile the pinned DuckDB source to the wasm32-wasip1 static
-            #    archive (frozen-duckdb-builder compile_wasip1_static recipe).
-            DUCKDB_PIN=b6013f7aa2f36caabb9466ce1791667ea8a280bb
-            TMP="$(mktemp -d)"
-            git clone --quiet https://github.com/duckdb/duckdb.git "$TMP/duckdb"
-            git -C "$TMP/duckdb" checkout --quiet "$DUCKDB_PIN"
-            grep -q 'set(CMAKE_POSITION_INDEPENDENT_CODE ON)' "$TMP/duckdb/CMakeLists.txt" # PIC patch pre-check
-            sed -i 's/set(CMAKE_POSITION_INDEPENDENT_CODE ON)/set(CMAKE_POSITION_INDEPENDENT_CODE OFF)/' "$TMP/duckdb/CMakeLists.txt"
-            cmake -S "$TMP/duckdb" -B "$TMP/duckdb/build-wasip1" \
-              -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk/share/cmake/wasi-sdk-p1.cmake \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DBUILD_SHARED_LIBS=OFF -DBUILD_EXTENSIONS= -DBUILD_SHELL=OFF \
-              -DBUILD_UNITTESTS=OFF -DENABLE_EXTENSION_AUTOLOADING=OFF \
-              -DENABLE_EXTENSION_AUTOINSTALL=OFF -DBUILD_HTTPFS=OFF \
-              -DBUILD_JEMALLOC=OFF -DDISABLE_THREADS=ON
-            cmake --build "$TMP/duckdb/build-wasip1" --target duckdb_static -j "$(nproc)" \
-              || cmake --build "$TMP/duckdb/build-wasip1" --target duckdb -j "$(nproc)"
-            mkdir -p "$CACHE"
-            AR="$TMP/duckdb/build-wasip1/src/libduckdb_static.a"
-            [ -f "$AR" ] || AR="$TMP/duckdb/build-wasip1/src/libduckdb.a"
-            is_wasm32_ar "$AR" || { echo "REFUSED: built archive is not wasm32 ar" >&2; exit 1; }
-            cp "$AR" "$CACHE/libduckdb.a"
-            find "$TMP/duckdb/build-wasip1" -name 'lib*_extension.a' -exec cp -n {} "$CACHE/" \;
-          fi
-          echo "WASI_SDK_PATH=/opt/wasi-sdk" >> "$GITHUB_ENV"
-          echo "staged: $(ls "$CACHE")"
+      # WASI setup — same composite staged-SDK + duckdb-archive recipe as the
+      # native job above (cache key hashes the action recipe, not this file).
+      - name: Stage WASI SDK + duckdb wasm archives
+        uses: ./.github/actions/wasi-duckdb
       - name: Compile facade for wasm32-unknown-unknown
         run: cargo check --lib --target wasm32-unknown-unknown
       - name: Build WASI module
@@ -251,11 +123,13 @@ jobs:
         env:
           CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS: -C target-feature=+exception-handling
         run: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
-      # LEGACY-PIN court: wasmi cannot host the DuckDB-linked artifact
-      # (exception-handling section, id 13); skipped pending dual-artifact
-      # policy. Loud skip: continue-on-error so a red run here is visible but
-      # not gating — never folded into a passing step silently.
-      - name: "[SKIP-loud] legacy wasmi ABI court (tests/wasm_abi.rs)"
+      # Post-EH-closure (wasmi retirement): tests/wasm_abi.rs hosts the
+      # DuckDB-linked artifact through wasmtime 48 with W3C exceptions
+      # (Config::wasm_exceptions) — wasmi 2 rejects that artifact's
+      # exception-handling sections, so the old legacy-wasmi framing is gone.
+      # Loud skip: continue-on-error so a red run here is visible but not
+      # gating — never folded into a passing step silently.
+      - name: "[SKIP-loud] ABI court (tests/wasm_abi.rs, wasmtime-48 EH host)"
         continue-on-error: true
         env:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
@@ -295,7 +169,7 @@ jobs:
       matrix:
         include:
           - package: graphlaw
-            features: pack-tools,abi,wasi-patched-deps,evidentiary-ring,runner
+            features: pack-tools,abi,wasi-patched-deps,evidentiary-ring
           - package: graphlaw-wasm
             features: ""
           - package: graphlaw-eyeron
@@ -306,6 +180,11 @@ jobs:
         with:
           toolchain: 1.96.0
           components: clippy
+      # frozen-duckdb-sys host cmake fails on ubuntu-24.04 with
+      # "Could NOT find CURL" (the runner image ships no libcurl dev headers);
+      # install it before any cargo step compiles frozen-duckdb-sys.
+      - name: Install libcurl dev + pkg-config (frozen-duckdb-sys host cmake)
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev pkg-config
       - name: Clippy
         if: matrix.features != ''
         run: cargo clippy --locked -p ${{ matrix.package }} --all-targets --features ${{ matrix.features }} -- -D warnings
@@ -328,6 +207,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.96.0
+      # frozen-duckdb-sys host cmake fails on ubuntu-24.04 with
+      # "Could NOT find CURL"; install it before the build runs.
+      - name: Install libcurl dev + pkg-config (frozen-duckdb-sys host cmake)
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev pkg-config
       - uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v2
         with:
           package: graphlaw
@@ -363,14 +246,16 @@ jobs:
       - name: Audit Cargo.lock
         run: cargo audit
 
-  # External oracle: pytest suite from ggen-marketplace (pm4pytest/graphlaw)
-  # running against the binaries this repo just built. Chicago-style: real
-  # subprocesses, no mocks. conftest.py resolves binaries via GRAPHLAW_REPO /
-  # GRAPHLAW_TARGET_DIR env overrides.
+  # External oracle: the IN-REPO pytest suites (tests_py + the pm4pytest BCBS
+  # driver in tests/) running against the binaries this repo just built.
+  # Chicago-style: real subprocesses, no mocks. Both conftest.py files resolve
+  # binaries via GRAPHLAW_REPO / GRAPHLAW_TARGET_DIR env overrides and build
+  # their own fixtures (tests_py/conftest.py builds blackbox_fixture with the
+  # runner-eh feature), so no feature name is hardcoded into pytest args here.
   # Allow-failure until the suite is stable; flip continue-on-error to false
   # once it has been green across several CI runs.
   external-oracle:
-    name: external oracle (ggen-marketplace pm4pytest)
+    name: external oracle (in-repo pytest suites)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     continue-on-error: true
@@ -379,26 +264,29 @@ jobs:
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.96.0
-      # TODO: upgrade this pin via
-      #   git -C ~/ggen-marketplace rev-parse HEAD
-      # after the pm4pytest suite is green across several CI runs.
-      # Pinned 2026-10-22 to fc2e7f7dbda8a95d625bdb5aa3ff58aa36698534
-      # (was: ref: main — a moving lease, not a pin).
-      - name: Check out ggen-marketplace (pm4pytest suite)
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          repository: seanchatmangpt/ggen-marketplace
-          ref: fc2e7f7dbda8a95d625bdb5aa3ff58aa36698534 # ggen-marketplace main @ 2026-10-22
-          path: pm4pytest-src
-      - uses: actions/setup-python@v5
+      # frozen-duckdb-sys host cmake fails on ubuntu-24.04 with
+      # "Could NOT find CURL"; install it before the build runs.
+      - name: Install libcurl dev + pkg-config (frozen-duckdb-sys host cmake)
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev pkg-config
+      # The BCBS driver conftest (tests/conftest.py) builds the DuckDB-linked
+      # wasm artifact itself, which needs WASI_SDK_PATH and the compiled
+      # duckdb wasm archives — stage them with the same composite action.
+      - name: Stage WASI SDK + duckdb wasm archives
+        uses: ./.github/actions/wasi-duckdb
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
       - name: Install pytest
         run: python -m pip install pytest
-      - name: Build graphlaw bins and examples
-        run: cargo build --bins --examples
-      - name: Run external pytest suite
+      - name: Build graphlaw bins and the blackbox_fixture example
+        run: cargo build --bins --example blackbox_fixture --features runner-eh
+      - name: Run in-repo pytest suite
         env:
           GRAPHLAW_REPO: ${{ github.workspace }}
           GRAPHLAW_TARGET_DIR: ${{ github.workspace }}/target/debug
-        run: pytest pm4pytest-src/packages/pm4pytest/graphlaw -v
+        run: pytest tests_py -v
+      - name: Run BCBS aggregation pytest court
+        env:
+          GRAPHLAW_REPO: ${{ github.workspace }}
+          GRAPHLAW_TARGET_DIR: ${{ github.workspace }}/target/debug
+        run: pytest tests/test_bcbs_aggregation.py -v
