@@ -82,6 +82,18 @@ re-verified on disk by the docs lane).
 - Ring court: shutdown-always-drains fix; restart watermark persists crash loss
   as gap markers, never silent renumbering.
 
+## Known limitations (disclosed, typed, ticketed)
+
+- **COPY TO egress file-locking**: DuckDB's advisory file lock on COPY
+  targets fails under wasi preview1 (`Could not set lock ... Invalid
+  argument`) — witnessed deterministically across artifact lineages
+  (`tests/wasm_fibo_egress_eh.rs`, red-team v20-v22 adjacent). In-memory
+  execution, table readbacks, and all other courts are unaffected;
+  tracked as SQLRDF-27 (reopened: lock-path defect distinct from the
+  closed openat/fcntl translation). Workaround: host-side egress via
+  the packet-4 result frames (rows stream to the host; no in-guest
+  file lock involved).
+
 ## Licenses
 
 MIT remains the code license. `LICENSE-P28-SIL.md` (P28 Sovereign Invariant
