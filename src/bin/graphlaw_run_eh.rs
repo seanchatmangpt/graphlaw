@@ -42,7 +42,7 @@ const _: () = assert!(graphlaw::abi::MAX_REQUEST_BYTES <= WALL_BYTES as usize);
 /// Guest fuel budget per request (wasmtime fuel units, ~1 per instruction).
 /// A guest call that spends it all is a typed refusal (exit 98), never a raw
 /// trap or an unbounded hang. Reset before every guest execution.
-const FUEL_PER_REQUEST: u64 = 10_000_000;
+const FUEL_PER_REQUEST: u64 = 100_000_000_000;
 
 /// Epoch-deadline ticks beyond the current epoch, set once at store creation.
 /// No watchdog increments the engine epoch yet, so the deadline cannot fire
