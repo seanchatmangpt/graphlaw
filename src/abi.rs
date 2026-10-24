@@ -122,7 +122,29 @@ pub(crate) fn check_limit(name: &str, observed: usize, max: usize) -> Res<()> {
 
 /// Maximum bracket nesting of a JSON text (string-aware, no allocation).
 fn json_depth(b: &[u8]) -> usize {
-    0 /* ~ changed by cargo-mutants ~ */
+    let (mut depth, mut max, mut in_str, mut esc) = (0usize, 0usize, false, false);
+    for &c in b {
+        if in_str {
+            if esc {
+                esc = false;
+            } else if c == b'\\' {
+                esc = true;
+            } else if c == b'"' {
+                in_str = false;
+            }
+            continue;
+        }
+        match c {
+            b'"' => in_str = true,
+            b'[' | b'{' => {
+                depth += 1;
+                max = max.max(depth);
+            }
+            b']' | b'}' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    max
 }
 
 /// Response for a request that exceeds `MAX_REQUEST_BYTES` (used by the wasm shim).

@@ -152,12 +152,11 @@ exit discipline live in the root `CLAUDE.md` Commands section.
 
 ## Program records (jira)
 
-Active window: `jira/v26.10.22/`. Older windows: `sjira/v26.10.8/`.
-
-- [jira/v26.10.22/INDEX.md](jira/v26.10.22/INDEX.md) — ticket register:
-  SQLRDF-01..22, all Open except SQLRDF-08 (withdrawn); SQLRDF-21
-  (EH closure / in-module duckdb) and SQLRDF-22 (compiler gaps) open.
-  CURRENT.
+Active window: `jira/v26.10.23/` (ADR / compliance / design set; register
+INDEX.md pending). Older windows: `jira/v26.10.22/` (landed),
+`sjira/v26.10.8/`.
+- [jira/v26.10.22/INDEX.md](jira/v26.10.22/INDEX.md) — landed window: ticket
+  register SQLRDF-01..22 (SQLRDF-08 withdrawn). INDEXED AS LANDED.
 - [jira/v26.10.22/CHARTER-DFLSS.md](jira/v26.10.22/CHARTER-DFLSS.md) —
   operator charter; header admits dispatch-by-summary, verbatim text not on
   disk. PENDING (self-declared UNVERIFIED charter text).
@@ -186,7 +185,7 @@ Active window: `jira/v26.10.22/`. Older windows: `sjira/v26.10.8/`.
   necessity — re-checked with `awk 'length>100'` on 2026-10-22, exactly 4
   lines, all table rows in that section.
 - README.md pointer: LANDED — the README docs table (README.md:49-52) now
-  carries `**Index** | [docs/INDEX.md](docs/INDEX.md)` at README.md:49,
+  carries `**Index** | [docs/index.md](docs/index.md)` at README.md:49,
   alongside the Diataxis hub link at line 45.
 
 ## Cross-repo references

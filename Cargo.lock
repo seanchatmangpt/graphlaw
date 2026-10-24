@@ -1726,7 +1726,7 @@ dependencies = [
 
 [[package]]
 name = "graphlaw-eyeron"
-version = "0.7.8"
+version = "0.7.9"
 dependencies = [
  "num-bigint 0.5.1",
  "num-traits",

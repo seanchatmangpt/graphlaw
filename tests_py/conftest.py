@@ -85,9 +85,24 @@ def is_windows() -> bool:
 LANE_TARGET = os.environ.get(
     "GRAPHLAW_TARGET_DIR", os.path.join(REPO, "target-lane-pm2")
 )
-WASM_ARTIFACT = os.path.join(
-    LANE_TARGET, "wasm32-wasip1", "wasm", "graphlaw_wasm.wasm"
-)
+
+
+def wasm_artifact() -> str:
+    """Resolve the wasm artifact: GRAPHLAW_WASM override first (typed failure
+    if set-but-missing — never a silent pass), else the lane-root artifact."""
+    p = os.environ.get("GRAPHLAW_WASM")
+    if p:
+        if not os.path.isfile(p):
+            pytest.fail(
+                f"GRAPHLAW_WASM is set but the artifact is missing: {p}"
+            )
+        return p
+    return os.path.join(
+        LANE_TARGET, "wasm32-wasip1", "wasm", "graphlaw_wasm.wasm"
+    )
+
+
+WASM_ARTIFACT = wasm_artifact()
 EH_HOST = os.path.join(LANE_TARGET, "debug", "graphlaw-run-eh")
 
 

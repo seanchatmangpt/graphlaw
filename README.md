@@ -46,7 +46,7 @@ Organized Diataxis-style; the hub is [docs/index.md](docs/index.md).
 
 | | |
 |---|---|
-| **Index** | [docs/INDEX.md](docs/INDEX.md) |
+| **Index** | [docs/index.md](docs/index.md) |
 | **Tutorial** | [Quickstart](docs/quickstart.md) |
 | **How-to** | [Run the WASM module](docs/how-to/run-the-wasm-module.md) · [First in-WASM SQL lifecycle](docs/how-to/first-in-wasm-sql-lifecycle.md) · [Persistent DuckDB sessions](docs/how-to/persistent-duckdb-sessions.md) · [Document sequences](docs/how-to/document-sequences.md) · [Signed leases](docs/how-to/authorize-with-signed-leases.md) · [Offline verification](docs/how-to/verify-without-trusting-the-operator.md) · [Knowledge hooks](docs/how-to/use-knowledge-hooks.md) · [Edge Ingestion & Compaction](docs/how-to/how-to-edge-ingestion-and-compaction.md) · [Use from JavaScript](docs/how-to/use-from-javascript.md) |
 | **Reference** | [ABI reference](docs/abi-reference.md) · [Capability registry](docs/capability-registry.md) · [Refusals](docs/refusals.md) · [API stability](docs/api-stability.md) · [WASM integration](docs/wasm-integration.md) · [WASM runbook](docs/WASM.md) · [Dialects](docs/DIALECTS.md) · [Full generated reference](docs/reference-generated/reference.md) |

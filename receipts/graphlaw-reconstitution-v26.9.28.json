@@ -1,0 +1,118 @@
+{
+  "actuation_performed": false,
+  "candidate_subjects": [
+    {
+      "repo": "seanchatmangpt/ggen-ecosystem",
+      "sha": "50fdfa20c84205a80c6eb94e916cffbedc4b816e",
+      "state": "CANDIDATE"
+    }
+  ],
+  "component_subjects": [
+    {
+      "authority": "CONSTRUCT_ONLY",
+      "repo": "seanchatmangpt/ggen",
+      "sha": "ff96f04e8c7b851e5cca53f3faf5ce1d5f43ce6e"
+    },
+    {
+      "authority": "CONSTRUCT_ONLY",
+      "repo": "seanchatmangpt/ggen-marketplace",
+      "sha": "76d698ad996606822c0e4a9237d201ff6cfef8f5"
+    },
+    {
+      "authority": "CONSTRUCT_ONLY",
+      "repo": "seanchatmangpt/ggen_igniter",
+      "sha": "71a211e757c7dd49757f5d74308a4027486d1b47"
+    },
+    {
+      "authority": "NONE",
+      "repo": "seanchatmangpt/ash_r2rml",
+      "sha": "d13555dbb564921ea9526f2d11a23d793daea41d"
+    },
+    {
+      "authority": "EVIDENCE_ONLY",
+      "repo": "seanchatmangpt/graphlaw",
+      "sha": "1a73410b2f1fc7007662f034837b0bff390dfeea"
+    },
+    {
+      "authority": "CONSTRUCT_ONLY",
+      "repo": "seanchatmangpt/ash_a2a",
+      "sha": "be5d9fafe4e212981eec706771820c53da0916d0"
+    },
+    {
+      "authority": "CONSEQUENTIAL_DO",
+      "repo": "seanchatmangpt/xaas",
+      "sha": "e01656e975b36e9232e985ce7bb09996320e1a0f"
+    },
+    {
+      "authority": "TRUST_ONLY",
+      "repo": "seanchatmangpt/affidavit",
+      "sha": "cedd662d8e3c9c0f36e4410798321ee2fea68835"
+    },
+    {
+      "authority": "NONE",
+      "repo": "seanchatmangpt/ash_pplan",
+      "sha": "b9da1ad7590d70afac5eace3bd7ba1a644f7249f"
+    },
+    {
+      "authority": "NONE",
+      "repo": "seanchatmangpt/beam4pm",
+      "sha": "34ce4a23d0c59edab2391f149413bc5fb1e375c3"
+    },
+    {
+      "authority": "NONE",
+      "repo": "seanchatmangpt/ferroplan",
+      "sha": "2954d5a1045160b31510257d39386d5c36af73c3"
+    },
+    {
+      "authority": "EVIDENCE_ONLY",
+      "repo": "seanchatmangpt/wasm4pm",
+      "sha": "6bf11ad0d1240d5b97bdae7ccaeebf087f45fae0"
+    },
+    {
+      "authority": "NONE",
+      "repo": "seanchatmangpt/gymact",
+      "sha": "d3eb5e848cb86952921d1b0083e0b7e7e1f53609"
+    },
+    {
+      "authority": "EVIDENCE_ONLY",
+      "repo": "seanchatmangpt/autofde-lab",
+      "sha": "d42a5af94481a3128bf3e35d5f2a0a9a70f22e41"
+    },
+    {
+      "authority": "NONE",
+      "repo": "seanchatmangpt/dspy-wasm",
+      "sha": "336482ce19464a3a752936f9c866ff6fea2780d3"
+    },
+    {
+      "authority": "EVIDENCE_ONLY",
+      "repo": "seanchatmangpt/unrdf",
+      "sha": "0550d9630da94b170c931f17a1580ea90091cbb4"
+    },
+    {
+      "authority": "EVIDENCE_ONLY",
+      "repo": "seanchatmangpt/gitvan",
+      "sha": "96f4ec42e71909c347158cb8633b55e254e54065"
+    },
+    {
+      "authority": "EVIDENCE_ONLY",
+      "repo": "seanchatmangpt/ash_graphlaw",
+      "sha": "20b2e8eca0bfd360f301270ff054317bc3a04ecc"
+    }
+  ],
+  "contract_sha256": "be9170d83a118201c548106698cb8e8b42b0a2fe0ade9e00b01d9a5ad5a83865",
+  "final_admission_allowed": false,
+  "lock_sha256": "86be63876d94b2c78b07b9fbc0e4df395b36bf9cd742e9228a32330aa1f88436",
+  "producer_role": "composition_evidence_manufacturer",
+  "receipt_sha256": "fb32769124e17cd3b530c1f06bb9e6e003b5bf8107cc246db6eae4207cfb94cb",
+  "release_admitted": false,
+  "schema": "ggen.legacy.v26.9.28.manufacture-receipt.v1",
+  "source_set_sha256": "434440b07b9ea83298e9081999adbe6444733f0f75595e8c0cb71ff8ef4f8801",
+  "standing": "PARTIAL_ALIVE",
+  "subject": {
+    "release": "v26.9.28",
+    "repository": "seanchatmangpt/ggen-legacy",
+    "revision": "c9f8028ced8c89feb7eb5d6e0fcb651bb3fd1781",
+    "tree": "123b010aa7aa794d1653e6534cb267a60a608bc4"
+  },
+  "sunset_admitted": false
+}

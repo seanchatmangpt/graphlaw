@@ -1,0 +1,238 @@
+{
+  "abi_manifest": {
+    "abi_version": 1,
+    "exports": [
+      {
+        "name": "gl_alloc",
+        "params": [
+          "i32"
+        ],
+        "result": "i32",
+        "summary": "reserve `len` bytes; returns ptr, or null over the request/outstanding limits"
+      },
+      {
+        "name": "gl_free",
+        "params": [
+          "i32",
+          "i32"
+        ],
+        "result": "()",
+        "summary": "release a buffer previously handed out by gl_alloc or gl_call"
+      },
+      {
+        "name": "gl_call",
+        "params": [
+          "i32",
+          "i32"
+        ],
+        "result": "i64",
+        "summary": "run one request; consumes the buffer; returns (out_ptr << 32) | out_len"
+      }
+    ],
+    "frame": {
+      "align_bytes": 64,
+      "fields": [
+        {
+          "len": 8,
+          "name": "instruction_id",
+          "offset": 0,
+          "ty": "u64-le"
+        },
+        {
+          "len": 8,
+          "name": "fired_mask",
+          "offset": 8,
+          "ty": "u64-le"
+        },
+        {
+          "len": 8,
+          "name": "denial.0",
+          "offset": 16,
+          "ty": "u64-le"
+        },
+        {
+          "len": 32,
+          "name": "obj_refs",
+          "offset": 24,
+          "ty": "8x-u32-le"
+        },
+        {
+          "len": 8,
+          "name": "ts_ns",
+          "offset": 56,
+          "ty": "u64-le"
+        },
+        {
+          "len": 2,
+          "name": "activity_idx",
+          "offset": 64,
+          "ty": "u16-le"
+        },
+        {
+          "len": 1,
+          "name": "node_kind",
+          "offset": 66,
+          "ty": "u8"
+        },
+        {
+          "len": 32,
+          "name": "prior_hash",
+          "offset": 67,
+          "ty": "32x-u8-verbatim"
+        }
+      ],
+      "hash_bytes_len": 99,
+      "hash_input": "to_hash_bytes() little-endian field table",
+      "prior_hash_semantics": "BLAKE3 of the preceding frame's to_hash_bytes; genesis is BLAKE3 of 32 zero bytes",
+      "size_bytes": 128,
+      "struct": "OcelCausalFrame"
+    },
+    "graphlaw_version": "26.10.22",
+    "limits": {
+      "default_max_skew_secs": 60,
+      "max_atoms_per_field": 10000,
+      "max_datalog_facts": 100000,
+      "max_datalog_rules": 10000,
+      "max_json_depth": 64,
+      "max_law_steps": 1000,
+      "max_outstanding_alloc_bytes": 16777216,
+      "max_plan_actions": 1000,
+      "max_policy_entries": 100000,
+      "max_request_bytes": 16777216,
+      "n3_max_derived_facts": 500000,
+      "n3_max_iterations": 4000,
+      "n3_max_term_bytes": 65536,
+      "n3_max_total_bytes": 268435456,
+      "n3_max_total_steps": 50000000
+    },
+    "manifest_blake3": "blake3:1115373c3f4e930ebd5947de146cb772f26a6b0a949a9638cdbb7132fe9fe933",
+    "notes": "op `duckdb` (op-15) dispatches inside the module on every target; the gates that compiled that dispatch arm out of wasm32 are removed. It is unadvertised from `capabilities.ops` (and stays off the hashed 14-op table) by digest-stability choice, so `registry_blake3` does not move until an explicit digest bump \u2014 not because the op is host-only. The wasm `capabilities.authorities` list now includes `frozen-duckdb` (as the host list already did). Absence from `capabilities.ops` is not a SQL refusal and is not REFUSAL-04. SQL-in-RDF admits inside the module through `compile_turtle`. Bounds enforced in src/duckdb_op.rs: DuckDB memory_limit=32MiB and threads=1 compile-time pragmas (GAP-2), chunk rows <= 10000 and chunk bytes <= 16 MiB typed ResourceLimit refusals (GAP-4), MAX_OUTSTANDING_ALLOC_BYTES is 16 MiB for the wasm32 target via split-config (GAP-1)",
+    "ops": [
+      {
+        "name": "capabilities",
+        "order": 1
+      },
+      {
+        "name": "sniff",
+        "order": 2
+      },
+      {
+        "name": "parse",
+        "order": 3
+      },
+      {
+        "name": "convert",
+        "order": 4
+      },
+      {
+        "name": "canonical",
+        "order": 5
+      },
+      {
+        "name": "sparql",
+        "order": 6
+      },
+      {
+        "name": "shacl",
+        "order": 7
+      },
+      {
+        "name": "shex",
+        "order": 8
+      },
+      {
+        "name": "n3",
+        "order": 9
+      },
+      {
+        "name": "entail",
+        "order": 10
+      },
+      {
+        "name": "datalog",
+        "order": 11
+      },
+      {
+        "name": "hooks",
+        "order": 12
+      },
+      {
+        "name": "law",
+        "order": 13
+      },
+      {
+        "name": "policy",
+        "order": 14
+      }
+    ],
+    "response_envelope": {
+      "refusal": {
+        "error": {
+          "details": "object|absent",
+          "dialect": "string|null",
+          "engine": "string|null",
+          "kind": "string",
+          "message": "string"
+        },
+        "ok": false
+      },
+      "success": {
+        "extra": "op-specific fields",
+        "ok": true
+      }
+    },
+    "schema": "graphlaw.abi-manifest/1"
+  },
+  "domain_constants": {
+    "CANON_ARROW_EMPTY_V1": "db2da6fc6b00ab4ba83884e9eb0ebaa5e20dae37f295fa90cb9e24bcf44f7b0c",
+    "FRAME_OVERSIZE_EXIT_CODE": 92,
+    "MAX_OUTSTANDING_ALLOC_BYTES": 16777216,
+    "MAX_REQUEST_BYTES": 16777216,
+    "WALL_BYTES": 67108864
+  },
+  "invariants": [
+    "H_query = BLAKE3(Canon(G_AST) || P_params)",
+    "receipt_v2 domain separation prefix: b'GLAW_RECEIPT_V2'",
+    "non-tabular query columnar null digest: CANON_ARROW_EMPTY_V1 (BLAKE3(b'CANON_ARROW_EMPTY_V1'))",
+    "frame size ceiling MAX_REQUEST_BYTES: 16777216 bytes",
+    "frame length exceeding ceiling terminates with exit code 92 without body allocation",
+    "zero host credential exposure: WASI context runs with empty environment (no inherit_env)",
+    "unbounded UPDATE/DELETE without WHERE rejected with REFUSAL-01",
+    "SQL comments preceding ATTACH rejected with REFUSAL-06",
+    "deterministic 64-byte alignment with zero-byte padding for all Arrow IPC buffers",
+    "CAS epoch monotonicity on all DDL/DML state mutations"
+  ],
+  "predecessor": {
+    "artifact_blake3": "472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea",
+    "artifact_size_bytes": 58121500,
+    "version": "26.10.22",
+    "wasm_abi": 1
+  },
+  "refusals": {
+    "REFUSAL-01": {
+      "description": "The graph AST fails strict closed-world SHACL shape validation before admission: missing or non-integer `sql:statementIndex`, empty/missing `sql:from`, missing projection list, malformed/unclosed RDF list, unexpected terminal node, recursion-limit breach, more than one expression discriminator per node, a token outside the \u00a74 operator enum (`Operator::from_token`), or a non-`sql:Scope` individual.",
+      "name": "MalformedAstRefusal"
+    },
+    "REFUSAL-02": {
+      "description": "A dialect statement kind parsed from the grammar (`ggen/sql-dialect/sql_statement_kinds.rs`) is recognized but has no evaluation path in this DuckDB build \u2014 currently `ConnectStatement`, `DisconnectStatement`.",
+      "name": "UnimplementedStatementRefusal"
+    },
+    "REFUSAL-03": {
+      "description": "Scope discrimination boundary violated (rec \u00a71.3): an aggregate in a `WHERE`/`JOIN`/`GROUP BY` position, a `sql:ProcessScope` column in the projection list, or a `sql:ViewScope` column inside a predicate \u2014 including `HAVING` (`ViewScope` at `src/sql_ast.rs:284-295`, arm `VIEW_SCOPE_IN_PREDICATE = 5`), an explicit scope annotation on an aggregate argument beneath a predicate-rooted aggregate (arm `SCOPE_IN_PRED_AGG_ARG = 6`, `src/sql_ast.rs:304-311` \u2014 laundering marker: the argument position is process-only, so the annotation can only re-scope the aggregate's output past the gate; recovery: drop the scope annotation on the aggregate argument), or a MERGE `ON` condition referencing no target-qualified column (`MERGE_ON_NO_TARGET_COLUMN = 7`, `src/sql_ast.rs:987-993` \u2014 a constant-only ON like `$1 = $2` matches every target row and makes WHEN MATCHED fan-out unbounded; recovery: qualify the ON condition to at least one target column, e.g. `t.id = s.id`).",
+      "name": "ScopeIntegrityRefusal"
+    },
+    "REFUSAL-04": {
+      "description": "Builtin SQL eval was given a reader that is not document-backed. The wasm module still admits and compiles SQL-in-RDF through `compile_turtle`, the same path as the other dialects.",
+      "name": "CapabilityRefusal"
+    },
+    "REFUSAL-05": {
+      "description": "UPDATE/DELETE statement node with neither `sql:whereColumn` nor `sql:whereValue` \u2014 refused at compile, zero engine contact. (Appended 2026-10-23, append-only per convention \u2014 never renumbered.) Receipt: `receipts/2026-10-23-eh-closure-wave.md` (W11/W18: REFUSAL-05 pins re-landed 36/0; register row landed W7/W25, no renumbering).",
+      "name": "UnboundedMutationRefusal"
+    },
+    "REFUSAL-06": {
+      "description": "SQL statement attempting to bypass ATTACH/COPY allowlist via SQL comments (/* */ or --)",
+      "name": "SQLCommentBypassAttempt"
+    }
+  },
+  "schema": "urn:chatman:graphlaw:observable-contract:v26.9.28"
+}

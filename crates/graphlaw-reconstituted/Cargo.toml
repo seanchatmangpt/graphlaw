@@ -1,0 +1,28 @@
+[package]
+name = "graphlaw-reconstituted"
+version = "26.10.23"
+edition = "2024"
+rust-version = "1.96"
+authors = ["Sean Chatman"]
+license = "MIT AND LicenseRef-P28-SIL-2.1.0"
+description = "Clean-room reconstituted GraphLaw kernel synthesized via ggen-legacy"
+
+[lib]
+name = "graphlaw_reconstituted"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+blake3 = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+frozen-duckdb = "2.0.2"
+purrdf = "=2.0.2"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+wasmtime = { version = "48", optional = true, features = ["runtime"] }
+wasmtime-wasi = { version = "48", optional = true }
+
+[features]
+default = []
+runner = ["dep:wasmtime", "dep:wasmtime-wasi"]
