@@ -59,7 +59,7 @@ preflight — EH artifacts are its native input. The eh host hardens the
 boundary: the WASI environment is sterile (explicitly empty — nothing from
 the host env reaches the guest), the frame prefix is bounded by
 `graphlaw::abi::MAX_REQUEST_BYTES` and refused pre-allocation (92), and
-every guest execution runs under a fuel budget of `10_000_000` units (reset
+every guest execution runs under a fuel budget of `100_000_000_000` units (reset
 per request) with epoch interruption armed as the wall-clock strangle path;
 a spent budget is a typed refusal (98), never a raw trap or hang, and a fired
 epoch deadline surfaces as an interrupt trap (97) until a host watchdog
@@ -79,14 +79,14 @@ increments the epoch.
 | 95 | Invalid wasm (or engine config) | `invalid wasm artifact: <e>` | Rebuild or repoint. |
 | 96 | Instantiate/link/export failure | `wasm instantiation failed: <e>` | Rebuild vs ABI. |
 | 97 | Guest ABI / memory fault | `guest ABI fault` + frames | Read backtrace; rebuild. |
-| 98 | Guest fuel budget spent (`FUEL_PER_REQUEST` = 10_000_000) | `guest exhausted fuel budget 10000000` | Driver: shrink the request or raise the budget. |
+| 98 | Guest fuel budget spent (`FUEL_PER_REQUEST` = 100_000_000_000) | `guest exhausted fuel budget 100000000000` | Driver: shrink the request or raise the budget. |
 
 Exact diagnostic strings unique to this host (each prefixed
 `graphlaw-run-eh: `; all other strings are the legacy shapes above with the
 `graphlaw-run: ` prefix swapped to `graphlaw-run-eh: `):
 
 ```text
-guest exhausted fuel budget 10000000
+guest exhausted fuel budget 100000000000
 ```
 
 Differences from the legacy host on 97: the anyhow chain is rendered with

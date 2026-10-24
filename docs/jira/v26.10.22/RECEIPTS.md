@@ -2026,3 +2026,21 @@ verbatim.
   wasmi-host frame bound, json_depth recovery, eyeron 0.7.9;
   UNCOMMITTED: EH-host R3/C0c legs; NOT LANDED: C0b sterile env;
   PENDING: settled artifact re-mint + full re-pin correspondence.
+
+## Fuel calibration pointer row (appended 2026-10-24, register lane)
+
+- **C0c fuel calibration — LANDED (`c3e05bd`).**
+  `FUEL_PER_REQUEST` 10_000_000 → 100_000_000_000
+  (`src/bin/graphlaw_run_eh.rs:45`), calibrated by empirical witness
+  ladder: 10M RED (eh court 6/1, pinned-artifact capabilities leg,
+  typed exit 98, "guest exhausted fuel budget 10000000" —
+  `/tmp/coord_t3.log` + gap-register addendum 01:55 PDT) → 1B RED
+  (commit-message witness only, no embedded output on disk) → 100B
+  GREEN (eh court flipped to 7/0 in 26.06s, exit-0 flip accepted —
+  `/tmp/coord_t3b.log`). Full receipt with embedded verbatim outputs,
+  b3sum-digested witness logs, margin bracket (requirement ∈ (1B,100B]
+  at mixed strength, (10M,100B] at embedded-output strength), and
+  falsifiers: `receipts/2026-10-24-fuel-calibration.md` (b3sum
+  `71512d894a1bce181f0717baf4af592d059d1ba9cb1ce32409f39a46f053e1d2`).
+  tc08 egress stays OPEN on SQLRDF-27 (fuel-independent typed EINVAL;
+  registered at witnessed strength in the same receipt).
