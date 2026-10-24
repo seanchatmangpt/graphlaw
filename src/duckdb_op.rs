@@ -266,6 +266,13 @@ pub fn leading_sql_token(sql: &str) -> Option<String> {
             }
             continue;
         }
+        // A leading `'`/`"` literal is one opaque token — a `/*` inside it
+        // is path text, not a comment — and can never be the ATTACH keyword.
+        if b[i] == '\'' || b[i] == '"' {
+            let q = b[i];
+            let (inner, _) = consume_quoted(&b, i);
+            return Some(format!("{q}{inner}{q}").to_ascii_uppercase());
+        }
         // First real token char: ASCII-alpha run = leading keyword.
         if b[i].is_ascii_alphabetic() {
             let start = i;
@@ -354,15 +361,22 @@ fn consume_quoted(cs: &[char], i: usize) -> (String, usize) {
     (inner, j)
 }
 
-/// The ATTACH path candidate: the first `'…'` string literal AFTER the
-/// leading trivia — never the first quote character in raw text, which a
-/// decoy literal inside the leading comment (`/* '/in-root/x' */ ATTACH
-/// '/etc/evil'`) would otherwise smuggle past the allowlist while the engine
-/// attaches the real argument. `None` when the first real token is not a
-/// string literal (nothing to validate: typed refusal, fail-closed).
+/// The ATTACH path candidate: the `'…'` string literal that follows the
+/// leading keyword (trivia skipped both before and after the keyword) —
+/// never the first quote character in raw text, which a decoy literal inside
+/// the leading comment (`/* '/in-root/x' */ ATTACH '/etc/evil'`) would
+/// otherwise smuggle past the allowlist while the engine attaches the real
+/// argument. `None` when no literal follows the leading keyword (nothing to
+/// validate: typed refusal, fail-closed).
 fn first_string_literal(sql: &str) -> Option<String> {
     let cs: Vec<char> = sql.chars().collect();
-    let i = skip_trivia(&cs, 0);
+    let mut i = skip_trivia(&cs, 0);
+    // Skip the leading keyword token (this extractor only runs once the
+    // policy classified the statement as ATTACH).
+    while i < cs.len() && (cs[i].is_ascii_alphanumeric() || cs[i] == '_') {
+        i += 1;
+    }
+    i = skip_trivia(&cs, i);
     if i < cs.len() && cs[i] == '\'' {
         Some(consume_quoted(&cs, i).0)
     } else {
@@ -407,6 +421,9 @@ fn skip_trivia(cs: &[char], mut i: usize) -> usize {
                 } else if cs[i] == '*' && i + 1 < n && cs[i + 1] == '/' {
                     depth -= 1;
                     i += 2;
+                    if depth == 0 {
+                        break;
+                    }
                 } else {
                     i += 1;
                 }
