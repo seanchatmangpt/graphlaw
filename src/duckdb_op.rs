@@ -232,19 +232,60 @@ fn enforce_attach_policy(sql: &str) -> Result<(), Fail> {
 
 /// Pure core of the ATTACH allowlist: `roots` is `None` when the env is
 /// unset and `Some("")` when it is empty — both fail closed.
+pub fn leading_sql_token(sql: &str) -> Option<String> {
+    let b: Vec<char> = sql.chars().collect();
+    let n = b.len();
+    let mut i = 0;
+    loop {
+        while i < n && b[i].is_whitespace() {
+            i += 1;
+        }
+        if i >= n {
+            return None;
+        }
+        if b[i] == '-' && i + 1 < n && b[i + 1] == '-' {
+            while i < n && b[i] != '\n' {
+                i += 1;
+            }
+            continue;
+        }
+        // Block comment /* ... */, nesting-aware
+        if b[i] == '/' && i + 1 < n && b[i + 1] == '*' {
+            let mut depth = 1usize;
+            i += 2;
+            while i < n && depth > 0 {
+                if b[i] == '/' && i + 1 < n && b[i + 1] == '*' {
+                    depth += 1;
+                    i += 2;
+                } else if b[i] == '*' && i + 1 < n && b[i + 1] == '/' {
+                    depth -= 1;
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
+            continue;
+        }
+        // First real token char: ASCII-alpha run = leading keyword.
+        if b[i].is_ascii_alphabetic() {
+            let start = i;
+            while i < n && b[i].is_ascii_alphabetic() {
+                i += 1;
+            }
+            let token: String = b[start..i].iter().collect();
+            return Some(token.to_ascii_uppercase());
+        }
+        return None;
+    }
+}
+
 fn enforce_attach_policy_with(sql: &str, roots: Option<&str>) -> Result<(), Fail> {
     fn outside(path: &str) -> Fail {
         duckdb_fail(format!(
             "attach path outside GRAPHLAW_ATTACH_ROOTS allowlist: {path}"
         ))
     }
-    let trimmed = sql.trim_start();
-    let upper: String = trimmed
-        .chars()
-        .take_while(|c| c.is_ascii_alphabetic())
-        .map(|c| c.to_ascii_uppercase())
-        .collect();
-    if upper != "ATTACH" {
+    if leading_sql_token(sql).as_deref() != Some("ATTACH") {
         return Ok(());
     }
     // Same single-quote rule as the COPY digest lane's `copy_to_path`

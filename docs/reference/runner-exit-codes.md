@@ -19,6 +19,7 @@ the engine it walks wasm section headers and refuses an EH-class artifact
 | 84 | Digest mismatch (`--expect-blake3`) | `ARTIFACT DIGEST MISMATCH` | Re-pin or rebuild. |
 | 86 | Guest trap (`--crash`, or > 64 MiB) | `guest trap` | Fixture. Wall: shrink < 64 MiB. |
 | 90 | EOF mid-frame | `EOF mid-frame` | Fix driver: prefix without body. |
+| 92 | Frame length prefix exceeds MAX_REQUEST_BYTES | `frame length <len> exceeds cap <cap>` | Driver: chunk or shrink the frame. |
 | 91 | Stdin read error | `stdin read error: <io>` | Fix the driver/pipe. |
 | 93 | Malformed envelope (bad base64) | `malformed envelope` | Fix the driver's payload. |
 | 94 | Non-JSON ABI response | `non-JSON response: <e>` | Rebuild; module ABI is broken. |
@@ -33,6 +34,7 @@ Exact diagnostic strings (each prefixed `graphlaw-run: `):
 ARTIFACT DIGEST MISMATCH for <path>: expected <hex>, got <hex>
 guest trap (crash mode or memory wall)
 EOF mid-frame
+frame length <len> exceeds cap <cap>
 stdin read error: <io error>
 malformed envelope (bad base64 payload)
 module returned non-JSON response: <serde error>
@@ -62,6 +64,7 @@ preflight — EH artifacts are its native input.
 | 84 | Digest mismatch (`--expect-blake3`) | `ARTIFACT DIGEST MISMATCH` | Re-pin or rebuild. |
 | 86 | Guest trap (`--crash`, or > 64 MiB) | `guest trap` | Court fixture; shrink payload. |
 | 90 | EOF mid-frame | `EOF mid-frame` | Fix the driver. |
+| 92 | Frame length prefix exceeds MAX_REQUEST_BYTES | `frame length <len> exceeds cap <cap>` | Driver: chunk or shrink the frame. |
 | 91 | Stdin read error | `stdin read error: <io>` | Fix driver/pipe. |
 | 93 | Malformed envelope (bad base64) | `malformed envelope` | Fix the payload. |
 | 94 | Non-JSON ABI response | `non-JSON response: <e>` | Rebuild the artifact. |

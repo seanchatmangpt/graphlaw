@@ -82,13 +82,27 @@ def is_windows() -> bool:
 # built in this lane's target root. No mocks; a missing artifact is a loud,
 # typed SKIP, never a pass.
 
-LANE_TARGET = os.environ.get(
-    "GRAPHLAW_TARGET_DIR", os.path.join(REPO, "target-lane-pm2")
-)
-WASM_ARTIFACT = os.path.join(
-    LANE_TARGET, "wasm32-wasip1", "wasm", "graphlaw_wasm.wasm"
-)
+def lane_root() -> str:
+    return os.environ.get("GRAPHLAW_TARGET_DIR", os.path.join(REPO, "target-lane-pm2"))
+
+
+LANE_TARGET = lane_root()
 EH_HOST = os.path.join(LANE_TARGET, "debug", "graphlaw-run-eh")
+
+
+def wasm_artifact() -> str:
+    """Resolve the wasm artifact: GRAPHLAW_WASM override first (typed failure
+    if set-but-missing — never a silent pass), else the lane-root artifact."""
+    p = os.environ.get("GRAPHLAW_WASM")
+    if p:
+        if not os.path.isfile(p):
+            pytest.fail(
+                f"GRAPHLAW_WASM is set but the artifact is missing: {p}"
+            )
+        return p
+    return os.path.join(
+        lane_root(), "wasm32-wasip1", "wasm", "graphlaw_wasm.wasm"
+    )
 
 
 def _wasi_sdk_path() -> str:
@@ -182,7 +196,8 @@ class UboModule:
 def ubo_module(request):
     """Build (once, if missing) and spawn the real module; typed SKIP if the
     build toolchain is unavailable."""
-    missing = [p for p in (WASM_ARTIFACT, EH_HOST) if not os.path.isfile(p)]
+    wasm = wasm_artifact()
+    missing = [p for p in (wasm, EH_HOST) if not os.path.isfile(p)]
     if missing:
         if not os.path.isfile(SHIM_OBJ):
             pytest.fail(
@@ -195,7 +210,7 @@ def ubo_module(request):
             WRAP_ENV_KEY: _WASM_RUSTFLAGS,
             "CARGO_TARGET_DIR": LANE_TARGET,
         }
-        if not os.path.isfile(WASM_ARTIFACT):
+        if not os.path.isfile(wasm):
             r = _cargo(
                 ["build", "-p", "graphlaw-wasm", "--target", "wasm32-wasip1",
                  "--profile", "wasm"],
@@ -210,6 +225,6 @@ def ubo_module(request):
         )
         assert r.returncode == 0, "eh host build failed:\n" + r.stderr[-4000:]
 
-    mod = UboModule(EH_HOST, WASM_ARTIFACT)
+    mod = UboModule(EH_HOST, wasm)
     request.addfinalizer(mod.close)
     return mod

@@ -53,7 +53,8 @@
 //!                   linear-memory wall (`--max-memory 67108864` parity).
 //!
 //! Other non-zero exits are harness faults, all typed (see `RunError`):
-//! 90 EOF mid-frame, 91 stdin read error, 93 malformed envelope, 94 non-JSON
+//! 90 EOF mid-frame, 92 frame length prefix over MAX_REQUEST_BYTES, 91 stdin
+//! read error, 93 malformed envelope, 94 non-JSON
 //! module response, 84 artifact digest mismatch refusal, 2 usage/I/O, and the
 //! wasm-artifact classes 95 (invalid module), 96 (instantiation/link failure),
 //! 97 (guest ABI fault). Malformed input never panics the runner; every
@@ -97,6 +98,12 @@ use wasmi_wasi::{WasiCtx, WasiCtxBuilder};
 
 const WALL_BYTES: u32 = 67_108_864; // wasmtime `--max-memory 67108864` parity
 
+// Coherence guard: the frame cap bounds an untrusted wire prefix; the wall
+// bounds total guest memory. A frame the cap admits must be allocatable
+// under the wall (docs/jira/v26.10.23/design-read-frame-bound.md) — equal
+// constants are NOT required, only cap <= wall.
+const _: () = assert!(graphlaw::abi::MAX_REQUEST_BYTES <= WALL_BYTES as usize);
+
 /// Typed runner failure. Every variant maps to one stable process exit code
 /// (courts depend on these; see the module docs) and carries a one-line
 /// stderr diagnostic.
@@ -112,6 +119,10 @@ enum RunError {
     },
     /// EOF in the middle of a packet-4 frame. Exit 90.
     FrameEof,
+    /// Frame length prefix exceeds the request cap
+    /// (`graphlaw::abi::MAX_REQUEST_BYTES`). Fired on the prefix alone,
+    /// before any body allocation. Exit 92.
+    FrameOversize { len: usize, cap: usize },
     /// Stdin read error. Exit 91.
     StdinRead(std::io::Error),
     /// Malformed eval envelope (undecodable base64 payload). Exit 93.
@@ -138,6 +149,7 @@ impl RunError {
             RunError::DigestMismatch { .. } => 84,
             RunError::Trap => 86,
             RunError::FrameEof => 90,
+            RunError::FrameOversize { .. } => 92,
             RunError::StdinRead(_) => 91,
             RunError::MalformedEnvelope => 93,
             RunError::NonJsonResponse(_) => 94,
@@ -161,6 +173,9 @@ impl RunError {
             ),
             RunError::Trap => "graphlaw-run: guest trap (crash mode or memory wall)".into(),
             RunError::FrameEof => "graphlaw-run: EOF mid-frame".into(),
+            RunError::FrameOversize { len, cap } => {
+                format!("graphlaw-run: frame length {len} exceeds cap {cap}")
+            }
             RunError::StdinRead(e) => format!("graphlaw-run: stdin read error: {e}"),
             RunError::MalformedEnvelope => {
                 "graphlaw-run: malformed envelope (bad base64 payload)".into()
@@ -462,6 +477,16 @@ fn read_frame(stdin: &mut impl Read) -> Result<Option<Vec<u8>>, RunError> {
         Err(e) => return Err(RunError::StdinRead(e)),
     }
     let len = u32::from_be_bytes(len_buf) as usize;
+    // Bound the untrusted prefix BEFORE any body allocation: a 0xFFFFFFFF
+    // prefix would otherwise allocate ~4 GiB of zeros and only fail with
+    // FrameEof (90) after stdin is exhausted. The cap is the single-source
+    // guest request cap (src/abi.rs), never a local duplicate.
+    if len > graphlaw::abi::MAX_REQUEST_BYTES {
+        return Err(RunError::FrameOversize {
+            len,
+            cap: graphlaw::abi::MAX_REQUEST_BYTES,
+        });
+    }
     let mut body = vec![0u8; len];
     match stdin.read_exact(&mut body) {
         Ok(()) => Ok(Some(body)),
