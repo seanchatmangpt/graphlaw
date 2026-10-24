@@ -266,11 +266,20 @@ fn json_depth_over_cap_refused() {
 }
 
 /// TWIN (kills the `check_limit: replace > with >=` mutant): the same nesting
-/// at exactly the cap (63 arrays + payload object = 64) is admitted and the
-/// wrapped request reaches dispatch intact.
+/// at exactly the cap (63 arrays + payload object = 64) passes the depth gate.
+/// `dispatch` reads `op` off the top-level value and does not unwrap leading
+/// arrays, so the wrapped request refuses with `Unsupported` ("missing string
+/// field `op`") — the assertion is that the refusal kind is NOT
+/// `ResourceLimit`: the depth gate admitted the envelope and dispatch owned
+/// the refusal. (Authored against the mutated tree where json_depth returned
+/// 0; the ok:true form never passed at any commit.)
 #[test]
 fn json_depth_at_exactly_the_cap_admitted() {
     let at_cap = MAX_JSON_DEPTH - 1; // 63 arrays -> request depth 64
     let r = call_json(&wrapped(at_cap, json!({"op": "capabilities"})));
-    assert_eq!(r["ok"], true, "{r}");
+    assert_ne!(
+        r["error"]["kind"], "ResourceLimit",
+        "depth gate fired at the cap — off-by-one: {r}"
+    );
+    assert_eq!(r["error"]["kind"], "Unsupported", "{r}");
 }

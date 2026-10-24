@@ -173,6 +173,25 @@ fn run_host_frame(bin: &Path, artifact: &Path, frame_body: &[u8], label: &str) -
         si.write_all(&frame)
             .expect("write frame (child consumes as we write)");
     }
+    let child_stdout = child.stdout.take();
+    let child_stderr = child.stderr.take();
+    // Drain both pipes CONCURRENTLY with the wait: the host can emit a
+    // per-frame guest backtrace on refusal paths (fuel exhaustion), and a
+    // pipe saturation deadlock here would masquerade as a runner hang.
+    let stdout_handle = std::thread::spawn(move || {
+        let mut buf = Vec::new();
+        if let Some(mut o) = child_stdout {
+            let _ = o.read_to_end(&mut buf);
+        }
+        buf
+    });
+    let stderr_handle = std::thread::spawn(move || {
+        let mut s = String::new();
+        if let Some(mut e) = child_stderr {
+            let _ = e.read_to_string(&mut s);
+        }
+        s
+    });
     let start = Instant::now();
     let status = loop {
         match child.try_wait().expect("poll runner") {
@@ -191,14 +210,8 @@ fn run_host_frame(bin: &Path, artifact: &Path, frame_body: &[u8], label: &str) -
             }
         }
     };
-    let mut stdout = Vec::new();
-    if let Some(mut o) = child.stdout.take() {
-        let _ = o.read_to_end(&mut stdout);
-    }
-    let mut stderr = String::new();
-    if let Some(mut e) = child.stderr.take() {
-        let _ = e.read_to_string(&mut stderr);
-    }
+    let stdout = stdout_handle.join().expect("stdout reader thread");
+    let stderr = stderr_handle.join().expect("stderr reader thread");
     Outcome {
         code: status.code().unwrap_or_else(|| panic!("{label}: no exit code: {status}")),
         stdout,
@@ -218,9 +231,10 @@ fn token_surfaces(stdout: &[u8], stderr: &str) -> bool {
 
 /// The op must produce a REAL observable outcome before the absence assertion
 /// runs — a spawn that died before the module reply path cannot speak for the
-/// reply path. Exit 0 = reply path ran (reply parsed); exit 97 = the pinned
-/// pending-artifact trap (real guest backtrace on stderr). Anything else is a
-/// typed failure.
+/// reply path. Exit 0 = reply path ran (reply parsed); exit 97 = guest trap
+/// past the frame layer; exit 98 = the typed fuel-exhaustion bound (the guest
+/// ran under metering until the budget bound fired). Each branch requires
+/// real child output; anything else is a typed failure.
 fn assert_real_outcome(out: &Outcome, label: &str) {
     match out.code {
         0 => {
@@ -243,11 +257,12 @@ fn assert_real_outcome(out: &Outcome, label: &str) {
                 "{label}: reply envelope must be ok:true — {v}"
             );
         }
-        97 => {
+        97 | 98 => {
             assert!(
                 !out.stderr.trim().is_empty(),
-                "{label}: exit 97 but stderr carries no guest trap output — \
-                 the pinned trap path did not run"
+                "{label}: exit {} but stderr carries no guest diagnostic — \
+                 the pinned refusal path did not run",
+                out.code
             );
         }
         other => panic!(
