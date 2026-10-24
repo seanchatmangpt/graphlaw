@@ -1499,3 +1499,126 @@ stand as prior banking-inventory witness (target-pub), not re-run.
   Both close conditions (FIBO 4/0 + lifecycle 3/0) met; SQLRDF-27.md
   flipped to Closed receipt-gated on that amendment. Owed non-gating:
   host-contract `-p graphlaw-wasm` rung + anti-vacuity inversion court.
+
+---
+
+# 2026-10-23 ledger truth-sync, adversarial-review wave (coherence lane, DOC)
+
+Append-only truth-sync per the coherence lane's 18 findings. No prior row
+is rewritten; supersessions are recorded here. Identity of record for this
+wave: **commit `d9cab2f`** ("fix(v26.10.22): pin final artifact 472d5557 +
+settle wave").
+
+## (a) Wasm re-pin — LANDED (supersedes every "re-pin held / PENDING" row)
+
+- `priv/graphlaw.wasm.blake3` = **`472d5557…bf80ea`**, size
+  **58,121,500 B**, pinned at commit **`d9cab2f`**; `scripts/receipt_chain_sync.sh --check`
+  **ok** (exit 0) at the settle commit. The following rows are superseded
+  to LANDED: W9 / W27 "RE-PIN HELD" (both addenda), W9 PENDING (EH-closure
+  wave §1), V1 "wasm pin UNWITNESSED" (Waves U/V/W — the witnessed re-pin
+  receipt now postdates the artifact), and SQLRDF-24's "no artifact re-pin
+  until (b)" hold (the trap was closed by the wrap-shim topology; the
+  artifact linked, executed, and was pinned).
+
+## (b) W9-W14 PENDING rows superseded (EH-closure wave §1; each with landing evidence)
+
+- **W9 (build + witnessed re-pin)** — superseded by (a): artifact linked,
+  re-pinned `472d5557…bf80ea` at `d9cab2f`, chain sync --check ok.
+- **W10 (lifecycle EH court)** — superseded by the lifecycle 3/0 amendment
+  to `receipts/2026-10-23-sqlrdf27-verdict.md`: 3 passed / 0 failed
+  (`court_a` DDL/DML/select lifecycle, `court_b` WHERE-less refusal +
+  table-unchanged readback, `court_c` wasmtime instantiation with
+  exceptions), 284.03s, root `graphlaw` package.
+- **W11 (REFUSAL-05 compiler arm + courts)** — superseded by W18 GREEN:
+  `REFUSAL-05` pins re-landed, **36 passed / 0 failed**; register rows
+  appended (W25), no renumbering.
+- **W12 (wasmtime host bin)** — superseded by W57 GREEN: legacy
+  `graphlaw-run` + `graphlaw-run-eh` binaries placed and exercised;
+  runner-eh host protocol confirmed; pm4pytest receipt-replay 6/6 after
+  the head-parser fix.
+- **W13 (pm4pytest FIBO matrix)** — superseded by W40 GREEN (precision API
+  4/4 with unmodeled-side-effect non-vacuity) + W50 GREEN (driver
+  fixture-driven rewrite, capabilities probe exit 0); residual eh_fibo
+  legs closed by the FIBO 4/0 on the canonical relink-8 artifact
+  (`receipts/2026-10-23-sqlrdf27-verdict.md`).
+- **W14 (mutation court + SPC gate BLOCKED on clean tree)** — unblocked by
+  the coordinator commit range **`0d11bc3..d9cab2f`**; the clean-tree
+  precondition is met by the settle commit; SPC court PASS witnessed at
+  W57 (`receipts/spc-2026-10-23T035422.json`).
+
+## (c) SQLRDF-27 Closed
+
+Per ticket `SQLRDF-27.md` (flipped receipt-gated on the lifecycle
+amendment): both close conditions met — FIBO 4/0 (incl.
+`tc_fibo_08_copy_executes_with_pid_keyed_egress`) + lifecycle 3/0 on the
+wrap-enabled artifact. INDEX row 567, the status addendum lines 603-604
+("verdict pending relink"), and the line-3 blanket status are corrected
+in `INDEX.md` this wave. Owed non-gating rungs (host-contract
+`-p graphlaw-wasm`, anti-vacuity inversion) remain owed and are NOT
+closed by this flip.
+
+## (d) Artifact identity lineage — historical, superseded by `472d5557…bf80ea`
+
+Prior rows untouched; the following identities are marked
+**historical-superseded-by-`472d5557…bf80ea`**:
+
+- **`332ea218…2c30c`** (6,793,617 B) — the v26.10.21-legacy pin cited in
+  Successor §2, wave-2/3/4 pins, K3/K12, and `docs/wasm-integration.md`.
+- **`4d9083af…eb67b`** (58,214,121 B) — relink-8 canonical artifact of
+  the SQLRDF-27 FIBO/lifecycle witnesses.
+- **`33083b92…`** — fuzz-lane plain-shim + `--allow-multiple-definition`
+  variant.
+- **`259cf5b0…`** — W27 interim build digest (Tag×1).
+
+## (e) Unreceipted-on-final-identity items (honest statement, terminal-receipt pending)
+
+The following were witnessed in lane transcripts against the final
+`472d5557…bf80ea` artifact but their durable `receipts/` files are being
+filed in the terminal receipt — marked **terminal-receipt pending**, not
+LANDED-as-receipted:
+
+- **exit-codes court** — 7/0, ×3 passes (lane transcript).
+- **banking battery** — 11/2 pre-fix, DvP pairing fix, then **4/0**
+  (the durable 4/4 witness `receipts/2026-10-23-banking-4of4-witness.md`
+  is historical `f3570f15…7920d`; the 11/2→4/0 trajectory lives in the
+  lane transcript).
+- **memory-wall court** — 8/0 (wasmtime port, lane transcript).
+- **boundary fuzz** — 1,172 frames / 0 defects (lane transcript; the
+  lane receipt owed per the shim-artifact re-witness row).
+
+Until the terminal receipt lands, these stand as witnessed-transcript
+claims, not receipted verdicts.
+
+## (f) TC-HOT internal contradiction resolved
+
+Line 43 (wave-2 green-lane row: "clone-path p99 **292ns** > 250ns
+budget, exit 1 honest-FAIL") vs lines 143-145 (wave-3 "Still open" row:
+`designs/tc-hot-01-errc-receipt.md` "10M p99 209 ns inside 250, refusal
+p99 42 ns PASS, variance 26.91% FAIL, SPC Cpk 0.001 FAIL") contradict.
+Resolved **in favor of the filed TC_HOT_FULL receipt**
+(`designs/tc-hot-full-receipt.md` / `designs/tc-hot-01-errc-receipt.md`):
+the full-corpus receipt postdates the SMOKE baseline and governs. The
+wave-2 292ns figure is the superseded SMOKE-baseline historical
+observation. The variance/SPC FAIL legs of the full receipt remain the
+open items; the p99 budget leg is PASS.
+
+## Receipt fields (this section)
+
+- **Identity**: coherence-lane truth-sync over commit `d9cab2f`; artifact
+  pin `472d5557…bf80ea` (58,121,500 B).
+- **Authority**: lease = this file (append-only) + INDEX status rows.
+- **Consequence**: 18 findings applied as supersession rows; zero prior
+  rows rewritten; 4 artifact identities marked historical; 5 items marked
+  terminal-receipt pending.
+- **Replay**: `b3sum priv/graphlaw.wasm` = pin file; `git rev-parse
+  --short HEAD` ≥ `d9cab2f`; `bash scripts/receipt_chain_sync.sh --check`
+  exit 0; `cargo test --test wasm_duckdb_lifecycle_eh` from repo root
+  (3/0 per the amendment).
+- **Falsifiers**: (a) a pin-file digest ≠ live artifact digest at HEAD —
+  the re-pin row is FAIL; (b) any W9-W13 landing evidence above failing to
+  replay — the supersession is FAIL; (c) terminal receipts landing with
+  counts contradicting the transcript figures — the honest-statement rows
+  are corrected in a new append.
+- **Standing**: re-pin LANDED; W9-W14 superseded-LANDED on cited evidence;
+  SQLRDF-27 Closed (non-gating rungs owed); 5 items terminal-receipt
+  pending; TC-HOT p99 PASS / variance+SPC FAIL open.

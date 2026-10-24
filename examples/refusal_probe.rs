@@ -17,8 +17,7 @@ use graphlaw::duckdb_eval::{GraphLawDuckDB, canonical_ast_graph_bytes};
 use graphlaw::rules::builtins::{BuiltinContext, builtin_eval_sql};
 use graphlaw::sql_ast::{
     CompiledQuery, RdfAstGraphReader, SelectStatement, SqlExpr, TableRef, compile_turtle,
-    validate_ast_shacl,
-};
+    validate_ast_shacl, SelectItem};
 
 fn main() -> std::process::ExitCode {
     let mut fails: Vec<String> = Vec::new();
@@ -186,16 +185,18 @@ ex:Q a sql:SelectStatement ;
     // but graph-free CompiledQuery; eval refuses with NoCanonicalGraph.
     {
         let stmt = SelectStatement {
+            ctes: Vec::new(),
+            qualify: None,
             from: TableRef {
                 name: "t".into(),
                 alias: None,
                 schema: None,
             },
             joins: Vec::new(),
-            select_list: vec![SqlExpr::ColumnRef {
+            select_list: vec![SelectItem::Expr(SqlExpr::ColumnRef {
                 column: "a".into(),
                 table_alias: None,
-            }],
+            })],
             where_clause: None,
             group_by: Vec::new(),
             having: None,

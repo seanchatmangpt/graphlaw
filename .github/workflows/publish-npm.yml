@@ -6,7 +6,8 @@ name: publish-npm
 # Trusted Publishing, so no token is stored anywhere.
 #
 # One-time operator configuration required before this workflow can publish:
-#   1. On npmjs.com, configure a Trusted Publisher for the `graphlaw` package:
+#   1. On npmjs.com, configure a Trusted Publisher for the SCOPED package
+#        `@seanchatmangpt/graphlaw` (the name js/npm/package.json declares):
 #        repository: seanchatmangpt/graphlaw
 #        workflow:   publish-npm.yml
 #        environment: npm
@@ -128,7 +129,8 @@ jobs:
           VERSION: ${{ steps.versions.outputs.version }}
         run: |
           set -euo pipefail
-          tgz="graphlaw-$VERSION.tgz"
+          tgz=$(ls seanchatmangpt-graphlaw-"$VERSION".tgz graphlaw-"$VERSION".tgz 2>/dev/null | head -1 || true)
+          [ -n "$tgz" ] || { echo "no npm tarball for version $VERSION produced" >&2; exit 1; }
           npm pack --pack-destination .
           [ -f "$tgz" ] || { echo "expected tarball $tgz not produced" >&2; exit 1; }
           # Drift check: pack a second time and compare file lists.
@@ -147,7 +149,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: npm-tarball-${{ github.run_id }}
-          path: js/npm/graphlaw-*.tgz
+          path: js/npm/seanchatmangpt-graphlaw-*.tgz
           if-no-files-found: error
           retention-days: 7
 

@@ -129,8 +129,8 @@ you; if you drive them yourself, the discipline is:
 ## WASM artifact state
 
 The shipped `wasm/graphlaw.wasm` is pinned by BLAKE3
-`fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`
-(57,781,384 B; the DuckDB-linked new-EH artifact)
+`472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea`
+(58,121,500 B; the DuckDB-linked new-EH artifact)
 (`src/generated/artifact-meta.ts`; the digest is re-pinned on every
 `npm run build`). wasmi 2.0.0 loads these bytes. A SQL-in-RDF document
 parsed as `sql` returns the same dataset id as the same bytes parsed as
@@ -138,6 +138,8 @@ Turtle.
 
 Historical pins:
 
+- `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`
+  (57,781,384 B)
 - `f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e`
   (7,104,147 B)
 - `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`

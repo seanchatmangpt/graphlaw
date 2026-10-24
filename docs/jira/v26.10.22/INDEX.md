@@ -1,6 +1,6 @@
 # SQL-in-RDF tickets — v26.10.22
 
-Status of every ticket: **Open**, except SQLRDF-08 (withdrawn: DuckDB is inside the wasm unit).
+Status of every ticket: **Open**, except SQLRDF-08 (withdrawn: DuckDB is inside the wasm unit) and SQLRDF-27 (Closed 2026-10-23, receipt-gated on FIBO 4/0 + lifecycle 3/0 — see RECEIPTS.md "2026-10-23 ledger truth-sync").
 
 The conformance target is the pasted sql-rdf Recommendation, the conformance text for v26.10.22. Section citations in the tickets point at that text. SQLRDF-12 files it at `docs/reference/sql-rdf-rec.md`.
 
@@ -564,7 +564,7 @@ live tree:
 - [`SPLIT-NOTES.md`](../../../SPLIT-NOTES.md) — Lane L46 phase-4 extraction notes (UNWIRED by directive)
 | SQLRDF-25 | Dialect expansion — window functions, QUALIFY, star modifiers, CTEs, PIVOT/UNPIVOT, composite literals, JSON operators | Open | Seven verified gaps, no AST terms/compile targets in [`src/sql_ast.rs`](../../../src/sql_ast.rs) (engine natively supports all; wasm artifact already executes them): window OVER/frames, QUALIFY, `* EXCLUDE/REPLACE` + `COLUMNS('regex')`, WITH/RECURSIVE CTEs, PIVOT/UNPIVOT, struct/map/list literals + slicing, JSON `->`/`->>`. REFUTED (already implemented, not re-asked): EXPLAIN/PRAGMA/SET/INSTALL/LOAD (`src/sql_ast.rs:1854-1932`, renderers :2250-2312, `LOAD icu` witnessed in-wasm), MERGE INTO (§7 shapes, extract_merge_statement, epoch + upsert courts), statement sequences (SQLRDF-23 landed). Per gap: ggen dialect shapes + sql_ast compile targets + SHACL admission + real-readback courts with anti-vacuity twins; engine and admission law untouched ([SQLRDF-25.md](SQLRDF-25.md)) | [SQLRDF-25](SQLRDF-25.md) |
 | SQLRDF-24 | Artifact trap: `uninitialized element` on first `gl_call` (indirect-call vtable) | Open | DuckDB-linked artifact (46,015,267 B; 46,069,809 B new-EH, Tag×1) traps on FIRST `gl_call` with `wasm trap: uninitialized element` — `call_indirect` through a vtable slot read from linear memory inside the `__cxa_thread_atexit` destructor-list runner (old-artifact func 68925, new ~68950), reached from the wasi-libc `gl_*` export epilogue (dtors + stdio flush); `Table[0]` permanently null, op-agnostic; V8 and wasmtime both trap → in-module defect; exonerated: EH-flavor mixing, LTO (false/cgu16/thin), stack size, V8 hosting; in flight: dtor-list memory dump host + gc-sections probe (`-C link-dead-code`, `--no-gc-sections`; gc-sections dropping table entries while the data-segment vtable survives = leading mechanism hypothesis); acceptance (a)-(d) in [SQLRDF-24.md](SQLRDF-24.md); no artifact re-pin until (b) | [SQLRDF-24](SQLRDF-24.md) |
-| SQLRDF-27 | tc08 COPY-egress EINVAL — musl↔wasi-libc fcntl ABI mismatch in the cached sysroot | Open (fix probe-validated at C level; verdict pending relink) | libduckdb.a emits musl fcntl words (`O_RDONLY=0`, `O_CREAT=0o100`) but resolves to wasi-libc `openat` expecting bits 25-28 (`O_RDONLY=0x04000000`-class); bit-scan probe: every flags word without bits 25-28 → EINVAL, stat unaffected. Fix: `__wrap_open`/`__wrap_openat` translation stub in `/Users/sac/frozen-duckdb/crates/frozen-duckdb-sys/wasi_posix.c` + raw-lld link args (`--wrap=open,--wrap=openat`, `--whole-archive -lduckdb_wasi_posix`); caveat: dep build-script `cargo:rustc-link-arg` does NOT reach the cdylib — apply via RUSTFLAGS on the graphlaw-wasm link. Close condition: FIBO 4/0 + lifecycle 3/0 on the wrap-enabled artifact ([SQLRDF-27.md](SQLRDF-27.md)) | [SQLRDF-27](SQLRDF-27.md) |
+| SQLRDF-27 | tc08 COPY-egress EINVAL — musl↔wasi-libc fcntl ABI mismatch in the cached sysroot | **Closed** (2026-10-23, receipt-gated: FIBO 4/0 + lifecycle 3/0 on the wrap-enabled artifact `4d9083af…`/superseded by final pin `472d5557…bf80ea`; owed non-gating: host-contract rung + anti-vacuity inversion) | libduckdb.a emits musl fcntl words (`O_RDONLY=0`, `O_CREAT=0o100`) but resolves to wasi-libc `openat` expecting bits 25-28 (`O_RDONLY=0x04000000`-class); bit-scan probe: every flags word without bits 25-28 → EINVAL, stat unaffected. Fix: `__wrap_open`/`__wrap_openat` translation stub in `/Users/sac/frozen-duckdb/crates/frozen-duckdb-sys/wasi_posix.c` + raw-lld link args (`--wrap=open,--wrap=openat`, `--whole-archive -lduckdb_wasi_posix`); caveat: dep build-script `cargo:rustc-link-arg` does NOT reach the cdylib — apply via RUSTFLAGS on the graphlaw-wasm link. Close condition: FIBO 4/0 + lifecycle 3/0 on the wrap-enabled artifact ([SQLRDF-27.md](SQLRDF-27.md)) | [SQLRDF-27](SQLRDF-27.md) |
 
 ### Status refresh 2026-10-23 (EH-closure wave)
 
@@ -600,5 +600,9 @@ Receipts: [RECEIPTS.md](RECEIPTS.md) §"2026-10-23 ledger-sync wave".
   RED at `tests/amortization_court.rs:155` (left: 1, right: 0; 64.71s, W62
   OPEN — owner assignment pending). Measurement pending.
 - **Whitepaper** — claims audit recorded (W63); one count corrected (363→360).
-- **SQLRDF-27** — ticket + ticket-table row live (INDEX line 567); status
-  unchanged: fix probe-validated, verdict pending relink (owner EH-19).
+- **SQLRDF-27** — **Closed** (supersedes the "verdict pending relink"
+  status above): FIBO 4/0 + lifecycle 3/0 witnessed on the wrap-enabled
+  artifact (`receipts/2026-10-23-sqlrdf27-verdict.md` lifecycle
+  amendment); ticket flipped receipt-gated; final artifact identity is
+  the settle-commit pin `472d5557…bf80ea` (58,121,500 B, commit
+  `d9cab2f`). Owed non-gating rungs remain open.

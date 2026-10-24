@@ -12,7 +12,7 @@ GraphLaw v26.10.22 resolves the historical split in enterprise semantic
 computing: the separation between governed graph semantics (RDF/OWL/SHACL) and
 high-throughput relational execution. The complete DuckDB analytical engine
 executes inside a sealed WebAssembly sandbox (`priv/graphlaw.wasm`, BLAKE3
-`fa155830…`, 57,781,384 B), where every SQL statement is compiled from an RDF
+`472d5557…`, 58,121,500 B), where every SQL statement is compiled from an RDF
 graph, admitted through SHACL shapes before engine contact, executed by a
 statically linked frozen-duckdb kernel, and sealed into a cryptographically
 chained receipt. Host delegation is eliminated: the identical artifact runs
@@ -82,14 +82,14 @@ overrides), verified across core dumps and symbolized static inspection.
 - **System Courts**: boundary fuzzing (1,172 frames / 0 defects),
   memory-wall plateau (8/0, re-lawed per-cycle-bounded Δ ≤ 2 pages/cycle), WASM ABI
   (25/0), and exit-code verification (7/0).
-- **Core Verification**: Dialect conformance (36/0), refusal family (75/0), SPC gate (receipt pending pre-commit),
+- **Core Verification**: Dialect conformance (36/0), refusal family (75/0), SPC gate (latest witness FAIL Cpk 0.0008 under fleet load — solo-machine rerun owed; prior PASS 1.7573),
   npm packaging (198/198), and `CHAIN.blake3` integrity
   (VERIFIED at exit-0 `receipt_chain_sync.sh --check`, 2026-10-23; re-baseline 4 documented in `receipts/2026-10-23-chain-rebaseline-note.md`; entry count cited at the pinned release commit).
 
 ### Banking Domain Verification (FIBO / wasmtime 48)
 
 *Witness receipts: BCBS/Rehypothecation/UBO runs receipted in-wave; DvP
-witness `receipts/2026-10-23-banking-4of4-witness.md` (filing in flight).*
+witness `receipts/2026-10-23-banking-4of4-witness.md`.*
 
 - **BCBS 239 Risk Aggregation**: 3/3 green, Petri-net conformance (fitness 1.0,
   precision 1.0 via pm4pytest).
@@ -109,7 +109,7 @@ witness `receipts/2026-10-23-banking-4of4-witness.md` (filing in flight).*
 | **Raw Engine Prepared** | **117.4 µs** | Frozen-DuckDB execution floor for pre-compiled physical plan. |
 | **Cold Graph-Backed Eval** | **23.13 ms** | Turtle parsing + SHACL admission + relational codegen + plan construction (receipts/2026-10-23-engine-baseline.md; fresh-connection leg 16.42 ms). |
 
-The ~8,600× delta (median-to-median) is a regime change: the cognitive cost of inductive proof
+The ~9,100× delta (median-to-median: 23.13 ms / 2.541 µs) is a regime change: the cognitive cost of inductive proof
 generation is paid once upon admission. Subsequent requests pay only a
 constant-time cryptographic identity check.
 
@@ -140,8 +140,9 @@ The compile surface supports 35 PEG statement kinds:
 ## 5. Architectural Standards & In-Flight Implementation
 
 - **CanonArrow Egress (ADR-26.10.23-B Clamped into v26.10.22)**:
-  - Memory Layout: 128-byte aligned `ArrowEgressHeader`
-    (`repr(C, align(64))` with 24-byte padding to preserve offset alignment).
+  - Memory Layout: `ArrowEgressHeader` — 128 bytes total,
+    `repr(C, align(64))`, 24-byte reserved tail (repr(C) padding math per
+    the in-source derivation).
   - Dual-Witness Attestation (`receipt_v2`): Defined and unit-tested (golden
     v1-preservation pin, domain separation, `CANON_ARROW_EMPTY_V1`); production
     emission wiring in `duckdb_eval` is the Phase 2 in-flight item.
@@ -168,7 +169,8 @@ The compile surface supports 35 PEG statement kinds:
 ## 7. Evidentiary Basis & Non-Vacuity
 
 Every performance figure and invariant cited in this specification maps to an
-immutable entry in the `CHAIN.blake3` ledger (VERIFIED at exit-0 check,
+entry in the `CHAIN.blake3` ledger (per-file verify exit-0; re-baselines
+documented, not silent) (VERIFIED at exit-0 check,
 2026-10-23; entry count is chain-extension-live and cited at the pinned
 release commit, not inline). Under the platform's anti-vacuity doctrine, every qualification
 court is paired with an inversion twin to ensure that any relaxation of
