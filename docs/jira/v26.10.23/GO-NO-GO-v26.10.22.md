@@ -210,3 +210,23 @@ cargo publish -p graphlaw
 - `/Users/sac/graphlaw/docs/jira/v26.10.22/RELEASE-NOTES-26.10.22.md`
 - `/Users/sac/graphlaw/receipts/2026-10-23-banking-4of4-witness.md`
 - `/Users/sac/graphlaw/docs/jira/v26.10.22/designs/mutation-court-full-receipt.md`
+
+---
+## v4 TERMINAL STATE (2026-10-24, coordinator)
+
+**Published-by-machine:** everything through the validate-and-pack green
+run (40084544193 validate ✓: version triple, byte authority, npm 198/198
+in CI, deterministic pack + drift check). Tag v26.10.22 at 669c817+.
+**Typed-blocked on operator credentials (machine-impossible by design):**
+1. npm OIDC publish → 404: Trusted Publisher for
+   `@seanchatmangpt/graphlaw` is not configured on npmjs.com. Operator
+   console action: npmjs.com → add Trusted Publisher (repo
+   seanchatmangpt/graphlaw, workflow publish-npm.yml, environment npm),
+   then `gh run rerun 40084544193`.
+2. crates.io publish → 403 auth failed: no cargo token in the session.
+   Operator: `cargo login <token>` then
+   `cargo publish --locked -p graphlaw-eyeron && cargo publish --locked -p graphlaw`
+   (0.7.9 then 26.10.22, in that order).
+The workflow fixes landed en route (ABI-surface gate port, byte-authority
+gate, scoped-tarball name + pack order + mkdir fixes, staging attempts
+documented). The publish completes with those two operator acts.
