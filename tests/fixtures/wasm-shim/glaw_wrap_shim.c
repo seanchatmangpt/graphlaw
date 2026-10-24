@@ -40,3 +40,28 @@ int __wrap_openat(int dirfd, const char *path, int flags, ...) {
     }
     return __real_openat(dirfd, path, wasi_fcntl_translate(flags), mode);
 }
+
+/* DuckDB locks egress targets via fcntl(F_SETLK/F_SETLKW) — wasi-libc's
+   fcntl is ENOSYS for lock commands (SQLRDF-27 observed as "Could not set
+   lock ... Invalid argument"). Single-writer egress: report success on lock
+   ops, defer everything else to the real fcntl. flock likewise. */
+#include <fcntl.h>
+
+extern int __real_fcntl(int fd, int cmd, ...);
+
+int fcntl(int fd, int cmd, ...) {
+    if (cmd == F_SETLK || cmd == F_SETLKW) return 0;
+    if (cmd == F_GETLK) {
+        va_list ap; va_start(ap, cmd);
+        struct flock *l = va_arg(ap, struct flock *);
+        va_end(ap);
+        if (l) l->l_type = F_UNLCK;
+        return 0;
+    }
+    va_list ap; va_start(ap, cmd);
+    int r = __real_fcntl(fd, cmd, ap);
+    va_end(ap);
+    return r;
+}
+
+int flock(int fd, int operation) { (void)fd; (void)operation; return 0; }
