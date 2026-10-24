@@ -35,7 +35,6 @@
 #![cfg(all(feature = "abi", not(target_arch = "wasm32")))]
 
 use std::path::PathBuf;
-use std::sync::Mutex;
 
 use graphlaw::receipt_chain::{
     ReceiptMeta, ReceiptRecord, RECEIPT_RECORD_VERSION,
@@ -45,223 +44,14 @@ use graphlaw::receipt_chain::{
     Andon, build_admission_frame, chain_from_frame,
 };
 use serde_json::{Value, json};
-use wasmtime::{Config, Engine, Instance, Linker, Memory, Module, Store, TypedFunc};
-use wasmtime_wasi::WasiCtxBuilder;
-use wasmtime_wasi::p1::{WasiP1Ctx, add_to_linker_sync};
 
-/// The frozen engine segfaults when engine-heavy tests run concurrently;
-/// serialize the wasm-engine courts with a process-local lock (structural
-/// sync, no sleeps).
-static ENGINE_LOCK: Mutex<()> = Mutex::new(());
+mod common;
 
-fn engine_lock() -> std::sync::MutexGuard<'static, ()> {
-    ENGINE_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
-}
+use common::engine_court::{Host, close_session, engine_lock, host_or_skip, open_session};
 
 // --------------------------------------------------------------- harness
-// (verbatim pattern from tests/wasm_fibo_fixtures_eh.rs)
-
-fn wasm_path() -> Option<PathBuf> {
-    if let Some(p) = std::env::var_os("GRAPHLAW_WASM") {
-        let path = PathBuf::from(p);
-        if !path.is_file() {
-            panic!(
-                "GRAPHLAW_WASM is set but the artifact is missing: {}",
-                path.display()
-            );
-        }
-        return Some(path);
-    }
-    let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("target/wasm32-wasip1/wasm/graphlaw_wasm.wasm");
-    if artifact.is_file() {
-        return Some(artifact);
-    }
-    None
-}
-
-struct Host {
-    store: Store<WasiP1Ctx>,
-    memory: Memory,
-    alloc: TypedFunc<u32, u32>,
-    free: TypedFunc<(u32, u32), ()>,
-    call: TypedFunc<(u32, u32), u64>,
-}
-
-#[derive(Debug)]
-enum HostError {
-    Trap(String),
-    Fatal(String),
-}
-
-impl Host {
-    fn new(bytes: &[u8]) -> Result<Self, HostError> {
-        let fail = |e: wasmtime::Error, stage: &'static str| {
-            let s = format!("{stage}: {e}");
-            if e.to_string().contains("uninitialized element") {
-                HostError::Trap(s)
-            } else {
-                HostError::Fatal(s)
-            }
-        };
-        let mut cfg = Config::new();
-        cfg.wasm_exceptions(true);
-        let engine = Engine::new(&cfg).map_err(|e| HostError::Fatal(format!("engine: {e}")))?;
-        let module =
-            Module::new(&engine, bytes).map_err(|e| HostError::Fatal(format!("module: {e}")))?;
-        for i in module.imports() {
-            if i.module() != "wasi_snapshot_preview1" {
-                return Err(HostError::Fatal(format!(
-                    "unexpected host import {}::{}",
-                    i.module(),
-                    i.name()
-                )));
-            }
-        }
-        let mut store = Store::new(
-            &engine,
-            WasiCtxBuilder::new()
-                .inherit_stdio()
-                .inherit_env()
-                .preopened_dir("/tmp", "/tmp", wasmtime_wasi::FsPerms::ReadWrite)
-                .map_err(|e| HostError::Fatal(format!("preopen /tmp: {e}")))?
-                .build_p1(),
-        );
-        let mut linker = <Linker<WasiP1Ctx>>::new(&engine);
-        add_to_linker_sync(&mut linker, |ctx| ctx)
-            .map_err(|e| HostError::Fatal(format!("wasi linker: {e}")))?;
-        let instance: Instance = linker
-            .instantiate(&mut store, &module)
-            .map_err(|e| fail(e, "instantiate"))?;
-        if let Ok(init) = instance.get_typed_func::<(), ()>(&mut store, "_initialize") {
-            init.call(&mut store, ()).map_err(|e| fail(e, "_initialize"))?;
-        }
-        let memory = instance
-            .get_memory(&mut store, "memory")
-            .ok_or_else(|| HostError::Fatal("module does not export memory".into()))?;
-        let missing = |name: &'static str, e: wasmtime::Error| {
-            HostError::Fatal(format!("missing or mistyped export {name}: {e}"))
-        };
-        Ok(Host {
-            alloc: instance
-                .get_typed_func::<u32, u32>(&mut store, "gl_alloc")
-                .map_err(|e| missing("gl_alloc", e))?,
-            free: instance
-                .get_typed_func::<(u32, u32), ()>(&mut store, "gl_free")
-                .map_err(|e| missing("gl_free", e))?,
-            call: instance
-                .get_typed_func::<(u32, u32), u64>(&mut store, "gl_call")
-                .map_err(|e| missing("gl_call", e))?,
-            store,
-            memory,
-        })
-    }
-
-    fn request_bytes(&mut self, body: &[u8]) -> Result<Vec<u8>, HostError> {
-        let ptr = self
-            .alloc
-            .call(&mut self.store, body.len() as u32)
-            .map_err(|e| fail_classify("gl_alloc", e))?;
-        if ptr == 0 {
-            return Err(HostError::Fatal("gl_alloc refused a pre-checked request".into()));
-        }
-        self.memory
-            .write(&mut self.store, ptr as usize, body)
-            .map_err(|e| HostError::Fatal(format!("memory write: {e}")))?;
-        let packed = self
-            .call
-            .call(&mut self.store, (ptr, body.len() as u32))
-            .map_err(|e| fail_classify("gl_call", e))?;
-        let (out_ptr, out_len) = ((packed >> 32) as u32, (packed & 0xffff_ffff) as u32);
-        let mut out = vec![0u8; out_len as usize];
-        self.memory
-            .read(&self.store, out_ptr as usize, &mut out)
-            .map_err(|e| HostError::Fatal(format!("memory read: {e}")))?;
-        self.free
-            .call(&mut self.store, (out_ptr, out_len))
-            .map_err(|e| fail_classify("gl_free", e))?;
-        Ok(out)
-    }
-
-    fn request(&mut self, req: &Value) -> Result<Value, HostError> {
-        let out = self.request_bytes(req.to_string().as_bytes())?;
-        serde_json::from_slice(&out)
-            .map_err(|e| HostError::Fatal(format!("response is not JSON: {e}")))
-    }
-
-    fn exec(&mut self, req: &Value) -> Value {
-        let r = self.request(req).expect("request transport");
-        assert_eq!(r["ok"], json!(true), "exec request failed: {req} -> {r}");
-        r
-    }
-
-    fn stream_all(&mut self, session: &str, cursor: &str) -> String {
-        let mut body = String::new();
-        loop {
-            let page = self.exec(&json!({
-                "op": "duckdb", "mode": "stream", "session": session,
-                "cursor": cursor, "max_rows": 100
-            }));
-            if let Some(b) = page["nquads"].as_str() {
-                body.push_str(b);
-            }
-            if page["more"].as_bool() != Some(true) {
-                return body;
-            }
-        }
-    }
-}
-
-fn fail_classify(stage: &str, e: wasmtime::Error) -> HostError {
-    let s = format!("{stage}: {e}");
-    if e.to_string().contains("uninitialized element") {
-        HostError::Trap(s)
-    } else {
-        HostError::Fatal(s)
-    }
-}
-
-fn try_host() -> Result<Host, String> {
-    let path = wasm_path().ok_or_else(|| "artifact-missing".to_string())?;
-    let bytes = std::fs::read(&path).map_err(|e| format!("fatal: read {}: {e}", path.display()))?;
-    match Host::new(&bytes) {
-        Ok(h) => Ok(h),
-        Err(HostError::Trap(e)) => Err(format!("trap: {e}")),
-        Err(HostError::Fatal(e)) => Err(format!("fatal: {e}")),
-    }
-}
-
-fn host_or_skip(test_name: &str) -> Option<Host> {
-    match try_host() {
-        Ok(h) => Some(h),
-        Err(reason) => {
-            let kind = if reason == "artifact-missing" {
-                "artifact not built"
-            } else if reason.starts_with("trap:") {
-                "first gl_call trapped on uninitialized element (stale/mismatched artifact)"
-            } else {
-                "host construction failed"
-            };
-            eprintln!(
-                "// SKIP(typed) [{test_name}]: {kind} — reason: {reason} — \
-                 suite pending-artifact; build with `WASI_SDK_PATH=<wasi-sdk> \
-                 cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`"
-            );
-            None
-        }
-    }
-}
-
-// --------------------------------------------------------------- documents
-
-fn open_session(h: &mut Host, name: &str) {
-    let r = h.exec(&json!({"op": "duckdb", "mode": "open", "session": name}));
-    assert_eq!(r["session"], json!(name), "session open reply: {r}");
-}
-
-fn close_session(h: &mut Host, name: &str) {
-    h.exec(&json!({"op": "duckdb", "mode": "close", "session": name}));
-}
+// Shared harness (engine lock, wasm host, session open/close) lives in
+// tests/common/mod.rs::engine_court; this file keeps only the bcbs documents.
 
 fn exec_req(session: &str, turtle: &str) -> Value {
     json!({
@@ -512,7 +302,7 @@ fn failing_stage(verdict: &Verdict) -> Option<(String, String)> {
 #[test]
 fn tc_bcbs_01_valid_fold_binds_child_receipts() {
     let _guard = engine_lock();
-    let Some(mut h) = host_or_skip("TC-BCBS-01") else { return };
+    let Some(mut h) = host_or_skip("TC-BCBS-01", true) else { return };
     let dir = temp_dir("01");
     let store = ReceiptStore::open(&dir).expect("open store");
     const SESSION: &str = "bcbs-01";
@@ -591,7 +381,7 @@ fn tc_bcbs_01_valid_fold_binds_child_receipts() {
 #[test]
 fn tc_bcbs_02_forged_child_refused_before_aggregation() {
     let _guard = engine_lock();
-    let Some(mut h) = host_or_skip("TC-BCBS-02") else { return };
+    let Some(mut h) = host_or_skip("TC-BCBS-02", true) else { return };
     let dir = temp_dir("02");
     let store = ReceiptStore::open(&dir).expect("open store");
     const SESSION: &str = "bcbs-02";
@@ -647,7 +437,7 @@ fn tc_bcbs_02_forged_child_refused_before_aggregation() {
 #[test]
 fn tc_bcbs_03_unverified_fold_is_detectable() {
     let _guard = engine_lock();
-    let Some(mut h) = host_or_skip("TC-BCBS-03") else { return };
+    let Some(mut h) = host_or_skip("TC-BCBS-03", true) else { return };
     let dir = temp_dir("03");
     let store = ReceiptStore::open(&dir).expect("open store");
     const SESSION: &str = "bcbs-03";

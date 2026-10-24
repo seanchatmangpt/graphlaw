@@ -268,12 +268,10 @@ mod tests {
         );
     }
 
-    #[test]
-    fn canon_arrow_empty_v1_is_blake3_of_domain_string() {
-        let expected = *blake3::hash(b"CANON_ARROW_EMPTY_V1").as_bytes();
-        assert_eq!(canon_arrow_empty_v1(), &expected);
-        // Stable across calls (OnceLock identity).
-        assert_eq!(canon_arrow_empty_v1(), canon_arrow_empty_v1());
-        assert_eq!(CANON_ARROW_EMPTY_V1(), &expected);
-    }
+    // The `canon_arrow_empty_v1` blake3 pin was removed from here as
+    // redundant: it compared the constructor against the same crate's own
+    // blake3 (tautological). The stronger independent witness lives in
+    // tests/receipt_v2_court.rs (`canon_arrow_empty_v1_matches_independent_blake3`),
+    // which pins the digest against an out-of-band b3sum-computed golden
+    // (EMPTY_GOLDEN).
 }

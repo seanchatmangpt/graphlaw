@@ -4,7 +4,8 @@
 //! binaries, feeds hand-built packet-4 frames over real pipes, asserts on
 //! exit codes, stderr text, and WHO consumed the body bytes (timing).
 //!
-//! Contract under court (both hosts):
+//! Contract under court (graphlaw-run-eh — the sole packet-4 runner since the
+//! wasmi retirement, docs/jira/v26.10.23/ADR-wasmi-retirement.md):
 //! - a frame length prefix > `graphlaw::abi::MAX_REQUEST_BYTES` (16 MiB) is
 //!   refused from the prefix ALONE: exit 92, stderr names length AND cap,
 //!   zero body bytes read, no reply frame written — the leg holds the child's
@@ -18,7 +19,7 @@
 //! Fixture module: the subject of this court is the RUNNER's frame layer, not
 //! the guest, so the legs mount a minimal hand-built wasm module exporting
 //! `memory`/`gl_alloc`/`gl_free`/`gl_call` (gl_call answers a fixed JSON
-//! response from a data segment). It is a real module: both engines validate,
+//! response from a data segment). It is a real module: the engine validates,
 //! instantiate, and execute it; the ABI env-court separately exercises the
 //! real DuckDB artifact's reply path. A missing runner binary is built
 //! (`cargo build --bin <bin> --features <feat>`); a binary that cannot be
@@ -396,100 +397,10 @@ fn assert_reply(stdout: &[u8], context: &str) {
 
 // ---------------------------------------------------------------- courts --
 
-// ---- graphlaw-run (wasmi host; src/bin/graphlaw_run.rs — this lane's mirror)
-
-/// Zero-length frame then EOF → clean exit 0 (degenerate-but-lawful frames
-/// must not be rejected by the new bound). The abi-passthrough answers the
-/// empty frame, so the leg asserts on the well-formed reply, not silence.
-#[test]
-fn wasmi_zero_len_frame_clean_exit0() {
-    let bin = ensure_bin("graphlaw-run", "runner");
-    let stub = write_stub();
-    let out = run_frame(&bin, &stub, StdinPlan::Close(frame(&[])), STUB_DEADLINE);
-    assert_eq!(out.code, 0, "stderr: {}", out.stderr);
-    assert_reply(&out.stdout, "zero-length frame");
-}
-
-/// Exactly-at-cap frame (16 MiB) is admitted end to end and answered —
-/// proves the bound is `>` not `>=`.
-#[test]
-fn wasmi_at_cap_frame_admitted_and_answered() {
-    let bin = ensure_bin("graphlaw-run", "runner");
-    let stub = write_stub();
-    let mut body = br#"{"op":"capabilities"}"#.to_vec();
-    body.resize(CAP, b' '); // lawful JSON whitespace padding to exactly 16 MiB
-    assert_eq!(body.len(), CAP);
-    let out = run_frame(&bin, &stub, StdinPlan::Close(frame(&body)), STUB_DEADLINE);
-    assert_eq!(out.code, 0, "stderr: {}", out.stderr);
-    assert_reply(&out.stdout, "at-cap frame");
-}
-
-/// 0xFFFFFFFF prefix → exit 92, stderr names length AND cap, no reply frame,
-/// and the runner exits while stdin is still OPEN with undrained padding
-/// (it cannot have read the body it never allocated).
-#[test]
-fn wasmi_oversize_0xffffffff_exit92_before_body() {
-    let bin = ensure_bin("graphlaw-run", "runner");
-    let stub = write_stub();
-    let mut bytes = 0xFFFFFFFFu32.to_be_bytes().to_vec();
-    bytes.extend(std::iter::repeat(0x20u8).take(4096)); // undrained padding
-    let out = run_frame(
-        &bin,
-        &stub,
-        StdinPlan::Padded {
-            bytes,
-            window: OPEN_STDIN_WINDOW,
-        },
-        STUB_DEADLINE,
-    );
-    assert_eq!(
-        out.code, 92,
-        "0xFFFFFFFF prefix must abort with exit 92; stderr: {}",
-        out.stderr
-    );
-    assert!(
-        out.stderr.contains("frame length 4294967295"),
-        "stderr must name the refused length: {}",
-        out.stderr
-    );
-    assert!(
-        out.stderr.contains("exceeds cap 16777216"),
-        "stderr must name the cap: {}",
-        out.stderr
-    );
-    assert!(
-        out.stdout.is_empty(),
-        "no reply frame may precede the oversize abort"
-    );
-}
-
-/// cap+1 prefix → exit 92 naming both numbers (boundary twin of the at-cap
-/// leg; together they pin the check as strictly `>`).
-#[test]
-fn wasmi_over_cap_by_one_exit92() {
-    let bin = ensure_bin("graphlaw-run", "runner");
-    let stub = write_stub();
-    let mut bytes = ((CAP + 1) as u32).to_be_bytes().to_vec();
-    bytes.extend(std::iter::repeat(0x20u8).take(4096));
-    let out = run_frame(
-        &bin,
-        &stub,
-        StdinPlan::Padded {
-            bytes,
-            window: OPEN_STDIN_WINDOW,
-        },
-        STUB_DEADLINE,
-    );
-    assert_eq!(out.code, 92, "stderr: {}", out.stderr);
-    assert!(
-        out.stderr.contains("frame length 16777217")
-            && out.stderr.contains("exceeds cap 16777216"),
-        "stderr must name length and cap: {}",
-        out.stderr
-    );
-}
-
-// ---- graphlaw-run-eh (wasmtime host; src/bin/graphlaw_run_eh.rs — spec side)
+// ---- graphlaw-run-eh (wasmtime host; src/bin/graphlaw_run_eh.rs — spec side).
+// The graphlaw-run (wasmi host) legs were retired with the runner on
+// 2026-10-24 per docs/jira/v26.10.23/ADR-wasmi-retirement.md; these EH twins
+// carry the same frame-bound contract.
 
 /// EH twin of the zero-length leg.
 #[test]

@@ -103,22 +103,14 @@ mod tests {
         assert_eq!(first_keys, sorted);
     }
 
-    #[test]
-    fn every_registry_op_has_one_dispatch_arm_in_abi_source() {
-        let full = include_str!("abi.rs");
-        let start = full.find("fn dispatch(").expect("dispatch fn");
-        let end = full.find("pub fn call_json(").expect("call_json");
-        let src = &full[start..end];
-        for op in OPS {
-            let arm = format!("\"{}\" =>", op.name);
-            let count = src
-                .lines()
-                .filter(|l| l.trim_start().starts_with(&arm))
-                .count();
-            assert_eq!(count, 1, "op `{}` needs exactly one dispatch arm", op.name);
-        }
-        assert!(src.contains("bad(format!(\"unknown op `{other}`\"))"));
-    }
+    // The src-side dispatch-arm census was removed as the weaker duplicate of
+    // tests/registry_dispatch.rs: that court parses the same `fn dispatch`
+    // arms from src/abi.rs and asserts (a) no duplicate arms, (b) set equality
+    // with the registry op names in BOTH directions — which together imply
+    // exactly one arm per registry op — plus (c) live dispatch of every
+    // registry op and (d) the unknown-op fallthrough behavior through
+    // `call_json`. This module keeps the registry-document shape and digest
+    // laws only.
 
     #[test]
     fn turtle_is_deterministic_and_counts_ops() {

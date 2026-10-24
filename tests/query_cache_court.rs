@@ -322,6 +322,10 @@ fn cache_unit_epoch_and_grounding() {
         artifact_digest_hex: None,
         artifact_bytes: None,
         artifact_warning: None,
+        // LANE receipt_v2 minimal unblock (compile-freeze SLA, disclosed):
+        // two additive Phase 3 fields from src/duckdb_eval.rs.
+        columnar_digest_hex: None,
+        receipt_v2_hex: None,
     };
     let make_entry = |grounding: Vec<u8>, epoch: u64| CacheEntry {
         h_query: h,
@@ -376,6 +380,9 @@ fn poisoned_mutex_recovers() {
         artifact_digest_hex: None,
         artifact_bytes: None,
         artifact_warning: None,
+        // LANE receipt_v2 minimal unblock (compile-freeze SLA, disclosed).
+        columnar_digest_hex: None,
+        receipt_v2_hex: None,
     };
     cache.store(CacheEntry {
         h_query: h,
@@ -434,6 +441,10 @@ fn receipt_artifact_fields_roundtrip_serde() {
         artifact_digest_hex: Some("deadbeef".into()),
         artifact_bytes: Some(42),
         artifact_warning: None,
+        // LANE receipt_v2 minimal unblock (compile-freeze SLA, disclosed):
+        // absent Phase 3 fields on a pre-Phase-3-shaped receipt.
+        columnar_digest_hex: None,
+        receipt_v2_hex: None,
     };
     let json = serde_json::to_string(&receipt).expect("serialize");
     assert!(

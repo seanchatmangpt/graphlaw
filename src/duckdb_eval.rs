@@ -319,6 +319,24 @@ pub struct ExecutionReceipt {
     /// receipt over refusing a successful execution). `None` when no
     /// warning applies. Skipped on the wire when `None`.
     pub artifact_warning: Option<String>,
+    /// ADR-CANONARROW Phase 3 (dual-witness): hex BLAKE3 of the columnar arm
+    /// folded into `attest::receipt_fold::receipt_v2` — the canonical columnar
+    /// byte form of `result_triples` on tabular results, or the ADR §3.1
+    /// domain null digest `CANON_ARROW_EMPTY_V1` on non-tabular results.
+    /// `None` on receipts sealed before Phase 3 (or by hand-built
+    /// constructions that never ran). Skipped on the wire when `None`
+    /// (lossless-default serde pattern, SQLRDF-22 G3 contract).
+    pub columnar_digest_hex: Option<String>,
+    /// ADR-CANONARROW Phase 3: hex of the sealed versioned dual-witness
+    /// envelope `receipt_v2 = BLAKE3("GLAW_RECEIPT_V2" ∥ H_query ∥ H_pre ∥
+    /// H_post ∥ H_triples ∥ H_columnar ∥ epoch)`. v1 verifiers are
+    /// untouched (OQ-4: dual-receipt additive). `H_pre`/`H_post` fold the
+    /// documented OQ-1(a) state sentinels ([`receipt_v2_state_sentinel`]);
+    /// `epoch` is the C1 plan-cache epoch snapshotted before execution —
+    /// self-verification from the receipt's own fields therefore holds
+    /// verbatim on non-mutating statements. Skipped on the wire when
+    /// `None`.
+    pub receipt_v2_hex: Option<String>,
 }
 
 /// SQLRDF-22 G3: manual `Serialize` for [`ExecutionReceipt`] — the artifact
@@ -331,7 +349,9 @@ impl serde::Serialize for ExecutionReceipt {
         use serde::ser::SerializeMap;
         let extra = self.artifact_digest_hex.is_some() as usize
             + self.artifact_bytes.is_some() as usize
-            + self.artifact_warning.is_some() as usize;
+            + self.artifact_warning.is_some() as usize
+            + self.columnar_digest_hex.is_some() as usize
+            + self.receipt_v2_hex.is_some() as usize;
         let mut map = serializer.serialize_map(Some(8 + extra))?;
         map.serialize_entry("query_iri", &self.query_iri)?;
         map.serialize_entry("query_hash", &self.query_hash)?;
@@ -349,6 +369,12 @@ impl serde::Serialize for ExecutionReceipt {
         }
         if let Some(w) = &self.artifact_warning {
             map.serialize_entry("artifact_warning", w)?;
+        }
+        if let Some(d) = &self.columnar_digest_hex {
+            map.serialize_entry("columnar_digest_hex", d)?;
+        }
+        if let Some(v) = &self.receipt_v2_hex {
+            map.serialize_entry("receipt_v2_hex", v)?;
         }
         map.end()
     }
@@ -377,6 +403,8 @@ impl<'de> serde::Deserialize<'de> for ExecutionReceipt {
             artifact_digest_hex: Option<String>,
             artifact_bytes: Option<u64>,
             artifact_warning: Option<String>,
+            columnar_digest_hex: Option<String>,
+            receipt_v2_hex: Option<String>,
         }
         Wire::deserialize(deserializer).map(|w| ExecutionReceipt {
             query_iri: w.query_iri,
@@ -390,8 +418,122 @@ impl<'de> serde::Deserialize<'de> for ExecutionReceipt {
             artifact_digest_hex: w.artifact_digest_hex,
             artifact_bytes: w.artifact_bytes,
             artifact_warning: w.artifact_warning,
+            columnar_digest_hex: w.columnar_digest_hex,
+            receipt_v2_hex: w.receipt_v2_hex,
         })
     }
+}
+
+// ---------------------------------------------------------------------------
+// Receipt v2 dual-witness production emission (ADR-CANONARROW Phase 3,
+// docs/jira/v26.10.22/ADR-canonarrow-dual-witness-egress.md §3.1).
+// OQ resolutions (v26.10.23 ROADMAP "Operator open questions"):
+//   OQ-1(a) — H_pre/H_post fold documented state sentinels (the eval path
+//             has no pre/post state witnesses; the sentinel is
+//             domain-separated so a future real witness cannot collide);
+//   OQ-2    — H_triples rides the SerTerm canonical JSON encoding of
+//             result_triples (fast path: serde straight into BLAKE3, no
+//             N-Triples text render);
+//   OQ-4    — dual-receipt additive: receipt_v1 verifiers untouched, v2 is
+//             a new envelope alongside v1.
+// ---------------------------------------------------------------------------
+
+/// OQ-1(a) sentinel for the `H_pre`/`H_post` fold arms of
+/// `attest::receipt_fold::receipt_v2`: BLAKE3(b"GLAW_RECEIPT_V2_STATE_SENTINEL_V1").
+///
+/// The eval path carries no pre/post state digests (ROADMAP OQ-1: the eval
+/// paths have no H_pre/H_post witnesses; resolution (a) = sentinel digests,
+/// documented as sentinels). The sentinel is a domain-separated digest, so
+/// it cannot collide with any real `BLAKE3` of execution state under the
+/// fold, and a future resolution-(b) upgrade (real state digests) replaces
+/// it at exactly one site ([`seal_receipt_v2`]).
+pub fn receipt_v2_state_sentinel() -> &'static [u8; 32] {
+    static SENTINEL: std::sync::OnceLock<[u8; 32]> = std::sync::OnceLock::new();
+    SENTINEL.get_or_init(|| *blake3::hash(b"GLAW_RECEIPT_V2_STATE_SENTINEL_V1").as_bytes())
+}
+
+/// OQ-2 fast-path `H_triples`: BLAKE3 over the SerTerm canonical encoding of
+/// `triples` — the serde (SerTerm shadow codec) JSON array, streamed
+/// directly into the BLAKE3 hasher. No N-Triples text render is involved
+/// (ADR baseline: N-Triples render 9.246 ms / 10k rows vs ~992 µs digest
+/// proxy). Deterministic: struct-field-order JSON, row order preserved.
+/// The empty slice encodes as the canonical empty array `b"[]"` — a real
+/// digest of the empty encoding, not a sentinel.
+pub fn h_triples_serterm(triples: &[RdfTriple]) -> [u8; 32] {
+    let mut hasher = blake3::Hasher::new();
+    // blake3::Hasher implements io::Write, so the canonical bytes stream
+    // into the fold with no intermediate whole-document buffer.
+    serde_json::to_writer(&mut hasher, &triples)
+        .expect("SerTerm canonical encode of plain-data triples is infallible");
+    *hasher.finalize().as_bytes()
+}
+
+/// Phase 3 `H_columnar` arm. ADR §3.1: `H_columnar_empty =
+/// BLAKE3(b"CANON_ARROW_EMPTY_V1")` for non-tabular results.
+///
+/// Tabular arm: the ADR §3.2 Arrow IPC payload region is Phase 2 machinery
+/// (the frozen-duckdb arrow re-export carries no `ipc` writer, and the
+/// aligned collector is not wired), so the columnar witness seals the
+/// canonical **column-major** SerTerm encoding of the same result: triples
+/// grouped by predicate in first-appearance (declared projection, ADR
+/// §3.3(1)) order; per column, `u64`-LE byte length prefix then the serde
+/// JSON array of that column's triples (each rendered through the same
+/// SerTerm shadow as [`h_triples_serterm`]). Deterministic, unambiguous
+/// (length-prefixed columns), and genuinely a different byte encoding from
+/// the row-major `H_triples` form.
+pub fn h_columnar_canon(triples: &[RdfTriple]) -> [u8; 32] {
+    if triples.is_empty() {
+        return *crate::egress::arrow::canon_arrow_empty_v1();
+    }
+    // Group by predicate; columns in first-appearance order.
+    let mut order: Vec<String> = Vec::new();
+    let mut columns: std::collections::HashMap<&str, Vec<&RdfTriple>> =
+        std::collections::HashMap::new();
+    for t in triples {
+        if !columns.contains_key(t.predicate.as_str()) {
+            order.push(t.predicate.clone());
+        }
+        columns.entry(t.predicate.as_str()).or_default().push(t);
+    }
+    let mut hasher = blake3::Hasher::new();
+    for pred in &order {
+        let column = &columns[pred.as_str()];
+        // Length-prefix each column so the concatenation is unambiguous.
+        let mut buf = Vec::new();
+        serde_json::to_writer(&mut buf, &column)
+            .expect("SerTerm canonical encode of plain-data triples is infallible");
+        hasher.update(&(buf.len() as u64).to_le_bytes());
+        hasher.update(&buf);
+    }
+    *hasher.finalize().as_bytes()
+}
+
+/// Seals the ADR-CANONARROW Phase 3 dual-witness envelope onto `receipt`:
+/// computes `H_triples` ([`h_triples_serterm`]) and the columnar arm
+/// ([`h_columnar_canon`]), folds `receipt_v2` over
+/// `(H_query, SENTINEL, SENTINEL, H_triples, H_columnar, epoch)` via
+/// `attest::receipt_fold::receipt_v2`, and stamps both hex fields.
+///
+/// `epoch` is the C1 plan-cache epoch snapshotted before execution
+/// (`eval_member`'s `exec_epoch`), so on non-mutating statements the
+/// receipt is self-verifiable from its own fields plus
+/// `shared_cache().epoch()`. Called after the artifact rebuild so a cached
+/// or stored receipt always carries the seal; on an `eval_admitted_ast`
+/// divergent-graph hash override the caller re-seals (the envelope folds
+/// `H_query`).
+fn seal_receipt_v2(receipt: &mut ExecutionReceipt, epoch: u64) {
+    let h_triples = h_triples_serterm(&receipt.result_triples);
+    let h_columnar = h_columnar_canon(&receipt.result_triples);
+    let v2 = crate::attest::receipt_fold::receipt_v2(
+        &receipt.query_hash,
+        receipt_v2_state_sentinel(),
+        receipt_v2_state_sentinel(),
+        &h_triples,
+        &h_columnar,
+        epoch,
+    );
+    receipt.columnar_digest_hex = Some(crate::attest::hex_encode(&h_columnar));
+    receipt.receipt_v2_hex = Some(crate::attest::hex_encode(&v2));
 }
 
 /// SQLRDF-23 (eval half): receipt for a compiled statement-sequence
@@ -1546,6 +1688,11 @@ impl GraphLawDuckDB {
             artifact_digest_hex: None,
             artifact_bytes: None,
             artifact_warning: None,
+            // LANE sniff2 minimal unblock (compile-freeze SLA): Phase 3
+            // dual-witness fields initialize to None; the CANONARROW seam
+            // populates them post-seal.
+            columnar_digest_hex: None,
+            receipt_v2_hex: None,
         };
 
         // SQLRDF-22 G3 (egress half): a successful `COPY ... TO '<path>'`
@@ -1571,12 +1718,17 @@ impl GraphLawDuckDB {
                 Err(warning) => artifact_warning = Some(warning),
             }
         }
-        let receipt = ExecutionReceipt {
+        let mut receipt = ExecutionReceipt {
             artifact_digest_hex,
             artifact_bytes,
             artifact_warning,
             ..receipt
         };
+
+        // ADR-CANONARROW Phase 3: seal the dual-witness v2 envelope onto the
+        // rebuilt receipt (before the C1 store seam below, so cached entries
+        // carry the seal; consult-side receipts ride the stored seal).
+        seal_receipt_v2(&mut receipt, exec_epoch);
 
         // C1 store seam: successful miss of a cacheable statement. D2
         // compare-and-swap: the entry is stamped with `exec_epoch` and stored
@@ -1634,6 +1786,15 @@ impl GraphLawDuckDB {
         if !same_document {
             let canonical_graph = canonical_ast_graph_bytes(ast_turtle)?;
             receipt.query_hash = admitted_statement_hash(&canonical_graph, &compiled.params);
+            // The v2 envelope folds H_query: after the divergent-graph hash
+            // override the seal is recomputed so the receipt stays
+            // self-consistent. Re-seal uses the current C1 epoch (the
+            // pre-execution snapshot is out of scope here); on non-mutating
+            // statements the two coincide, keeping the receipt
+            // field-verifiable.
+            let mut receipt = receipt;
+            seal_receipt_v2(&mut receipt, self.cache.epoch());
+            return Ok(receipt);
         }
         Ok(receipt)
     }

@@ -15,14 +15,15 @@
 //!
 //! Runs under plain `cargo test --test amortization_court`.
 
-use std::sync::Mutex;
+mod common;
 
+use common::engine_court::ENGINE_LOCK;
 use graphlaw::duckdb_eval::{ExecutionReceipt, GraphLawDuckDB};
 use graphlaw::sql_ast::{CompiledQuery, compile_turtle};
 
 /// The frozen engine segfaults under concurrent engine-heavy threads
 /// (tests/duckdb_statement_kinds.rs:11); serialize engine-heavy legs.
-static ENGINE_LOCK: Mutex<()> = Mutex::new(());
+/// The lock itself lives in tests/common/mod.rs::engine_court.
 
 const N_QUERIES: usize = 1_000;
 const N_TEMPLATES: usize = 16;

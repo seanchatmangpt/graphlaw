@@ -1495,6 +1495,147 @@ pub trait RdfAstGraphReader {
         })
     }
 
+    /// SQLRDF-27 dialect gap #1: extracts a `sql:SetOperationStatement` —
+    /// two full nested `sql:SelectStatement` operands, one required
+    /// `sql:setOperator` token (`UNION` | `INTERSECT` | `EXCEPT`), and the
+    /// optional `sql:setAll` / `sql:byName` xsd:boolean flags.
+    ///
+    /// Refusal law (typed, never a silent default or a dropped clause):
+    /// - unknown `sql:` predicate on the statement node → REFUSAL-01
+    ///   `UNKNOWN_STATEMENT_PREDICATE` (same closed-enum gate as
+    ///   [`Self::extract_select_statement`]);
+    /// - missing `sql:setLeft` / `sql:setOperator` → internal
+    ///   `MissingProperty` (MERGE-clause precedent);
+    /// - missing `sql:setRight` → REFUSAL-01 arm `SET_OP_NO_RIGHT` (the
+    ///   dedicated appended arm — the rendered SQL would end at the
+    ///   combinator with an empty right operand);
+    /// - duplicate clause predicates → `DUP_CLAUSE_PREDICATE`;
+    /// - unknown operator token → arm `SET_OP_KIND_TOKEN`;
+    /// - non-boolean flag lexical → arm `SET_OP_FLAG_LEX`;
+    /// - `sql:byName true` beside INTERSECT/EXCEPT → arm
+    ///   `SET_OP_BY_NAME_KIND` (engine-witnessed: `INTERSECT BY NAME` is a
+    ///   real frozen-duckdb parser error).
+    fn extract_set_operation_statement(
+        &self,
+        query_node: &Self::Node,
+    ) -> Result<SetOperationStatement, AstError> {
+        const SQL_NS: &str = "http://graphlaw.org/sql#";
+        const KNOWN_SQL_PREDICATES: &[&str] = &[
+            "statementIndex",
+            "setLeft",
+            "setOperator",
+            "setAll",
+            "byName",
+            "setRight",
+        ];
+        for pred in self.predicate_iris(query_node) {
+            if let Some(local) = pred.strip_prefix(SQL_NS)
+                && !KNOWN_SQL_PREDICATES.contains(&local)
+            {
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::UNKNOWN_STATEMENT_PREDICATE,
+                )
+                .with_ident(query_node)
+                .with_aux_ident(&pred));
+            }
+        }
+
+        let left_node = self
+            .single_object_checked(query_node, "http://graphlaw.org/sql#setLeft")?
+            .ok_or_else(|| {
+                AstError::MissingProperty(
+                    "http://graphlaw.org/sql#setLeft".to_string(),
+                    query_node.to_string(),
+                )
+            })?;
+        let left = self.extract_select_statement(&left_node)?;
+
+        let right_node = self
+            .single_object_checked(query_node, "http://graphlaw.org/sql#setRight")?
+            .ok_or_else(|| {
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::SET_OP_NO_RIGHT)
+                    .with_ident(query_node)
+            })?;
+        let right = self.extract_select_statement(&right_node)?;
+
+        // The combinator token: a string literal is the lawful form; an IRI
+        // object falls through to `from_token` and refuses as an unknown
+        // token (never a silent default to UNION). Single-cardinality like
+        // every clause predicate (audit E3).
+        if self.object_count(query_node, "http://graphlaw.org/sql#setOperator") > 1 {
+            return Err(AstError::new(
+                RefusalCode::MalformedAst,
+                refusal_arm::DUP_CLAUSE_PREDICATE,
+            )
+            .with_ident("http://graphlaw.org/sql#setOperator")
+            .with_aux_ident(query_node));
+        }
+        let op_token = match self
+            .get_datatype_literal(query_node, "http://graphlaw.org/sql#setOperator")
+        {
+            Some((tok, _)) => tok,
+            None => self
+                .get_single_object(query_node, "http://graphlaw.org/sql#setOperator")
+                .ok_or_else(|| {
+                    AstError::MissingProperty(
+                        "http://graphlaw.org/sql#setOperator".to_string(),
+                        query_node.to_string(),
+                    )
+                })?
+                .to_string(),
+        };
+        let kind = SetOpKind::from_token(&op_token)?;
+
+        // Flags: E4-style literal reads (count-checked; a present-but-Iri
+        // object is the malformed-lexical arm, never an absent flag).
+        let mut flag_lex = |pred: &str| -> Result<bool, AstError> {
+            let full = format!("{SQL_NS}{pred}");
+            if self.object_count(query_node, &full) > 1 {
+                return Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::DUP_CLAUSE_PREDICATE,
+                )
+                .with_ident(&full)
+                .with_aux_ident(query_node));
+            }
+            match self.get_datatype_literal(query_node, &full) {
+                Some((v, _)) if v == "true" => Ok(true),
+                Some((v, _)) if v == "false" => Ok(false),
+                Some((v, _)) => Err(
+                    AstError::new(RefusalCode::MalformedAst, refusal_arm::SET_OP_FLAG_LEX)
+                        .with_ident(pred)
+                        .with_aux_ident(&v),
+                ),
+                None if self.object_count(query_node, &full) > 0 => Err(AstError::new(
+                    RefusalCode::MalformedAst,
+                    refusal_arm::SET_OP_FLAG_LEX,
+                )
+                .with_ident(pred)
+                .with_aux_ident(query_node)),
+                None => Ok(false),
+            }
+        };
+        let all = flag_lex("setAll")?;
+        let by_name = flag_lex("byName")?;
+
+        if by_name && kind != SetOpKind::Union {
+            return Err(AstError::new(
+                RefusalCode::MalformedAst,
+                refusal_arm::SET_OP_BY_NAME_KIND,
+            )
+            .with_ident(query_node));
+        }
+
+        Ok(SetOperationStatement {
+            left,
+            kind,
+            all,
+            by_name,
+            right,
+        })
+    }
+
     /// Extracts a section 7 `MergeIntoStatement`: target table identifier,
     /// grouped USING sub-select, merge ON condition, and WHEN MATCHED update
     /// assignments. Any other shape falls back to the legacy scalar template.
@@ -1913,6 +2054,11 @@ fn compile_statement_arm(
         // `sql:UnpivotStatementShape`; rec section 4 statement-class ladder).
         "PivotStatement" => compile_pivot_statement(reader, node),
         "UnpivotStatement" => compile_unpivot_statement(reader, node),
+        // SQLRDF-27 dialect gap #1: UNION [ALL] [BY NAME] / INTERSECT [ALL] /
+        // EXCEPT [ALL] over two full nested SelectStatement operands. The
+        // cacheable-class memo and `cacheable` bit keep excluding composite
+        // arms (merge precedent): only the SelectStatement arm enters either.
+        "SetOperationStatement" => reader.extract_set_operation_statement(node)?.compile_set_operation(),
         other => reader.compile_command(node, other),
     }
 }

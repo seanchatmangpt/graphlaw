@@ -16,19 +16,67 @@ fn body_lines(text: &str) -> impl Iterator<Item = &str> {
         .filter(|l| !(l.is_empty() || l.starts_with('#') || is_directive_line(l)))
 }
 
+/// Routing head budget (`design-sniff-fixes.md` fix 5, court
+/// `tests/sniff_court.rs`): routing never sees more than this many characters
+/// of collapsed skeleton per document — charged after comment-stripping,
+/// literal-blanking and whitespace-collapse. Documents whose routing-relevant
+/// tokens land beyond this budget require an explicit `hint`. Named constant,
+/// asserted by court; never a magic literal.
+const HEAD_BUDGET: usize = 8192;
+
+/// SNIFF-01 (design-sniff-fixes fix 4): true when the collapsed skeleton has
+/// a leading SQL statement shape (`SELECT`/`INSERT`/`UPDATE`, `DELETE FROM`,
+/// `CREATE TABLE`) plus a SQL clause keyword (`FROM`/`INTO`/`SET`/`VALUES`)
+/// and none of the SPARQL markers — `WHERE`, `FILTER`, a graph-pattern `{`,
+/// an `a` type token, `sql:` vocabulary. SPARQL text carrying any marker
+/// still routes [`Dialect::Sparql`].
+fn bare_sql(skel: &str, first_keyword: &str) -> bool {
+    let lower = skel.to_ascii_lowercase();
+    let toks: Vec<&str> = lower.split_whitespace().collect();
+    let marker = toks.iter().any(|t| matches!(*t, "where" | "filter" | "a"))
+        || toks.iter().any(|t| t.starts_with("sql:"))
+        || skel.contains('{');
+    if marker {
+        return false;
+    }
+    let leading = match first_keyword {
+        "SELECT" | "INSERT" | "UPDATE" => true,
+        "DELETE" => toks.get(1) == Some(&"from"),
+        "CREATE" => toks.get(1) == Some(&"table"),
+        _ => false,
+    };
+    if !leading {
+        return false;
+    }
+    toks.iter()
+        .any(|t| matches!(*t, "from" | "into" | "set" | "values"))
+}
+
 /// The document with comments, string literals and IRI references blanked, so
 /// that structural tokens (`{`, `=>`, `GRAPH`) are only seen where they are
 /// syntax and not where they are data.
+///
+/// `#` handling is IRI-aware (design-sniff-fixes fix 2): `in_iri` is tracked
+/// across `<`/`>` exactly as [`route_sql_rdf`]'s stripper does — a `<` that
+/// never closes falls through to per-char processing with `in_iri` set, `>`
+/// and `\n` clear it, and a `#` inside an unclosed IRI span is pushed as data
+/// (a fragment separator), not treated as a comment start.
 pub(super) fn skeleton(text: &str) -> String {
     let c: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len());
     let mut i = 0;
+    let mut in_iri = false;
     while i < c.len() {
         match c[i] {
-            '#' => {
+            '#' if !in_iri => {
                 while i < c.len() && c[i] != '\n' {
                     i += 1;
                 }
+            }
+            // Inside an unclosed `<...>` span: data, not a comment.
+            '#' => {
+                out.push('#');
+                i += 1;
             }
             q @ ('"' | '\'') => {
                 let triple = c.get(i + 1) == Some(&q) && c.get(i + 2) == Some(&q);
@@ -63,12 +111,26 @@ pub(super) fn skeleton(text: &str) -> String {
                     Some(n) if c[i + 1 + n] == '>' => {
                         out.push_str("<>");
                         i += n + 2;
+                        in_iri = false;
                     }
                     _ => {
                         out.push('<');
                         i += 1;
+                        // Unclosed `<`: track the span like the stripper does
+                        // so a same-line `#` is data, not a comment.
+                        in_iri = true;
                     }
                 }
+            }
+            '>' => {
+                in_iri = false;
+                out.push('>');
+                i += 1;
+            }
+            '\n' => {
+                in_iri = false;
+                out.push('\n');
+                i += 1;
             }
             ch => {
                 out.push(ch);
@@ -106,8 +168,21 @@ fn line_terms(line: &str) -> Option<usize> {
             rest.find('>')? + 1
         } else if rest.starts_with("_:") {
             rest.find(char::is_whitespace).unwrap_or(rest.len())
-        } else if let Some(tail) = rest.strip_prefix('"') {
-            let close = tail.find('"')? + 2;
+        } else if rest.starts_with('"') {
+            // Escape-aware close (design-sniff-fixes fix 3): on `\` skip the
+            // escape and its escaped char, so `\"` never terminates the
+            // literal scan early. Byte-scan is UTF-8-safe (`\` and `"` are
+            // ASCII; continuation bytes are >= 0x80).
+            let b = rest.as_bytes();
+            let mut j = 1; // rest[0] is the opening quote
+            let close = loop {
+                match b.get(j) {
+                    None => return None, // unterminated literal
+                    Some(b'\\') => j += 2,
+                    Some(b'"') => break j + 1,
+                    Some(_) => j += 1,
+                }
+            };
             close
                 + rest[close..]
                     .find(char::is_whitespace)
@@ -139,7 +214,7 @@ pub fn sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> {
     }
     let lower: String = head
         .chars()
-        .take(600)
+        .take(HEAD_BUDGET)
         .collect::<String>()
         .to_ascii_lowercase();
     if lower.starts_with("<!doctype html")
@@ -181,9 +256,36 @@ pub fn sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> {
             Dialect::JsonLd
         });
     }
-    let skel = skeleton(head);
+    // Fix 5 (design-sniff-fixes.md): the routing view of the document is its
+    // skeleton with whitespace collapsed, charged against [`HEAD_BUDGET`] —
+    // routing never sees more than 8 KiB of skeleton per document. The window
+    // ends at the last complete line within the budget: a partial trailing
+    // line is an artifact of truncation, not document content, and counting
+    // it as a body line would break the line-based classification (measured:
+    // `ontologies/schema-org/schema_all_https.nt`, 2.37 MB of N-Triples,
+    // classified Turtle when the cut landed mid-line).
+    let skel = {
+        let full = skeleton(head);
+        let collapsed = full.split_whitespace().collect::<Vec<_>>().join(" ");
+        let window: String = collapsed.chars().take(HEAD_BUDGET).collect();
+        match window.rfind('\n') {
+            Some(n) => window[..=n].to_string(),
+            None => window,
+        }
+    };
     let body: Vec<&str> = body_lines(&skel).collect();
     let first_keyword = first_keyword(&skel);
+    // Fix 4 / SNIFF-01: bare SQL keyword+clause shape with none of the
+    // SPARQL markers present is a typed refusal at routing — before the
+    // SPARQL keyword set below, which would otherwise admit it as
+    // [`Dialect::Sparql`] and fail SPARQL parse with a generic engine error.
+    if bare_sql(&skel, &first_keyword) {
+        return Err(Refusal::routing(
+            RefusalKind::BareSql,
+            "bare SQL statement, not SPARQL; no SPARQL markers (WHERE, \
+             FILTER, graph pattern) are present",
+        ));
+    }
     if matches!(
         first_keyword.as_str(),
         "SELECT"
@@ -247,55 +349,84 @@ fn route_sql_rdf(head: &str) -> Option<Result<Dialect, Refusal>> {
     const SQL_IRI: &str = "http://graphlaw.org/sql#";
 
     // Whitespace-collapsed token stream: assertions and usages may span lines.
-    // Turtle comments are stripped first (`#` to end of line, but never inside
-    // a `<...>` IRI, where `#` is a fragment separator). String literals
-    // (`"..."` or `"""..."""`) are also stripped so mentions inside comments
-    // or literal documentation strings (e.g. rdfs:comment) never trigger false usage.
+    // Comments (`#` to end of line, never inside a `<...>` IRI, where `#` is a
+    // fragment separator) are stripped. String literals are blanked through
+    // the same quote/triple-quote/backslash-escape state machine as
+    // [`skeleton`] (design-sniff-fixes fix 1: a port of existing machinery),
+    // replacing each literal span with a `""` placeholder — so a `sql:` token
+    // inside `"..."`, `'...'` or `"""..."""` is data, never usage, and a `#`
+    // inside a literal is data, not a comment.
+    let c: Vec<char> = head.chars().collect();
     let mut stripped = String::with_capacity(head.len());
+    let mut i = 0;
     let mut in_iri = false;
     let mut in_comment = false;
-    let mut in_str = false;
-    let mut prev_char = '\0';
-    for c in head.chars() {
+    while i < c.len() {
         if in_comment {
-            if c == '\n' {
+            if c[i] == '\n' {
                 in_comment = false;
-                stripped.push(c);
+                stripped.push('\n');
             }
-            prev_char = c;
+            i += 1;
             continue;
         }
-        if in_str {
-            if c == '"' && prev_char != '\\' {
-                in_str = false;
-                stripped.push(' ');
-            }
-            prev_char = c;
-            continue;
-        }
-        match c {
-            '"' => {
-                in_str = true;
-                stripped.push(' ');
+        match c[i] {
+            q @ ('"' | '\'') => {
+                let triple = c.get(i + 1) == Some(&q) && c.get(i + 2) == Some(&q);
+                i += if triple { 3 } else { 1 };
+                while i < c.len() {
+                    if c[i] == '\\' {
+                        i += 2;
+                        continue;
+                    }
+                    if c[i] == q {
+                        if !triple {
+                            i += 1;
+                            break;
+                        }
+                        if c.get(i + 1) == Some(&q) && c.get(i + 2) == Some(&q) {
+                            i += 3;
+                            break;
+                        }
+                    } else if !triple && c[i] == '\n' {
+                        break;
+                    }
+                    i += 1;
+                }
+                stripped.push_str("\"\"");
             }
             '<' => {
                 in_iri = true;
-                stripped.push(c);
+                stripped.push('<');
+                i += 1;
             }
             '>' => {
                 in_iri = false;
-                stripped.push(c);
+                stripped.push('>');
+                i += 1;
             }
-            '#' if !in_iri => in_comment = true,
+            '#' if !in_iri => {
+                in_comment = true;
+                i += 1;
+            }
             '\n' => {
                 in_iri = false;
-                stripped.push(c);
+                stripped.push('\n');
+                i += 1;
             }
-            _ => stripped.push(c),
+            ch => {
+                stripped.push(ch);
+                i += 1;
+            }
         }
-        prev_char = c;
     }
-    let toks: Vec<&str> = stripped.split_whitespace().collect();
+    // Fix 5: the token view is charged against [`HEAD_BUDGET`] after
+    // comment-stripping, literal-blanking and whitespace-collapse.
+    let view: String = {
+        let collapsed = stripped.split_whitespace().collect::<Vec<_>>().join(" ");
+        collapsed.chars().take(HEAD_BUDGET).collect()
+    };
+    let toks: Vec<&str> = view.split_whitespace().collect();
 
     let ends_with_statement = |tok: &str| -> bool {
         let rest = tok.strip_prefix(SQL).or_else(|| tok.strip_prefix(SQL_IRI));

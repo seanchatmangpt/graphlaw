@@ -38,6 +38,14 @@ pub enum RefusalKind {
     /// the caller gets this typed refusal instead. Absence from the hashed
     /// 14-op list is not this refusal and is not REFUSAL-04.
     DuckDb,
+    /// SNIFF-01 (`docs/refusals.md`): the document is bare SQL — a leading
+    /// SQL keyword plus a clause keyword with none of the SPARQL markers
+    /// (`WHERE`, `FILTER`, graph-pattern `{`, `a` type token, `sql:`
+    /// vocabulary). Typed refusal at routing, instead of admitting the text
+    /// as [`Dialect::Sparql`] and failing SPARQL parse with a generic
+    /// engine error. Refusal codes are append-only; this variant is never
+    /// renumbered.
+    BareSql,
 }
 
 /// Diagnostic text on a [`Refusal`]. Literals stay a `'static` borrow so the

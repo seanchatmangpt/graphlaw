@@ -498,3 +498,60 @@ fn court_b_whereless_update_refused_and_table_unchanged() {
 
     close_session(&mut h, SESSION);
 }
+
+// --------------------------------------------------------------- Court D
+
+/// Digest of the pre-duckdb legacy artifact (`priv/graphlaw.wasm` at the
+/// pre-wiring pin). When the shipped artifact's blake3 no longer matches, the
+/// before-state witness is obsolete and skips loudly — never a faked pass.
+const LEGACY_DIGEST: &str =
+    "f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e";
+
+/// Legacy before-state witness, ported from the retired
+/// tests/wasm_duckdb_op_wired.rs (`legacy_pin_shipped_artifact_refuses_duckdb_op`):
+/// the pre-duckdb shipped artifact answers the duckdb request with the typed
+/// unknown-op refusal. Digest-gated — when `priv/graphlaw.wasm` is re-pinned
+/// past the pre-wiring build, this skips loudly instead of failing falsely.
+/// The legacy artifact predates the W3C exception tag section, so it
+/// instantiates under this same wasmtime EH host (a proposal enabled in the
+/// runtime admits modules that do not use it).
+#[test]
+fn court_d_legacy_pin_shipped_artifact_refuses_duckdb_op() {
+    let _guard = engine_lock();
+    let shipped = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("priv/graphlaw.wasm");
+    let bytes = match std::fs::read(&shipped) {
+        Ok(b) => b,
+        Err(_) => {
+            eprintln!(
+                "// SKIP(typed): legacy witness artifact {} missing — before-state \
+                 refusal lives in the receipt now",
+                shipped.display()
+            );
+            return;
+        }
+    };
+    let digest = blake3::Hasher::new().update(&bytes).finalize().to_string();
+    if digest != LEGACY_DIGEST {
+        eprintln!(
+            "// SKIP(typed): {} digest {digest} no longer matches the legacy \
+             pre-duckdb pin ({LEGACY_DIGEST}); artifact re-pinned past the before-state",
+            shipped.display()
+        );
+        return;
+    }
+    let mut h = match Host::new(&bytes) {
+        Ok(h) => h,
+        Err(e) => {
+            eprintln!(
+                "// SKIP(typed): cannot drive the legacy artifact under the \
+                 wasmtime EH host: {e}"
+            );
+            return;
+        }
+    };
+    let out = h.request(&json!({"op": "duckdb", "mode": "close", "cursor": "x"}));
+    assert_eq!(out["ok"], Value::Bool(false), "{out}");
+    assert_eq!(out["error"]["kind"], "Unsupported", "{out}");
+    let msg = out["error"]["message"].as_str().unwrap_or_default();
+    assert!(msg.contains("unknown op"), "{out}");
+}

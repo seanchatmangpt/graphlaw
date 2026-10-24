@@ -256,3 +256,254 @@ pub fn read(path: &str) -> String {
     std::fs::read_to_string(format!("{}/{path}", env!("CARGO_MANIFEST_DIR")))
         .unwrap_or_else(|e| panic!("read {path}: {e}"))
 }
+
+// ---------------------------------------------------------------------------
+// engine_court: the shared wasm-engine harness for the finance-domain courts
+// (bcbs_aggregation, dvp_settlement, ubo_sanctions). Reduced verbatim from
+// tests/bcbs_aggregation_court.rs — the trio's copies were identical modulo
+// comment/format drift; ubo omits the /tmp WASI preopen, so `preopen_tmp`
+// parameterizes it instead of widening every court's capability grant.
+// ---------------------------------------------------------------------------
+
+pub mod engine_court {
+    use std::path::PathBuf;
+    use std::sync::Mutex;
+
+    use serde_json::{Value, json};
+    use wasmtime::{Config, Engine, Instance, Linker, Memory, Module, Store, TypedFunc};
+    use wasmtime_wasi::WasiCtxBuilder;
+    use wasmtime_wasi::p1::{WasiP1Ctx, add_to_linker_sync};
+
+    /// The frozen engine segfaults when engine-heavy tests run concurrently;
+    /// serialize the wasm-engine courts with a process-local lock (structural
+    /// sync, no sleeps).
+    pub static ENGINE_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Lock without poison cascade: a court that panics (e.g. a pending-
+    /// artifact `unknown op`) must not fail its siblings with PoisonError —
+    /// each court reports its own outcome.
+    pub fn engine_lock() -> std::sync::MutexGuard<'static, ()> {
+        ENGINE_LOCK
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// The wasm artifact under test: `GRAPHLAW_WASM` overrides (and must exist
+    /// when set), else the default target-dir build output. `None` = not built.
+    pub fn wasm_path() -> Option<PathBuf> {
+        if let Some(p) = std::env::var_os("GRAPHLAW_WASM") {
+            let path = PathBuf::from(p);
+            if !path.is_file() {
+                panic!(
+                    "GRAPHLAW_WASM is set but the artifact is missing: {}",
+                    path.display()
+                );
+            }
+            return Some(path);
+        }
+        let artifact = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("target/wasm32-wasip1/wasm/graphlaw_wasm.wasm");
+        if artifact.is_file() {
+            return Some(artifact);
+        }
+        None
+    }
+
+    /// Classified host failure: `Trap` ("uninitialized element" — stale or
+    /// mismatched artifact) vs `Fatal` (everything else).
+    #[derive(Debug)]
+    pub enum HostError {
+        /// gl_call/gl_free trapped on an uninitialized element.
+        Trap(String),
+        /// Deterministically fatal construction/transport failure.
+        Fatal(String),
+    }
+
+    /// One wasmtime host around a compiled module: wasi_snapshot_preview1
+    /// imports plus the gl_alloc/gl_call/gl_free JSON-over-linear-memory ABI.
+    pub struct Host {
+        store: Store<WasiP1Ctx>,
+        memory: Memory,
+        alloc: TypedFunc<u32, u32>,
+        free: TypedFunc<(u32, u32), ()>,
+        call: TypedFunc<(u32, u32), u64>,
+    }
+
+    impl Host {
+        /// Compile + instantiate. `preopen_tmp` grants the module `/tmp`
+        /// ReadWrite (bcbs/dvp grant it; ubo does not).
+        pub fn new(bytes: &[u8], preopen_tmp: bool) -> Result<Self, HostError> {
+            let fail = |e: wasmtime::Error, stage: &'static str| {
+                let s = format!("{stage}: {e}");
+                if e.to_string().contains("uninitialized element") {
+                    HostError::Trap(s)
+                } else {
+                    HostError::Fatal(s)
+                }
+            };
+            let mut cfg = Config::new();
+            cfg.wasm_exceptions(true);
+            let engine = Engine::new(&cfg).map_err(|e| HostError::Fatal(format!("engine: {e}")))?;
+            let module =
+                Module::new(&engine, bytes).map_err(|e| HostError::Fatal(format!("module: {e}")))?;
+            for i in module.imports() {
+                if i.module() != "wasi_snapshot_preview1" {
+                    return Err(HostError::Fatal(format!(
+                        "unexpected host import {}::{}",
+                        i.module(),
+                        i.name()
+                    )));
+                }
+            }
+            let wasi = if preopen_tmp {
+                WasiCtxBuilder::new()
+                    .inherit_stdio()
+                    .inherit_env()
+                    .preopened_dir("/tmp", "/tmp", wasmtime_wasi::FsPerms::ReadWrite)
+                    .map_err(|e| HostError::Fatal(format!("preopen /tmp: {e}")))?
+                    .build_p1()
+            } else {
+                WasiCtxBuilder::new().inherit_stdio().inherit_env().build_p1()
+            };
+            let mut store = Store::new(&engine, wasi);
+            let mut linker = <Linker<WasiP1Ctx>>::new(&engine);
+            add_to_linker_sync(&mut linker, |ctx| ctx)
+                .map_err(|e| HostError::Fatal(format!("wasi linker: {e}")))?;
+            let instance: Instance = linker
+                .instantiate(&mut store, &module)
+                .map_err(|e| fail(e, "instantiate"))?;
+            if let Ok(init) = instance.get_typed_func::<(), ()>(&mut store, "_initialize") {
+                init.call(&mut store, ()).map_err(|e| fail(e, "_initialize"))?;
+            }
+            let memory = instance
+                .get_memory(&mut store, "memory")
+                .ok_or_else(|| HostError::Fatal("module does not export memory".into()))?;
+            let missing = |name: &'static str, e: wasmtime::Error| {
+                HostError::Fatal(format!("missing or mistyped export {name}: {e}"))
+            };
+            Ok(Host {
+                alloc: instance
+                    .get_typed_func::<u32, u32>(&mut store, "gl_alloc")
+                    .map_err(|e| missing("gl_alloc", e))?,
+                free: instance
+                    .get_typed_func::<(u32, u32), ()>(&mut store, "gl_free")
+                    .map_err(|e| missing("gl_free", e))?,
+                call: instance
+                    .get_typed_func::<(u32, u32), u64>(&mut store, "gl_call")
+                    .map_err(|e| missing("gl_call", e))?,
+                store,
+                memory,
+            })
+        }
+
+        pub fn request_bytes(&mut self, body: &[u8]) -> Result<Vec<u8>, HostError> {
+            let ptr = self
+                .alloc
+                .call(&mut self.store, body.len() as u32)
+                .map_err(|e| fail_classify("gl_alloc", e))?;
+            if ptr == 0 {
+                return Err(HostError::Fatal("gl_alloc refused a pre-checked request".into()));
+            }
+            self.memory
+                .write(&mut self.store, ptr as usize, body)
+                .map_err(|e| HostError::Fatal(format!("memory write: {e}")))?;
+            let packed = self
+                .call
+                .call(&mut self.store, (ptr, body.len() as u32))
+                .map_err(|e| fail_classify("gl_call", e))?;
+            let (out_ptr, out_len) = ((packed >> 32) as u32, (packed & 0xffff_ffff) as u32);
+            let mut out = vec![0u8; out_len as usize];
+            self.memory
+                .read(&self.store, out_ptr as usize, &mut out)
+                .map_err(|e| HostError::Fatal(format!("memory read: {e}")))?;
+            self.free
+                .call(&mut self.store, (out_ptr, out_len))
+                .map_err(|e| fail_classify("gl_free", e))?;
+            Ok(out)
+        }
+
+        pub fn request(&mut self, req: &Value) -> Result<Value, HostError> {
+            let out = self.request_bytes(req.to_string().as_bytes())?;
+            serde_json::from_slice(&out)
+                .map_err(|e| HostError::Fatal(format!("response is not JSON: {e}")))
+        }
+
+        pub fn exec(&mut self, req: &Value) -> Value {
+            let r = self.request(req).expect("request transport");
+            assert_eq!(r["ok"], json!(true), "exec request failed: {req} -> {r}");
+            r
+        }
+
+        /// Stream a cursor fully and return the N-Triples body.
+        pub fn stream_all(&mut self, session: &str, cursor: &str) -> String {
+            let mut body = String::new();
+            loop {
+                let page = self.exec(&json!({
+                    "op": "duckdb", "mode": "stream", "session": session,
+                    "cursor": cursor, "max_rows": 100
+                }));
+                if let Some(b) = page["nquads"].as_str() {
+                    body.push_str(b);
+                }
+                if page["more"].as_bool() != Some(true) {
+                    return body;
+                }
+            }
+        }
+    }
+
+    /// Classify a wasmtime invocation error by its trap shape.
+    pub fn fail_classify(stage: &str, e: wasmtime::Error) -> HostError {
+        let s = format!("{stage}: {e}");
+        if e.to_string().contains("uninitialized element") {
+            HostError::Trap(s)
+        } else {
+            HostError::Fatal(s)
+        }
+    }
+
+    /// Build the host or report the typed failure reason.
+    pub fn try_host(preopen_tmp: bool) -> Result<Host, String> {
+        let path = wasm_path().ok_or_else(|| "artifact-missing".to_string())?;
+        let bytes =
+            std::fs::read(&path).map_err(|e| format!("fatal: read {}: {e}", path.display()))?;
+        match Host::new(&bytes, preopen_tmp) {
+            Ok(h) => Ok(h),
+            Err(HostError::Trap(e)) => Err(format!("trap: {e}")),
+            Err(HostError::Fatal(e)) => Err(format!("fatal: {e}")),
+        }
+    }
+
+    /// The court's harness or a loud typed SKIP (a SKIP is not a pass).
+    pub fn host_or_skip(test_name: &str, preopen_tmp: bool) -> Option<Host> {
+        match try_host(preopen_tmp) {
+            Ok(h) => Some(h),
+            Err(reason) => {
+                let kind = if reason == "artifact-missing" {
+                    "artifact not built"
+                } else if reason.starts_with("trap:") {
+                    "first gl_call trapped on uninitialized element (stale/mismatched artifact)"
+                } else {
+                    "host construction failed"
+                };
+                eprintln!(
+                    "// SKIP(typed) [{test_name}]: {kind} — reason: {reason} — \
+                     suite pending-artifact; build with `WASI_SDK_PATH=<wasi-sdk> \
+                     cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`"
+                );
+                None
+            }
+        }
+    }
+
+    /// Open a named duckdb session (duplicate names are refused).
+    pub fn open_session(h: &mut Host, name: &str) {
+        let r = h.exec(&json!({"op": "duckdb", "mode": "open", "session": name}));
+        assert_eq!(r["session"], json!(name), "session open reply: {r}");
+    }
+
+    /// Close a named duckdb session.
+    pub fn close_session(h: &mut Host, name: &str) {
+        h.exec(&json!({"op": "duckdb", "mode": "close", "session": name}));
+    }
+}

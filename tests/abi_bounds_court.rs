@@ -1,9 +1,14 @@
 #![cfg(feature = "abi")]
-//! Courts for the W06 ABI resource-bound gaps: `op_shacl` shape-depth guard,
-//! `op_law` step cap, and `op_datalog` rule/fact caps. Every cap is refused at
-//! exactly max+1 via the typed `ResourceLimit` details path, and a positive
-//! control at exactly max must still succeed. Real ABI dispatch (`call_json`),
-//! real parsers and reasoners — no mocks.
+//! Courts for the W06 ABI resource-bound gaps: `op_law` step cap and
+//! `op_datalog` rule/fact caps. Every cap is refused at exactly max+1 via the
+//! typed `ResourceLimit` details path, and a positive control at exactly max
+//! must still succeed. Real ABI dispatch (`call_json`), real parsers and
+//! reasoners — no mocks.
+//!
+//! The `op_shacl` shape-depth pair was removed as redundant: the guard's
+//! boundary (refuse past the cap, admit at exactly cap) is covered in depth by
+//! tests/shacl_depth_guard_court.rs (node chain, property chain, small-stack,
+//! cyclic-shapes controls). See that file for the shacl_validation_depth law.
 
 use graphlaw::abi::{MAX_DATALOG_FACTS, MAX_DATALOG_RULES, MAX_LAW_STEPS, call_json};
 use serde_json::{Value, json};
@@ -16,28 +21,6 @@ fn assert_limit(r: &Value, limit: &str, observed: usize, max: usize) {
     assert_eq!(d["limit"], limit, "{r}");
     assert_eq!(d["observed"], observed, "{r}");
     assert_eq!(d["max"], max, "{r}");
-}
-
-fn shacl_prefix() -> &'static str {
-    "@prefix sh: <http://www.w3.org/ns/shacl#> .\n@prefix ex: <http://example.org/> .\n"
-}
-
-/// `n` shapes linked by `sh:node` (acyclic chain) — same construction as
-/// tests/shacl_depth_guard_court.rs, driven through the JSON ABI here.
-fn node_chain(n: usize) -> String {
-    let mut ttl = String::from(shacl_prefix());
-    for i in 0..n {
-        ttl.push_str(&format!(
-            "ex:s{i} a sh:NodeShape ; sh:targetNode ex:x ; sh:property [ sh:path ex:p ] ; sh:node ex:s{} .\n",
-            i + 1
-        ));
-    }
-    ttl.push_str(&format!("ex:s{n} a sh:NodeShape .\n"));
-    ttl
-}
-
-fn shacl_req(shapes: &str) -> Value {
-    json!({"op": "shacl", "data": {"text": "", "dialect": "ntriples"}, "shapes": shapes})
 }
 
 fn law_req(steps: usize) -> Value {
@@ -56,21 +39,6 @@ fn datalog_req(rules: usize, facts: usize) -> Value {
         .map(|i| json!([format!("urn:a{i}"), "urn:p", format!("urn:b{i}")]))
         .collect();
     json!({"op": "datalog", "rules": rs, "facts": fs})
-}
-
-#[test]
-fn op_shacl_refuses_shapes_deeper_than_cap_with_typed_resource_limit() {
-    let max = graphlaw::shacl_guard::MAX_SHACL_VALIDATION_DEPTH;
-    let r = call_json(&shacl_req(&node_chain(max + 1)));
-    assert_limit(&r, "shacl_validation_depth", max + 1, max);
-}
-
-#[test]
-fn op_shacl_admits_shapes_at_exactly_the_cap() {
-    let max = graphlaw::shacl_guard::MAX_SHACL_VALIDATION_DEPTH;
-    let r = call_json(&shacl_req(&node_chain(max)));
-    assert_eq!(r["ok"], true, "{r}");
-    assert_eq!(r["conforms"], true, "{r}");
 }
 
 #[test]

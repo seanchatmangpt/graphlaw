@@ -1,9 +1,10 @@
-//! `graphlaw-run-eh` (GWS-18 successor): wasmtime 48 host for the
-//! DuckDB-linked wasm artifact, speaking the same packet-4 stdio protocol as
-//! `graphlaw-run` (4-byte BE length-prefixed frames, smalt eval-envelope
-//! auto-detect, stub-compatible exit codes).
+//! `graphlaw-run-eh` (GWS-18): wasmtime 48 host for the DuckDB-linked wasm
+//! artifact — the sole packet-4 stdio runner (4-byte BE length-prefixed
+//! frames, smalt eval-envelope auto-detect, stub-compatible exit codes)
+//! since the wasmi retirement (docs/jira/v26.10.23/ADR-wasmi-retirement.md).
 //!
-//! Differences from the wasmi host (`src/bin/graphlaw_run.rs`):
+//! Contract (formerly stated as differences from the retired wasmi host,
+//! `src/bin/graphlaw_run.rs`):
 //! - runtime is wasmtime 48 with the W3C exception-handler proposal enabled
 //!   (`wasm_exceptions(true)`), matching `-wasm-use-legacy-eh=0` upstream;
 //! - WASI is linked via `wasmtime-wasi` (`add_to_linker_sync`, stdio

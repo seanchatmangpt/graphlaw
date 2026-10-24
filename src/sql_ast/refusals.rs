@@ -137,6 +137,11 @@ pub mod refusal_arm {
     /// form is refused typed until specified. Recovery: use the regex form
     /// `sql:columnsPattern` with one quoted pattern string.
     pub const COLUMNS_LAMBDA: u16 = 51;
+    /// REFUSAL-01 arm (SQLRDF-25 Rows 1+2, appended append-only): a COLUMNS
+    /// projection item with no string `sql:columnsPattern` literal, or an
+    /// empty/whitespace one (never a silent `COLUMNS('')`). Recovery: one
+    /// quoted pattern string.
+    pub const COLUMNS_PATTERN: u16 = 52;
     /// REFUSAL-01 arm (SQLRDF-27 dialect gap #1, appended append-only): a
     /// `sql:SetOperationStatement` node carries no `sql:setRight` — the
     /// rendered SQL would be `( SELECT … ) UNION ` with an empty right
