@@ -19,7 +19,7 @@ projection surface: 47 files | generator-backed: 3 | admitted leaks: 0
 G3 ARCHITECTURE-LEAK: 44 handwritten projection files ...
 GATE-FAIL: G3: 44 unadmitted architecture leaks (exit 1 while any unadmitted leak exists)
 -- G4 DELTA-PURITY --
-G4-JUSTIFIED src/evidence_ring.rs: 2 io hits covered by manifest io_justification
+G4-JUSTIFIED src/evidence_ring.rs — 2 io hits covered by manifest io_justification
 G4 PASS: all DELTA-SLAB files pure or justification-recorded
 -- G5 RATIO --
 S_handwritten = 19999 | S_derived = 17340 | S_delta = 15027 | total = 52366

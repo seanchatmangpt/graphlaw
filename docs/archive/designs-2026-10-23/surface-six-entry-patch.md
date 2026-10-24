@@ -132,7 +132,7 @@ patch -> check -> court -> --write -> --check -> court.
 
 - applied-at: 2026-10-22, lane P7, CARGO_TARGET_DIR=target-lane-p7
 - before: `receipt_surface_blake3 = blake3:e0215f61...` (V3, 2-entry surface)
-- after: `receipt_surface_blake3 = blake3:4f28d0f1b02e9ef0b3b70a64a37af798782d5509f8f25fb685ff53707ed270a2`
+- after: `receipt_surface_blake3 = blake3:4f28d0f1b02e9ef0b3b70a64a37af798782d5509f8f25fb685ff53707ed270a2` (historical)
 - files order: src/duckdb_eval.rs, src/sql_ast.rs, src/sql_ast/ast.rs, src/sql_ast/refusals.rs, src/sql_ast/serializer.rs, ontologies/sql-ast.ttl
 - `cargo check --lib` exit 0
 - post-patch pre-write court run: 4 failures (exactly the courts comparing

@@ -33,12 +33,12 @@ PASS: bin/clang++ symlink -> /Users/sac/emsdk/upstream/bin/clang++
 PASS: bin/llvm-ar symlink -> /Users/sac/emsdk/upstream/bin/llvm-ar
 PASS: bin/wasm-ld symlink -> /Users/sac/emsdk/upstream/bin/wasm-ld
 PASS: share/wasi-sysroot merged (include + lib/wasm32-wasip1 resolve)
-PASS: libclang_rt.builtins.a == emsdk builtins (sha256 6eb339614a6064fc76c0dfdcc98b363901e32e35c6c89aafe6126973af29b2bc)
+PASS: libclang_rt.builtins.a == emsdk builtins (sha256 6eb339614a6064fc76c0dfdcc98b363901e32e35c6c89aafe6126973af29b2bc) # historical
 PASS: lib/wasm32-wasip1/libc.a == rust wasip1 self-contained (sha256)
 PASS: lib/wasm32-wasip1/crt1-command.o == rust wasip1 self-contained (sha256)
-PASS: libc++.a == emsdk libc++-wasmexcept.a (sha256 0f632424e349b1e632b3ec05a87ba749cc64f2c9c25e96422177e971d3b76a7a)
-PASS: libc++abi.a == emsdk libc++abi-wasmexcept.a (sha256 551b6e6bdf395d61145bcaadf75d89bd443a02dcbe0209359172b0bcc65397c5)
-PASS: libunwind.a == emsdk libunwind-wasmexcept.a (sha256 7ab65b4ca03c66172ec7effcd04f9b402a9c1854b3adc400d4fe951040da8a7b)
+PASS: libc++.a == emsdk libc++-wasmexcept.a (sha256 0f632424e349b1e632b3ec05a87ba749cc64f2c9c25e96422177e971d3b76a7a) # historical
+PASS: libc++abi.a == emsdk libc++abi-wasmexcept.a (sha256 551b6e6bdf395d61145bcaadf75d89bd443a02dcbe0209359172b0bcc65397c5) # historical
+PASS: libunwind.a == emsdk libunwind-wasmexcept.a (sha256 7ab65b4ca03c66172ec7effcd04f9b402a9c1854b3adc400d4fe951040da8a7b) # historical
 PASS: libduckdb.a: 87620792 B, wasm32 magic in 64 MiB prefix
 PASS: libcore_functions_extension.a: 16165504 B, wasm32 magic in 64 MiB prefix
 PASS: libicu_extension.a: 3309950 B, wasm32 magic in 64 MiB prefix

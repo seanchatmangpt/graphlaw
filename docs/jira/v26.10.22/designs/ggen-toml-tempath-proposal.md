@@ -58,13 +58,13 @@ make it unnecessary.
 1. Wrote the relative-path config into `wasm/ggen.toml`.
 2. `ggen sync run` → `"written": []` (idempotent re-run; file unchanged) —
    `b3sum src/ffi.rs` =
-   `9dcab4e4099ede0e605b2f619c8791e8f19bf656f3c6a8bd552eeade6d9e46a9` (known-good).
+   `9dcab4e4099ede0e605b2f619c8791e8f19bf656f3c6a8bd552eeade6d9e46a9` (known-good). (historical)
 3. Delete-and-regen: `mv src/ffi.rs /tmp/ffi.rs.bak && ggen sync run` →
    `"written": ["src/ffi.rs"]`, `graph_hash_hex`
-   `8821e277608452cd44baac350c850e4d96759b17a64bec9b08f2b644b0c07ae2` (matches
+   `8821e277608452cd44baac350c850e4d96759b17a64bec9b08f2b644b0c07ae2` (matches (historical)
    the L49 determinism receipt), and regenerated
    `b3sum src/ffi.rs` =
-   `9dcab4e4099ede0e605b2f619c8791e8f19bf656f3c6a8bd552eeade6d9e46a9` —
+   `9dcab4e4099ede0e605b2f619c8791e8f19bf656f3c6a8bd552eeade6d9e46a9` — (historical)
    byte-identical to the known-good artifact.
 
 ## REQUIRES-UPSTREAM

@@ -10,8 +10,8 @@
 
 | row | before | after |
 |---|---|---|
-| registry | `blake3:7db561aa315e86f3f21022697276ef3382b808ea1bcef4e4245159b755f819b4` | `blake3:4cd56fd50675c0aa9cc95c0444ed8e378e40a270fc52fe859ffe4aaa83b7091f` |
-| receipt-surface | `blake3:78ebb149bb6712049fabbefc8b17cb72dcb6461b66422e1ea04e106e2b63f96e` | `blake3:0cc02ca4100542f68de431eacf4e5d0dac5d51fdd96887b2bf2b2cbebcd3669d` |
+| registry | `blake3:7db561aa315e86f3f21022697276ef3382b808ea1bcef4e4245159b755f819b4` | `blake3:4cd56fd50675c0aa9cc95c0444ed8e378e40a270fc52fe859ffe4aaa83b7091f` | (historical)
+| receipt-surface | `blake3:78ebb149bb6712049fabbefc8b17cb72dcb6461b66422e1ea04e106e2b63f96e` | `blake3:0cc02ca4100542f68de431eacf4e5d0dac5d51fdd96887b2bf2b2cbebcd3669d` | (historical)
 | surface | `blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9` | unchanged |
 
 L21 cited drift to `5d31d472…`; at run time the live digest was already

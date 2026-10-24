@@ -52,8 +52,8 @@ EXIT=6
 ## Counts (read-only `cargo-mutants mutants --list --no-shuffle`, exit 0)
 
 - Total mutants in scope: **319**
-  - src/abi.rs: 203 (8 name capabilities()/dispatch() -> gated)
-  - src/registry.rs: 116 (all gated)
+  - src/abi.rs — 203 (8 name capabilities()/dispatch() -> gated)
+  - src/registry.rs — 116 (all gated)
   - gated surface total: 124
 - Mutants tested / caught / missed: **0 / 0 / 0 — run refused before mutant
   testing** (exit 6, not exit 4 restore-mismatch, not an untyped failure).
@@ -122,7 +122,7 @@ lane is still live in src/dialect.rs, so --force remains unsafe):
   L120 clippy fixes / L4 seal produced **zero net delta**.
 - Total: **319 → 319, delta 0.**
 - Correction of the N1 amendment: "Gated surface 124 (abi.rs 8 + registry.rs
-  116)" misquotes M1's receipt line 55, which reads "src/abi.rs: 203 (8 name
+  116)" misquotes M1's receipt line 55, which reads "src/abi.rs — 203 (8 name
   capabilities()/dispatch() -> gated)" — the 8 is the capabilities()/dispatch()
   subset (re-counted fresh: exactly 8 lines match capabilities|dispatch in
   abi.rs), not the abi.rs file total. The court's GUARDED set
@@ -130,8 +130,8 @@ lane is still live in src/dialect.rs, so --force remains unsafe):
   **319 (abi.rs 203 + registry.rs 116)**, not 124.
 - Guarded-file fingerprints at re-verification time (for the post-commit
   baseline comparison):
-  sha256(src/abi.rs)      = 14fa5823e339eaa6b6d46b83a1ae6e357a05515531a0cff4c266bdcf317864bb
-  sha256(src/registry.rs) = 23af3f1b918d92103a92c895ef7a1c4aa40f739c17973cfbad09771281d17398
+  sha256(src/abi.rs)      = 14fa5823e339eaa6b6d46b83a1ae6e357a05515531a0cff4c266bdcf317864bb (historical)
+  sha256(src/registry.rs) = 23af3f1b918d92103a92c895ef7a1c4aa40f739c17973cfbad09771281d17398 (historical)
 - **State: still BLOCKED[MUTATION-COURT-DIRTY-TREE]** (`git status --porcelain
   -- src/` non-empty; src/abi.rs, src/registry.rs, src/dialect.rs all
   modified). Post-commit expectation: the --list count must still be **319**

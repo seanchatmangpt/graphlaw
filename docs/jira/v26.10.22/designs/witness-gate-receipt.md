@@ -31,8 +31,8 @@ Command: `bash scripts/witness_gate.sh docs/WASM.md`
 
 ```
 WITNESS-GATE FAIL: docs/WASM.md:44 cites nonexistent lane dir target-lane114 (build witness must cite receipts/)
-WITNESS-GATE FAIL: docs/WASM.md:47 unregistered blake3 digest 9d299ed81795f3011321b268de1ccc008da74b4fcbbcfa4b3020e61c2d2a51f0
-WITNESS-GATE FAIL: docs/WASM.md:99 unregistered blake3 digest 9d299ed81795f3011321b268de1ccc008da74b4fcbbcfa4b3020e61c2d2a51f0
+WITNESS-GATE FAIL: docs/WASM.md:47 unregistered blake3 digest 9d299ed81795f3011321b268de1ccc008da74b4fcbbcfa4b3020e61c2d2a51f0 # historical
+WITNESS-GATE FAIL: docs/WASM.md:99 unregistered blake3 digest 9d299ed81795f3011321b268de1ccc008da74b4fcbbcfa4b3020e61c2d2a51f0 # historical
 exit=1
 ```
 

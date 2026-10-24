@@ -30,7 +30,7 @@ commit blockers. Full detail in the lane reports.
    (HIGH); OnceLock double-init corrupts the shared ledger (init does I/O
    before GLOBAL.set) (HIGH); "wait-free" doc vs Mutex-guarded push (doc
    mismatch); finalize watermark under-read (Low).
-6. **graphlaw_run.rs: 17 expect/unwrap on external wasm/CLI input** (RUST-3,
+6. **graphlaw_run.rs — 17 expect/unwrap on external wasm/CLI input** (RUST-3,
    HIGH in a binary): malformed .wasm panics the CLI instead of typed exit.
 7. **SBOM fix introduced a latent deny.toml blocker** (RUST-8): the new
    `MIT AND LicenseRef-P28-SIL-2.1.0` expression is not in deny.toml's

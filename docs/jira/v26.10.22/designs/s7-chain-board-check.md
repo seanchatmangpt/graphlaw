@@ -8,7 +8,7 @@ working tree, coordinator owns git). Every state re-read from disk at
 
 ```
 $ bash scripts/receipt_chain_sync.sh --check
-VERIFIED: 22 receipts match CHAIN.blake3; head=5931264fb2f93ede6f12c0f5e446da0ff27b266c896851839dd8f54d7705726f
+VERIFIED: 22 receipts match CHAIN.blake3; head=5931264fb2f93ede6f12c0f5e446da0ff27b266c896851839dd8f54d7705726f # historical
 EXIT=0
 ```
 

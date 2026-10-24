@@ -19,8 +19,8 @@ live from concurrent lanes on this shared 16-core M3 Max).
 - corpus_source=loaded_from_disk (generation step skipped; gate
   `GATE corpus_assert schema=4cols row_count=25000000 : PASS` both runs)
 - Corpus: target-lane92/tc-hot-25m, 8.0 MB, 2 parquet files, sha256
-  tenant-A fb0e4764d82ae83b9550fad923e563ca6a57cea34ac03450dd9cf9e8489ee37b
-  tenant-B c7732bba1900631d38c8659ee752baebe6d4fc628a30512638ed629fd167eb86
+  tenant-A fb0e4764d82ae83b9550fad923e563ca6a57cea34ac03450dd9cf9e8489ee37b (historical)
+  tenant-B c7732bba1900631d38c8659ee752baebe6d4fc628a30512638ed629fd167eb86 (historical)
 - Machine: Apple M3 Max, 16 cores, aarch64, duckdb v2.0.0-dev88595, threads=16
 
 ## Load snapshots (machine-load honesty)
@@ -158,9 +158,9 @@ using the bench's own COPY path and verified by independent regeneration.
 - New durable path: `TC_HOT_CORPUS_PATH=/Users/sac/graphlaw/var/tc-hot-25m`
 - Contents: 2 files, hive-partitioned
   - `var/tc-hot-25m/tenant_id=tenant-A/data_0.parquet` 3,671,948 B
-    sha256 `fb0e4764d82ae83b9550fad923e563ca6a57cea34ac03450dd9cf9e8489ee37b`
+    sha256 `fb0e4764d82ae83b9550fad923e563ca6a57cea34ac03450dd9cf9e8489ee37b` (historical)
   - `var/tc-hot-25m/tenant_id=tenant-B/data_0.parquet` 3,672,400 B
-    sha256 `c7732bba1900631d38c8659ee752baebe6d4fc628a30512638ed629fd167eb86`
+    sha256 `c7732bba1900631d38c8659ee752baebe6d4fc628a30512638ed629fd167eb86` (historical)
 - Total: 7,344,348 B (7.0 MiB payload; 8,936 KiB on disk), 25,000,000 rows
 - Identity receipts:
   - Independent second regeneration into `/tmp/l159_determinism_check`

@@ -106,7 +106,7 @@ bumps, no re-pin, no path patch, no dated receipt edited.
 
 ## N10 lane — 2026-10-22 re-run (gate unchanged, census stable)
 
-- Gate sha256: `296812dcc06582d3f73f4694840d69229d301b3ba60014fc11e944d8262a94d0`
+- Gate sha256: `296812dcc06582d3f73f4694840d69229d301b3ba60014fc11e944d8262a94d0` (historical)
   — byte-identical to M12's close; no logic changes this lane.
 - Census: `bash scripts/doc_staleness_gate.sh` → 76 finding(s), exit 1
   (matches M13 close 83→76). All 76 sit in dated jira history —

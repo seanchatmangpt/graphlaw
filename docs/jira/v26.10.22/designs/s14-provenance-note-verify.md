@@ -22,7 +22,7 @@ Content spot-checks (all confirmed verbatim at cited sections):
   `~/.zsh_history`/Trash/fswatch ruled out (lines 41/43), UNDETERMINED
   CONFIRMED with escalation (line 64) — matches.
 - S8: QUIESCED 20:14–20:20, 5×60 s bounded poll, sha256
-  e1c5260259f18ddf5ae4bb3d23a7878fe813b90dfe4d35f6e5e347ce579f7854 (line 18),
+  e1c5260259f18ddf5ae4bb3d23a7878fe813b90dfe4d35f6e5e347ce579f7854 (line 18), (historical)
   `lsof +D` zero handles, PID 23692 (line 44), commit-if-and-only-if
   recommendation (line 58) — matches.
 - N25 (eyeron-switchover-fixforward.md): `cargo test -p graphlaw-eyeron`

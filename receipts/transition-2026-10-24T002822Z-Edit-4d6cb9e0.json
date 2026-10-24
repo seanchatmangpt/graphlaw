@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "4d6cb9e0d15e7e01ae877a20ce4a715dfe5beca891fd64ea5aa265bfad0efa97",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T002822Z-Edit-4d6cb9e0.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/designs/mutation-court-full-receipt.md",
+  "timestamp_utc": "2026-10-24T002822Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

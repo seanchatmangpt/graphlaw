@@ -25,9 +25,9 @@ are fresh", then 716:5). Failing tests and assert sites:
 
     ok      capability-registry.json
     ok      capability-registry.ttl
-    DRIFT   ARTIFACTS.blake3 registry: expected `registry blake3:60e4463a6339e923f3f54988c52db5da558ce17801f60fe7df0adb6d8c46f0df - capability-registry.json`, found `registry blake4cd...4cd56fd50675c0aa9cc95c0444ed8e378e40a270fc52fe859ffe4aaa83b7091f`
+    DRIFT   ARTIFACTS.blake3 registry: expected `registry blake3:60e4463a6339e923f3f54988c52db5da558ce17801f60fe7df0adb6d8c46f0df - capability-registry.json`, found `registry blake4cd...4cd56fd50675c0aa9cc95c0444ed8e378e40a270fc52fe859ffe4aaa83b7091f` (historical)
     ok      ARTIFACTS.blake3 surface
-    DRIFT   ARTIFACTS state: expected receipt-surface `blake3:4c25000c0224a61d888b9394902b1f52b3e99a0a9565954937110b636560eb1f`, found `blake3:0cc02ca4100542f68de431eacf4e5d0dac5d51fdd96887b2bf2b2cbebcd3669d`
+    DRIFT   ARTIFACTS state: expected receipt-surface `blake3:4c25000c0224a61d888b9394902b1f52b3e99a0a9565954937110b636560eb1f`, found `blake3:0cc02ca4100542f68de431eacf4e5d0dac5d51fdd96887b2bf2b2cbebcd3669d` (historical)
     registry drift: run `cargo run --features abi --bin graphlaw-registry -- --write`
 
 (`--check` exit code verified directly: exit=1 on drift, 0 not claimed.)
@@ -75,8 +75,8 @@ src is quiescent (and re-run if those two files move again).
 
 ## 5. Expected post-state after `--write` on a quiescent src
 
-- `registry` row → `blake3:60e4463a6339e923f3f54988c52db5da558ce17801f60fe7df0adb6d8c46f0df`
-- `receipt-surface` row → `blake3:4c25000c0224a61d888b9394902b1f52b3e99a0a9565954937110b636560eb1f`
+- `registry` row → `blake3:60e4463a6339e923f3f54988c52db5da558ce17801f60fe7df0adb6d8c46f0df` (historical)
+- `receipt-surface` row → `blake3:4c25000c0224a61d888b9394902b1f52b3e99a0a9565954937110b636560eb1f` (historical)
 - `surface` row unchanged `blake3:da96e137…`; `wasm` row byte-identical
   `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c 6793617 graphlaw_wasm.wasm`
 - `--check` exit 0; all 5 registry_artifacts tests flip green.

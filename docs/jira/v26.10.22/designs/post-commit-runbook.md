@@ -123,7 +123,7 @@ If non-zero: STOP, the wave commit has not landed.
   bash scripts/receipt_chain_sync.sh --check
   ```
 - **Expected**: sync → `NO-OP` (or chains any receipts/ files new since the
-  head `2c316b0261c992cfb0463d135e4af4f6975daf9318368bfaf531098b57749d05`),
+  head `2c316b0261c992cfb0463d135e4af4f6975daf9318368bfaf531098b57749d05`), (historical)
   exit 0; `--check` → `VERIFIED: 8 receipts match CHAIN.blake3`, exit 0.
 - **Failure branch**: `TAMPER-DETECTED` (as at
   `chain-resync-receipt.md:11-21`) → STOP; per the L108 finding, the chain

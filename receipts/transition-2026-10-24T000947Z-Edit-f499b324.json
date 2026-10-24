@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "f499b324bc31af3ab13188f75b8d490572184eeb9934d743782c1e84163a3f04",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T000947Z-Edit-f499b324.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/RECEIPTS.md",
+  "timestamp_utc": "2026-10-24T000947Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

@@ -24,15 +24,15 @@ Test Files  11 passed (11)
 
 | file | before | after |
 |---|---|---|
-| `js/npm/src/generated/types.ts` | `d931750a452c830b3a4dde374927ee3f6069ba22fb99a86501e888d295a1b39f` | `02cd89d366290b05deedbd9dd21f060b08769e9a81c95a8be667ae2714f0a128` |
-| `js/npm/src/limits.ts` | `0e37ae8257d33965a14594cec17585f1b6517938f5ad8b4d0f4bf2d333352549` | `9b67820be80a8ac7e63e8ae2917ff630ee1d9c68a0baaaab9eca63565d2069b2` |
+| `js/npm/src/generated/types.ts` | `d931750a452c830b3a4dde374927ee3f6069ba22fb99a86501e888d295a1b39f` | `02cd89d366290b05deedbd9dd21f060b08769e9a81c95a8be667ae2714f0a128` | (historical)
+| `js/npm/src/limits.ts` | `0e37ae8257d33965a14594cec17585f1b6517938f5ad8b4d0f4bf2d333352549` | `9b67820be80a8ac7e63e8ae2917ff630ee1d9c68a0baaaab9eca63565d2069b2` | (historical)
 
 ## Pin flip
 
 - `src/generated/types.ts` line 2 header, via documented regen (`npm run gen`, real
   generator — not hand-edit):
-  `blake3:22b7478c47293741a17c0ec1f884472bac8fcb0ec7320b0925b48aa04d80908b` →
-  `blake3:e227367e13ce8110d97fe29f252bdb69e22e872a5be4117ccbce4bbc9c6477d7`
+  `blake3:22b7478c47293741a17c0ec1f884472bac8fcb0ec7320b0925b48aa04d80908b` → (historical)
+  `blake3:e227367e13ce8110d97fe29f252bdb69e22e872a5be4117ccbce4bbc9c6477d7` (historical)
   (matches `registry/ARTIFACTS.blake3` registry row).
 - `src/limits.ts` line 12 provenance comment (single-line hand edit, lease allows):
   `blake3:1c129dd6…` → `blake3:e227367e…`.

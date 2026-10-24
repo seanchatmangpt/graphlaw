@@ -185,7 +185,7 @@ Real success reply (trimmed to the load-bearing fields):
 
 ```json
 {
- "doc_hash": "0c36f3151666bbe0495893b14569836e8d001718cdc30edb1cadc34677a2cf36",
+ "doc_hash": "0c36f3151666bbe0495893b14569836e8d001718cdc30edb1cadc34677a2cf36",  # historical example-run digest
  "failed_at": null,
  "ok": true,
  "query_iri": "urn:doc-howto",

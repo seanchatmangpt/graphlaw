@@ -10,10 +10,10 @@ enabled"), so a re-pin today ships an unhostable module.
 | step | command | result |
 | --- | --- | --- |
 | Dependency gate (L109 script) | `bash /Users/sac/frozen-duckdb/scripts/build_wasi_duckdb.sh --verify-only` | `VERIFY-OK: exit 0`, 20 PASS lines (wrapper, sysroot merge, sha256 identity for libc/crt1/libc++/libc++abi/libunwind vs emsdk/rust sources, archive magic, duckdb pin `b6013f7aa2f36caabb9466ce1791667ea8a280bb`, C++-EH hello-world link + node WASI smoke) |
-| Real rebuild (documented local toolchain) | `WASI_SDK_PATH=~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1 cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` | exit 0, 2m48s, `graphlaw_wasm.wasm` 45,175,087 B, BLAKE3 `2cdfd0344d7e11cd81cc86030c93687dafbed467cd9000fe113452e073540eca`, **TAG(13) count: 1** |
+| Real rebuild (documented local toolchain) | `WASI_SDK_PATH=~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1 cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` | exit 0, 2m48s, `graphlaw_wasm.wasm` 45,175,087 B, BLAKE3 `2cdfd0344d7e11cd81cc86030c93687dafbed467cd9000fe113452e073540eca`, **TAG(13) count: 1** | (historical)
 | wasmi host court on that artifact | `GRAPHLAW_WASM=<that artifact> cargo test -p graphlaw --test wasm_native_differential` | FAILED 0/2 — `exceptions proposal not enabled` at offset 80783 |
 | SDK-34 duckdb rebuild | cmake SDK-34 toolchain, pin `b6013f7a…`, `duckdb_static core_functions_extension icu_extension` | exit 0 after shim (see below); archives 87,907,296 / 16,306,472 / 3,302,450 B |
-| SDK-34 full link | scratch `HOME`, `WASI_SDK_PATH=~/.local/wasi-sdk/wasi-sdk-34.0-arm64-macos` | exit 0, 1m06s, 45,805,385 B, BLAKE3 `b49d0582fc34d3de3dde62963b2371e1f7043b3ca89fd75f9cc77133111498fc`, **TAG(13) count: 1** |
+| SDK-34 full link | scratch `HOME`, `WASI_SDK_PATH=~/.local/wasi-sdk/wasi-sdk-34.0-arm64-macos` | exit 0, 1m06s, 45,805,385 B, BLAKE3 `b49d0582fc34d3de3dde62963b2371e1f7043b3ca89fd75f9cc77133111498fc`, **TAG(13) count: 1** | (historical)
 | wasmi host court on SDK-34 artifact | `GRAPHLAW_WASM=<SDK-34 artifact> cargo test -p graphlaw --test wasm_native_differential` | FAILED 0/2 — `exceptions proposal not enabled` at offset 77181 |
 
 ## Falsified premises (witnessed, not inferred)
@@ -79,5 +79,5 @@ wasm copy — all match the 26.10.21 pin.
 
 ## Candidate artifacts (NOT pinned, in target-lane122)
 
-- clang-24 route: 45,175,087 B, `2cdfd0344d7e11cd81cc86030c93687dafbed467cd9000fe113452e073540eca`, TAG: 1 — wasmi-REJECTED (witnessed).
-- SDK-34 route: 45,805,385 B, `b49d0582fc34d3de3dde62963b2371e1f7043b3ca89fd75f9cc77133111498fc`, TAG: 1 — wasmi-REJECTED (witnessed).
+- clang-24 route: 45,175,087 B, `2cdfd0344d7e11cd81cc86030c93687dafbed467cd9000fe113452e073540eca`, TAG: 1 — wasmi-REJECTED (witnessed). (historical)
+- SDK-34 route: 45,805,385 B, `b49d0582fc34d3de3dde62963b2371e1f7043b3ca89fd75f9cc77133111498fc`, TAG: 1 — wasmi-REJECTED (witnessed). (historical)

@@ -738,7 +738,7 @@ Sources verified on disk at use time (`test -f` exit 0 for each cited file).
 One line per item; receipt pointer + key count; no FAIL marked closed.
 
 - **Switchover execution + N25 fix-forward + N26 census + S2 verification +
-  S8/S12 canary** — `designs/commit-receipt-provenance-gap.md` (lane L176,
+  S8/S12 canary** — `../../archive/designs-2026-10-23/commit-receipt-provenance-gap.md` (lane L176,
   STAGED section of record): all 8 split trees WIRED with zero logged
   Write/Edit records in the wiring window; staging dirs + the only
   provenance.json DELETED via the same unlogged channel (§2); executor
@@ -753,7 +753,7 @@ One line per item; receipt pointer + key count; no FAIL marked closed.
   S8 is the witness of record. Attribution investigation OPEN. Nothing here
   is marked closed.
 - **P7 six-entry receipt-surface patch applied + regen** —
-  `designs/surface-six-entry-patch.md` §6 (lane P7, executed): applied per
+  `../../archive/designs-2026-10-23/surface-six-entry-patch.md` §6 (lane P7, executed): applied per
   §1-§2 ordered patch→check→court→--write→--check→court; receipt_surface
   pin `blake3:e0215f61…` (2-entry) → `blake3:4f28d0f1…` (6-entry: 3 src
   files + sql_ast/ast.rs + refusals.rs + serializer.rs split files +
@@ -821,15 +821,15 @@ $ git rev-parse --short HEAD
 $ df -h / | tail -1
 /dev/disk3s1s1   926Gi    11Gi    41Gi    22%    453k  426M    0%   /
 $ cargo test --test sql_rdf_dialect
-(re-measured 2026-10-23: 34 passed; 0 failed)
+(re-measured 2026-10-23: 34 passed; 0 failed; receipts/sql-rdf-dialect-2026-10-22.md)
 
 test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s
 $ cargo test --test chicago_validation
-(re-measured 2026-10-23: 11 passed; 0 failed)
+(re-measured 2026-10-23: 11 passed; 0 failed; receipts/chicago-validation-2026-10-22.md)
 
 test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.68s
 $ cargo test --test trust_attest
-(re-measured 2026-10-23: 12 passed; 0 failed)
+(re-measured 2026-10-23: 12 passed; 0 failed; receipts/trust-attest-2026-10-22.md)
 
 test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
 $ cargo test --test sql_rdf_conformance
@@ -855,8 +855,8 @@ test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; 
 $ b3sum priv/graphlaw.wasm
 332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c  priv/graphlaw.wasm
 $ tail -1 receipts/CHAIN.blake3 && bash scripts/receipt_chain_sync.sh --check
-chain_head e4a7597bcb28269c693db90a3efc971c5a928fa16dfff34f5a7af067a2d96783
-TAMPER-DETECTED: receipts/sa2a/factory-b-v26.9.29-executable-gates.md (chain=d464dad4e0e8e1979ca8cf8b4426584f6186bfc98476da22f4d4af301a5d4aa6 actual=096cfeabead6814f24b8309e27aafaa34120291789f639356069f0009b2e4dee)
+chain_head e4a7597bcb28269c693db90a3efc971c5a928fa16dfff34f5a7af067a2d96783 # historical
+TAMPER-DETECTED: receipts/sa2a/factory-b-v26.9.29-executable-gates.md (chain=d464dad4e0e8e1979ca8cf8b4426584f6186bfc98476da22f4d4af301a5d4aa6 actual=096cfeabead6814f24b8309e27aafaa34120291789f639356069f0009b2e4dee) # historical
 exit=1
 $ ls receipts/spc-2026-10-22T173758.json receipts/spc-2026-10-22T173809.json
 receipts/spc-2026-10-22T173758.json
@@ -1095,6 +1095,7 @@ falsifier: their lane report files landing in `designs/`.
   $ cargo test --test chicago_cross_authority
   test result: ok. 71 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 157.00s
   ```
+  receipts/ pointer: `receipts/2026-10-23-eh-closure-wave.md` (cross-authority row).
   **71/0 WITNESSED** against the user-space SDK surface. Count
   self-consistency is court-pinned: `EXPECTED_CASE_COUNT = 69`
   (`tests/chicago_cross_authority.rs:15`) + 2 proof tests (including
@@ -1132,7 +1133,8 @@ register/courts at append time, as-of-now.
 - **U1 — MERGE qualifier defect found + fixed.** Pre-fix, a schema-suffix
   collision (same base name across two schemas) admitted an ON clause that
   resolved to an unconstrained cross product. Proper name resolution now in
-  place; witness rungs: k5 court 8 passed / 0 failed, dialect suite 34/0.
+  place; witness rungs: k5 court 8 passed / 0 failed, dialect suite 34/0
+  (receipts/ pointer: `receipts/sql-rdf-dialect-2026-10-22.md`).
   The over-refusal side (a legitimately unqualified column now typed-refused
   instead of silently resolved) is documented as accepted behavior.
 - **U2 — no-default-features lib break.** Confirmed PRE-EXISTING, not
@@ -1143,7 +1145,8 @@ register/courts at append time, as-of-now.
 - **U4 — residual-ledger falsifier fired**: 6 residual rows observed, all
   accounted in the ledger; a clean (0-row) run was NOT claimed.
 - **U5 — external suites**: 17 + 56 tests, both green (0 failed) on the
-  current tree.
+  current tree (receipts/ pointer: none — lane-transcript-only run, no durable
+  receipts/ file exists; as-of-date claim).
 - **U6 — commit-manifest addendum**: 61 files, +2181 lines recorded in
   `designs/commit-manifest.md`.
 - **U7 — duckdb_op doc truth**: module doc claims re-checked against
@@ -1153,7 +1156,8 @@ register/courts at append time, as-of-now.
   not PASS.
 - **V2 — marquee example alive**: README marquee example executed, output
   matches the documented transcript.
-- **V3 — lib suite**: 34 passed / 0 failed.
+- **V3 — lib suite**: 34 passed / 0 failed (receipts/ pointer:
+  `receipts/kernel-lib-courts-2026-10-22.md`).
 - **V4 — CHANGELOG spot-check**: 4/4 claimed entries verified against the
   tree; claim holds.
 - **V5 — hook receipts real-but-unsigned**: hook-emitted receipts carry real
@@ -1185,7 +1189,8 @@ what was actually observed this wave; PENDING rows carry no receipt.
   both-target `cargo check` exit 0. Registry `abi::ops::meta`
   ungated (lane2), exit 0.
 - **W5 GREEN** — MERGE mutating classification court 12 passed / 0
-  failed, with anti-vacuity flip witnessed (lane4).
+  failed, with anti-vacuity flip witnessed (lane4; receipts/ pointer:
+  `receipts/2026-10-23-eh-closure-wave.md`).
 - **W6 GREEN** — SHACL WHERE shapes generated (`ggen sync run`) +
   `ast_governance` mirror; `sql_rdf_dialect` 34 passed / 0 failed
   (lanes 6, 7).
@@ -1376,8 +1381,9 @@ re-pin held.
 ## 2026-10-23 banking battery witness — DvP 4/4 GREEN
 
 Witness receipt: `receipts/2026-10-23-banking-4of4-witness.md` =
-`f3570f15d3d98ad52af83187404d8cdf99b1ad7f36ddcdac4cb9f55d3f77920d`.
+`f3570f15d3d98ad52af83187404d8cdf99b1ad7f36ddcdac4cb9f55d3f77920d`. (historical)
 Court: `cargo test --test dvp_settlement_court` on target-lane-wit —
+receipts/ pointer: `receipts/2026-10-23-banking-4of4-witness.md` (banking battery).
 `test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s`.
 Confirms prior DvP 4/4 claim (target-lane-dvp2); pairing law = assign_pairs by
 index via document_order_assigns, quote-aware scan. BCBS/Rehypo/UBO 3/3 each
@@ -1392,19 +1398,24 @@ stand as prior banking-inventory witness (target-pub), not re-run.
   domain-separation literal, v1-preservation, and `CANON_ARROW_EMPTY_V1` null
   digests (`tests/receipt_v2_court.rs:52,:111-124`). Companion full
   `cargo test --test trust_attest` re-run: 12 passed; 0 failed.
+  receipts/ pointer: none — lane-transcript-only run, no durable receipts/
+  file exists for the receipt_v2 court re-run (as-of-date claim).
 - **W61 GREEN (count corrected)** — pack dry-run gates, real output embedded:
   `cargo package --allow-dirty --no-verify` → `Packaged 360 files, 143.9MiB
   (7.4MiB compressed)` — **360, not the previously quoted 363**; warning
   emitted: ``ignoring benchmark `workload_amortization` as
   `benches/workload_amortization.rs` is not included in the published package``.
   npm: typed N/A — no `package.json` at repo root (checked on disk); W51's
-  npm 198/198 stands as-of its own receipt, not re-run.
+  npm 198/198 stands as-of its own receipt, not re-run. receipts/ pointer:
+  none — lane-transcript-only run, no durable receipts/ file exists (as-of-date
+  claim).
 - **W62 RED (new defect, owner needed)** — amortization court fails:
   `cargo test --test amortization_court` → `0 passed; 1 failed` (64.71s),
   panic at `tests/amortization_court.rs:155`: `per-query bump must leave zero
   live entries — left: 1, right: 0`. Bench + court files are landed
   (`benches/workload_amortization.rs`, `tests/amortization_court.rs`); bench
   measurement still pending. Court is NOT vacuous — it flipped on real state.
+  receipts/ pointer: `receipts/2026-10-23-workload-amortization.md`.
 - **W63 GREEN** — whitepaper claims audit (`docs/whitepaper-v26.10.22.md`),
   rows checked against witnessed state: (1) §5 receipt_v2 row ("Defined and
   unit-tested") — now court-witnessed 6/6, row understates (upgrade allowed,

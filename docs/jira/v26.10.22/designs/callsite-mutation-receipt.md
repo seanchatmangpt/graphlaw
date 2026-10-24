@@ -43,7 +43,7 @@ A (helper revert in isolation); reverting the law.rs:1033 transition callsite
 - Court on clean tree: `cargo test --test law_state` -> 8 passed; 0 failed.
 - Leg under shim: `transition_with_unknown_capability_refuses_typed_end_to_end`
   FAILED (exit 101) — the flip is the non-vacuity witness.
-- Restore: byte-exact, sha256 `ac1ac95533abf8abf05e6d4f6608bb8507ba29a0023e32978be984f6a2eb8bb0`
+- Restore: byte-exact, sha256 `ac1ac95533abf8abf05e6d4f6608bb8507ba29a0023e32978be984f6a2eb8bb0` (historical)
   (verified twice: leg output and independent `sha256sum` after the leg).
 - Leg exit: 0. Vacuous and compile-abort paths both exit 7 typed.
 

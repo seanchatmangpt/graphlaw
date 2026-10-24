@@ -270,8 +270,8 @@ Executed 2026-10-22, lane WO-08, `/Users/sac/graphlaw`, isolated target
 $ CARGO_TARGET_DIR=target-lane-wo8 cargo test --test two_verifier_court -- --nocapture
 running 3 tests
 test wo08_formula_consistency_inline_and_large_param_branches ... ok
-[WO08] H_query (A == B == reference) = 9ddd051bec7f5a91addcfda7f710e941478eb36c6e535b4cd3923e22bbbc4348
-[WO08] diverged: A = 9ddd051bec7f5a91addcfda7f710e941478eb36c6e535b4cd3923e22bbbc4348, B(mutated param) = 8c59c6b515eef0a933a582a9255be4eafbf7992a5c74dbb10e026877d7b07cdb
+[WO08] H_query (A == B == reference) = 9ddd051bec7f5a91addcfda7f710e941478eb36c6e535b4cd3923e22bbbc4348 # historical
+[WO08] diverged: A = 9ddd051bec7f5a91addcfda7f710e941478eb36c6e535b4cd3923e22bbbc4348, B(mutated param) = 8c59c6b515eef0a933a582a9255be4eafbf7992a5c74dbb10e026877d7b07cdb # historical
 test wo08_two_verifiers_agree_on_h_query ... ok
 test wo08_one_mutated_param_makes_digests_diverge ... ok
 

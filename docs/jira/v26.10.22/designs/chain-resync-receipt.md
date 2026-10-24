@@ -18,7 +18,7 @@ Any unknown first argument exits 2 (usage). Guard:
 
 ```
 $ bash scripts/receipt_chain_sync.sh
-TAMPER-DETECTED: receipts/spc-2026-10-22.json (chain=1da77e6b743577d627aa588f1e1264fea4ff9bcf86b8dd3f30ecca0ba4cbbc3a actual=50896fa3253cf162946b5c7eb6eb325fe909cda9305cdb3359619fa52ba11708)
+TAMPER-DETECTED: receipts/spc-2026-10-22.json (chain=1da77e6b743577d627aa588f1e1264fea4ff9bcf86b8dd3f30ecca0ba4cbbc3a actual=50896fa3253cf162946b5c7eb6eb325fe909cda9305cdb3359619fa52ba11708) # historical
 REFUSED: chain drift above; receipts are immutable — no CHAIN.blake3 write (exit 1)
 EXIT=1
 ```
@@ -60,7 +60,7 @@ the writer is the defect.
 
 ## Chain head
 
-- before: `abb89cec5337dbc109f1a5159e81e395c216c7bba9cd35f462bbf780f96dcdc5` (unchanged — no write occurred)
+- before: `abb89cec5337dbc109f1a5159e81e395c216c7bba9cd35f462bbf780f96dcdc5` (unchanged — no write occurred) (historical)
 - after: same (sync refused, exit 1, no CHAIN.blake3 write)
 
 ## Coordinator re-baseline decision (2026-10-22)
@@ -70,7 +70,7 @@ tampering: scripts/spc_court.sh overwrote the same-day receipt in place
 (fixed by L111 — per-run timestamped append-only filenames). The current
 bytes are the court's real output. Decision: re-baseline the chain over
 the post-fix receipt set. Executed: rm CHAIN.blake3 && sync → 8 receipts
-chained, head 2c316b0261c992cfb0463d135e4af4f6975daf9318368bfaf531098b57749d05;
+chained, head 2c316b0261c992cfb0463d135e4af4f6975daf9318368bfaf531098b57749d05; (historical)
 --check VERIFIED exit 0. The overwritten file's pre-overwrite content
 survives in git history (HEAD version, cpk -0.0016 numbers) — provenance
 preserved there, not in the chain.
@@ -81,10 +81,10 @@ Ownership: `receipts/CHAIN.blake3` (via `scripts/receipt_chain_sync.sh` only).
 
 ```
 $ bash scripts/receipt_chain_sync.sh
-NO-OP: CHAIN.blake3 already current; head=2c316b0261c992cfb0463d135e4af4f6975daf9318368bfaf531098b57749d05
+NO-OP: CHAIN.blake3 already current; head=2c316b0261c992cfb0463d135e4af4f6975daf9318368bfaf531098b57749d05 # historical
 EXIT=0
 $ bash scripts/receipt_chain_sync.sh --check
-VERIFIED: 8 receipts match CHAIN.blake3; head=2c316b0261c992cfb0463d135e4af4f6975daf9318368bfaf531098b57749d05
+VERIFIED: 8 receipts match CHAIN.blake3; head=2c316b0261c992cfb0463d135e4af4f6975daf9318368bfaf531098b57749d05 # historical
 EXIT=0
 ```
 
@@ -115,7 +115,7 @@ transition, not a lane N14 action.
 
 ### Chain head
 
-- before: `2c316b0261c992cfb0463d135e4af4f6975daf9318368bfaf531098b57749d05` (NO-OP — no write)
+- before: `2c316b0261c992cfb0463d135e4af4f6975daf9318368bfaf531098b57749d05` (NO-OP — no write) (historical)
 - after:  same (byte-identical, --check VERIFIED)
 
 ## Second canary window (S12, 2026-10-22 ~21:0x) — investigation CLOSED QUIESCED

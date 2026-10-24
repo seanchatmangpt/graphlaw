@@ -518,10 +518,17 @@ fn dvp_02_aborted_atomic_settlement_zero_net_change() {
         partial["state_delta"], json!(0),
         "atomic abort undoes every member effect: {r}"
     );
+    // Partial-receipt doc_hash serializes as the raw 32-byte BLAKE3 digest
+    // (byte array), unlike the success-path doc_hash which is 64-char hex
+    // (witnessed in the BatchMemberFailed envelope, 2026-10-23).
     assert_eq!(
-        partial["doc_hash"].as_str().map(str::len),
-        Some(64),
-        "partial receipt carries the document hash: {r}"
+        partial["doc_hash"].as_array().map(Vec::len),
+        Some(32),
+        "partial receipt carries the 32-byte document hash: {r}"
+    );
+    assert!(
+        partial["doc_hash"].as_array().map_or(false, |a| a.iter().all(|b| b.is_u64())),
+        "doc_hash bytes: {r}"
     );
 
     // CRITICAL: zero net state change — pre/post readbacks byte-identical.
@@ -541,15 +548,22 @@ fn dvp_02_aborted_atomic_settlement_zero_net_change() {
     // document commits with the payer un-debited. One-legged settlement is
     // caught at the conformance layer (DVP-03), not the execution layer.
     let ghost = sequence_doc(true, &[
-        update_member(0, "g0", "dvp_accounts", "balance", "900.00", "acct", "GHOST-ACCT"),
-        update_member(1, "g1", "dvp_accounts", "balance", "1100.00", "acct", "PAYEE"),
-        update_member_var(2, "g2", "dvp_assets", "owner", "PAYEE", "asset_id", "A1"),
+        update_member(0, "m0", "dvp_accounts", "balance", "900.00", "acct", "GHOST-ACCT"),
+        update_member(1, "m1", "dvp_accounts", "balance", "1100.00", "acct", "PAYEE"),
+        update_member_var(2, "m2", "dvp_assets", "owner", "PAYEE", "asset_id", "A1"),
     ]);
     let g = h.exec(&doc_req(SESSION, &ghost, true));
     assert_eq!(g["failed_at"], Value::Null, "empty-WHERE-match commits: {g}");
+    // rows_emitted counts observation triples per member (1 each); the
+    // zero-row-mutation fact lives in member 0's vocab:Count result triple.
     assert_eq!(
-        g["rows_emitted"], json!([0, 1, 1]),
-        "the ghost debit matches zero rows: {g}"
+        g["rows_emitted"], json!([1, 1, 1]),
+        "one observation triple per member: {g}"
+    );
+    assert_eq!(
+        g["members"][0]["result_triples"][0]["object"]["Literal"]["lexical_form"],
+        json!("0"),
+        "the ghost debit matches zero rows (vocab:Count = 0): {g}"
     );
     let (gap_cash, _) = readback(&mut h, SESSION);
     assert!(
@@ -597,16 +611,41 @@ fn dvp_03_one_legged_trace_rejected_by_conformance_check() {
     );
 
     // Twin: with the cash legs ALSO landed (DVP-01's document), the same
-    // check passes — proving the check is not vacuously false.
+    // check passes — proving the check is not vacuously false. Members are
+    // named ex:m0/ex:m1 so they fold into the sequence's sql:statements —
+    // mismatched node names (c0/c1) would stay bare top-level roots and trip
+    // the kernel's one-root conformance check (REFUSAL-01).
     let full = sequence_doc(true, &[
-        update_member(0, "c0", "dvp_accounts", "balance", "900.00", "acct", "PAYER"),
-        update_member(1, "c1", "dvp_accounts", "balance", "1100.00", "acct", "PAYEE"),
+        update_member(0, "m0", "dvp_accounts", "balance", "900.00", "acct", "PAYER"),
+        update_member(1, "m1", "dvp_accounts", "balance", "1100.00", "acct", "PAYEE"),
     ]);
     h.exec(&doc_req(SESSION, &full, true));
     let (cash_full, asset_full) = readback(&mut h, SESSION);
     assert!(
         settlement_conformant(&cash_full, &asset_full),
         "the two-sided settlement must pass the same check (non-vacuity twin)"
+    );
+
+    // Anti-vacuity twin: the multi-root malformation itself must be refused
+    // TYPED — a document with the sequence root PLUS bare statement roots
+    // (mismatched IRIs) must fail as REFUSAL-01, never crash or silently
+    // pick a root.
+    let multi_root = format!(
+        r#"{PREFIXES}
+ex:dvp1 a sql:StatementSequence ;
+    sql:atomic true ;
+    sql:statements ( ex:m0 ex:m1 ) .
+{}"#,
+        update_member(0, "c0", "dvp_accounts", "balance", "900.00", "acct", "PAYER")
+    );
+    let mr = h
+        .request(&doc_req(SESSION, &multi_root, true))
+        .expect("request transport");
+    assert_eq!(mr["ok"], json!(false), "multi-root doc must be refused: {mr}");
+    let mr_msg = mr["error"]["message"].as_str().unwrap_or_default();
+    assert!(
+        mr_msg.contains("REFUSAL-01") && mr_msg.contains("more than one top-level root"),
+        "typed multi-root refusal required: {mr_msg}"
     );
 
     close_session(&mut h, SESSION);

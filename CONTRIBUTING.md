@@ -14,6 +14,8 @@ cargo check --all-targets --all-features
 cargo run --locked --features abi --bin graphlaw-registry -- --check
 cargo clippy --all-targets --features pack-tools,abi,wasi-patched-deps -- -D warnings
 cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+#   ^ requires the canonical relink env (WASI_SDK_PATH at the frozen-duckdb cache
+#     SDK + wrap-shim RUSTFLAGS) — full command: docs/WASM.md
 GRAPHLAW_WASM=$PWD/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm \
     cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps
 cargo package -p graphlaw-eyeron -p graphlaw
@@ -51,7 +53,9 @@ cargo test --test test_edge_sovereign_ingestion --test test_cold_chain_ocel --te
 
 ## WebAssembly module
 
-`cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` produces
+The canonical relink recipe (`WASI_SDK_PATH` at the unpacked frozen-duckdb
+cache SDK plus the in-tree wrap shim from `tests/fixtures/wasm-shim/`;
+full command in `docs/WASM.md`) produces
 `target/wasm32-wasip1/wasm/graphlaw_wasm.wasm` (the `wasm` member is version-pinned in
 `wasm/Cargo.toml`; the same commit must carry `registry/ARTIFACTS.blake3` and
 `priv/graphlaw.wasm.blake3` for any version bump). `tests/wasm_abi.rs` runs it in a real wasm runtime

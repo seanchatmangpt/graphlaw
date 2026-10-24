@@ -15,7 +15,7 @@ records — remains unexplained by this lane and stands.)
    src/registry{,.rs,/*}, src/abi{,.rs,/*}, src/dialect{,.rs,/*},
    src/query_ledger{,.rs,/*}, src/receipt_chain{,.rs,/*}, and eyeron parser/
    + reasoner/ (incl. mod files) — into `/tmp/s8-canary/before.jsonl`
-   (sha256 e1c5260259f18ddf5ae4bb3d23a7878fe813b90dfe4d35f6e5e347ce579f7854).
+   (sha256 e1c5260259f18ddf5ae4bb3d23a7878fe813b90dfe4d35f6e5e347ce579f7854). (historical)
 2. Bounded poll — SLEEP-CLASS: POLL-STEP (single audited poll implementation,
    bounded 60 s steps, deadline-checked): 5 rounds, snapshots round1..round5.
 3. `diff` round r vs r+1 for all pairs: **IDENTICAL** (byte-exact; sha256 of
@@ -77,11 +77,11 @@ round would have altered snapshot content and tripped the comparator).
    src/registry{,.rs,/*}, src/abi{,.rs,/*}, src/abi_manifest.rs, src/dialect{,.rs,/*},
    src/query_ledger{,.rs,/*}, src/receipt_chain{,.rs,/*}, eyeron parser{,.rs,/*},
    reasoner{,.rs,/*} — via `/tmp/s12-canary/snap.sh` into `before.jsonl`
-   (sha256 c0a96f0bcb9a7d0f4c5837729d356ccd209922260666b4500e03b862c55015d8).
+   (sha256 c0a96f0bcb9a7d0f4c5837729d356ccd209922260666b4500e03b862c55015d8). (historical)
 2. Bounded poll — SLEEP-CLASS: POLL-STEP (single audited poll implementation, 60 s
    bounded steps): 10 rounds, snapshot per round into round1..round10.jsonl.
 3. Byte-exact `cmp` of each round vs baseline: **exit 0 all 10 rounds**; final
-   round10.jsonl sha256 == baseline (c0a96f0bcb9a7d0f4c5837729d356ccd209922260666b4500e03b862c55015d8).
+   round10.jsonl sha256 == baseline (c0a96f0bcb9a7d0f4c5837729d356ccd209922260666b4500e03b862c55015d8). (historical)
    No TRIPPED file exists; no lsof/ps attribution fired because no trip occurred.
 4. Baseline attribution probes (no trip, so probes are corroboration not capture):
    - `lsof +D src crates/graphlaw-eyeron/src`: **zero handles** on any watched source file (exit 0, empty).

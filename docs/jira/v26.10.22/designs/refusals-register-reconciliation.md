@@ -2,7 +2,7 @@
 
 Subject: `/Users/sac/graphlaw` @ main (uncommitted working tree; coordinator owns git).
 Receipt hash of the register after edit:
-`76946732e9cc2fa9bc6084660f3c2f8c21587893781ca10df1cfa5446fdecd14  docs/refusals.md`
+`76946732e9cc2fa9bc6084660f3c2f8c21587893781ca10df1cfa5446fdecd14  docs/refusals.md` (historical)
 (shasum -a 256, this session).
 
 ## Method

@@ -44,7 +44,7 @@
   stat -f%z priv/graphlaw.wasm
   ```
 - Artifact blake3 (BUILT artifact, target build):
-  `259cf5b0650c94f310e516fbccefabed5896b6a1872d915a3273729f427ed7c9`
+  `259cf5b0650c94f310e516fbccefabed5896b6a1872d915a3273729f427ed7c9` (historical)
   (`b3sum target/wasm32-wasip1/wasm/graphlaw_wasm.wasm`).
   **Re-pin to `priv/` pending trap resolution** — the pinned
   `priv/graphlaw.wasm` remains the legacy pre-DuckDB pin until then.

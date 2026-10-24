@@ -11,9 +11,9 @@
 # wasm row: never re-pinned by graphlaw-registry; re-pinned by the wasm rebuild flow.
 # historical pin (pre-EH-closure): wasm f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e 7104147 graphlaw_wasm.wasm
 wasm fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107 57781384 graphlaw_wasm.wasm
-registry blake3:51c07b33c9b5092a37634aaa2ccaf95399914eec6fdac24856fc9b1cca5dc03c - capability-registry.json
+registry blake3:80ef3ebf957e2d6eac6950d9a08362ad6d339ffde7a235b27f5d748c746f23c7 - capability-registry.json
 surface blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9 - capability-registry.json
-receipt-surface blake3:3f6a98a691b9b0231ba5bf4d4360101eebfedf22beac6f924d35e981331b0cb3 - src/duckdb_eval.rs+src/sql_ast.rs
+receipt-surface blake3:742e03113322ecff98afbbcfc73a952d6321df8e917cf45aa9225efc327ef491 - src/duckdb_eval.rs+src/sql_ast.rs
 # receipt-surface: blake3 of the canonical graphlaw.receipt-surface/1 document
 #   (per-file blake3+bytes for src/duckdb_eval.rs and src/sql_ast.rs, the receipt-minting
 #   surface); recomputed by graphlaw::registry::receipt_surface_blake3(). Re-pin via

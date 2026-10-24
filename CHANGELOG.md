@@ -169,6 +169,44 @@ signature-tamper courts, OCEL exporter, and an external oracle CI job.
   and G4 multi-column 6 courts folded in
   (`receipts/2026-10-23-eh-closure-wave.md` §4).
 
+### Added (SQLRDF-25..27 + CanonArrow wave, third batch)
+
+- SQLRDF-25 rows 1-5 of the dialect-expansion gaps landed with courts (17/0:
+  pivot 3, star 4, columns 4, json 2, composite 4 incl. a struct egress arm +
+  SHACL depth route): PIVOT/UNPIVOT compiler dispatch (ON-IN-USING order
+  load-bearing), `* EXCLUDE/REPLACE` star modifiers and `COLUMNS('regex')`
+  closed shapes, JSON `->`/`->>` operators, composite struct/map/list
+  literals + slicing (`tests/pivot_court.rs`, `tests/star_modifier_court.rs`,
+  `tests/columns_projection_court.rs`, `tests/json_operator_court.rs`,
+  `tests/composite_literal_court.rs`; remaining-gaps ledger
+  `docs/jira/v26.10.22/SQLRDF-25-remaining-gaps.md`).
+- Atomic document execution mode (SQLRDF-26): `sql:atomic true` selects
+  BEGIN/COMMIT around the statement-sequence spine; any member failure
+  ROLLBACKs and returns the typed `BatchMemberFailed` envelope with
+  `failed_at` and a partial receipt marked `status:"aborted"`;
+  `REFUSAL-01` arm `ATOMIC_LITERAL` (46) refuses a non-boolean atomic
+  literal at compile.
+- COPY-egress fix closed (SQLRDF-27): musl→wasi-libc fcntl ABI bridge via the
+  standalone wrap shim `tests/fixtures/wasm-shim/glaw_wrap_shim.c` linked
+  through `--wrap=open/--wrap=openat` RUSTFLAGS (canonical relink recipe,
+  `docs/WASM.md`); close conditions FIBO 4/0 incl. tc08 COPY egress +
+  lifecycle 3/0 witnessed (`receipts/2026-10-23-sqlrdf27-verdict.md`).
+- ADR-CANONARROW dual-witness columnar egress
+  (`docs/jira/v26.10.22/ADR-canonarrow-dual-witness-egress.md`):
+  in-guest Arrow IPC stream egress plus versioned `receipt_v2`
+  (`R_receipt_v2 = BLAKE3("GLAW_RECEIPT_V2" ∥ H_query ∥ H_pre ∥ H_post ∥
+  H_triples ∥ H_columnar ∥ epoch)`, domain-separated from v1);
+  `src/egress/` (`arrow.rs`, `mod.rs`), court `tests/receipt_v2_court.rs`;
+  `receipt_v1` verifiers untouched; CHAIN re-baselined
+  (`receipts/CHAIN.blake3`, `receipts/2026-10-23-chain-rebaseline-note.md`).
+- Banking (DvP) battery 4/4 GREEN, including the INSERT pairing law fix
+  (`tests/dvp_settlement_court.rs`;
+  `receipts/2026-10-23-banking-4of4-witness.md`).
+- Benchmark suite: `benches/` (`sql_rdf_admission`, `sql_rdf_compiler`,
+  `sql_rdf_egress`, `sql_rdf_engine`, `tc_hot_01`, `tc_hot_02`,
+  `workload_amortization`) with the amortization anti-vacuity court
+  `tests/amortization_court.rs`.
+
 Continued — sql-rdf dialect surface (35 statement classes, SHACL admission, expression
 compiler, parameterized MERGE), typed refusal register, and receipt-hash pinning.
 

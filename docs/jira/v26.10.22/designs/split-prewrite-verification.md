@@ -25,7 +25,7 @@ pin; extraction base = working tree at extract time.
 - Provenance replay: all 131 ranges in provenance.json (limits 15, builtins/mod 29,
   math 22, string 13, list 24, log 28) byte-verified: 131/131 PASS.
 - Source identity: `shasum -a 256 crates/graphlaw-eyeron/src/reasoner.rs` →
-  `1fb8f0a4d5dad8fea77e93073404952d98579098aad360d5fe2d5dc11d4bad2c`, equals the
+  `1fb8f0a4d5dad8fea77e93073404952d98579098aad360d5fe2d5dc11d4bad2c`, equals the (historical)
   SPLIT-NOTES pin (extract-time and post-write). reasoner.rs itself is unmodified in
   git (not in the modified list).
 - Parse gate: rustfmt --emit stdout --edition 2021, all 7 files → exit 0 each

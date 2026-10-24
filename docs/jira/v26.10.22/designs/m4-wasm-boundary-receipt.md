@@ -14,7 +14,7 @@ use time (not recalled from the dispatch):
 
     /tmp/gl-target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
     45,162,113 B (mtime Oct 22 17:21)   <= 67,108,864 B  PASS (3/3 ceiling rungs: profile, deps copy, --whole-archive free — the artifact under ceiling is the only claim under test here; the dispatch's 3/3 stands)
-    sha256 = c06b2e8cb0474b8e3dde787b1c6f2b91a8982471721a8531500692e09a3f36f0
+    sha256 = c06b2e8cb0474b8e3dde787b1c6f2b91a8982471721a8531500692e09a3f36f0 (historical)
 
 Note (no-overclaiming): the dispatch transcribed 45,179,203 B; the
 on-disk byte count at file time is 45,162,113 B. Both are far under the
@@ -37,8 +37,8 @@ path argument only. priv/ state verified clean at file time:
     git status --porcelain priv/  -> (empty, clean vs HEAD 6b1c7d82…)
     git log -1 --format=%H -- priv/ -> 6b1c7d8289d137e3e1e9d6751752639ba4459927
     sha256(priv/graphlaw.wasm)     =
-      20c5b3f6489447e41a566e9d5909a4f5c0c08d2b8b0c855c422ce0d1fde73d82
-      graphlaw.wasm.blake3 e93e8b99775b0de1da9dd356f5bd316ef1b9e74ccf235c87391ecf3dea218eb1
+      20c5b3f6489447e41a566e9d5909a4f5c0c08d2b8b0c855c422ce0d1fde73d82 (historical)
+      graphlaw.wasm.blake3 e93e8b99775b0de1da9dd356f5bd316ef1b9e74ccf235c87391ecf3dea218eb1 (historical)
     mtimes 12:56 — predate every M4-lane run (17:16/17:21): untouched.
 
 Before/after shas match (before per the lane's run log, after re-read

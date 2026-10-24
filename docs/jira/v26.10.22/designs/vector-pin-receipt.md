@@ -23,10 +23,10 @@ pin to catch it.
 
 | slug | digest |
 |---|---|
-| a-paper-baader-el | `f12d295ffc9209a2c8a7e6f7bc8258daa239e49b29ff6d65d06a102f5d91309c` |
-| b-chain3-conj | `6e920dcc011ba8c665440b691d0e7fa1b11ac27cbc13a03205d2dba06e1d329e` |
-| c-exists-pair | `2ba717f1109389dec0733f812966dbdc0e7ee52d653117214b94942a415465d9` |
-| d-exists-conj-interlock | `c22c4ee38d0e6c47eedbd05c49f65ae818d4cb718b2a28eaa2d56abaf5aee345` |
+| a-paper-baader-el | `f12d295ffc9209a2c8a7e6f7bc8258daa239e49b29ff6d65d06a102f5d91309c` | (historical)
+| b-chain3-conj | `6e920dcc011ba8c665440b691d0e7fa1b11ac27cbc13a03205d2dba06e1d329e` | (historical)
+| c-exists-pair | `2ba717f1109389dec0733f812966dbdc0e7ee52d653117214b94942a415465d9` | (historical)
+| d-exists-conj-interlock | `c22c4ee38d0e6c47eedbd05c49f65ae818d4cb718b2a28eaa2d56abaf5aee345` | (historical)
 
 ## Verification (real output)
 
@@ -44,7 +44,7 @@ Injected `"extra_field": true` after `"breed"` into the emitted bytes and
 re-hashed with the same normalization:
 
 ```
-6799ace43411a625dac72b833aa7fd29308020bc09a64294e911743fea255aa1  (≠ pin f12d295f…)
+6799ace43411a625dac72b833aa7fd29308020bc09a64294e911743fea255aa1  (≠ pin f12d295f…) # historical
 ```
 
 The court flips on exactly the K10 mutation (field addition). Emission state

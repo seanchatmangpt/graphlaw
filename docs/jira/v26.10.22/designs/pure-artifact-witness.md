@@ -12,8 +12,8 @@ candidate artifact, feeding D3 of the dual-artifact policy
 | field | value |
 |---|---|
 | byte size | 6,655,651 B |
-| BLAKE3 | `8b4f4bc8ef650a85135da4d7b6a13b94be20bd38143a21049c03c274c2bb43b5` |
-| sha256 | `bf2bdd8fd761ff85d876a4af8805d77606d08ca1788e9a89be26039f2150d66c` |
+| BLAKE3 | `8b4f4bc8ef650a85135da4d7b6a13b94be20bd38143a21049c03c274c2bb43b5` | (historical)
+| sha256 | `bf2bdd8fd761ff85d876a4af8805d77606d08ca1788e9a89be26039f2150d66c` | (historical)
 | mtime | Oct 13 07:15 |
 
 **The BLAKE3 matches the D3 candidate `8b4f4bc8…` exactly.** It does NOT match
@@ -72,7 +72,7 @@ the ops list ends at `policy`.)
 Request: `{"op":"parse","text":"<http://example/s> <http://example/p> <http://example/o> .","dialect":"turtle"}`
 
 ```json
-{"ok": true, "result": {"dialect": "Turtle", "id": "sha256:f033b5c657944fc3d258e3698a2ba6c7d149b4213449b2bdf6977ce584e81775", "ok": true, "quads": 1}}
+{"ok": true, "result": {"dialect": "Turtle", "id": "sha256:f033b5c657944fc3d258e3698a2ba6c7d149b4213449b2bdf6977ce584e81775", "ok": true, "quads": 1}} # historical
 ```
 
 ### 3.3 governance op (`law` plan step, real admission + receipt) — exit 0
@@ -84,12 +84,12 @@ same goal).
 ```json
 {"ok": true, "result": {"nquads": "<http://example/g> <http://example/says> <http://example/ok> .\n<http://example/s> <http://example/p> <http://example/o> .\n",
   "ok": true,
-  "receipts": [{"added": 1, "authority": "purrdf", "child": "sha256:eebbbd4d5f97d86f59ddad3e7e1dc3a192a5d7b966309295071a86c153ffc7a1",
-                "index": 0, "parent": "sha256:f033b5c657944fc3d258e3698a2ba6c7d149b4213449b2bdf6977ce584e81775",
-                "plan_sha256": "sha256:8602b5163a07170a4dca3028d6ab0d9828bc76b9ec9f77fcbe4b9cd3a1bd431f",
+  "receipts": [{"added": 1, "authority": "purrdf", "child": "sha256:eebbbd4d5f97d86f59ddad3e7e1dc3a192a5d7b966309295071a86c153ffc7a1", # historical
+                "index": 0, "parent": "sha256:f033b5c657944fc3d258e3698a2ba6c7d149b4213449b2bdf6977ce584e81775", # historical
+                "plan_sha256": "sha256:8602b5163a07170a4dca3028d6ab0d9828bc76b9ec9f77fcbe4b9cd3a1bd431f", # historical
                 "revision": "2.0.2", "step": "plan-action"}],
-  "states": ["sha256:f033b5c657944fc3d258e3698a2ba6c7d149b4213449b2bdf6977ce584e81775",
-             "sha256:eebbbd4d5f97d86f59ddad3e7e1dc3a192a5d7b966309295071a86c153ffc7a1"]}}
+  "states": ["sha256:f033b5c657944fc3d258e3698a2ba6c7d149b4213449b2bdf6977ce584e81775", # historical
+             "sha256:eebbbd4d5f97d86f59ddad3e7e1dc3a192a5d7b966309295071a86c153ffc7a1"]}} # historical
 ```
 
 A real plan admission ran inside the guest: state id advanced, one receipt
@@ -115,7 +115,7 @@ mechanism in the duckdb-linked generation.)
 `--expect-blake3 000…000`, one capabilities frame supplied:
 
 ```
-stderr: graphlaw-run: ARTIFACT DIGEST MISMATCH for /Users/sac/beam4pm/native/graphlaw/graphlaw_wasm.wasm: expected 0000000000000000000000000000000000000000000000000000000000000000, got 8b4f4bc8ef650a85135da4d7b6a13b94be20bd38143a21049c03c274c2bb43b5
+stderr: graphlaw-run: ARTIFACT DIGEST MISMATCH for /Users/sac/beam4pm/native/graphlaw/graphlaw_wasm.wasm: expected 0000000000000000000000000000000000000000000000000000000000000000, got 8b4f4bc8ef650a85135da4d7b6a13b94be20bd38143a21049c03c274c2bb43b5 # historical
 exit: 84
 ```
 
@@ -136,7 +136,7 @@ exit: 90
 
 ```
 printf '\x00\x00\x00\x15{"op":"capabilities"}' | graphlaw-run --wasm <artifact> \
-  --expect-blake3 8b4f4bc8ef650a85135da4d7b6a13b94be20bd38143a21049c03c274c2bb43b5
+  --expect-blake3 8b4f4bc8ef650a85135da4d7b6a13b94be20bd38143a21049c03c274c2bb43b5 # historical
 exit: 0
 ```
 

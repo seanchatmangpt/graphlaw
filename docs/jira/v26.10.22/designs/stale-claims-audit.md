@@ -12,7 +12,7 @@ a lane-in-flight note where applicable.
 ### C1. `docs/wasm-integration.md` — artifact pin section describes a dead source state
 
 - **File:line:** `docs/wasm-integration.md:107-131`
-- **Stale text:** "digest `cbc80f07346f025d4e1cd001f21d15474928cb055d4b1a9c0ac7c31c5938dc6a` … 6,654,496 bytes … Minted at the **26.10.13** source state … `wasm/Cargo.toml` reads `version = "26.10.13"`"
+- **Stale text:** "digest `cbc80f07346f025d4e1cd001f21d15474928cb055d4b1a9c0ac7c31c5938dc6a` … 6,654,496 bytes … Minted at the **26.10.13** source state … `wasm/Cargo.toml` reads `version = "26.10.13"`" (historical)
 - **Correction:** The live pin is `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`, 6,793,617 B, `pin-source=26.10.21`; `wasm/Cargo.toml` reads `version = "26.10.21"`.
 - **Evidence:** `cat registry/ARTIFACTS.blake3` → `wasm 332ea218…2c30c 6793617 graphlaw_wasm.wasm`, header `pin-source=26.10.21`; `grep '^version' wasm/Cargo.toml` → `26.10.21`; `ls -l priv/graphlaw.wasm` → 6,793,617 B Oct 22 12:56; `b3sum priv/graphlaw.wasm` → `332ea218…2c30c` (matches pin).
 - Note: `docs/WASM.md` step 7 of the upgrade checklist already names this file's
@@ -127,9 +127,9 @@ a lane-in-flight note where applicable.
 ### C9. `registry/ARTIFACTS.blake3` — capability-registry.json digest pin does not match the file on disk
 
 - **File:line:** `registry/ARTIFACTS.blake3` (registry row)
-- **Stale text:** "registry blake3:7db561aa315e86f3f21022697276ef3382b808ea1bcef4e4245159b755f819b4 - capability-registry.json"
+- **Stale text:** "registry blake3:7db561aa315e86f3f21022697276ef3382b808ea1bcef4e4245159b755f819b4 - capability-registry.json" (historical)
 - **Correction:** `b3sum registry/capability-registry.json` →
-  `5d31d47270ddb7758e86e3223eebd91cd4d59b5dedcee17f875f8660ba97dff3`. The pin
+  `5d31d47270ddb7758e86e3223eebd91cd4d59b5dedcee17f875f8660ba97dff3`. The pin (historical)
   is behind the file.
 - **Evidence:** `b3sum registry/capability-registry.json` (above). **Lane in
   flight:** both `src/registry.rs` and `registry/capability-registry.json` are

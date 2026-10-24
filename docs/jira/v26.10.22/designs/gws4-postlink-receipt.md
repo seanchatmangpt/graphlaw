@@ -25,7 +25,7 @@ Per-subtest:
 
 The prior BLOCKED-LINK is gone: `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`
 succeeds (artifact 45,162,452 B, sha256
-`500333a4b876e0d97741ccc96eb5a00c43959714a8d29b172e7dbaff101d2053`,
+`500333a4b876e0d97741ccc96eb5a00c43959714a8d29b172e7dbaff101d2053`, (historical)
 `target-lane116/wasm-abi/wasm32-wasip1/wasm/graphlaw_wasm.wasm`).
 But the linked module contains a **wasm Tag section** (section id 13, size 3,
 offset 80778; entry `01 00 03` = one tag, attribute 0 (`__cpp_exception`),

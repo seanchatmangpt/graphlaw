@@ -29,7 +29,7 @@ All six resolve (test -f, exit 0 each):
 - include_bytes! embeds a compile-time snapshot; the drift court reads the
   SAME on-disk file, so readback is consistent with whatever bytes compile.
   shasum-256 stable across re-check (3s apart):
-  340afb5519dc67974a6f230f1da57a2ff2c38fc5a8d6aff9fb3aabbb24b798ca
+  340afb5519dc67974a6f230f1da57a2ff2c38fc5a8d6aff9fb3aabbb24b798ca (historical)
 - CAVEAT (session instability, not patch defect): ontologies/sql-ast.ttl is
   git-MODIFIED in the working tree (99 insertions, 1 deletion vs HEAD
   5606594) and mtime is 2026-10-22 17:56:33 — the file changed during this

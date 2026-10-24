@@ -87,7 +87,7 @@ named session `howto-doc`, two-member CREATE→INSERT; exit 0):
 
 ```text
 open: {'ok': True, 'session': 'howto-doc'}
-batch: {"doc_hash": "df81804d5974869d3f435a656c49296c441fd0ed30797af8577878e6041fb19e",
+batch: {"doc_hash": "df81804d5974869d3f435a656c49296c441fd0ed30797af8577878e6041fb19e",  # historical example-run digest
         "failed_at": null, "ok": true, "query_iri": "urn:doc-howto",
         "rows_emitted": [0, 1],
         "members": [
@@ -117,23 +117,23 @@ and `tc01_insert.ttl`). Real output:
 --- 1. open session ---
 {"ok": true, "session": "howto-demo"}
 --- 2. exec CREATE (session=S) ---
-{"cursor": "713c33ff90457f7431dd4831550e68c5f8acb67d536428643998f00c78719830",
+{"cursor": "713c33ff90457f7431dd4831550e68c5f8acb67d536428643998f00c78719830",  # historical example-run digest
  "more": false, "ok": true,
- "query_hash": "357791cfab8c7c4090d0ba059a8bcfe136f2e9ddd68c5c48aeff0607bd718554",
+ "query_hash": "357791cfab8c7c4090d0ba059a8bcfe136f2e9ddd68c5c48aeff0607bd718554",  # historical example-run digest
  "receipt": "http://example.org/data/receipt_357791cfab8c7c4090d0ba059a8bcfe136f2e",
  "rows_emitted": 0,
  "sql": "CREATE TABLE fibo_accounts (id INTEGER, balance DECIMAL, facility_id VARCHAR)"}
 --- 3. exec INSERT (session=S) ---
-{"cursor": "6b2d20b6561fcf73e96093f5cd43c254cd68e3b23d830ba7fdd9c7daa4c0b6e5",
+{"cursor": "6b2d20b6561fcf73e96093f5cd43c254cd68e3b23d830ba7fdd9c7daa4c0b6e5",  # historical example-run digest
  "more": true, "ok": true,
- "query_hash": "3cad3a0725e6da2e9dc16e36890f1725be5acd66eb083dcb7b412c60dd2f0cd6",
+ "query_hash": "3cad3a0725e6da2e9dc16e36890f1725be5acd66eb083dcb7b412c60dd2f0cd6",  # historical example-run digest
  "receipt": "http://example.org/data/receipt_3cad3a0725e6da2e9dc16e36890f1725be5a",
  "rows_emitted": 1,
  "sql": "INSERT INTO fibo_accounts (id, balance, facility_id) VALUES (1, 1250.50, 'FAC-CORP-9882')"}
 --- 4. exec SELECT (session=S) ---
-{"cursor": "294e628b394de4ab84ae0d68c621c4cb99a36f4f972128792b55d41e1b3587a2",
+{"cursor": "294e628b394de4ab84ae0d68c621c4cb99a36f4f972128792b55d41e1b3587a2",  # historical example-run digest
  "more": true, "ok": true,
- "query_hash": "abe8c01f785d2be608d4d5f5713accbd5f23e737fc0dd4fda421695185145c15",
+ "query_hash": "abe8c01f785d2be608d4d5f5713accbd5f23e737fc0dd4fda421695185145c15",  # historical example-run digest
  "receipt": "http://example.org/data/receipt_abe8c01f785d2be608d4d5f5713accbd5f23e",
  "rows_emitted": 1,
  "sql": "SELECT balance FROM fibo_accounts ORDER BY balance"}

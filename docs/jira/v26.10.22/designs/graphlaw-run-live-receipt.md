@@ -13,7 +13,7 @@
 | artifact | blake3 | size | provenance | wasmi `Engine::default()` result |
 |---|---|---|---|---|
 | `priv/graphlaw.wasm` (registry pin row `wasm`) | `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c` | 6,793,617 B | pinned 26.10.21 (byte-exact registry/ARTIFACTS.blake3 row; mtime 2026-10-22 12:56) | LOADS — all receipts below |
-| L115 lane build `target-lane115/wasm32-wasip1/wasm/graphlaw_wasm.wasm` | `f8a146b97be83948331a8d2b9726d84e26b2cc947058b04175eb31c8f84e8eca` | 45,162,315 B | built this lane with `WASI_SDK_PATH=~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1`, exit 0, 2m49s | REJECTED — typed exit 95: `invalid wasm artifact: exceptions proposal not enabled (at offset 0x13b8c)` |
+| L115 lane build `target-lane115/wasm32-wasip1/wasm/graphlaw_wasm.wasm` | `f8a146b97be83948331a8d2b9726d84e26b2cc947058b04175eb31c8f84e8eca` | 45,162,315 B | built this lane with `WASI_SDK_PATH=~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1`, exit 0, 2m49s | REJECTED — typed exit 95: `invalid wasm artifact: exceptions proposal not enabled (at offset 0x13b8c)` | (historical)
 
 Both artifacts contain DuckDB; they differ in a **tag (exceptions) section** present only in
 the lane build. Root cause chain (environmental, typed): the engine cache is not a
@@ -50,7 +50,7 @@ Requests framed as packet-4 (4-byte BE length + JSON); replies unframed by the p
 - **R1 capabilities** — `{"op":"capabilities"}` → EXIT=0, reply len 1470:
   `{"ok":true,"result":{"abi":1,"abi_version":1,"authorities":[...purrdf 2.0.2, SPARQL, SHACL, ShEx, Datalog, entail, hooks...]}}`
 - **R2 parse** — `{"op":"parse","text":"@prefix ex: <https://e/> .\nex:s ex:p ex:o .\n","dialect":"turtle"}` → EXIT=0:
-  `{"ok":true,"result":{"dialect":"Turtle","id":"blake3:b40351024431a9f42aee144a86ad7fe9e74126f0eb5b8537dea2e3fad77f258e","ok":true,"quads":1}}`
+  `{"ok":true,"result":{"dialect":"Turtle","id":"blake3:b40351024431a9f42aee144a86ad7fe9e74126f0eb5b8537dea2e3fad77f258e","ok":true,"quads":1}}` (historical)
 - **R3 duckdb op (probe, pinned artifact)** — native duckdb exec envelope from `tests/wasm_duckdb_op.rs` → EXIT=0,
   reply `{"ok":true,"result":{"error":{"kind":"Unsupported","message":"unknown op `duckdb`"},"ok":false}}`.
   **Typed finding, by design**: `wasm/Cargo.toml` links `graphlaw` with `features = ["abi","wasi-patched-deps"]`
@@ -95,7 +95,7 @@ printf '\x00\x00\x00\x15{"op":"capabilities"}' | $RUN --wasm $PIN >/dev/null; ec
 printf '\x00\x00\x00!{"op":"eval","payload_b64":"!!!"}' | $RUN --wasm $PIN; echo $?     # 93
 python3 -c "import sys; sys.stdout.buffer.write((100).to_bytes(4,'big')+b'{')" | \
   $RUN --wasm $PIN; echo $?                                                             # 90
-$RUN --wasm $PIN --expect-blake3 0000000000000000000000000000000000000000000000000000000000000000 </dev/null; echo $?  # 84
+$RUN --wasm $PIN --expect-blake3 0000000000000000000000000000000000000000000000000000000000000000 </dev/null; echo $?  # 84 # historical
 printf '\x00\x00\x00\x15{"op":"capabilities"}' | \
   $RUN --wasm $PIN --expect-blake3 332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c >/dev/null; echo $?  # 0
 ```

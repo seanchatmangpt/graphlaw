@@ -77,13 +77,13 @@ Two full re-generation runs at `--seed 20261022`, sha256 over every output,
 `diff` of the digest lists returned empty (DETERMINISM-OK). Recorded digests:
 
 ```
-d73d77f3a813dc954f37ac33fa7c98f371d44c87cb0dbb2c3181c20c0a2e8be2  antivacuity-leg-41209-malformed.ttl
-b09ff4de5b635172a429ea38dad3d2aee6e90a56e256c663fd1b5a5c0e19400d  tc-mega-fibo-01-full.nq
-a2932316d00fcd7a1b0d78b8de1fb81e0e0aca288e21993ccab6647b75682ccf  tc-mega-fibo-01-full.trig
-f3e22ad6d641f4347378b0c7980fb7aa7d0e0bd1a623aa25916edf111d601e57  tc-mega-fibo-01-full.ttl
-763b1a4900311ad2a2931eb2079fb54b2773be0bde3a6ac06011e47ecf12a15b  tc-mega-fibo-01-smoke.nq
-370c47f6e8693687314b0044d3add3b706f2d21b51397f278e42bfb5e43f307d  tc-mega-fibo-01-smoke.trig
-19d2f840b44a23ea17728bf246ace9eb44d6db2271f8ccd62d4cad889c7c3013  tc-mega-fibo-01-smoke.ttl
+d73d77f3a813dc954f37ac33fa7c98f371d44c87cb0dbb2c3181c20c0a2e8be2  antivacuity-leg-41209-malformed.ttl # historical
+b09ff4de5b635172a429ea38dad3d2aee6e90a56e256c663fd1b5a5c0e19400d  tc-mega-fibo-01-full.nq # historical
+a2932316d00fcd7a1b0d78b8de1fb81e0e0aca288e21993ccab6647b75682ccf  tc-mega-fibo-01-full.trig # historical
+f3e22ad6d641f4347378b0c7980fb7aa7d0e0bd1a623aa25916edf111d601e57  tc-mega-fibo-01-full.ttl # historical
+763b1a4900311ad2a2931eb2079fb54b2773be0bde3a6ac06011e47ecf12a15b  tc-mega-fibo-01-smoke.nq # historical
+370c47f6e8693687314b0044d3add3b706f2d21b51397f278e42bfb5e43f307d  tc-mega-fibo-01-smoke.trig # historical
+19d2f840b44a23ea17728bf246ace9eb44d6db2271f8ccd62d4cad889c7c3013  tc-mega-fibo-01-smoke.ttl # historical
 ```
 
 Any digest flip on regeneration is FAIL.

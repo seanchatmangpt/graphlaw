@@ -238,13 +238,13 @@ No-Rust constraint honored: setup is python3-stdlib-only
 Rows verified present on disk via `ls` before filing. Loud skips:
 `wasmi-eh-research` (not landed — no file under `designs/`),
 `g2-repin-prestage`, `p7-final-regen-prestage` (no files found); the
-EH memo amendment is in-file (`designs/eh-runner-decision-memo.md:76`, L126
+EH memo amendment is in-file (`../../archive/designs-2026-10-23/eh-runner-decision-memo.md:76`, L126
 stand-down), not a separate record; the M/N receipt set is covered by
 the `m-wave-verdicts` and N-lane rows below.
 
 | Record | What it is | Status |
 |---|---|---|
-| [designs/eh-runner-decision-memo.md](designs/eh-runner-decision-memo.md) | EH runner decision memo (+ L126 amendment): DuckDB wasm artifact carries a Tag section wasmi cannot host; recommends a route, decision required | DECISION REQUIRED (A1 refuted by amendment) |
+| [designs/eh-runner-decision-memo.md](../../archive/designs-2026-10-23/eh-runner-decision-memo.md) | EH runner decision memo (+ L126 amendment): DuckDB wasm artifact carries a Tag section wasmi cannot host; recommends a route, decision required | DECISION REQUIRED (A1 refuted by amendment) |
 | [designs/a1prime-trytable-recipe.md](designs/a1prime-trytable-recipe.md) | A1' rebuild recipe: emsdk try_table/new-style wasm EH flags for a uniformly new-EH artifact hostable by V8 + modern wasmtime | DESIGN (read-only recipe, nothing landed) |
 | [designs/dual-artifact-policy-design.md](designs/dual-artifact-policy-design.md) | Route C dual-artifact policy: legacy EH engine artifact + PURE-tier pre-duckdb module for the wasmi court tier; supersedes the memo route pick | DESIGN (nothing landed) |
 | [designs/wasm-link-root-cause.md](designs/wasm-link-root-cause.md) | WASM-LINK-RC consolidated receipt: four-hop root cause of the `-lduckdb` link failure and the EH consequence chain | DOCUMENTED |
@@ -271,7 +271,7 @@ file has since landed (L165 recorded it as not-landed) — indexed below.
 | Record | What it is | Status |
 |---|---|---|
 | [designs/m4-wasm-boundary-receipt.md](designs/m4-wasm-boundary-receipt.md) | M4 wasm-boundary verdict receipt (closes the M4 OUT->FILED flip noted in m-wave-verdicts) | FILED (L149) |
-| [designs/p7-final-regen-prestage.md](designs/p7-final-regen-prestage.md) | P7 pre-stage: final registry regen procedure, queued on the GO/NO-GO board row 47 | PRE-STAGE (not yet executed) |
+| [designs/p7-final-regen-prestage.md](../../archive/designs-2026-10-23/p7-final-regen-prestage.md) | P7 pre-stage: final registry regen procedure, queued on the GO/NO-GO board row 47 | PRE-STAGE (not yet executed) |
 | [designs/mutation-court-full-receipt.md](designs/mutation-court-full-receipt.md) | In-file amendments: N1 verification + blocked-until-commit; L151 mutant-scope freshness re-verification (corrects N1's "124" count) | AMENDED (L151) |
 | [designs/OPERATOR-DECISIONS.md](designs/OPERATOR-DECISIONS.md) | Consolidated operator decision register: question, evidence, options, recommendation per entry; nothing decided by the lane | DECISION REGISTER (open) |
 | [designs/laundering-count-reconcile.md](designs/laundering-count-reconcile.md) | Reconciles GO/NO-GO row 1 "laundering 11/11" against the M2/L147 witness at 23/0 | RECONCILED |
@@ -279,7 +279,7 @@ file has since landed (L165 recorded it as not-landed) — indexed below.
 | [designs/g2-repin-prep.md](designs/g2-repin-prep.md) | G2 AXIOM-IMMUTABILITY re-pin prep: read-only prep, writes only `courts/code-partition/axioms.blake3.next` | PREP (runbook step 3) |
 | [designs/tc-hot-full-receipt.md](designs/tc-hot-full-receipt.md) | "Durable corpus relocation (L159)" section: TC-HOT corpus moved to a durable path with reattempt leg L118 | AMENDED (L159) |
 | [designs/registry-drift-scope.md](designs/registry-drift-scope.md) | Registry drift scope receipt: court run with embedded exits/digests bounding registry drift | RECEIPTED |
-| [designs/repin-staging-gap.md](designs/repin-staging-gap.md) | Re-pin staging gap: wasi-sdk-34 vs emsdk-built staging; nothing re-pinned, every claim receipt-cited | GAP DOCUMENTED |
+| [designs/repin-staging-gap.md](../../archive/designs-2026-10-23/repin-staging-gap.md) | Re-pin staging gap: wasi-sdk-34 vs emsdk-built staging; nothing re-pinned, every claim receipt-cited | GAP DOCUMENTED |
 | [designs/spc-red-remediation-design.md](designs/spc-red-remediation-design.md) | SPC red remediation design for `spc_court.sh`/`tc_hot_01.rs`; design only, gate code untouched by the lane | DESIGN (nothing landed) |
 | [designs/wasmi-eh-research.md](designs/wasmi-eh-research.md) | wasmi exception-handling research feeding the ENGINE-tier host decision (wasmi EH support, wasmtime 48 new-EH) | RESEARCH (landed since L165) |
 
@@ -311,7 +311,7 @@ outputs found under `designs/` in this batch.
 |---|---|---|
 | [designs/s2-provenance-census-verify.md](designs/s2-provenance-census-verify.md) | S2 skeptic verification of N26: independently re-derived all-8-trees-wired (facade `mod`/`pub use` evidence), zero writes to split dirs in the wiring window via its own jsonl sweep; abi/ops and reasoner/builtins are nested dirs (12 files, not 8 flat); out-of-band actor not identified — advises do NOT commit until the unlogged writer is found | CONFIRMED with corrections (actor question open) |
 | [designs/s4-spc-design-verify.md](designs/s4-spc-design-verify.md) | S4 skeptic verification of `spc-red-remediation-design.md` (L169): 5 receipts re-parsed, p999=292 shelf CONFIRMED in 4 runs (stronger than claimed), 3 arithmetic corrections, composite tail-magnitude loophole found; measurement model stands, gate needs one more term before implementation | PARTIAL (design confirmed; composite gate loophole) |
-| [designs/surface-six-entry-patch.md](designs/surface-six-entry-patch.md) | L172 staged patch expanding `src/registry/emit_json.rs` FILES const from 2 to 6 entries (closes the S1-confirmed 35.8% pin gap); DO-NOT-APPLY until quiescent window, sequenced after green compile and BEFORE any `graphlaw-registry --write` | STAGED (deferred, not applied) |
+| [designs/surface-six-entry-patch.md](../../archive/designs-2026-10-23/surface-six-entry-patch.md) | L172 staged patch expanding `src/registry/emit_json.rs` FILES const from 2 to 6 entries (closes the S1-confirmed 35.8% pin gap); DO-NOT-APPLY until quiescent window, sequenced after green compile and BEFORE any `graphlaw-registry --write` | STAGED (deferred, not applied) |
 
 ### V-L20 integration verification (2026-10-22, lane V-L20)
 
@@ -436,10 +436,10 @@ re-adjudicated here — see [designs/RECEIPTS.md](designs/RECEIPTS.md) and
 | [c4-reconciliation.md](designs/c4-reconciliation.md) | C4 reconciliation: c4-architecture.md vs. repo state |
 | [cargo-deny-receipt.md](designs/cargo-deny-receipt.md) | cargo-deny Receipt (RUST-8, lane L63) |
 | [claude-md-ladder-receipt.md](designs/claude-md-ladder-receipt.md) | CLAUDE.md Ladder Receipt — Lane L50 |
-| [claude-policy-commit-note.md](designs/claude-policy-commit-note.md) | .claude/ Commit Policy — GO/NO-GO Operator Decision 3 |
+| [claude-policy-commit-note.md](../../archive/designs-2026-10-23/claude-policy-commit-note.md) | .claude/ Commit Policy — GO/NO-GO Operator Decision 3 |
 | [clippy-zero-receipt.md](designs/clippy-zero-receipt.md) | Clippy-zero receipt — lane L130 |
 | [code-first-refusals.md](designs/code-first-refusals.md) | Code-first refusals & binary-first serialization — P29-RFL (design record) |
-| [commit-receipt-provenance-gap.md](designs/commit-receipt-provenance-gap.md) | Commit receipt — staged provenance-gap section (lane L176) |
+| [commit-receipt-provenance-gap.md](../../archive/designs-2026-10-23/commit-receipt-provenance-gap.md) | Commit receipt — staged provenance-gap section (lane L176) |
 | [cpk-correction.md](designs/cpk-correction.md) | Cpk capability analysis — corrected (DFLSS Measure-lane A record) |
 | [ctq-traceability.md](designs/ctq-traceability.md) | CTQ → Court Traceability Matrix (DFLSS Define-lane A record) |
 | [defect-pareto-verified.md](designs/defect-pareto-verified.md) | Defect Pareto — witnessed vs charter (DFLSS Define-lane B record) |
@@ -464,7 +464,7 @@ re-adjudicated here — see [designs/RECEIPTS.md](designs/RECEIPTS.md) and
 | [p28-sil-capability-audit.md](designs/p28-sil-capability-audit.md) | P28-SIL v2.1.0 capability audit — consolidated record (12 lanes) |
 | [pce-baseline.md](designs/pce-baseline.md) | PCE baseline — charter "<2.8%" REFUTED at the measured operating point |
 | [peg-kinds-claim-receipt.md](designs/peg-kinds-claim-receipt.md) | Receipt: L60 — "35 PEG statement kinds" claim audit |
-| [R2-capability-routes.md](designs/R2-capability-routes.md) | R2 — capability route table (design record) |
+| [R2-capability-routes.md](../../archive/designs-2026-10-23/R2-capability-routes.md) | R2 — capability route table (design record) |
 | [receipt-surface-pin.md](designs/receipt-surface-pin.md) | Receipt-surface digest pin (P28-SIL §4 circumvention witness) |
 | [receipts-chain-audit.md](designs/receipts-chain-audit.md) | Receipts chain audit — lane L31 |
 | [rules-pruner-design.md](designs/rules-pruner-design.md) | C23 Harness Pruner — Design (L34) |
@@ -589,7 +589,7 @@ Per-ticket standing as of the EH-closure wave. Receipts:
 
 Receipts: [RECEIPTS.md](RECEIPTS.md) §"2026-10-23 ledger-sync wave".
 - **Banking (DvP)** — 4/4 GREEN witnessed (`receipts/2026-10-23-banking-4of4-witness.md`,
-  b3sum `f3570f15d3d98ad52af83187404d8cdf99b1ad7f36ddcdac4cb9f55d3f77920d`);
+  historical b3sum `f3570f15d3d98ad52af83187404d8cdf99b1ad7f36ddcdac4cb9f55d3f77920d`);
   BCBS/Rehypo/UBO 3/3 each as-of prior witness.
 - **receipt_v2** — court 6/6 GREEN with corrected goldens (W60); trust_attest
   full file 12/0.

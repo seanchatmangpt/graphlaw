@@ -33,7 +33,7 @@ cargo test --test differential
 # N3 (Eyeron), Datalog and OWL-RL (PurRDF) must agree on a transitive closure
 
 cargo test --test wasm_abi          # builds the WASI module and drives the hashed 14-op table (`duckdb` is dispatched by the module and omitted from that table until a digest bump)
-                                    #   prerequisite: WASI_SDK_PATH must point at a wasi-sdk root (CI uses wasi-sdk 34) — frozen-duckdb-sys links libc++ into the wasm32-wasip1 build and panics without it (all 25 tests then fail loudly). Alternatively point GRAPHLAW_WASM at a prebuilt module. Recipe: docs/WASM.md.
+                                    #   prerequisite: the canonical relink recipe — WASI_SDK_PATH at the unpacked frozen-duckdb cache SDK (~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1; its legacy-EH sysroot matches libduckdb.a; the published wasi-sdk-34 sysroot fails the link) plus the in-tree wrap shim compiled from tests/fixtures/wasm-shim/. Alternatively point GRAPHLAW_WASM at a prebuilt module. Recipe: docs/WASM.md.
 
 cargo test --test sql_rdf_dialect   # SQL-in-RDF compile + admission courts
 cargo test --test chicago_validation  # Chicago receipt/execution courts

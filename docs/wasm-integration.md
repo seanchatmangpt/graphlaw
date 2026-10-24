@@ -180,7 +180,7 @@ The shipped artifact is pinned by digest and size:
   `74ec3c8d6cdb3db1ff1869ac8b2454c2cf94d08f2a211b0b7d2af2c36b08a7a5`
   (7,098,370 B, 26.10.21);
   `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`
-  (6,793,617 B); (the 26.10.13-era pin was
+  (6,793,617 B); (the 26.10.13-era historical pin was
   `cbc80f07346f025d4e1cd001f21d15474928cb055d4b1a9c0ac7c31c5938dc6a`,
   6,654,496 B.)
 - Reproducibility was witnessed 2026-09-30: two builds, each after

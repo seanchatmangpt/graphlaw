@@ -105,11 +105,11 @@ witness `receipts/2026-10-23-banking-4of4-witness.md` (filing in flight).*
 
 | Execution Path | Measured Median | Operational Context |
 | :--- | :--- | :--- |
-| **C1 Query-Identity Hit** | **2.4 µs** | BLAKE3 canonical digest match + cache short-circuit; zero engine contact. |
-| **Raw Engine Prepared** | **123 µs** | Frozen-DuckDB execution floor for pre-compiled physical plan. |
+| **C1 Query-Identity Hit** | **2.541 µs** | BLAKE3 canonical digest match + cache short-circuit; zero engine contact. |
+| **Raw Engine Prepared** | **117.4 µs** | Frozen-DuckDB execution floor for pre-compiled physical plan. |
 | **Cold Graph-Backed Eval** | **23.13 ms** | Turtle parsing + SHACL admission + relational codegen + plan construction (receipts/2026-10-23-engine-baseline.md; fresh-connection leg 16.42 ms). |
 
-The ~9,100× delta (median-to-median) is a regime change: the cognitive cost of inductive proof
+The ~8,600× delta (median-to-median) is a regime change: the cognitive cost of inductive proof
 generation is paid once upon admission. Subsequent requests pay only a
 constant-time cryptographic identity check.
 
@@ -149,7 +149,7 @@ The compile surface supports 35 PEG statement kinds:
     backward compatibility with legacy receipt verifiers.
 - **Steady-State Optimization Horizon**:
   - Prepared-Statement Ring Cache (P1): Keyed by module-computed
-    H_query to drop parameterized queries from 123 µs toward the low-µs floor.
+    H_query to drop parameterized queries from 117.4 µs toward the low-µs floor.
   - Parametric Workload Amortization: Establishing the empirical latency curve
     T(c) = c·T_cold + (1−c)·T_hot across Zipfian distribution sweeps.
 
@@ -161,7 +161,7 @@ The compile surface supports 35 PEG statement kinds:
 2. **Not Zero-Parse**: The module canonicalizes and hashes every incoming
    payload. The governance boundary cannot be bypassed; what is eliminated is
    intermediate text marshalling and plan re-derivation.
-3. **Parametric Latency**: The 2.4 µs floor represents repeated identical
+3. **Parametric Latency**: The 2.541 µs floor represents repeated identical
    query evaluation. First-contact queries must pay the 23.13 ms admission fee
    to construct the formal evidentiary record.
 

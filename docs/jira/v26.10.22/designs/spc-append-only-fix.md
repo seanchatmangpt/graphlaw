@@ -26,7 +26,7 @@ Measurement logic untouched; only filename + stamp variable lines changed.
 3. `bash scripts/receipt_chain_sync.sh --check` → exit 1:
 
    TAMPER-DETECTED: receipts/spc-2026-10-22.json
-   (chain=1da77e6b743577d627aa588f1e1264fea4ff9bcf86b8dd3f30ecca0ba4cbbc3a
+   (chain=1da77e6b743577d627aa588f1e1264fea4ff9bcf86b8dd3f30ecca0ba4cbbc3a (historical)
     actual=50896fa3253cf162946b5c7eb6eb325fe909cda9305cdb3359619fa52ba11708)
 
 ## Permanent history: the old drift stands (do NOT re-baseline by default)
