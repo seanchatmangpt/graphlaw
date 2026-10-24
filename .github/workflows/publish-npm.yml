@@ -137,6 +137,7 @@ jobs:
           [ -n "$tgz" ] || { echo "no npm tarball for version $VERSION produced" >&2; exit 1; }
           [ -f "$tgz" ] || { echo "expected tarball $tgz not produced" >&2; exit 1; }
           # Drift check: pack a second time and compare file lists.
+          mkdir -p /tmp/pack2
           npm pack --pack-destination /tmp/pack2 >/dev/null
           if ! diff <(tar -tzf "$tgz" | sort) <(tar -tzf "/tmp/pack2/$tgz" | sort) >/dev/null; then
             echo "tarball drift: two packs of the same tree differ in file list" >&2
