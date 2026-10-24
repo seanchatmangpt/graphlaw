@@ -1779,3 +1779,250 @@ form and is R2-relevant.
 - **Standing**: reconciliation APPLIED; GWS-2/3 PASS (receipt-gated);
   GWS-1/4/7/8 honestly PENDING; SQLRDF-26 ALIVE; SQLRDF-25-RG five
   rows LANDED; ADR absorbed.
+
+## Security-hardening wave — consolidation rows (appended 2026-10-24, chain-sync lane)
+
+Post-commit consolidation for the security-hardening wave, appended after the
+wave's fix commits landed on main: `6b57840` (security hardening wave) and
+`16678de` (src/abi.rs json_depth recovery). Chain gate first, real output:
+
+- `bash scripts/receipt_chain_sync.sh` → `NO-OP: CHAIN.blake3 already current;
+  head=3e7fd945f2f86d12059f4f8bd36727e5b27e6a16b88267f4492236cd24eb7a6b`
+  (sync exit 0).
+- `bash scripts/receipt_chain_sync.sh --check` → `VERIFIED: 1720 receipts match
+  CHAIN.blake3; head=3e7fd945…eb7a6b` (exit 0).
+- Wave-window edit-transition receipt locus:
+  `receipts/transition-2026-10-24T06*.json` (92 per-edit receipts, schema
+  v2030-step3, signature status `UNSIGNED-NO-KEY`), now folded into the chain.
+
+Per-item rows (status read from the tree at HEAD `16678de`, not from commit
+messages; commit-message claims are verified against the working tree before
+being recorded as landed):
+
+- **ATTACH scanner re-land (E1) + courts — NOT LANDED (message overclaims).**
+  The `6b57840` commit message claims `src/duckdb_op.rs` was rewritten to a
+  nesting-aware, quote-aware lexical scanner (`leading_sql_token`) with 8 new
+  unit courts (26/0 lib). The tree contradicts the message: zero matches for
+  `leading_sql_token` in the working tree AND in every ref
+  (`git log --all -S leading_sql_token` = empty); `src/duckdb_op.rs:235` still
+  carries the prefix classifier `enforce_attach_policy_with` (prefix-only
+  classification, so `/* comment */ ATTACH` still classifies outside the
+  ATTACH class). Status: IN FLIGHT / NOT LANDED — the scanner and its 8 courts
+  exist in no ref of this checkout. Closure falsifier: the symbol present in
+  `src/duckdb_op.rs` AND the claimed lib courts green (26/0).
+- **Frame bound (`RunError::FrameOversize`, exit 92) — PARTIAL, uncommitted.**
+  Working-tree diff only, `src/bin/graphlaw_run.rs`: enum variant + exit-code
+  mapping (5 inserted lines). The claimed `read_frame` bound by
+  `MAX_REQUEST_BYTES` with pre-allocation guard is absent from both runner
+  bins; `src/bin/graphlaw_run_eh.rs` has no `FrameOversize` at HEAD or in
+  tree. Status: IN FLIGHT.
+- **sterile WasiCtx — NOT LANDED.** `src/bin/graphlaw_run_eh.rs:249` still
+  calls `.inherit_env()` at HEAD and in tree; no ref removed it.
+- **fuel/epoch interruption — NOT LANDED.** No `consume_fuel` or epoch
+  interruption in either runner bin (working tree or HEAD).
+- **json_depth de-mutation — LANDED.** `16678de` recovered `src/abi.rs:124`
+  to the real string-aware bracket-depth scan (`in_str`/`esc` state machine),
+  removing the b4283a3-leaked cargo-mutants shim (`body → 0`). Verified in
+  tree (grep + read of the function body).
+- **eyeron 0.7.9 — LANDED.** `6b57840` carries
+  `crates/graphlaw-eyeron/Cargo.toml` `version = "0.7.9"` (crates.io 0.7.8
+  collision). Verified in tree.
+- **Artifact re-pin (b3sum) — unchanged, live-verified.** `b3sum
+  priv/graphlaw.wasm` = `472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff0068
+  4c0869bf80ea`, byte-exact against `priv/graphlaw.wasm.blake3`. The wave
+  introduced no new wasm artifact; original pin witness
+  `receipts/2026-10-23-v26.10.22-terminal.md` §1 (GWS-2 flip row above).
+- **R3 attestation courts — this host witnessed; second host not re-executed
+  here.** `cargo test --test trust_attest` on this tree, 2026-10-24:
+  `test result: ok. 12 passed; 0 failed; 0 ignored; ... finished in 0.10s`,
+  court exit 0. The "both hosts" leg beyond this host is not witnessed in
+  this session and is recorded as-of-date, not re-executed.
+
+### Receipt fields (security-hardening wave consolidation)
+
+- **Identity**: chain-sync lane over HEAD `16678de`; chain head
+  `3e7fd945f2f86d12059f4f8bd36727e5b27e6a16b88267f4492236cd24eb7a6b` (1720
+  receipts); artifact pin `472d5557…bf80ea` verified live; file touched:
+  `docs/jira/v26.10.22/RECEIPTS.md` (this append only).
+- **Authority**: lane lease = `receipts/CHAIN.blake3` via
+  `scripts/receipt_chain_sync.sh` + RECEIPTS.md appends; no src edits, no git.
+- **Consequence**: one appended section (8 per-item rows + fields); zero prior
+  rows rewritten; chain verified, no re-baseline needed (sync NO-OP).
+- **Replay**: `bash scripts/receipt_chain_sync.sh --check` (expect exit 0,
+  head as above); `git log --all -S leading_sql_token` (expect empty);
+  `grep -n leading_sql_token src/duckdb_op.rs` (expect no match);
+  `grep -n inherit_env src/bin/graphlaw_run_eh.rs` (expect line 249);
+  `grep -n 'version' crates/graphlaw-eyeron/Cargo.toml` (expect 0.7.9);
+  `b3sum priv/graphlaw.wasm` (expect the pin); `cargo test --test
+  trust_attest` (expect 12/0, exit 0).
+- **Falsifiers**: (a) any of the NOT-LANDED items found landed without a
+  follow-up append naming its receipt — this section is stale, not failed;
+  (b) a NOT-LANDED row later shown present at HEAD `16678de` — the row is
+  FAIL; (c) chain `--check` exiting 1 after this append — the consolidation
+  is FAIL and the flip reverts.
+- **Standing**: chain VERIFIED (receipt-gated); LANDED: json_depth
+  de-mutation, eyeron 0.7.9, artifact pin unchanged-and-verified; this-host
+  attestation courts 12/0 witnessed; IN FLIGHT / NOT LANDED (honest): E1
+  ATTACH scanner + courts, frame bound (partial, uncommitted), sterile
+  WasiCtx, fuel/epoch, second-host attestation leg.
+
+## Security-hardening wave — supersession rows (appended 2026-10-24 ~01:10 PDT, chain/attest lane)
+
+As-of HEAD `e94d9bd` ("re-land comment-aware ATTACH scanner + multi-statement
+guard (SQLRDF-22 G6)"), read 2026-10-24T08:09:18Z. Supersedes-by-pointer the
+consolidation section above (whose rows are as-of HEAD `16678de`, taken
+before `679299d`/`e94d9bd` landed); zero prior rows rewritten. All commands
+below were executed by this lane, cwd `/Users/sac/graphlaw`, outputs embedded
+verbatim.
+
+### Wave commit sequence (witnessed live: `git log` + `git reflog` this session)
+
+```text
+00:30:02  9b9695e  feat(reconstitution): … (removed from the branch 27 s
+          later by the coordinator `reset: moving to HEAD~1` at 00:30:29 —
+          the destroy of the first landing; survives only in reflog)
+00:34:11  6b57840  fix(v26.10.22): security hardening wave — committed diff =
+          Cargo.lock + crates/graphlaw-eyeron/Cargo.toml (0.7.8→0.7.9) ONLY;
+          the message's other claims landed in later commits
+00:36:45  16678de  fix(v26.10.22): recover src/abi.rs json_depth (+23/-1)
+00:56:43  679299d  fix(security): ATTACH bypass comment guard, read_frame
+          cap, attach court, and CHAIN sync
+(as-of)   e94d9bd  fix(security): re-land comment-aware ATTACH scanner +
+          multi-statement guard (SQLRDF-22 G6)
+```
+
+### Chain gate (mandated run, this lane)
+
+- First run: `bash scripts/receipt_chain_sync.sh` → `TAMPER-DETECTED:
+  receipts/2026-10-23-v26.10.22-terminal.md (chain=fe915732…30eaa7
+  actual=9931a06e…589a7)`, `REFUSED: … no CHAIN.blake3 write (exit 1)`;
+  `--check` exit 1. Cause: a post-chaining append to the terminal receipt
+  (§6 amendment, on disk mtime 00:54, read live at digest `9931a06e…`);
+  the file was subsequently restored to its chained digest `fe915732…`
+  (re-verified live) and the drift cleared without any write by this lane
+  (lease is script-only; re-baselines are coordinator transitions per
+  `receipts/2026-10-23-chain-rebaseline-note.md`).
+- Final run: `bash scripts/receipt_chain_sync.sh` → `NO-OP: CHAIN.blake3
+  already current; head=244349f1ddb61366813ee9cce4c07b663c1ce8f7f0cfbeac054b
+  55053f6ad269` (exit 0); `bash scripts/receipt_chain_sync.sh --check` →
+  `VERIFIED: 1763 receipts match CHAIN.blake3; head=244349f1…d269`
+  (**exit 0 required — met**). Intermediate same-session runs also exit 0
+  (1757 receipts head `7e4cea0c…c465`; 1739 receipts head `1103675c…6503`)
+  — heads move between runs because the re-land lanes keep extending the
+  chain concurrently; every run verified, none refused after the drift
+  cleared.
+
+### Per-item rows (every state re-read at HEAD `e94d9bd` / tree, 08:09:18Z)
+
+- **E1 ATTACH scanner fix — LANDED (`679299d` + `e94d9bd`).**
+  `git show HEAD:src/duckdb_op.rs | grep -c 'leading_sql_token\|
+  top_level_semicolon_count'` = **4** (symbol present at HEAD; at
+  `16678de` it was 0 — the sibling rows above recorded that correctly
+  for their as-of). `git log -S leading_sql_token -- src/duckdb_op.rs`
+  = `679299d`, `e94d9bd`. **Court RED as run by this lane** on the tree
+  carrying the then-uncommitted `+58` scanner edit (in-flight state
+  disclosed per the compile-freeze SLA; run completed 01:0x before
+  `e94d9bd` landed):
+  ```text
+  $ cargo test --test attach_bypass_court
+  test camouflage_attack_strings_are_engine_live_attach_statements ... ok
+  test wire_fail_closed_refusal_then_inside_root_attach_executes ... FAILED
+  test wire_document_member_attach_refuses_typed ... FAILED
+  ---- wire_fail_closed_refusal_then_inside_root_attach_executes stdout ----
+  thread '…' panicked at tests/attach_bypass_court.rs:103:5:
+  fail-closed env-unset attach: refusal must carry the raw path verbatim:
+  {"error":{"…":"…","kind":"DuckDb","message":"duckdb: attach path outside
+  GRAPHLAW_ATTACH_ROOTS allowlist: <none>"}, "ok":false}
+  test result: FAILED. 1 passed; 2 failed; … finished in 0.20s
+  error: test failed, to rerun pass `--test attach_bypass_court`
+  ```
+  Standing: **LANDED, COURT RED (1/2, exit 1)** — the wire refusals carry
+  the `<none>` sentinel instead of the raw path verbatim. Not a closure.
+  Falsifier: rerun post-`e94d9bd` — expect 3/0 exit 0; a still-red run
+  names the defect locus (`extract_attach_path`-equivalent on the wire
+  path).
+- **R3 frame bound — wasmi host LANDED (`679299d`); EH host UNCOMMITTED
+  (mid-re-land).** `src/bin/graphlaw_run.rs` at HEAD: `FrameOversize`
+  variant, `=> 92` mapping, `read_frame` bound at `:484-485` against
+  single-source `graphlaw::abi::MAX_REQUEST_BYTES`, coherence assert
+  `MAX_REQUEST_BYTES <= WALL_BYTES` (`:105`), +3 rows in
+  `docs/reference/runner-exit-codes.md` (commit stat). EH host:
+  working tree carries the legs (11 matches for
+  `FrameOversize|FUEL_PER_REQUEST` in `src/bin/graphlaw_run_eh.rs`),
+  HEAD has **0**; `git log -S FrameOversize -- src/bin/graphlaw_run_eh.rs`
+  = empty. Status: PARTIAL — committed on the wasmi host only.
+- **C0b sterile WasiCtx — NOT LANDED.** `grep -c inherit_env
+  src/bin/graphlaw_run_eh.rs` = **1** in the working tree (and at HEAD);
+  no ref removed it (`git log --all -S inherit_env` shows only the
+  landing commit, none removing). Disclosed residual
+  (`SECURITY.md:103-105` class) stays OPEN.
+- **C0c fuel/epoch — UNCOMMITTED, no commit.** FUEL_PER_REQUEST +
+  epoch-deadline + typed exit-98 docs visible in the working-tree
+  `graphlaw_run_eh.rs` (11 combined R3/fuel token matches), **0 at
+  HEAD**. Cannot be recorded LANDED without a commit.
+- **eyeron 0.7.9 — LANDED (`6b57840`).** `git show
+  HEAD:crates/graphlaw-eyeron/Cargo.toml | grep '^version'` = `0.7.9`;
+  workspace dep `Cargo.toml:68` = `0.7.9`; real digests:
+  `b3sum crates/graphlaw-eyeron/Cargo.toml` =
+  `c97d1496c4a1f1787280f58ecd95fcfc6fe14bd49e46bc2aac13fc40b744e037`;
+  `b3sum Cargo.lock` =
+  `65147e3320af86c97afcb4e48cf464f63349266f98d738a1a630da79f3695537`.
+- **Final artifact re-pin — re-minted twice this window; committed pin
+  still `472d5557…`.** Witnessed live: `9f17f6981264…add40a`
+  (58,122,880 B, mtime 00:35) re-minted then backed out — all four
+  surfaces (priv/graphlaw.wasm, `.blake3`, registry/ARTIFACTS.blake3:13,
+  js/npm/src/generated/artifact-meta.ts) re-verified agreeing on
+  `472d5557…bf80ea` (58,121,500 B) at ~00:57; then a second re-mint
+  observed as-of 08:09:18Z: `b3sum priv/graphlaw.wasm` =
+  `58a4409505f32b5d9aebc8c0ce2e2adeaba05c8c4b55f951a244ab4ad7d2280a` =
+  pin file (working tree, **uncommitted**). The committed pin
+  (`priv/graphlaw.wasm.blake3` at HEAD) remains `472d5557…bf80ea`.
+  Standing: correspondence of the shipped artifact with post-fix source
+  stays PENDING until one settled re-mint + full re-pin (priv + registry
+  + npm meta + release notes) lands committed after the last wave leg.
+- **Mutation/battery context (read, not re-executed, from the files the
+  GO-NO-GO cites):** `/tmp/mc5_run.log` = typed exit 4 (post-restore
+  sanity FAILED on the then-committed mutant shim; flip + byte-exact
+  restore legs green in the same log); `mutants.out/outcomes.json` =
+  caught 9 / missed 0 / unviable 9 / timeout 0, `end_time: null`
+  (18/88 resolved; sweep PENDING); `/tmp/battery9.log` = battery RED
+  (`dvp_settlement_court` 2 passed / 2 failed, 367.49 s). All three
+  pre-date `16678de` (the shim recovery) — each is receipt-gated to its
+  own post-fix rerun, none claimed closed here.
+
+### Receipt fields (this section)
+
+- **Identity**: chain/attest lane over HEAD `e94d9bd`, read
+  2026-10-24T08:09:18Z; files touched: `docs/jira/v26.10.22/RECEIPTS.md`
+  (this append only); `receipts/CHAIN.blake3` untouched by hand (sync
+  runs were NO-OPs).
+- **Authority**: lease = `receipts/CHAIN.blake3` via
+  `scripts/receipt_chain_sync.sh` only + RECEIPTS.md appends; no src
+  edits, no git transitions, no re-baseline (coordinator-only).
+- **Consequence**: one appended section (commit sequence, chain gate,
+  7 per-item rows, fields); zero prior rows rewritten; the sibling
+  consolidation section above is superseded-by-pointer for the rows
+  that moved (`679299d`/`e94d9bd`), not edited.
+- **Replay**: `bash scripts/receipt_chain_sync.sh --check` (expect exit
+  0; head ≥ `244349f1…d269`, count ≥ 1763 — it grows with concurrent
+  lanes); `git log --oneline -S leading_sql_token -- src/duckdb_op.rs`
+  (expect `679299d`, `e94d9bd`); `cargo test --test attach_bypass_court`
+  post-`e94d9bd` (expect 3/0 — the red 1/2 above was pre-`e94d9bd` on an
+  in-flight tree); `grep -c inherit_env src/bin/graphlaw_run_eh.rs`;
+  `git log -S FrameOversize -- src/bin/graphlaw_run_eh.rs` (empty until
+  the EH legs commit); `b3sum priv/graphlaw.wasm` vs
+  `priv/graphlaw.wasm.blake3` (equality is the gate; the digest itself
+  is expected to move once more with the settled re-mint).
+- **Falsifiers**: (a) a post-`e94d9bd` `attach_bypass_court` run still
+  red with the `<none>` path sentinel — the E1 row's court leg is FAIL
+  and the fix is incomplete; (b) the EH legs (`FrameOversize`/fuel) or
+  a sterile-env removal committing without a follow-up append here
+  naming the commit — this section is stale, not failed; (c) any
+  committed `~ changed by cargo-mutants ~` marker surviving in a
+  post-`16678de` HEAD — reopens the shim finding; (d) `--check` exit 1
+  after this append — the chain leg of this consolidation is FAIL.
+- **Standing**: chain VERIFIED exit 0 (receipt-gated); LANDED: E1
+  scanner symbol (court leg RED as-of, falsifier names the flip), R3
+  wasmi-host frame bound, json_depth recovery, eyeron 0.7.9;
+  UNCOMMITTED: EH-host R3/C0c legs; NOT LANDED: C0b sterile env;
+  PENDING: settled artifact re-mint + full re-pin correspondence.
