@@ -4,7 +4,7 @@
 Lane P1 mapping (operator FOND decomposition, v26.10.22):
 
   tool call --(hook)--> RDF transition proposal (act:ToolCall)
-            --(packet-4 stdio)--> graphlaw-run hosting the compiled wasm module
+            --(packet-4 stdio)--> graphlaw-run-eh hosting the compiled wasm module
             --(`shacl` ABI op)--> SHACL report vs .claude/policy/graphlaw-seed-shapes.ttl
             --(conforms? allow : refuse BEFORE disk alteration)
 
@@ -19,10 +19,10 @@ Infra failures (runner/wasm/shapes missing) fail OPEN with a loud stderr
 GRAPHLAW-ADMISSION: INFRA-FAIL line, matching manifest_guard.py precedent;
 the non-vacuity court covers the real refuse/allow paths.
 
-Prototype honesty: this routes through the graphlaw-run HOST runner (wasmi
-hosting the same compiled artifact as the WASM bridge increment), not through
-wasmex inside a BEAM. The bridge is sequenced, not skipped — see the
-blueprint.
+Prototype honesty: this routes through the graphlaw-run-eh HOST runner
+(wasmtime-48 hosting the same compiled artifact as the WASM bridge increment;
+wasmi retired 2026-10-24 per ADR-wasmi-retirement.md), not through wasmex
+inside a BEAM. The bridge is sequenced, not skipped — see the blueprint.
 """
 import json
 import os
@@ -32,7 +32,7 @@ import sys
 from typing import NoReturn
 
 ROOT = os.environ.get("CLAUDE_PROJECT_DIR", "/Users/sac/graphlaw")
-RUNNER = os.path.join(ROOT, "target/debug/graphlaw-run")
+RUNNER = os.path.join(ROOT, "target/debug/graphlaw-run-eh")
 WASM = os.environ.get("GRAPHLAW_WASM") or os.path.join(ROOT, "priv/graphlaw.wasm")
 SHAPES = os.path.join(ROOT, ".claude/policy/graphlaw-seed-shapes.ttl")
 
@@ -58,10 +58,10 @@ def run_graphlaw_shacl(proposal_turtle: str, shapes_ttl: str):
         env={**os.environ, "GRAPHLAW_WASM": WASM},
     )
     if p.returncode != 0:
-        raise RuntimeError(f"graphlaw-run exit {p.returncode}: {p.stderr.decode()[:400]}")
+        raise RuntimeError(f"graphlaw-run-eh exit {p.returncode}: {p.stderr.decode()[:400]}")
     out = p.stdout
     if len(out) < 4:
-        raise RuntimeError("graphlaw-run: short reply (no length prefix)")
+        raise RuntimeError("graphlaw-run-eh: short reply (no length prefix)")
     (n,) = struct.unpack(">I", out[:4])
     return json.loads(out[4 : 4 + n])
 

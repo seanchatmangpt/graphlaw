@@ -46,7 +46,7 @@ use graphlaw::datalog::store::RelationStore;
 use serde_json::json;
 
 const PURRDF: &str = "2.0.2";
-const EYERON: &str = "0.7.8";
+const EYERON: &str = "0.7.9";
 const SUBJ: &str = "t";
 const TRUE_OBJ: &str = "true";
 

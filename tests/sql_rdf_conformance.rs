@@ -807,6 +807,12 @@ const REGISTERED_ARMS: &[(&str, &[&str])] = &[
     ("STAR_MODIFIER_POSITION", &["Star vocabulary position"]),
     ("COLUMNS_LAMBDA", &["COLUMNS lambda form"]),
     ("COLUMNS_PATTERN", &["COLUMNS pattern literal"]),
+    // SQLRDF-27 set-op arms (docs/refusals.md set-op appendix, refusal_arm
+    // 53..56; courts: tests/set_operations_court.rs).
+    ("SET_OP_NO_RIGHT", &["carries no `sql:setRight`"]),
+    ("SET_OP_KIND_TOKEN", &["not `UNION`, `INTERSECT` or `EXCEPT`"]),
+    ("SET_OP_FLAG_LEX", &["flag literal is not an `xsd:boolean`"]),
+    ("SET_OP_BY_NAME_KIND", &["beside a non-UNION `sql:setOperator`"]),
 ];
 
 /// Known defect-class-A2 drift: implemented arms the register does not yet

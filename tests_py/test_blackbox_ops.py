@@ -71,7 +71,7 @@ def graphlaw_run(args, input_bytes=b"", env_extra=None, timeout=120):
     if env_extra:
         env.update(env_extra)
     return subprocess.run(
-        [os.path.join(REPO, "target", "debug", "graphlaw-run")] + args,
+        [os.path.join(REPO, "target", "debug", "graphlaw-run-eh")] + args,
         input=input_bytes,
         capture_output=True,
         env=env,
@@ -153,7 +153,7 @@ def test_verify_missing_trusted_key_is_usage_exit_2(verify_fixture, graphlaw_bin
 
 
 # ---------------------------------------------------------------------------
-# (b) graphlaw-run: packet-4 stdio framing over a Turtle law doc
+# (b) graphlaw-run-eh: packet-4 stdio framing over a Turtle law doc
 
 
 @pytest.fixture(scope="module")
@@ -169,11 +169,11 @@ def require_wasm_artifact():
 
 
 def packet4_session(runner_args, frames):
-    """Drive one graphlaw-run process: write frames, read reply frames, wait."""
+    """Drive one graphlaw-run-eh process: write frames, read reply frames, wait."""
     env = dict(os.environ)
     env["GRAPHLAW_WASM"] = WASM_PATH
     proc = subprocess.Popen(
-        [os.path.join(REPO, "target", "debug", "graphlaw-run")] + runner_args,
+        [os.path.join(REPO, "target", "debug", "graphlaw-run-eh")] + runner_args,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -252,7 +252,7 @@ def test_run_eof_midframe_is_typed_exit_90(require_wasm_artifact):
     env = dict(os.environ)
     env["GRAPHLAW_WASM"] = WASM_PATH
     proc = subprocess.Popen(
-        [os.path.join(REPO, "target", "debug", "graphlaw-run")],
+        [os.path.join(REPO, "target", "debug", "graphlaw-run-eh")],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -287,13 +287,13 @@ def test_run_malformed_envelope_is_typed_exit_93(require_wasm_artifact):
 # VERBATIM message body — the probe's own MATCH/MISS verdict lines are never
 # read by this court.
 #
-# Reachability note: `graphlaw-run` hosts the wasm module only, and the wasm
+# Reachability note: `graphlaw-run-eh` hosts the wasm module only, and the wasm
 # dispatch (src/abi.rs:334, `#[cfg(not(target_arch = "wasm32"))]`) excludes
 # the `duckdb` op — `compile_turtle`/`eval_ast_query`/`builtin_eval_sql`
 # therefore have NO subprocess surface today. The refusal_probe example is
 # the one real process boundary to them (same pattern as blackbox_fixture);
-# the graphlaw-run `canonical` op is the one wire arm that does cross, and it
-# is exercised directly below.
+# the graphlaw-run-eh `canonical` op is the one wire arm that does cross, and
+# it is exercised directly below.
 
 
 REFUSAL_PROBE_PINS = {
@@ -355,7 +355,7 @@ def test_refusal_class_fires_pinned_register_message(label_prefix, refusal_probe
 
 
 def abi_reply(request_obj: dict, require_wasm_artifact) -> dict:
-    """One raw ABI request through the real graphlaw-run packet-4 passthrough.
+    """One raw ABI request through the real graphlaw-run-eh packet-4 passthrough.
     Returns the module's raw ABI response under the runner envelope."""
     frame = packet4_frame(json.dumps(request_obj).encode("utf-8"))
     rc, replies, err = packet4_session([], [frame])

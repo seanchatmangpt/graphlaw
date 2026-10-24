@@ -2106,13 +2106,13 @@
   "receipt_surface": {
     "files": [
       {
-        "blake3": "blake3:5c4af287b7f82f31bafbd15cac9ad5d86387f52084ad43ae6f8d8ec1e346ddaf",
-        "bytes": 130677,
+        "blake3": "blake3:8ba7c75dcbc90fd9bf8cf9abffbe97cb4a0b4c41a02b2412fb65c55fc77f1582",
+        "bytes": 139342,
         "path": "src/duckdb_eval.rs"
       },
       {
-        "blake3": "blake3:f98e9b5479ae42cc97b20e77ccad65c964fb838c201d06de63e096cee53d56b4",
-        "bytes": 228897,
+        "blake3": "blake3:44360950a2d762463ffc1d97426ddbf1fcaebd9e990cd9c12ce93efd0e14a747",
+        "bytes": 235210,
         "path": "src/sql_ast.rs"
       },
       {
@@ -2121,13 +2121,13 @@
         "path": "src/sql_ast/ast.rs"
       },
       {
-        "blake3": "blake3:b3fc38a441fcb7ca79db1bed015172b42b712f488fab6f86804904185ce60f7b",
-        "bytes": 39216,
+        "blake3": "blake3:ff76944e9b8f7bd780b31c67501c016a96862101bca1bd8253bcfa728a1eb4d0",
+        "bytes": 41884,
         "path": "src/sql_ast/refusals.rs"
       },
       {
-        "blake3": "blake3:bee91779a4faca398d7c7199aa6a8a01d41125c2cd7d511123fc15e252286094",
-        "bytes": 18909,
+        "blake3": "blake3:b35468f29ed40d7aff2ebf67e1d5d1dfb8a06dc10e0e2893dd1a3d24689c54d6",
+        "bytes": 22880,
         "path": "src/sql_ast/serializer.rs"
       },
       {
@@ -2138,7 +2138,7 @@
     ],
     "schema": "graphlaw.receipt-surface/1"
   },
-  "receipt_surface_blake3": "blake3:742e03113322ecff98afbbcfc73a952d6321df8e917cf45aa9225efc327ef491",
+  "receipt_surface_blake3": "blake3:7e34917e1499443427f7ac66939d430691572b484379907355824970e23725b4",
   "refusal_codes": [
     {
       "code": "Refused",
@@ -2431,7 +2431,7 @@
     "owl-rl",
     "d"
   ],
-  "registry_blake3": "blake3:80ef3ebf957e2d6eac6950d9a08362ad6d339ffde7a235b27f5d748c746f23c7",
+  "registry_blake3": "blake3:2a4d109e8ba2c71ff0fc49cc38dbb829dbc8970e13960d9e6202da633ea81c7e",
   "schema": "graphlaw.capability-registry/1",
   "surface_blake3": "blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9"
 }

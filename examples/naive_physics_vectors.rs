@@ -287,7 +287,7 @@ fn check(scene: &Scene) -> Value {
         "provenance": {
             "graphlaw_rev": rev,
             "purrdf": "2.0.2",
-            "eyeron": "0.7.8",
+            "eyeron": "0.7.9",
             "generator": "naive_physics_vectors",
             "stratified": true,
             "paper": "Hayes 1979 (Naive Physics Manifesto); Hayes 1985 (Naive physics I: ontology for liquids)",

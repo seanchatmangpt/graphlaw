@@ -27,17 +27,17 @@ def _bin(name: str) -> str:
 def graphlaw_binaries():
     """Build the real binaries once; yield their paths."""
     r = subprocess.run(
-        ["cargo", "build", "--bins", "--example", "blackbox_fixture", "--features", "runner"],
+        ["cargo", "build", "--bins", "--example", "blackbox_fixture", "--features", "runner-eh"],
         cwd=REPO,
         capture_output=True,
         text=True,
     )
     assert r.returncode == 0, f"cargo build failed:\n{r.stderr}"
-    for name in ("graphlaw-verify", "graphlaw-run", "graphlaw-attest"):
+    for name in ("graphlaw-verify", "graphlaw-run-eh", "graphlaw-attest"):
         assert os.path.exists(_bin(name)), f"missing binary {name}"
     return {
         "verify": _bin("graphlaw-verify"),
-        "run": _bin("graphlaw-run"),
+        "run": _bin("graphlaw-run-eh"),
         "attest": _bin("graphlaw-attest"),
         "fixture": os.path.join(REPO, "target", "debug", "examples", "blackbox_fixture"),
     }

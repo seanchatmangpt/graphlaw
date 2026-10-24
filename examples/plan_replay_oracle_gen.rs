@@ -42,7 +42,7 @@ use graphlaw::abi::call_json;
 use serde_json::{Value, json};
 
 const PURRDF: &str = "2.0.2";
-const EYERON: &str = "0.7.8";
+const EYERON: &str = "0.7.9";
 const GENERATOR: &str = "plan_replay_oracle_gen";
 
 // ------------------------------------------------------------------ datalog

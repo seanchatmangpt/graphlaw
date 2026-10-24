@@ -52,7 +52,7 @@ use graphlaw::datalog::{
 use serde_json::json;
 
 const PURRDF: &str = "2.0.2";
-const EYERON: &str = "0.7.8";
+const EYERON: &str = "0.7.9";
 const GENERATOR: &str = "event_calculus_vectors";
 /// Live crate version stamped into provenance (post-L98/L106 pattern).
 const GL_VERSION: &str = env!("CARGO_PKG_VERSION");

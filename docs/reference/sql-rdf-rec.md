@@ -159,8 +159,8 @@ Conforming implementations **MUST** recognize all 35 statement classes. The embe
 | `sql:AttachStatement` | `sql:SessionStatement` | `AttachStatement` | Mounts external database files into namespace catalog. |
 | `sql:DetachStatement` | `sql:SessionStatement` | `DetachStatement` | Unmounts database files from active engine catalog. |
 | `sql:UseStatement` | `sql:SessionStatement` | `UseStatement` | Sets default schema and database resolution path. |
-| `sql:ConnectStatement` | `sql:SessionStatement` | `ConnectStatement` | **Engine Refusal:** `CONNECT LOCAL is not yet implemented` (illustrative; courts pin loose substrings `not yet implemented` / `no active CONNECT` at `tests/duckdb_statement_kinds.rs:115`). |
-| `sql:DisconnectStatement` | `sql:SessionStatement` | `DisconnectStatement` | **Engine Refusal:** `no active CONNECT` (illustrative; same substring pin at `tests/duckdb_statement_kinds.rs:115`). |
+| `sql:ConnectStatement` | `sql:SessionStatement` | `ConnectStatement` | **Engine Refusal:** `CONNECT LOCAL is not yet implemented` (illustrative; courts pin loose substrings `not yet implemented` / `no active CONNECT` at `tests/duckdb_statement_kinds.rs:123-124`). |
+| `sql:DisconnectStatement` | `sql:SessionStatement` | `DisconnectStatement` | **Engine Refusal:** `no active CONNECT` (illustrative; same substring pin at `tests/duckdb_statement_kinds.rs:123-124`). |
 
 ### 3.3 Syntactic Clauses and Scoped Expressions
 
@@ -353,7 +353,7 @@ The runtime environment **MUST** certify that built-in engine extensions answer 
 | `icu` | Installed & Loaded | `SELECT CASE WHEN count(*) > 0 THEN 1 ELSE 0 END FROM icu_calendar_names()` | Returned integer `1` |
 | `json` | Installed & Loaded | `SELECT json_extract('{"a": 1}', '$.a')::INTEGER` | Returned integer `1` |
 | `parquet` | Installed & Loaded | `COPY (...) TO 'surface.parquet'; SELECT count(*) FROM read_parquet(...)` | Returned integer `1` |
-| `tpch` | Installed | `CALL dbgen(sf = 0.01); SELECT count(*) FROM nation` | Returned integer `25` (courted at `tests/duckdb_statement_kinds.rs:573`, count pinned at `:605`; supersedes earlier `sf = 0` wording) |
+| `tpch` | Installed | `CALL dbgen(sf = 0.01); SELECT count(*) FROM nation` | Returned integer `25` (courted at `tests/duckdb_statement_kinds.rs:515-516` (fn `section6_2_certified_checks_run_through_compiled_ast_graphs`), count pinned at `:646`; supersedes earlier `sf = 0` wording) |
 
 ---
 

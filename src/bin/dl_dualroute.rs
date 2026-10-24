@@ -399,7 +399,7 @@ fn emit_vector(case: &Case, _parsed: &Parsed, verdicts: &[bool]) -> Result<Strin
     "graphlaw_rev": "{rev}",
     "graphlaw_version": "{version}",
     "purrdf": "2.0.2",
-    "eyeron": "0.7.8",
+    "eyeron": "0.7.9",
     "generator": "graphlaw src/bin/dl_dualroute.rs (dual-route: Eyeron N3 DATALOG CR1-CR4 + purrdf OWL-RL; agreement required before emission)",
     "stratified": false
   }},
