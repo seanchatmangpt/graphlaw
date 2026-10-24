@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "10bd20f38f56eb46f05d1600fa7e22ab4cc024e13aaf9db0acb6412d624fbcaf",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T064004Z-Write-10bd20f3.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/design-sniff-fixes.md",
+  "timestamp_utc": "2026-10-24T064004Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

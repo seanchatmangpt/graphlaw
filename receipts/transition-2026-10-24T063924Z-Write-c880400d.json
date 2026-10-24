@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "c880400de3ab03cfc2a525feb7abefce0b2269dfbadc99289615868231a6f9c9",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T063924Z-Write-c880400d.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/ggen-marketplace/packs/court-kit-pack/README.md",
+  "timestamp_utc": "2026-10-24T063924Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

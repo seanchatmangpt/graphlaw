@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "ba71caeda9e1274f996d02428514bc8fce3fcac791983119a6b87ea0bfa10e8c",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T063840Z-Edit-ba71caed.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/design-hot-file-lease-locks.md",
+  "timestamp_utc": "2026-10-24T063840Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

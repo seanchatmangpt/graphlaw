@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "06d0e5eaa1536640cf007a5732be0914920618d3b6db43128d7c95153dea3cbc",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T063834Z-Edit-06d0e5ea.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/ADR-egress-op.md",
+  "timestamp_utc": "2026-10-24T063834Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

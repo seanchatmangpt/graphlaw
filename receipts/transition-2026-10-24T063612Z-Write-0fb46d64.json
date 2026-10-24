@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "0fb46d64bc3a01316196b826cb2f7bcc8f1262d2e724b6e4973e0e5608f5085b",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T063612Z-Write-0fb46d64.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/ggen-marketplace/packs/court-kit-pack/gates/01_all_codes_live.rq",
+  "timestamp_utc": "2026-10-24T063612Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

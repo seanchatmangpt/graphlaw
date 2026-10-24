@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "373cceb114a861cdc5dc54e48e7e30b0db56ccf72652e9552288d4278e481fac",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T063605Z-Write-373cceb1.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/ggen-marketplace/packs/court-kit-pack/templates/vacuity_twin_court_test.rs.tmpl",
+  "timestamp_utc": "2026-10-24T063605Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

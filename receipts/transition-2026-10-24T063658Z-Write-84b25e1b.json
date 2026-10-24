@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "84b25e1bfdba92b08ac3197d4de98aabc24c9f4369986ce470d95efd32ff1b31",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T063658Z-Write-84b25e1b.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/ADR-crate-splitting.md",
+  "timestamp_utc": "2026-10-24T063658Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

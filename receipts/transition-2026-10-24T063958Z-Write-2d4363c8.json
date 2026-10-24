@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "2d4363c8e1ef29aebfbbb897e49914997aea05ab92f4a33ca995e361be4e2ba7",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T063958Z-Write-2d4363c8.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/design-dev-loop-self-hosting.md",
+  "timestamp_utc": "2026-10-24T063958Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

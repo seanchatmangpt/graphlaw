@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "daac0f2c1f444c9609281e3567c41c1c8b96deb3105edb552d55c5422a0b77ab",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T063827Z-Write-daac0f2c.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/design-env-admission-court.md",
+  "timestamp_utc": "2026-10-24T063827Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

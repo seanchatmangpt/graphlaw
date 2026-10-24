@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "c11fe16d4a458cf2733d7c1c31f67480cdef19ab09616c80ba23e3989ddb40ef",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T061624Z-Edit-c11fe16d.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/.claude/plans/here-is-the-voice-golden-bengio.md",
+  "timestamp_utc": "2026-10-24T061624Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

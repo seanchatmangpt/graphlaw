@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "65b0cb91063d8c39e9aa0364a3fd0b2b857cfce0f6ebdfcd66d9a7baf9aeed01",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T063642Z-Write-65b0cb91.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/ADR-wasmi-retirement.md",
+  "timestamp_utc": "2026-10-24T063642Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

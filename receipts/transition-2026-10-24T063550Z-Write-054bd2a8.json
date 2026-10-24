@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "054bd2a8d9b0186c2ce87722d24217c5c2b30a7b6b5eaad813adc4db475158f4",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T063550Z-Write-054bd2a8.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/ggen-marketplace/packs/court-kit-pack/templates/refusal_register.rs.tmpl",
+  "timestamp_utc": "2026-10-24T063550Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}
