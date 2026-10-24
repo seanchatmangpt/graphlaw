@@ -132,9 +132,9 @@ jobs:
           VERSION: ${{ steps.versions.outputs.version }}
         run: |
           set -euo pipefail
+          npm pack --pack-destination .
           tgz=$(ls seanchatmangpt-graphlaw-"$VERSION".tgz graphlaw-"$VERSION".tgz 2>/dev/null | head -1 || true)
           [ -n "$tgz" ] || { echo "no npm tarball for version $VERSION produced" >&2; exit 1; }
-          npm pack --pack-destination .
           [ -f "$tgz" ] || { echo "expected tarball $tgz not produced" >&2; exit 1; }
           # Drift check: pack a second time and compare file lists.
           npm pack --pack-destination /tmp/pack2 >/dev/null
