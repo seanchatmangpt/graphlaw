@@ -8,7 +8,13 @@
 //!   (`wasm_exceptions(true)`), matching `-wasm-use-legacy-eh=0` upstream;
 //! - WASI is linked via `wasmtime-wasi` (`add_to_linker_sync`, stdio
 //!   inherited), and `--features runner-eh` gates compilation via the
-//!   `[[bin]]` `required-features` (coordinator wires Cargo.toml).
+//!   `[[bin]]` `required-features` (coordinator wires Cargo.toml);
+//! - hardening: the WASI environment is sterile (explicitly empty — no host
+//!   variable leaks into the guest), frame prefixes are bounded by
+//!   `graphlaw::abi::MAX_REQUEST_BYTES` (exit 92, before any allocation),
+//!   and guest execution runs under a per-request fuel budget
+//!   (`FUEL_PER_REQUEST`, exhaustion = typed exit 98) with epoch
+//!   interruption armed.
 //!
 //! Import policy is unchanged: only `wasi_snapshot_preview1` imports are
 //! accepted; anything else is a typed instantiation refusal (exit 96).
@@ -27,6 +33,25 @@ use wasmtime_wasi::WasiCtxBuilder;
 
 const WALL_BYTES: u32 = 67_108_864; // `--max-memory 67108864` parity
 
+/// Coherence guard (design-read-frame-bound.md): a frame the cap admits must
+/// be allocatable under the runner memory wall. The two constants serve
+/// different layers (untrusted wire prefix vs total guest memory) and are
+/// deliberately not equal — this only asserts cap <= wall.
+const _: () = assert!(graphlaw::abi::MAX_REQUEST_BYTES <= WALL_BYTES as usize);
+
+/// Guest fuel budget per request (wasmtime fuel units, ~1 per instruction).
+/// A guest call that spends it all is a typed refusal (exit 98), never a raw
+/// trap or an unbounded hang. Reset before every guest execution.
+const FUEL_PER_REQUEST: u64 = 10_000_000;
+
+/// Epoch-deadline ticks beyond the current epoch, set once at store creation.
+/// No watchdog increments the engine epoch yet, so the deadline cannot fire
+/// today; arming it (`epoch_interruption(true)` + a finite deadline — the
+/// wasmtime default deadline of 0 traps immediately) makes the wall-clock
+/// strangle path (`Engine::increment_epoch`) available without a behavior
+/// change. A fired deadline surfaces as an interrupt trap → AbiFault (97).
+const EPOCH_TICKS: u64 = 1_000_000_000;
+
 #[derive(Debug)]
 enum RunError {
     /// Usage / artifact I/O fault. Exit 2.
@@ -39,6 +64,10 @@ enum RunError {
     },
     /// EOF in the middle of a packet-4 frame. Exit 90.
     FrameEof,
+    /// Frame length prefix exceeds the request cap
+    /// (`graphlaw::abi::MAX_REQUEST_BYTES`). Fired on the prefix alone,
+    /// before any body allocation. Exit 92.
+    FrameOversize { len: usize, cap: usize },
     /// Stdin read error. Exit 91.
     StdinRead(std::io::Error),
     /// Malformed eval envelope (undecodable base64 payload). Exit 93.
@@ -53,6 +82,9 @@ enum RunError {
     WasmInstantiation(String),
     /// Guest ABI call or linear-memory access faulted. Exit 97.
     AbiFault(String),
+    /// Guest spent its entire per-request fuel budget (`FUEL_PER_REQUEST`).
+    /// Exit 98 — a budget refusal, not a trap.
+    FuelExhausted,
 }
 
 impl RunError {
@@ -62,12 +94,14 @@ impl RunError {
             RunError::DigestMismatch { .. } => 84,
             RunError::Trap => 86,
             RunError::FrameEof => 90,
+            RunError::FrameOversize { .. } => 92,
             RunError::StdinRead(_) => 91,
             RunError::MalformedEnvelope => 93,
             RunError::NonJsonResponse(_) => 94,
             RunError::WasmInvalid(_) => 95,
             RunError::WasmInstantiation(_) => 96,
             RunError::AbiFault(_) => 97,
+            RunError::FuelExhausted => 98,
         }
     }
 
@@ -86,6 +120,9 @@ impl RunError {
                 "graphlaw-run-eh: guest trap (crash mode or memory wall)".into()
             }
             RunError::FrameEof => "graphlaw-run-eh: EOF mid-frame".into(),
+            RunError::FrameOversize { len, cap } => {
+                format!("graphlaw-run-eh: frame length {len} exceeds cap {cap}")
+            }
             RunError::StdinRead(e) => format!("graphlaw-run-eh: stdin read error: {e}"),
             RunError::MalformedEnvelope => {
                 "graphlaw-run-eh: malformed envelope (bad base64 payload)".into()
@@ -102,6 +139,9 @@ impl RunError {
             // `{:#}` renders the full anyhow chain so the root cause (e.g.
             // "uninitialized element 0") reaches stderr, not just the wrapper.
             RunError::AbiFault(e) => format!("graphlaw-run-eh: guest ABI fault: {e:#}"),
+            RunError::FuelExhausted => {
+                format!("graphlaw-run-eh: guest exhausted fuel budget {FUEL_PER_REQUEST}")
+            }
         }
     }
 }
@@ -213,6 +253,12 @@ impl Host {
         let mut config = Config::new();
         config.wasm_exceptions(true);
         config.wasm_backtrace_details(WasmBacktraceDetails::Enable);
+        // Deterministic budget: every guest execution runs under fuel; a
+        // spent budget is a typed refusal (exit 98), not a trap or a hang.
+        config.consume_fuel(true);
+        // Epoch interruption armed for the wall-clock strangle path; see
+        // EPOCH_TICKS for why the deadline is finite but cannot fire today.
+        config.epoch_interruption(true);
         // Compile-time parity with the court deadline: the 46 MB
         // DuckDB-linked artifact is JIT-compiled on every spawn, and a
         // debug-built cranelift at `SpeedAndSize` cannot compile it within
@@ -244,11 +290,24 @@ impl Host {
         }
         let mut store = Store::new(
             &engine,
+            // Sterile WASI context: stdio is inherited (the packet-4 protocol
+            // is the module's I/O surface) but the environment is explicitly
+            // empty — no host variable (keys, tokens, paths) reaches the
+            // guest. `inherit_env()` must never return.
             WasiCtxBuilder::new()
                 .inherit_stdio()
-                .inherit_env()
+                .envs(std::iter::empty::<(&str, &str)>())
                 .build_p1(),
         );
+        // Fuel and the epoch deadline must be seeded BEFORE `instantiate`:
+        // a store starts at 0 fuel (any guest execution traps OutOfFuel
+        // immediately) and at epoch deadline 0 (traps immediately with
+        // epochs enabled). The start section and `_initialize` are guest
+        // code and run under the same budget as requests.
+        store.set_epoch_deadline(EPOCH_TICKS);
+        store
+            .set_fuel(FUEL_PER_REQUEST)
+            .map_err(|e| RunError::AbiFault(format!("fuel budget init: {e:#}")))?;
         let mut linker = <Linker<WasiP1Ctx>>::new(&engine);
         add_to_linker_sync(&mut linker, |ctx| ctx)
             .map_err(|e| RunError::WasmInstantiation(e.to_string()))?;
@@ -286,6 +345,12 @@ impl Host {
     /// `gl_alloc` + memory write + `gl_call` + read + `gl_free`, mirroring the
     /// request_bytes pattern of graphlaw_run.rs and tests/wasm_abi.rs.
     fn request_bytes(&mut self, body: &[u8]) -> Result<Vec<u8>, RunError> {
+        // Fresh deterministic budget per request: one guest call cannot
+        // spend more than FUEL_PER_REQUEST regardless of driver behavior;
+        // exhaustion is classified from Trap::OutOfFuel in `abi_fault`.
+        self.store
+            .set_fuel(FUEL_PER_REQUEST)
+            .map_err(|e| RunError::AbiFault(format!("set_fuel: {e:#}")))?;
         if body.len() > WALL_BYTES as usize {
             // Memory wall: enforced before any reply can be framed.
             return Err(RunError::Trap);
@@ -328,6 +393,10 @@ fn abi_fault(op: &str, e: wasmtime::Error) -> RunError {
             eprintln!("graphlaw-run-eh: guest frame #{i} in {op}: {name}");
         }
     }
+    // Fuel exhaustion is a budget refusal (exit 98), not a crash.
+    if let Some(wasmtime::Trap::OutOfFuel) = e.downcast_ref::<wasmtime::Trap>() {
+        return RunError::FuelExhausted;
+    }
     RunError::AbiFault(format!("{op}: {e:#}"))
 }
 
@@ -341,6 +410,16 @@ fn read_frame(stdin: &mut impl Read) -> Result<Option<Vec<u8>>, RunError> {
         Err(e) => return Err(RunError::StdinRead(e)),
     }
     let len = u32::from_be_bytes(len_buf) as usize;
+    // Bound the untrusted prefix BEFORE any body allocation: a 0xFFFFFFFF
+    // prefix would otherwise allocate ~4 GiB of zeros and only fail with
+    // FrameEof (90) after stdin is exhausted. The cap is the single-source
+    // guest request cap (src/abi.rs), never a local duplicate.
+    if len > graphlaw::abi::MAX_REQUEST_BYTES {
+        return Err(RunError::FrameOversize {
+            len,
+            cap: graphlaw::abi::MAX_REQUEST_BYTES,
+        });
+    }
     let mut body = vec![0u8; len];
     match stdin.read_exact(&mut body) {
         Ok(()) => Ok(Some(body)),

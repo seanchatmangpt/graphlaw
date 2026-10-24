@@ -327,6 +327,96 @@ fn top_level_semicolon_count(sql: &str) -> usize {
     count
 }
 
+/// Consume the `'`/`"` quoted literal starting at `i`; returns the literal's
+/// inner text (doubled-quote escapes folded to one quote — the same
+/// single-quote rule as the COPY digest lane's `copy_to_path`) and the index
+/// just past the closing quote. Unterminated literal: the text so far and
+/// the end index (the engine syntax-errors; nothing admits on it).
+fn consume_quoted(cs: &[char], i: usize) -> (String, usize) {
+    let q = cs[i];
+    let n = cs.len();
+    let mut j = i + 1;
+    let mut inner = String::new();
+    while j < n {
+        if cs[j] == q {
+            if j + 1 < n && cs[j + 1] == q {
+                inner.push(q); // `''` inside a literal renders one `'`
+                j += 2;
+            } else {
+                j += 1;
+                return (inner, j);
+            }
+        } else {
+            inner.push(cs[j]);
+            j += 1;
+        }
+    }
+    (inner, j)
+}
+
+/// The ATTACH path candidate: the first `'…'` string literal AFTER the
+/// leading trivia — never the first quote character in raw text, which a
+/// decoy literal inside the leading comment (`/* '/in-root/x' */ ATTACH
+/// '/etc/evil'`) would otherwise smuggle past the allowlist while the engine
+/// attaches the real argument. `None` when the first real token is not a
+/// string literal (nothing to validate: typed refusal, fail-closed).
+fn first_string_literal(sql: &str) -> Option<String> {
+    let cs: Vec<char> = sql.chars().collect();
+    let i = skip_trivia(&cs, 0);
+    if i < cs.len() && cs[i] == '\'' {
+        Some(consume_quoted(&cs, i).0)
+    } else {
+        None
+    }
+}
+
+/// Index of the first non-trivia character at/after `i`. Whitespace, `--`
+/// line comments (consumed through the newline) and NESTING-AWARE `/* */`
+/// block comments are trivia. Returns `cs.len()` at end of input, including
+/// the unterminated-block-comment case (fail-closed: callers see no token
+/// and the engine syntax-errors).
+fn skip_trivia(cs: &[char], mut i: usize) -> usize {
+    let n = cs.len();
+    loop {
+        if i >= n {
+            return i;
+        }
+        let c = cs[i];
+        if c.is_whitespace() {
+            i += 1;
+        } else if c == '-' && i + 1 < n && cs[i + 1] == '-' {
+            // `--` line comment: consumed through the newline.
+            i += 2;
+            while i < n && cs[i] != '\n' {
+                i += 1;
+            }
+            if i < n {
+                i += 1;
+            }
+        } else if c == '/' && i + 1 < n && cs[i + 1] == '*' {
+            // `/* */` block comment, nesting-aware depth counter.
+            i += 2;
+            let mut depth = 1usize;
+            loop {
+                if i >= n {
+                    return i; // unterminated: EOF, fail-closed
+                }
+                if cs[i] == '/' && i + 1 < n && cs[i + 1] == '*' {
+                    depth += 1;
+                    i += 2;
+                } else if cs[i] == '*' && i + 1 < n && cs[i + 1] == '/' {
+                    depth -= 1;
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+            }
+        } else {
+            return i;
+        }
+    }
+}
+
 fn enforce_attach_policy_with(sql: &str, roots: Option<&str>) -> Result<(), Fail> {
     fn outside(path: &str) -> Fail {
         duckdb_fail(format!(
@@ -346,29 +436,11 @@ fn enforce_attach_policy_with(sql: &str, roots: Option<&str>) -> Result<(), Fail
             "multi-statement SQL is not admitted through op-15; admit each statement separately",
         ));
     }
-    // Same single-quote rule as the COPY digest lane's `copy_to_path`
-    // (`''` inside a literal renders one `'`).
-    let mut chars = sql.chars().peekable();
-    let mut in_quote = false;
-    let mut current = String::new();
-    let raw = loop {
-        match chars.next() {
-            None => return Err(outside("<none>")),
-            Some('\'') => {
-                if in_quote && chars.peek() == Some(&'\'') {
-                    current.push('\'');
-                    let _ = chars.next();
-                } else if in_quote {
-                    break std::mem::take(&mut current);
-                } else {
-                    in_quote = true;
-                    current.clear();
-                }
-            }
-            Some(c) if in_quote => current.push(c),
-            Some(_) => {}
-        }
-    };
+    // The validated path is the first `'…'` literal AFTER the leading
+    // trivia (see [`first_string_literal`]) — never a decoy quote buried in
+    // a comment. No literal at all is the `<none>` refusal (fail-closed;
+    // the engine would syntax-error on it anyway).
+    let raw = first_string_literal(sql).ok_or_else(|| outside("<none>"))?;
     let roots = roots.unwrap_or_default();
     if roots.is_empty() {
         return Err(outside(&raw));
@@ -765,7 +837,7 @@ fn close(v: &Value) -> Result<Value, Fail> {
 mod tests {
     use serde_json::{Value, json};
 
-    use super::enforce_attach_policy_with;
+    use super::{enforce_attach_policy_with, leading_sql_token};
 
     #[test]
     fn unknown_cursor_is_a_typed_refusal() {
@@ -1214,6 +1286,174 @@ ex:C a sql:CreateStatement ;
         }));
         // Empty-string roots fail closed identically at the pure seam.
         assert!(attach_exec_with("/tmp/graphlaw-g6-nowhere.duckdb", Some("")).is_err());
+    }
+
+    // -----------------------------------------------------------------------
+    // E1 re-land unit courts: the ATTACH policy classifies the leading token
+    // with the quote-aware, nesting-aware `leading_sql_token` scanner and
+    // validates the first string literal AFTER the trivia. The literal attack
+    // strings here are the corpus that tests/attach_bypass_court.rs
+    // liveness-courts against the real engine.
+    // -----------------------------------------------------------------------
+
+    /// Shared envelope assert: the camouflaged ATTACH is the typed allowlist
+    /// refusal carrying the raw path verbatim, never an engine error.
+    fn assert_camo_refusal(sql: &str, ctx: &str) {
+        let err = enforce_attach_policy_with(sql, None)
+            .expect_err(&format!("{ctx}: camouflaged ATTACH must hit the allowlist policy"));
+        let rendered = format!("{err:?}");
+        assert!(
+            rendered.contains("attach path outside GRAPHLAW_ATTACH_ROOTS allowlist"),
+            "{ctx}: stable allowlist message: {rendered}"
+        );
+        assert!(
+            rendered.contains("/etc/passwd"),
+            "{ctx}: raw attack path carried verbatim: {rendered}"
+        );
+    }
+
+    /// `/* harmless */ ATTACH …` must hit the policy (the pre-fix
+    /// classification returned an empty leading token and skipped it while
+    /// the engine executed the attach).
+    #[test]
+    fn attach_behind_block_comment_hits_policy() {
+        assert_camo_refusal(
+            "/* harmless */ ATTACH '/etc/passwd' AS camo_block",
+            "block comment",
+        );
+    }
+
+    /// `-- note\nATTACH …` must hit the policy.
+    #[test]
+    fn attach_behind_line_comment_hits_policy() {
+        assert_camo_refusal("-- note\nATTACH '/etc/passwd' AS camo_line", "line comment");
+    }
+
+    /// `/* /* */ */ ATTACH …` must hit the policy: the scanner consumes the
+    /// nested comment with a depth counter, exactly as the engine's lexer
+    /// does (a first-`*/` scan would mis-close it).
+    #[test]
+    fn attach_behind_nested_block_comment_hits_policy() {
+        assert_camo_refusal(
+            "/* /* */ */ ATTACH '/etc/passwd' AS camo_nested",
+            "nested block comment",
+        );
+    }
+
+    /// Leading whitespace (spaces, tabs, CRLF) must not hide the ATTACH.
+    #[test]
+    fn attach_behind_whitespace_hits_policy() {
+        assert_camo_refusal(
+            " \t \r\n ATTACH '/etc/passwd' AS camo_ws",
+            "leading whitespace",
+        );
+    }
+
+    /// Positive twin at the pure seam: a plain single-statement ATTACH of a
+    /// real DuckDB file inside an allowlisted root ADMITS (real file, real
+    /// canonicalize — no mocks).
+    #[test]
+    fn attach_plain_inside_root_admits() {
+        let root = format!("/tmp/graphlaw-e1-attach-root-{}", std::process::id());
+        std::fs::create_dir_all(&root).unwrap();
+        let db_path = format!("{root}/inside.duckdb");
+        drop(frozen_duckdb::Connection::open(&db_path).unwrap());
+        let sql = format!("ATTACH '{db_path}' AS e1root");
+        enforce_attach_policy_with(&sql, Some(&root)).expect("plain inside-root ATTACH admits");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// A comment-camouflaged NON-attach statement stays outside the policy:
+    /// the scanner sees SELECT and the allowlist is not consulted.
+    #[test]
+    fn select_behind_block_comment_stays_allowed() {
+        enforce_attach_policy_with("/* x */ SELECT 1", None)
+            .expect("non-ATTACH behind a block comment stays allowed");
+    }
+
+    /// `/*` inside the path literal is path text, not a comment: the refusal
+    /// carries the verbatim glob path (a comment-blind lexer would truncate
+    /// or mangle it at the `/*`).
+    #[test]
+    fn attach_path_glob_literal_is_path_text() {
+        let err = enforce_attach_policy_with(
+            "/* glob */ ATTACH '/tmp/graphlaw-e1/*.duckdb' AS globby",
+            None,
+        )
+        .expect_err("fail-closed refusal for the unresolvable glob path");
+        assert!(
+            format!("{err:?}").contains("/tmp/graphlaw-e1/*.duckdb"),
+            "glob path carried verbatim as literal text: {err:?}"
+        );
+    }
+
+    /// Exact-token pins at the scanner and at the policy: `ATTACHER` is a
+    /// different token from `ATTACH` (the old take_while-alphabetic prefix
+    /// classified it as ATTACH); an unterminated block comment yields None
+    /// (the engine syntax-errors — the safe, fail-closed outcome); a quote
+    /// terminates the word run so `ATTACH'db'` still classifies as ATTACH;
+    /// `/*!*/` is a closed block comment; a leading literal is one opaque
+    /// token (its `/*` is not a comment).
+    #[test]
+    fn leading_sql_token_exact_tokens() {
+        assert_eq!(
+            leading_sql_token("ATTACH '/tmp/x' AS t").as_deref(),
+            Some("ATTACH")
+        );
+        assert_eq!(
+            leading_sql_token("ATTACHER '/tmp/x' AS t").as_deref(),
+            Some("ATTACHER")
+        );
+        assert_ne!(
+            leading_sql_token("ATTACHER '/tmp/x' AS t").as_deref(),
+            Some("ATTACH")
+        );
+        // ATTACHER never reaches the allowlist: it is not an ATTACH statement.
+        assert!(enforce_attach_policy_with("ATTACHER '/etc/passwd' AS t", None).is_ok());
+        // Unterminated block comments (flat and nested) are None.
+        assert_eq!(leading_sql_token("/* unterminated"), None);
+        assert_eq!(leading_sql_token("/* /* nested */"), None);
+        assert_eq!(leading_sql_token(""), None);
+        // A quote terminates the word run.
+        assert_eq!(
+            leading_sql_token("ATTACH'/tmp/x' AS t").as_deref(),
+            Some("ATTACH")
+        );
+        // The bang comment is a closed block comment.
+        assert_eq!(
+            leading_sql_token("/*!*/ ATTACH '/tmp/x' AS t").as_deref(),
+            Some("ATTACH")
+        );
+        // A leading literal is opaque token text: its /* is not a comment.
+        assert_eq!(leading_sql_token("'/*'").as_deref(), Some("'/*'"));
+    }
+
+    /// The policy validates the first literal AFTER the trivia, not the first
+    /// quote character in raw text: a decoy in-root path buried in the
+    /// leading comment must not admit the real outside-root path the engine
+    /// will attach. (This is the discriminator for the
+    /// `first_string_literal` extractor: the raw first-quote scan it replaced
+    /// would extract the decoy and ADMIT.)
+    #[test]
+    fn attach_path_decoy_in_leading_comment_refuses_real_path() {
+        let root = format!("/tmp/graphlaw-e1-decoy-root-{}", std::process::id());
+        std::fs::create_dir_all(&root).unwrap();
+        let inside = format!("{root}/inside.duckdb");
+        drop(frozen_duckdb::Connection::open(&inside).unwrap());
+        let block = format!("/* '{inside}' */ ATTACH '/etc/passwd' AS decoy");
+        let err = enforce_attach_policy_with(&block, Some(&root)).expect_err(
+            "decoy in-root literal in the comment must not admit the outside-root path",
+        );
+        assert!(
+            format!("{err:?}").contains("/etc/passwd"),
+            "the REAL argument is what got validated and refused: {err:?}"
+        );
+        let line = format!("-- '{inside}'\nATTACH '/etc/passwd' AS decoy2");
+        assert!(
+            enforce_attach_policy_with(&line, Some(&root)).is_err(),
+            "line-comment decoy variant refuses too"
+        );
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     // -----------------------------------------------------------------------
