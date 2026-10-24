@@ -65,7 +65,7 @@ hex = "0.4"
 serde = { version = "1", features = ["derive"] }
 regex = { version = "1", optional = true }
 serde_json = "1"
-eyeron = { package = "graphlaw-eyeron", version = "0.7.8", path = "crates/graphlaw-eyeron" }
+eyeron = { package = "graphlaw-eyeron", version = "0.7.9", path = "crates/graphlaw-eyeron" }
 rtrb = { version = "0.3", optional = true }
 # frozen-duckdb links into the ONE unit on every target, wasm32 included: the
 # wasm static archive is built with -fwasm-exceptions -mllvm
