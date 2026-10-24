@@ -108,7 +108,7 @@ chain, credential boundary, environmental). Status is as-of disk
 | 9 | Conftest env routing | G3/N10, `conftest.py:35`; `GRAPHLAW_WASM` ignored | OPEN | R-24-adjacent, N10 |
 | 10 | Blackbox suite pinned to legacy host | N11, `residual-unknowns.md:212-215` (12 fails vs legacy path) | OPEN; fix path = pin flip, not per-test patches | N11 |
 | 11 | Non-reproducible wasm builds (pins copy-only) | N9, `residual-unknowns.md:199-206`; pin `472d5557…` → re-mint `58a44095…` (GO-NO-GO §1.4, uncommitted at that window) | OPEN — copy-only pins unless operator acceptance or rebuild witness lands | N9, R-1 |
-| 12 | Supply-chain integrity (NEW) | Advisories RUSTSEC-2026-0258 / 2025-0134 / 2024-0449 (§6 dated decisions); unsigned receipt telemetry 1,510/1,515 `UNSIGNED-NO-KEY` (R-9); trusted keys out-of-band (R-10); receipt_v2 no emission site (R-8); tree-revert incident INC1 (verified fixes present→absent→present, re-landed `679299d` + `907e663`); eyeron version collision 0.7.8→0.7.9 (GO-NO-GO §1.6) | Identified; the advisory half is decided (§6); identity/chaining halves are registered backlog | R-2 (closed), R-8, R-9, R-10, R-11, INC1 |
+| 12 | Supply-chain integrity (NEW) | Advisories RUSTSEC-2026-0258 / 2025-0134 / 2024-0449 (§5 dated decisions); unsigned receipt telemetry 1,510/1,515 `UNSIGNED-NO-KEY` (R-9); trusted keys out-of-band (R-10); receipt_v2 no emission site (R-8); tree-revert incident INC1 (verified fixes present→absent→present, re-landed `679299d` + `907e663`); eyeron version collision 0.7.8→0.7.9 (GO-NO-GO §1.6) | Identified; the advisory half is decided (§5); identity/chaining halves are registered backlog | R-2 (closed), R-8, R-9, R-10, R-11, INC1 |
 | 13 | Credential boundary (NEW) | Publish is typed-blocked on operator credentials by design: npm Trusted Publisher unset (run `40084544193` E404), crates.io 403 no token — GO-NO-GO v4 terminal state; `PUBLISH-STATUS.md`; key custody/distribution/revocation outside the library (`SECURITY.md:50`); `unverified_lease: true` explicit opt-out (`SECURITY.md:52`) | Recorded typed block; machine-impossible by design, completes with two operator acts | R-10, R-22 (partial: validate-and-pack leg green in CI) |
 | 14 | Environmental (NEW) | SPC gate FAIL under shared-tree load (Cpk 0.0008 vs 1.33); `generated_kinds` fails on hosts lacking the fixture path (R-24/G-5); disk pressure killed the mutation sweep (DISK-REFUSED, exit 137 kill); moving-tree reads (GO-NO-GO §1.1 present→absent→present) | Identified; gates refuse (working), solo-machine SPC rerun owed (R-5); portability-or-typed-SKIP owed (G-5); sweep needs solo window + ≥20 GiB | R-5, R-7, R-24, G-5 |
 
@@ -237,7 +237,7 @@ residual register was re-adjudicated in the 2026-10-24 terminal wave,
 3. publish preflight: eyeron version vs crates.io max_version, byte-authority
    gate, npm pack/dry-run receipt (R-22's owed leg);
 4. this plan re-read: §3 statuses re-verified against the tree by the §9
-   commands, §8 determinations re-affirmed or flipped, and the plan's
+   commands, §7 determinations re-affirmed or flipped, and the plan's
    changes receipted in the window's RECEIPTS.
 
 **Expiry triggers** (re-review before the named date, not at it):
