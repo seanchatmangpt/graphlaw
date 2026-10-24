@@ -292,12 +292,10 @@ impl Host {
             &engine,
             // Sterile WASI context: stdio is inherited (the packet-4 protocol
             // is the module's I/O surface) but the environment is explicitly
-            // empty — no host variable (keys, tokens, paths) reaches the
-            // guest. `inherit_env()` must never return.
-            WasiCtxBuilder::new()
-                .inherit_stdio()
-                .envs(std::iter::empty::<(&str, &str)>())
-                .build_p1(),
+            // empty — the builder default, no `.inherit_env()` / `.env()` /
+            // `.envs()` call at all — so no host variable (keys, tokens,
+            // paths) reaches the guest.
+            WasiCtxBuilder::new().inherit_stdio().build_p1(),
         );
         // Fuel and the epoch deadline must be seeded BEFORE `instantiate`:
         // a store starts at 0 fuel (any guest execution traps OutOfFuel

@@ -2,7 +2,7 @@
 
 Typed exit codes for the two graphlaw stdio runners. Source of truth:
 `src/bin/graphlaw_run.rs` (`RunError::code`, lines 134-149) and
-`src/bin/graphlaw_run_eh.rs` (`RunError::code`, lines 58-72). Diagnostics are
+`src/bin/graphlaw_run_eh.rs` (`RunError::code`, lines 91-106). Diagnostics are
 one line on stderr; malformed input never panics a runner — every failure is
 typed. Exit codes are stable; courts depend on them.
 
@@ -55,7 +55,15 @@ must enforce the timeout.
 Same packet-4 protocol and stub-compatible exit codes; adds the W3C
 exception-handler proposal (`wasm_exceptions(true)`). Compiled under
 `--features runner-eh` (`required-features` on the `[[bin]]`). No Tag-section
-preflight — EH artifacts are its native input.
+preflight — EH artifacts are its native input. The eh host hardens the
+boundary: the WASI environment is sterile (explicitly empty — nothing from
+the host env reaches the guest), the frame prefix is bounded by
+`graphlaw::abi::MAX_REQUEST_BYTES` and refused pre-allocation (92), and
+every guest execution runs under a fuel budget of `10_000_000` units (reset
+per request) with epoch interruption armed as the wall-clock strangle path;
+a spent budget is a typed refusal (98), never a raw trap or hang, and a fired
+epoch deadline surfaces as an interrupt trap (97) until a host watchdog
+increments the epoch.
 
 | Code | Name / condition | stderr shape | Recovery |
 |---|---|---|---|
@@ -71,6 +79,15 @@ preflight — EH artifacts are its native input.
 | 95 | Invalid wasm (or engine config) | `invalid wasm artifact: <e>` | Rebuild or repoint. |
 | 96 | Instantiate/link/export failure | `wasm instantiation failed: <e>` | Rebuild vs ABI. |
 | 97 | Guest ABI / memory fault | `guest ABI fault` + frames | Read backtrace; rebuild. |
+| 98 | Guest fuel budget spent (`FUEL_PER_REQUEST` = 10_000_000) | `guest exhausted fuel budget 10000000` | Driver: shrink the request or raise the budget. |
+
+Exact diagnostic strings unique to this host (each prefixed
+`graphlaw-run-eh: `; all other strings are the legacy shapes above with the
+`graphlaw-run: ` prefix swapped to `graphlaw-run-eh: `):
+
+```text
+guest exhausted fuel budget 10000000
+```
 
 Differences from the legacy host on 97: the anyhow chain is rendered with
 `{:#}` (root cause, e.g. "uninitialized element 0", reaches stderr), and the
@@ -91,7 +108,7 @@ an `_initialize` trap are also 96.
 ## `--wasm` / `GRAPHLAW_WASM` resolution ladder
 
 Identical order in both runners (graphlaw_run.rs:212-217,
-graphlaw_run_eh.rs:138-145):
+graphlaw_run_eh.rs:178-185):
 
 1. `--wasm <path>` — highest precedence; missing value is exit 2.
 2. `GRAPHLAW_WASM` env var, when `--wasm` is absent.
