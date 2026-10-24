@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "f848ee6b9097e2769375e3a5882fa867ddecc0cbac03f5e0434023a1611c614a",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T172524Z-Write-f848ee6b.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/receipts/2026-10-24-wasmi-retirement-deletion.md",
+  "timestamp_utc": "2026-10-24T172524Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

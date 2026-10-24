@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "00cc7b1c4f8d6461fd2732e6cd85b068a218df8a85054ef0be27b3cacb57bc7a",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T065811Z-Edit-00cc7b1c.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.22/RUST-4-PHASE2-HARDENING.md",
+  "timestamp_utc": "2026-10-24T065811Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

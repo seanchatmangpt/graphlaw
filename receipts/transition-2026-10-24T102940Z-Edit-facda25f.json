@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "facda25f36a40873277c15e797e52cef509792738c741c6f316526db4f75963b",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T102940Z-Edit-facda25f.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/tests_py/test_blackbox_ops.py",
+  "timestamp_utc": "2026-10-24T102940Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

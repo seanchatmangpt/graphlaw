@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "d323fbf1fd2e3b6ffafe868c0ca741e3313cbe9acdeee9ef7f3e17547ae18b97",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T065800Z-Write-d323fbf1.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/compliance-nist-gov-map.md",
+  "timestamp_utc": "2026-10-24T065800Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

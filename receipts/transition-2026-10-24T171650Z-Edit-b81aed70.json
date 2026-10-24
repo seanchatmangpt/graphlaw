@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "b81aed709415aee60e531ef35cc7ce5855dd3e81a23503dee871e56603e7b8cc",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T171650Z-Edit-b81aed70.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/examples/naive_physics_vectors.rs",
+  "timestamp_utc": "2026-10-24T171650Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

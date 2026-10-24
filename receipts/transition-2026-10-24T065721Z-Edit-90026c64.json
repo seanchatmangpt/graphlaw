@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "90026c64c079e039a621c1a07e398934d42caf94b957bdbd4e3c7516922d9929",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T065721Z-Edit-90026c64.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/compliance-nist-measure-manage.md",
+  "timestamp_utc": "2026-10-24T065721Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

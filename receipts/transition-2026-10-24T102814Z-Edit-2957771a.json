@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "2957771a3c84d689b8891ef628920c25739590370d15b68dd337db9462dbfd1a",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T102814Z-Edit-2957771a.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/risk-management-plan.md",
+  "timestamp_utc": "2026-10-24T102814Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

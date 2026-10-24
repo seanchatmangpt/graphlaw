@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "fd8f261f40dce359149e01e1e02257bffb7cef16be75ab103755b2dbba39796c",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T084326Z-Edit-fd8f261f.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/reference/wasm-gap-register.md",
+  "timestamp_utc": "2026-10-24T084326Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

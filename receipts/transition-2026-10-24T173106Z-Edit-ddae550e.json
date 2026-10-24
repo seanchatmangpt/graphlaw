@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "ddae550e3ae5e6429182511e2fe4c3df17c6735dcb61d9188e4cbd88b3a855e7",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T173106Z-Edit-ddae550e.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/receipts/2026-10-24-wasmi-retirement-step2-green-witness.md",
+  "timestamp_utc": "2026-10-24T173106Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

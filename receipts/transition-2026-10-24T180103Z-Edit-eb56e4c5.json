@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "eb56e4c512955aa772b13b6c9428dc8f33ebeca1ed63bbe82b06c2611dfd74ac",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T180103Z-Edit-eb56e4c5.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/receipts/2026-10-24-dialect-shex.md",
+  "timestamp_utc": "2026-10-24T180103Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "cbe926003b38cf4e5622fd9b4b0f21924d198c74b889b7ec37d1ed6707a1dfe9",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T161805Z-Edit-cbe92600.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/.claude/plans/launch-20-explore-agents-humble-pony.md",
+  "timestamp_utc": "2026-10-24T161805Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

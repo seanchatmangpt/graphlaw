@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "af7ae15e93172e0c4dcdffe2b5e1363064c85da9dc9a141e7ed4c426d601a0a0",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T065857Z-Edit-af7ae15e.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/compliance-eu-ai-act-robustness.md",
+  "timestamp_utc": "2026-10-24T065857Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

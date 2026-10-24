@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "16154e6dd19c04a7c655a04cdcbfcce7fa1fa46dc2b3a38a99f6b72b4a47338c",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T065800Z-Write-16154e6d.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/compliance-gap-closure-plan.md",
+  "timestamp_utc": "2026-10-24T065800Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}
