@@ -369,3 +369,20 @@ this lane's lease).
 - `docs/jira/v26.10.23/compliance-gap-closure-plan.md`
 - `docs/refusals.md` · `docs/reference/wasm-gap-register.md` ·
   `SECURITY.md`
+
+---
+## R-2 DISCHARGE — cargo-deny operator decision (dated 2026-10-24, coordinator)
+
+Per-advisory dispositions, all dated-ignored in deny.toml with expiry
+2026-11-23 (re-review required on expiry):
+- RUSTSEC-2026-0258 (h2 0.3.27, unbounded empty DATA frames): ACCEPTED
+  RISK — transitive via frozen-duckdb → reqwest ^0.11 (host-side tooling
+  only; not on the in-WASM execution/receipt-signing path); h2 0.4 is
+  semver-incompatible with the frozen reqwest pin; upstream bump tracked.
+- RUSTSEC-2025-0134 (rustls-pemfile, unmaintained): ACCEPTED — host-side
+  TLS config plumbing only.
+- RUSTSEC-2024-0449 (unsafe-libyaml, unmaintained): ACCEPTED — serde_yaml
+  transitive, config parsing only.
+`cargo deny check advisories` exit 0 under these ignores; `cargo audit`
+exit 1 is the expected divergence (audit does not read deny.toml).
+Decision authority: operator directive 2026-10-24 (publish order).

@@ -35,12 +35,12 @@ re-verified on disk by the docs lane).
 - **Single-unit wasm architecture.** One executable law runs on host and wasm:
   the same artifact admitting SQL-in-RDF inside `graphlaw-wasm`
   (`wasm/src/lib.rs`). Current state: the committed artifact `priv/graphlaw.wasm`
-  is re-pinned (`332ea218…2c30c`, digest verified, RECEIPTS.md Successor §2);
+  was re-pinned at `332ea218…2c30c` (historical); the SHIPPED artifact is `58a44095…d2280a` (58,124,612 B, commit 499e759), RECEIPTS.md security-wave rows);
   the wasm32-wasip1 link of the successor edits was pending at receipt time.
   State at drafting time: RED on this host — a fresh lane-isolated boundary
   build aborts in `frozen-duckdb-sys/build.rs:101` ("WASI_SDK_PATH is required
   to link libc++ into wasm32-wasip1"); the committed `priv/graphlaw.wasm`
-  artifact remains the last good build (digest-verified `332ea218…`).
+  artifact was the last good build at that checkpoint (historical); the shipped artifact is `58a44095…d2280a`.
 
 ### What is NOT in this release (loud boundaries)
 
@@ -68,7 +68,7 @@ re-verified on disk by the docs lane).
   cosmetic-invariance set (RECEIPTS.md SQLRDF-09 row).
 - `frozen-duckdb` pinned to the crates.io 2.0 series with checksums (local
   `[patch]` override on this tree, see above).
-- WASM artifact re-pinned `332ea218…2c30c`.
+- WASM artifact re-pinned `58a44095…d2280a` (58,124,612 B; superseded historical pin `332ea218…2c30c`).
 
 ### Fixed (from CHANGELOG, receipt-backed)
 
