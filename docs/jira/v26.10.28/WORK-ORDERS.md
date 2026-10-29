@@ -147,3 +147,20 @@ re-asks for it. WO-2/WO-3/WO-4 courts exist in-tree; the work is
 re-execution for this-session witnesses, not new implementation. Wasm
 build machinery, SPC court, and mutation court all exist per CLAUDE.md;
 WO-1/WO-2 are runs, not builds of new gates.
+
+## GL28 addendum (synced 2026-10-28, states re-read at write time)
+
+GL28 backlog states beyond WO-1..WO-7, verified on disk this sync:
+
+| Order | Standing | Evidence |
+| --- | --- | --- |
+| GL28-2 | DESIGN | `GL28-2-SMALT-WIRE-SPEC.md` (this dir); implementation not started |
+| GL28-5 | LANDED | `documentation/reference/conformance_claim.md` exists on disk (verified this sync) |
+| GL28-6 | DESIGN, impl lane in flight | `GL28-6-KILLSWITCH-DESIGN.md` (this dir) |
+| GL28-7 | DESIGN, impl lane in flight | `GL28-7-AUTHORITY-PORT-DESIGN.md` (this dir) |
+| GL28-13 | DESIGN (census) | `GL28-13-SLIMMING-CENSUS.md`: ICU drop −3 MB + MinSizeRel wasm32 rebuild −10–18 MB restores the 64 MiB gate |
+| Upstream pack | LANDED-local, BLOCKED-external(push) | branch `blake3-digest-keys` @ `041a039ae` in /Users/sac/ggen-marketplace (verified on disk; 48 files, unpushed) |
+| npm/hex publish | DOCUMENTED, BLOCKED-external | `receipts/2026-10-24-npm-attempt-ledger.md` (first publish manual → Trusted Publisher mapping, 2-day expiry); hex dry-run needs no auth |
+
+DESIGN is not LANDED; a filed design doc is a candidate, not an executed
+transition. Implementation lanes in flight carry no receipt here yet.

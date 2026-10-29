@@ -273,3 +273,72 @@ Status vocabulary at append time:
 
 The mutation-court-open line in WORK-ORDERS.md (WO-2 gap) is intentionally
 untouched by this append.
+
+# GL28 wave receipts (2026-10-28)
+
+Verification vocabulary: rows marked **verified-on-disk** were checked by
+this lane this session (existence + key content read from the file);
+rows marked **cited** are lane/coordinator claims not re-executed here.
+
+## Filed and landed (GL28 window)
+
+- **VISION-2028-EXECUTION.md + GL28-BACKLOG.md filed** — verified-on-disk:
+  `docs/jira/v26.10.28/VISION-2028-EXECUTION.md` (2712 bytes, mtime
+  2026-10-28 20:30) and `docs/jira/v26.10.28/GL28-BACKLOG.md` (2745 bytes,
+  mtime 2026-10-28 20:19) exist with GL28 ticket content read this session.
+- **GL28-5 conformance_claim.md landed (receipt-gated standing)** —
+  verified-on-disk:
+  `documentation/reference/conformance_claim.md` exists; its standing
+  header states the receipt-gated rule explicitly ("a count without a live
+  run against the current tree is `UNVERIFIED`"; "No row on this page is
+  `ALIVE`; a row is promoted only by a dated receipt") and currently marks
+  every row `UNVERIFIED`. Note: it lives under `documentation/reference/`,
+  not `docs/reference/` — recorded here as-found.
+- **GL28-6 kill-switch design + GL28-7 authority port design filed** —
+  verified-on-disk: `docs/jira/v26.10.28/GL28-6-KILLSWITCH-DESIGN.md` and
+  `docs/jira/v26.10.28/GL28-7-AUTHORITY-PORT-DESIGN.md` exist with design
+  content read this session. Implementation lanes for both are in flight
+  (cited — this lane did not execute them).
+- **GL28-2 Smalt admission-gate wire protocol spec landed** —
+  verified-on-disk: `docs/jira/v26.10.28/GL28-2-SMALT-WIRE-SPEC.md` exists;
+  HEAD commit `28f91b9` ("docs(v26.10.28): GL28-2 Smalt admission-gate wire
+  protocol spec (courts + falsifiers)") contains it.
+- **GL28-13 slimming census landed** — verified-on-disk:
+  `docs/jira/v26.10.28/GL28-13-SLIMMING-CENSUS.md` exists; cited results:
+  ICU −3 MB, MinSizeRel −10–18 MB, and the wasm_size_court 80 MiB ceiling
+  restores the prior 64 MiB budget (numbers cited from the census doc's
+  lane, not re-measured by this lane).
+
+## Upstream carry
+
+- **ggen-marketplace branch `blake3-digest-keys` @ `041a039ae`** —
+  verified-on-disk in `/Users/sac/ggen-marketplace` this session:
+  - `git log --oneline -1 blake3-digest-keys` →
+    `041a039ae pack(graphlaw-ash-capability): accept blake3 digest keys (dual blake3|sha256)`
+  - `git show --stat 041a039ae` → `48 files changed, 239 insertions(+), 229 deletions(-)`
+  - `git branch -a --contains 041a039ae | grep -c remotes` → `0` —
+    **unpushed**; the commit exists only on the local branch, so the
+    durable fix for the vendor-clobber loop is not yet durable upstream.
+  - Note: `blake3-digest-keys` is 19 commits ahead of `origin/main`
+    (319 files total on the branch delta) — the single 48-file commit
+    `041a039ae` is the blake3-keys commit itself.
+
+## Publish paths
+
+- **npm unblock path documented** — cited (read in GL28-BACKLOG.md:28-30
+  this session, file verified-on-disk): manual first publish → Trusted
+  Publisher → CI re-run, ledger at
+  `receipts/2026-10-24-npm-attempt-ledger.md` (ledger file not re-read by
+  this lane).
+- **hex publish path documented** — cited (GL28-BACKLOG.md:28-30, same
+  rows): dry-run needs no auth; GL28-12 tracks the npm publish + hex
+  decision.
+
+## Standing summary (as of this append, 2026-10-28)
+
+- Docs filed/landed: ALIVE (all verified-on-disk above).
+- GL28-6 / GL28-7 implementation lanes: cited IN-FLIGHT, not executed by
+  this lane — status is the owning lanes' to receipt.
+- Upstream push of `blake3-digest-keys`: **PENDING** (unpushed, verified).
+- npm Trusted-Publisher flow + hex publish: **PENDING** (documented, not
+  executed this session).
