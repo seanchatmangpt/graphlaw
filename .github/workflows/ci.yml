@@ -44,12 +44,23 @@ jobs:
         # evidentiary-ring (native SPSC ring) is host-buildable and must not
         # dodge the gate (RUST-8 lane L7).
         run: cargo clippy --all-targets --features pack-tools,abi,evidentiary-ring -- -D warnings
+      # Compile the wrap shim with the staged SDK's clang (GL28-13 canonical
+      # recipe, docs/WASM.md; receipt docs/jira/v26.10.28/RECEIPTS.md, commit
+      # 09bafd2). The shim is the sole __wrap provider: a plain-fcntl shim
+      # linked without --wrap duplicates wasi-libc's fcntl.c.obj (rust-lld
+      # duplicate symbol), and without the shim DuckDB's musl-word
+      # open/openat never translate.
+      - name: Compile wrap shim (staged SDK clang)
+        run: $WASI_SDK_PATH/bin/clang --target=wasm32-wasip1 -c tests/fixtures/wasm-shim/glaw_wrap_shim.c -o tests/fixtures/wasm-shim/glaw_wrap_shim.o
       - name: Build WASI module
         # The DuckDB-linked artifact requires the exception-handling target
         # feature at link time (new-EH duckdb wasm archive; wasmtime 48 hosts
-        # it, wasmi cannot).
+        # it, wasmi cannot). Wrap + bindgen env mirror the js.yml recipe
+        # (same provenance comments there): BINDGEN_EXTRA_CLANG_ARGS fixes
+        # the Linux bindgen glibc-multiarch death (js run 40797877807).
         env:
-          CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS: -C target-feature=+exception-handling
+          CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS: -C target-feature=+exception-handling -C link-arg=tests/fixtures/wasm-shim/glaw_wrap_shim.o -C link-arg=--wrap=open -C link-arg=--wrap=openat -C link-arg=--wrap=fcntl
+          BINDGEN_EXTRA_CLANG_ARGS: --target=wasm32-wasip1 --sysroot=/opt/wasi-sdk/share/wasi-sysroot
         run: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
       - name: Capability registry is current (graphlaw-registry --check)
         run: cargo run --locked --features abi --bin graphlaw-registry -- --check

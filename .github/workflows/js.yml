@@ -40,7 +40,31 @@ jobs:
       # DuckDB wasm archives + WASI_SDK_PATH for the graphlaw-wasm link
       # (frozen-duckdb-sys build.rs requires both on the wasm32 target).
       - uses: ./.github/actions/wasi-duckdb
+      # Compile the wrap shim with the staged SDK's clang (GL28-13 canonical
+      # recipe, docs/WASM.md "Build command"; receipt
+      # docs/jira/v26.10.28/RECEIPTS.md, commit 09bafd2). The shim is the sole
+      # __wrap provider: --wrap=open/openat/fcntl routes DuckDB's musl-word
+      # open/openat through the musl->wasi fcntl translator and makes the
+      # renamed __wrap_fcntl the sole fcntl (a plain-fcntl shim linked without
+      # --wrap duplicates wasi-libc's fcntl.c.obj: rust-lld duplicate symbol).
+      - name: Compile wrap shim (staged SDK clang)
+        run: $WASI_SDK_PATH/bin/clang --target=wasm32-wasip1 -c tests/fixtures/wasm-shim/glaw_wrap_shim.c -o tests/fixtures/wasm-shim/glaw_wrap_shim.o
       - name: Build WASI module (wasm profile)
+        env:
+          # Canonical relink-8 recipe + GL28-13 wrap-fcntl amendment
+          # (docs/WASM.md "Build command"). Env-form, mirroring ci.yml's
+          # native job: an env RUSTFLAGS supersedes the committed
+          # .cargo/config.toml [target.wasm32-wasip1] rustflags (stack-size).
+          CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS: -C target-feature=+exception-handling -C link-arg=tests/fixtures/wasm-shim/glaw_wrap_shim.o -C link-arg=--wrap=open -C link-arg=--wrap=openat -C link-arg=--wrap=fcntl
+          # frozen-duckdb-sys build.rs bindgen passes no --target/--sysroot;
+          # host libclang then dies on glibc multiarch:
+          #   /usr/include/stdint.h:26:10: fatal error: 'bits/libc-header-start.h' file not found
+          # (js tag run 40797877807 + every main js run; 0 green in the last
+          # 100 js runs). Point bindgen's libclang at the staged wasi-sysroot
+          # multilib dir: clang --target=wasm32-wasip1 --sysroot=... -E
+          # wrapper.h exits 0 with headers resolving from
+          # include/wasm32-wasip1/ (include trace, 9 sysroot hits).
+          BINDGEN_EXTRA_CLANG_ARGS: --target=wasm32-wasip1 --sysroot=/opt/wasi-sdk/share/wasi-sysroot
         run: cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm --locked
       # BLAKE3 is the artifact-digest algorithm (priv/graphlaw.wasm.blake3,
       # b3sum format). Node/WebCrypto have no blake3; the runner has rust
@@ -216,7 +240,15 @@ jobs:
           set -euo pipefail
           node js/npm/scripts/sync-version.mjs
           git diff --exit-code -- js/npm/package.json
+      - name: Compile wrap shim (staged SDK clang)
+        run: $WASI_SDK_PATH/bin/clang --target=wasm32-wasip1 -c tests/fixtures/wasm-shim/glaw_wrap_shim.c -o tests/fixtures/wasm-shim/glaw_wrap_shim.o
       - name: artifact-meta.ts is current (rebuild wasm, repin, diff)
+        env:
+          # Same canonical recipe + bindgen sysroot as the js-build job's
+          # "Build WASI module" step (see that step for the full provenance
+          # comments).
+          CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS: -C target-feature=+exception-handling -C link-arg=tests/fixtures/wasm-shim/glaw_wrap_shim.o -C link-arg=--wrap=open -C link-arg=--wrap=openat -C link-arg=--wrap=fcntl
+          BINDGEN_EXTRA_CLANG_ARGS: --target=wasm32-wasip1 --sysroot=/opt/wasi-sdk/share/wasi-sysroot
         run: |
           set -euo pipefail
           # Build-health gate: the tree must still produce the wasm artifact.

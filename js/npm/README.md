@@ -8,7 +8,7 @@ and run law pipelines with receipts and signed leases — ending in FOND policy 
 Every op returns a typed result or a typed refusal over a versioned JSON ABI
 (`ABI_VERSION = 1`).
 
-## Install
+## Quickstart
 
 ```sh
 npm i @seanchatmangpt/graphlaw
@@ -16,14 +16,99 @@ npm i @seanchatmangpt/graphlaw
 
 Node >= 20.
 
+One client, one honest admit: the `law` op runs its steps over your data *inside* the
+wasm module and returns the final state with a receipt per transition.
+
+```js
+import { createClient } from '@seanchatmangpt/graphlaw';
+
+const gl = await createClient();
+
+const res = await gl.law({
+  data: {
+    text: '@prefix : <https://test.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n',
+    dialect: 'turtle',
+  },
+  steps: [{ step: 'rdfs' }],
+});
+
+console.log(res.ok);              // true
+console.log(res.states.length);   // 2 — blake3 state ids, the input state first
+console.log(res.states);          // ['blake3:4912113c…', 'blake3:54f96d06…']
+console.log(res.receipts.length); // 1 — one receipt per transition
+console.log(res.nquads.length);   // 18113 — the final state as N-Quads
+```
+
+That is the whole drop-in. `createClient()` initializes the WASM engine once and fails
+fast on init errors. `res.receipts[0]` carries `authority` (here `"purrdf::entail"`),
+`added` (the triples the step derived), and the `parent`/`child` blake3 state chain, so
+the admission is replayable evidence, not a boolean.
+
+Refusals are typed the same way. Hand SHACL a shape the data violates and the same call
+throws a `GraphlawRefusalError` carrying the kernel's own answer — here the stable
+register code `NotAdmitted`; every code lives in the typed refusal register,
+[Refusals](https://github.com/seanchatmangpt/graphlaw/blob/main/docs/refusals.md):
+
+```js
+import { createClient, GraphlawRefusalError } from '@seanchatmangpt/graphlaw';
+
+const gl = await createClient();
+
+try {
+  await gl.law({
+    data: { text: '@prefix ex: <https://e/> . ex:a a ex:T .', dialect: 'turtle' },
+    steps: [{
+      step: 'shacl',
+      shapes: '@prefix sh: <http://www.w3.org/ns/shacl#> . @prefix ex: <https://e/> .\n' +
+        'ex:S a sh:NodeShape ; sh:targetClass ex:T ; sh:property [ sh:path ex:name ; ' +
+        'sh:minCount 1 ] .',
+    }],
+  });
+} catch (err) {
+  if (err instanceof GraphlawRefusalError) {
+    console.log(err.kind);    // "EngineRejected"
+    console.log(err.code);    // "NotAdmitted" — details.code, the stable register code
+    console.log(err.engine);  // "PurRdf"
+    console.log(err.dialect); // "Turtle"
+    console.log(err.message); // "SHACL admission refused: 1 violation(s)"
+    console.log(err.details.violations[0].component);
+    // "<http://www.w3.org/ns/shacl#MinCountConstraintComponent>"
+  } else {
+    throw err;
+  }
+}
+```
+
+Each op also has a `tryX()` variant (`tryLaw`, `tryParse`, `trySparql`, ...) that returns
+an `{ ok, error }` result instead of throwing.
+
+<!-- EXECUTED (2026-10-29, node 26): both snippets ran against the real pinned
+     artifact through this package's client methods (`gl.law`, error fields above are
+     the actual values). Init used skipDigestCheck because this checkout's
+     dist-nodejs/ pin predates the relinked artifact — see Publish state. -->
+
+## Publish state
+
 **Publish state** (verified 2026-10-24): the latest published version on npm is
 `26.10.14` (published pre-OIDC). The sources in this directory are version
-`26.10.22`; that version is packed and CI-validated (`publish-npm` run
+`26.10.28`; that version is packed and CI-validated (`publish-npm` run
 40084544193, validate-and-pack GREEN) but its publish is typed-blocked on the
 one-time npm Trusted Publisher configuration (E404,
 `docs/jira/v26.10.23/PUBLISH-STATUS.md`) — `npm i` today gets `26.10.14`.
 
-## Quickstart
+**Checkout build state** (executed 2026-10-29): `js/npm/wasm/graphlaw.wasm` hashes to
+blake3 `c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c`
+(62,909,537 B — the 2026-10-29 GL28-13 relink) while the built `dist-nodejs/` still
+carries the pre-relink pin `c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c`;
+`createClient()` on that dist throws `GraphlawIntegrityError` (witnessed: expected
+`c38b1fdb…`, actual `c92caeb6…`) until `npm run build` re-pins. Published tarballs are
+unaffected: `prepublishOnly` rebuilds, and the pin is regenerated from the artifact on
+every build, so pin and bytes always ship together.
+
+## Parse and SPARQL
+
+The single ops work the same way as `law` — typed request in, typed result or typed
+refusal out.
 
 ```js
 import { createClient } from '@seanchatmangpt/graphlaw';
@@ -47,9 +132,9 @@ if (res.kind === 'solutions') {
 }
 ```
 
-`createClient()` initializes the WASM engine once and fails fast on init errors. Each
-op also has a `tryX()` variant (`tryParse`, `trySparql`, ...) that returns an
-`{ ok, error }` result instead of throwing.
+<!-- EXECUTED (2026-10-29, node 26): quads = 1, id = blake3:ffe6ff3…, sparql returned
+     kind 'solutions' with the uri/literal Term row; same skipDigestCheck disclosure as
+     Quickstart. -->
 
 ## Typed errors
 
@@ -65,8 +150,9 @@ try {
   await gl.parse({ text: 'not rdf', dialect: 'turtle' });
 } catch (err) {
   if (err instanceof GraphlawRefusalError) {
-    console.log(err.kind); // e.g. "EngineRejected"
-    console.log(err.code); // machine-readable code, when present
+    console.log(err.kind); // "EngineRejected"
+    console.log(err.code); // "refused" — the fallback when the refusal carries no
+                           // details.code; a coded refusal surfaces its register code
     console.log(err.message);
   } else {
     throw err;
@@ -76,6 +162,10 @@ try {
 
 Other error types: `GraphlawInitError`, `GraphlawIntegrityError`,
 `GraphlawAllocRefusedError`, `GraphlawRequestTooLargeError`.
+
+<!-- EXECUTED (2026-10-29, node 26): kind = "EngineRejected", code = "refused",
+     message = "syntax error in Turtle (PurRdf) at line 1:1: …unexpected token…";
+     same skipDigestCheck disclosure as Quickstart. -->
 
 ## Raw passthrough
 
@@ -89,6 +179,10 @@ import { callRaw } from '@seanchatmangpt/graphlaw/raw';
 const res = await callRaw({ op: 'sniff', text: 'PREFIX : <http://ex/> :s :p :o .' });
 // { ok: true, dialect: 'Turtle', engine: 'PurRdf', ... }
 ```
+
+<!-- EXECUTED (2026-10-29, node 26): ok = true, dialect = "Turtle", engine = "PurRdf";
+     callRaw is exported only from the graphlaw/raw subpath, not the main entry; same
+     skipDigestCheck disclosure as Quickstart. -->
 
 ## Runtimes
 
@@ -132,8 +226,8 @@ you; if you drive them yourself, the discipline is:
 ## WASM artifact state
 
 The shipped `wasm/graphlaw.wasm` is pinned by BLAKE3
-`0858a760f9df87c66cdc01a04f6f4ce15926f400cb974b67a7d14513a5ddd2f1`
-(60,895,924 B; the DuckDB-linked new-EH artifact; verified across all four
+`c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c`
+(62,909,537 B; the ICU-drop relink, GL28-13 2026-10-29; verified across all four
 pin surfaces including this generated file — `src/generated/artifact-meta.ts`;
 the digest is re-pinned on every
 `npm run build`). The host for these bytes is the wasmtime-48 EH runner
