@@ -187,3 +187,28 @@ The codes in §5 are canonical; the courts reuse them verbatim.
   both paths, byte-identical `receipt_blake3` set, green.
 - Mutation court: inverting the gate to always-commit makes the parity
   court FAIL (anti-vacuity). A gate that cannot refuse is the failure.
+
+## §8 Discovered integration seam (2026-10-29 repo census)
+
+Smalt (`/Users/sac/smalt`, ~8.3k-line ARM router) already binds GraphLaw:
+`Smalt.GraphLaw.Validator` (`lib/smalt/graphlaw/validator.ex:304`,
+`validate_resource/2`, SHACL at `priv/shacl/smalt-shapes.ttl`) runs as
+`check_shape` inside the canonical mutation chain
+(`lib/smalt/arm_gateway/router.ex:1633-1660`), fail-closed to 503 on
+`:engine_unavailable` (router.ex:3686).
+
+Gate insertion point: a new `with :ok <-` step between the last refusal gate
+(`SkuQuota.check_put` / `Policy.enforce`) and the commit
+(`Store.put(:smalt_resources, ...)` at router.ex:1680), mirrored at the
+child-PUT chain (:2166), blob/route (:2900), EventGrid (:6547/:6782/:6834),
+and the Cosmos/Blob data-plane write entries.
+
+Receipt substrate to extend (not invent): `Smalt.Receipt.VcExport.to_vc/2`,
+`affidavit_seal/2` sideband (router.ex:1703), the TTV-4 sealed journal
+frames 0x0A01/0x0A02 (`store.ex:49-50`) as the commit boundary, and the
+Merkle receipt root (`src/smalt_arm_router.erl:123`).
+
+Enforcement posture reuses `graph_law_fail_closed?()` (router.ex:3686):
+`:fail_closed` -> typed refusal before commit; `:fail_open` -> admit-and-seal
+sideband. The GL28-2 receipt gate rides the journal frames rather than a new
+store table.
