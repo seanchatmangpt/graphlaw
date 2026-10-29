@@ -52,7 +52,7 @@ purrdf fork swap @ 2223f894 — ALIVE witnesses:
 - **Acceptance**: met — SPC court exit 0 with Cpk 6.0979 and 14.4149 (receipts spc-2026-10-28T165319/T171756.json) ≥ 1.33 in the
   receipt; real tail latencies embedded.
 
-## WO-2 — CTQ 2.1 fail-closed admission — PARTIAL
+## WO-2 — CTQ 2.1 fail-closed admission — **ALIVE**
 
 - **Required**: 0 false admissions; anti-vacuity: gates flip on mutation.
 - **Current (ALIVE)**: chicago_validation 12/12 @ 2223f894 (acceptance rerun).
