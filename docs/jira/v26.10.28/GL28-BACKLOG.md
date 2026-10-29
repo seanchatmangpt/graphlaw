@@ -108,3 +108,19 @@ dependency edges + glx:CandidatePlan remain unbuilt; (5) GL28-7 ceiling
 gate is spec+design, not code (implementation in flight). The drop-in
 claim is gated on WO-2 (mutation court) and the npm Trusted-Publisher
 bootstrap.
+
+### GL28-1 discovery (2026-10-29 census): the consumer already exists
+
+/Users/sac/beam4pm carries the full OCEL 2.0 side: BeamPM.Ocel
+(envelope validate/decode), BeamPM.OcelIngest.Router (POST /ocel/events,
+typed refusals), BeamPM.OcelAccumulator, RF2 alignment/Petri-net
+conformance + RF3 OCEL oracle (native binaries), and — decisive —
+BeamPM.Evidence's telemetry-bridge pattern (event_names/0, attach_all/0,
+engine_op_mapper/2, OtelBridge, ReceiptBridge at
+lib/beam4pm_evidence.ex:77/97/143/217/259) already consuming
+[:beam4pm, :engine, :graphlaw, op] events. GL28-1's remaining work is one
+new bridge module (GraphlawBridge) attaching to
+[:graphlaw_ex, :admit, :stop] with an engine_op_mapper-style mapping,
+paired with the OcelIngest path — not a new consumer. The
+ggen-generated BeamPM.Graphlaw facade is do-not-edit; admission helpers
+live in BeamPM.GraphlawAdmission.
