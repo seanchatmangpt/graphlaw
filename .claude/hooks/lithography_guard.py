@@ -10,6 +10,7 @@ Unreadable stdin fails closed. The other guards stay fail-open.
 """
 import json
 import sys
+from typing import NoReturn
 
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
 
@@ -26,7 +27,7 @@ PINS = {
 }
 
 
-def block(reason: str) -> None:
+def block(reason: str) -> NoReturn:
     print(json.dumps({"decision": "block", "reason": reason}))
     sys.exit(2)
 
