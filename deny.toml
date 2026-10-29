@@ -17,6 +17,16 @@ ignore = [
     # unmaintained warnings (transitive, host tooling only); expiry 2026-11-23
     "RUSTSEC-2025-0134",
     "RUSTSEC-2024-0449",
+    # RUSTSEC-2026-0391 (zstd 0.13.3) + RUSTSEC-2026-0398/0403 (zstd-safe
+    # 7.3.0): sole holder is wasmtime-internal-cache 48.0.7 (its manifest
+    # pins zstd "0.13.0"; not bumpable by cargo update — the patched
+    # zstd 0.14.3 / zstd-safe 8.2.0 already sit in the lock via zip 9.1.3).
+    # Host tooling only (wasmtime cache layer), not the in-WASM runtime or
+    # receipt-signing path. Fix tracks the wasmtime upstream bump.
+    # accepted 2026-10-29, expiry 2026-11-28, re-review on expiry.
+    "RUSTSEC-2026-0391",
+    "RUSTSEC-2026-0398",
+    "RUSTSEC-2026-0403",
 ]
 
 version = 2

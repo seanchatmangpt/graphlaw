@@ -18,6 +18,15 @@ ignore = [
     # unmaintained (transitive, host tooling only).
     # accepted 2026-10-24, expiry 2026-11-23, re-review on expiry (operator directive: compliance-final-verdict.md:374-388)
     "RUSTSEC-2024-0449",
+    # RUSTSEC-2026-0391 (zstd 0.13.3) + RUSTSEC-2026-0398/0403 (zstd-safe 7.3.0):
+    # sole holder wasmtime-internal-cache 48.0.7 (manifest pins zstd "0.13.0",
+    # not bumpable by cargo update; patched versions already in the lock via
+    # zip 9.1.3). Host tooling only (wasmtime cache layer), not the in-WASM
+    # runtime or receipt-signing path. Fix tracks the wasmtime upstream bump.
+    # accepted 2026-10-29, expiry 2026-11-28, re-review on expiry.
+    "RUSTSEC-2026-0391",
+    "RUSTSEC-2026-0398",
+    "RUSTSEC-2026-0403",
 ]
 
 # cargo-audit 0.22 has no `yanked` config key (schema: ignore,
