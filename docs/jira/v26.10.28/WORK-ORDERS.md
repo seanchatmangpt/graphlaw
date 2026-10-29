@@ -40,12 +40,13 @@ purrdf fork swap @ 2223f894 — ALIVE witnesses:
   ONE-unit law — the wasm artifact DOES advertise frozen-duckdb);
   `wasm_size_court` 4/4 at the 80 MiB SCAR ceiling (artifact
   74,097,211 B). SPC gate landed:
-  `bash scripts/spc_court.sh` exit 0 — receipt
-  `receipts/spc-2026-10-28T165319.json` (re-read at write time): bench
-  `tc_hot_01`, clone_path leg, mean 109.485 ns, stddev 7.681 ns,
-  **Cpk 6.0979 / 14.4149** (two independent receipts, gate min 1.33), p99 125/118 ns,
-  tail_fraction 0.0 against 0.0001 budget, 999 samples / 1,000,000
-  iterations.
+  `bash scripts/spc_court.sh` exit 0 — **two independent receipts**
+  (re-read from the JSON files on disk): `receipts/spc-2026-10-28T165319.json`
+  (bench `tc_hot_01`, clone_path leg, mean 109.485 ns, stddev 7.681 ns,
+  **Cpk 6.0979**, p99 125 ns) and `receipts/spc-2026-10-28T171756.json`
+  (mean 102.622 ns, stddev 3.408 ns, **Cpk 14.4149**, p99 118 ns);
+  gate min 1.33; tail_fraction 0.0 against 0.0001 budget, 999 samples /
+  1,000,000 iterations each.
 - **Gap**: none — latency receipt embedded in the SPC receipt (p50/p95/p99/
   p999/max).
 - **Acceptance**: met — SPC court exit 0 with Cpk 6.0979 and 14.4149 (receipts spc-2026-10-28T165319/T171756.json) ≥ 1.33 in the
@@ -148,19 +149,24 @@ re-execution for this-session witnesses, not new implementation. Wasm
 build machinery, SPC court, and mutation court all exist per CLAUDE.md;
 WO-1/WO-2 are runs, not builds of new gates.
 
-## GL28 addendum (synced 2026-10-28, states re-read at write time)
+## GL28 addendum (consolidated 2026-10-29)
 
-GL28 backlog states beyond WO-1..WO-7, verified on disk this sync:
+GL28 ticket statuses (GL28-1..GL28-14, upstream pack, npm/hex publish
+paths) are **not duplicated here**. The single authoritative GL28 register
+is [`GL28-BACKLOG.md`](GL28-BACKLOG.md) — one status per GL28-n lives
+there (design authority stays with the per-ticket spec files). The WO↔GL28
+bridges that remain load-bearing here:
 
-| Order | Standing | Evidence |
-| --- | --- | --- |
-| GL28-2 | DESIGN | `GL28-2-SMALT-WIRE-SPEC.md` (this dir); implementation not started |
-| GL28-5 | LANDED | `documentation/reference/conformance_claim.md` exists on disk (verified this sync) |
-| GL28-6 | DESIGN, impl lane in flight | `GL28-6-KILLSWITCH-DESIGN.md` (this dir) |
-| GL28-7 | DESIGN, impl lane in flight | `GL28-7-AUTHORITY-PORT-DESIGN.md` (this dir) |
-| GL28-13 | DESIGN (census) | `GL28-13-SLIMMING-CENSUS.md`: ICU drop −3 MB + MinSizeRel wasm32 rebuild −10–18 MB restores the 64 MiB gate |
-| Upstream pack | LANDED-local, BLOCKED-external(push) | branch `blake3-digest-keys` @ `041a039ae` in /Users/sac/ggen-marketplace (verified on disk; 48 files, unpushed) |
-| npm/hex publish | DOCUMENTED, BLOCKED-external | `receipts/2026-10-24-npm-attempt-ledger.md` (first publish manual → Trusted Publisher mapping, 2-day expiry); hex dry-run needs no auth |
+- **GL28-9 = WO-2** (mutation court solo run): the window stands
+  GO-except-WO-2 until the coordinator's solo `bash scripts/mutation_court.sh`
+  exit 0 lands in RECEIPTS.md. No mutation-court receipt exists in
+  `receipts/` (re-checked at this consolidation).
+- **GL28-10 = WO-7** (ash_graphlaw adoption): parity court + full suite
+  pending per WO-7 above.
+- npm publish: **NOT executed — no receipt exists.** The npm package
+  already exists on the registry at 26.10.14; the fix is the Trusted
+  Publisher mapping + rerun A3 (`receipts/2026-10-24-npm-attempt-ledger.md`),
+  tracked as GL28-12 in the register.
 
 DESIGN is not LANDED; a filed design doc is a candidate, not an executed
 transition. Implementation lanes in flight carry no receipt here yet.

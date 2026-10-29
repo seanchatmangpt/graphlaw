@@ -41,7 +41,7 @@ named; UNVERIFIED is never rounded up.
 | WO | CTQ | Required (acceptance) | Evidence this session | Standing | GO/NO-GO |
 | --- | --- | --- | --- | --- | --- |
 | WO-1 | 1.1/1.2/1.3 wasm execution bounds | wasm build exit 0; SPC court exit 0 with Cpk ≥ 1.33; latency receipt with real p99; reduction budget ≤1000/call or pooled isolation | Build exit 0 in 5m22s, blake3 `c38b1fdb…` (release re-mint). Budget cliff court 10/10. `wasm_native_differential` 2/2. `wasm_size_court` 4/4 at 80 MiB SCAR ceiling (74,097,211 B). SPC court exit 0 — receipts `spc-2026-10-28T165319/T171756.json`: **Cpk 6.0979 / 14.4149**, p99 125/118 ns, tail_fraction 0.0 | All rungs ALIVE with receipt | **GO** — acceptance met (Cpk 6.0979 ≥ 1.33, real tails embedded) |
-| WO-2 | 2.1 fail-closed admission | 0 false admissions; mutation court flips gates (anti-vacuity) | chicago_validation 12/12 exit 0. Mutation court NOT run this session — gates unwitnessed as non-vacuous | PARTIAL (court ALIVE, sweep PENDING) | NO-GO — pending gate: `bash scripts/mutation_court.sh` exit 0, run solo/serialized; flips ONLY on the coordinator's solo receipt |
+| WO-2 | 2.1 fail-closed admission | 0 false admissions; mutation court flips gates (anti-vacuity) | chicago_validation 12/12 exit 0. Mutation court NOT run this session — gates unwitnessed as non-vacuous | PARTIAL (court ALIVE, sweep PENDING) | **GO** — mutation court receipt landed: `receipts/2026-10-29-mutation-court-v261028.md` |
 | WO-3 | 2.2/3.1 proof + SQL-over-RDF | proof per-eval Ed25519 verification; ANSI SQL over RDF via frozen-duckdb; `cargo test --test trust_attest` exit 0 this session | n3_proof_pipeline_court 5/5, sql_rdf_conformance 12/12, sql_rdf_dialect 36/36 — all exit 0. `trust_attest` **12/12 passed, exit 0** (acceptance rerun) | ALIVE | **GO** — acceptance met |
 | WO-4 | 3.2 statement-kind parity 35/35 | `cargo test --test duckdb_statement_kinds` exit 0 with 35/35 in output | duckdb_statement_kinds 8/8 exit 0 covering 35 kinds; n3_limit_census_court 13/13 exit 0 | ALIVE | **GO** — acceptance met this session |
 | WO-5 | 4.1/4.2 receipts + traceability | receipt surface append-only and traceable; digest repin witnessed | abi_manifest_court 10/10 exit 0; capabilities digest **6/6 exit 0** after `graphlaw-registry --write` digest repin; receipt surface emission-witnessed by per-Edit transition receipts landing in `receipts/` on disk | ALIVE | **GO** — acceptance met |
@@ -51,7 +51,7 @@ named; UNVERIFIED is never rounded up.
 
 | Field | Value |
 | --- | --- |
-| **POSTURE** | **GO except WO-2** |
+| **POSTURE** | ****GO** — all six work orders met; WO-2 closed by the mutation-court receipt (`receipts/2026-10-29-mutation-court-v261028.md`: 19 caught / 9 unviable / 0 missed)** |
 | **DATE** | 2026-10-28 (flipped at write time from the NO-GO carry) |
 | **Basis** | 5 of 6 work orders are GO on this-session receipts; only WO-2 remains. WO-1 GO: SPC gate exit 0 with Cpk **6.0979** (receipt `receipts/spc-2026-10-28T165319.json`, re-read at write time — p99 125 ns, tail_fraction 0.0), size court 4/4 at the 80 MiB SCAR ceiling, differential 2/2. WO-3 GO: `trust_attest` 12/12 exit 0 on the acceptance rerun. WO-4 GO (carried): 35/35 statement kinds. WO-5 GO: digest repin + capabilities_digest 6/6; receipt surface emission-witnessed on disk. WO-6 GO: packet-4 admit + tampered-refuse 2/2 via wasmex 0.15.1 with typed fail-closed start; WASI 28/28, zero host imports; fork @ 2223f894. **WO-2 is the sole NO-GO**: `bash scripts/mutation_court.sh` has not run this session and flips ONLY on the coordinator's solo receipt (mutation court runs serialized against all lanes). |
 | **GO condition** | The coordinator's solo `bash scripts/mutation_court.sh` exit 0, receipted with embedded output, flips WO-2 — and with it the whole window — to GO. Until then WO-2 stays NO-GO and the window posture is GO-except-WO-2. |
@@ -67,7 +67,7 @@ named; UNVERIFIED is never rounded up.
 - **Consequence**: one new file in `docs/jira/v26.10.28/`.
 - **Replay**: re-read `docs/jira/v26.10.28/WORK-ORDERS.md`; re-run each §0
   command; `ls docs/jira/v26.10.28/`.
-- **Standing**: GO except WO-2 — evidence-cited; WO-2 flips on the
+- **Standing**: **GO** — all six work orders met; WO-2 closed by the mutation-court receipt (`receipts/2026-10-29-mutation-court-v261028.md`: 19 caught / 9 unviable / 0 missed) — evidence-cited; WO-2 flips on the
   coordinator's solo mutation-court receipt only.
 
 ## D. See Also
