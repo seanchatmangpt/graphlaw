@@ -60,8 +60,15 @@ defmodule GraphlawEx.KillSwitchTest do
   test "install: mutated signature refuses at publication, epoch term unchanged" do
     {pub, seed} = keypair()
     doc = revocation(7, "all", key_id(), seed)
-    <<b, rest::binary>> = doc["attestation"]["signature"]
-    doc = put_in(doc, ["attestation", "signature"], <<:erlang.bxor(b, 1), rest::binary>>)
+    # Alphabet-preserving tamper: decode the hex, flip one raw signature
+    # byte, re-encode lowercase. (XOR-ing the hex STRING's first char is
+    # not alphabet-preserving — `a`->backtick, `f`->`g` — and the refusal
+    # would be :malformed at hex-decode instead of :invalid_signature at
+    # the Ed25519 verify stage.)
+    sig = doc["attestation"]["signature"]
+    <<b, rest::binary>> = Base.decode16!(sig, case: :mixed)
+    flipped = (:erlang.bxor(b, 1) |> :binary.encode_unsigned()) |> String.pad_leading(2, "0")
+    doc = put_in(doc, ["attestation", "signature"], Base.encode16(flipped <> rest, case: :lower))
 
     assert {:error, %Refusal{code: :lease_revoked} = refusal} = KillSwitch.install(doc, %{key_id() => pub})
     assert refusal.details.reason == :invalid_signature
