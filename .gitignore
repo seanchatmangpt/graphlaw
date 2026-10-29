@@ -47,3 +47,12 @@ tests_py/.pytest_cache/
 /.pytest_cache/
 
 *.output
+
+# graphlaw_ex build outputs + VM artifacts (untracked 2026-10-29; GL28-11/13 cleanup)
+graphlaw_ex/_build*/
+graphlaw_ex/deps/
+graphlaw_ex/erl_crash.dump
+graphlaw_ex/*.tar
+
+# provenance blobs re-derivable from upstream (recipe in docs/jira/v26.10.28/provenance/)
+docs/jira/v26.10.28/provenance/purrdf-fork-44f4979.tar.gz
