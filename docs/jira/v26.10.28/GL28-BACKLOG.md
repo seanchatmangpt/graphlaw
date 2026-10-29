@@ -85,3 +85,26 @@ vocabulary exists, upstream in chatman-ecosystem.ttl:15-16); (b) explicit
 step-dependency edges (implicit in tsched.rs:93-185 consume/produce
 logic, not materialized on the plan struct); (c) the lease-ceiling court
 (`c01_plan_lease_court`) against `Capability.API.law/2`/`policy/2`.
+
+### GL28-14 — MCP manifest projection (new, 2026-10-29)
+
+A SPARQL CONSTRUCT over ontology.ttl emitting `tools/list` JSON-Schema for
+the 14 typed verbs — a fourth ggen target platform alongside the Elixir,
+wasm and npm projections. Thin by construction: the request field maps are
+already cross-checked 14/14 against contracts/abi-manifest.json, and the
+ggen projection machinery proved itself on the ash_graphlaw regeneration.
+Receiver surface: graphlaw_ex's 14 typed verbs over packet-4 (75/75) are
+the tools/call implementation; the projection is the manifest.
+
+Standing discipline carried into the Vision-2028 positioning (2026-10-29
+review): (1) "0 DPMO" is not claimable — what exists is bounded-input
+correctness under the census ceilings plus P01 forgery resistance; inputs
+outside the admitted grammar get typed refusals, not proofs. (2) The
+118 ns SPC number is the hot-path receipt-fold leg, not a full
+parse→reason→plan composite — only the first leg is witnessed. (3)
+frozen-duckdb gives exact joins over the dataset; closure completeness is
+rule-set-dependent — claim exactness, not universality. (4) GL28-3
+dependency edges + glx:CandidatePlan remain unbuilt; (5) GL28-7 ceiling
+gate is spec+design, not code (implementation in flight). The drop-in
+claim is gated on WO-2 (mutation court) and the npm Trusted-Publisher
+bootstrap.
