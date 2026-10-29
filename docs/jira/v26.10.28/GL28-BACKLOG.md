@@ -253,3 +253,11 @@ Falsifier (corrected 2026-10-29): the byte-exact replay is the GitHub codeload U
   order-flip regression court in purrdf-n3 (first-match-only fired_fuse
   is rule-order-dependent; suppresses second simultaneous denial). The
   ash_a2a sentinel re-route is the permanent consumer answer either way.
+
+### ERRC tick-2 ledger note (2026-10-29)
+
+Tick-2's candidate wave was killed by 429 rate limits before scoring:
+12 candidates unscored, no mints on disk (the ERC-001-*.json files in
+ash_a2a research/erc/ are an older era, git_sha dbb5cc06, not this
+tick). Nothing to fold; re-propose on the next hourly ERRC cycle if
+wanted. Tick-4's kept candidates are folded above.
