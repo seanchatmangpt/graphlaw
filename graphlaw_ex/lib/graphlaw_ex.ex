@@ -66,9 +66,18 @@ defmodule GraphlawEx do
   engine-side refusal (`"ok": false`) is still `{:ok, response}` at the
   transport layer; read `response["ok"]` to classify it.
   """
-  @spec admit(GenServer.server(), binary()) :: {:ok, map()} | {:error, Refusal.t()}
-  def admit(server \\ __MODULE__, payload) when is_binary(payload) do
-    Telemetry.admit("admit", [server: server], fn ->
+  @spec admit(GenServer.server(), binary(), keyword()) ::
+          {:ok, map()} | {:error, Refusal.t()}
+  def admit(server \\ __MODULE__, payload, opts \\ []) when is_binary(payload) do
+    # GL28-1 leg (b): opts passthrough — the caller may pin the source
+    # digest of the law content this span executes (engine-minted
+    # `blake3:` LawState.id). Arity-2 callers keep their exact behavior:
+    # absent opts -> nil digest, metadata shape unchanged.
+    telemetry_opts =
+      [server: server]
+      |> Keyword.put(:source_digest, Keyword.get(opts, :source_digest))
+
+    Telemetry.admit("admit", telemetry_opts, fn ->
       with {:ok, _framed} <- ABI.frame(payload) do
         Host.request_raw(server, payload)
       end

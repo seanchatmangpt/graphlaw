@@ -225,6 +225,9 @@ defmodule GraphlawEx.Authority do
       ]
       |> maybe_put(:trusted_keys, opts[:trusted_keys])
       |> maybe_put(:max_skew_secs, opts[:max_skew_secs])
+      # GL28-1 leg (b): capability-verb callers may pin the source digest of
+      # the law content being executed; nil (absent) is dropped, shape unchanged.
+      |> maybe_put(:source_digest, opts[:source_digest])
       |> Enum.reject(fn {_k, v} -> is_nil(v) end)
 
     case claim(opts[:lease]) do
