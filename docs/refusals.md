@@ -282,6 +282,18 @@ ggen sync path) has standing and determinism is enforced by projection replay, n
 Rule: if a gate or query needs an aggregate, run it in the projection layer and admit the
 projected artifact; do not push it through a `law` step expecting a kernel answer.
 
+## Elixir-side de-coarsening (graphlaw_ex, 2026-10-29)
+
+The BEAM bridge is de-coarsening its refusal surface: where a single coarse
+`{:error, {:refused, _}}`-style failure used to stand for several distinct
+conditions, the Elixir side now types them distinctly — `ReceiptRefused`,
+`LeaseRefused`, and `UnverifiedLeaseRefused` are separate errors, and the
+`Fuse`/`DuckDb`/`BatchMemberFailed` kernel refusals are mapped to their own
+Elixir-side kinds instead of collapsing into a generic refusal. Existing codes
+in this register are unchanged; this entry records the mapping so the Elixir
+surface and the codes above stay legible against each other. Recovery for each
+condition follows the row for the underlying kernel refusal.
+
 ## See Also
 
 - [ABI reference](abi-reference.md)

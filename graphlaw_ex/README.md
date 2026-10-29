@@ -30,9 +30,10 @@ GraphlawEx (GenServer) ---> packet-4 frame ---> wasm module (digest-pinned artif
 The BEAM holds only the wasm byte-slice; the bridge owns bytes in/out; the
 host owns authority, standing, refusals.
 
-- `lib/graphlaw_ex.ex` — GenServer owning the wasmex store/instance; exposes
-  `admit/2` and `stop/1`; speaks ABI version 1 (`gl_alloc` / `gl_call` /
-  `gl_free`) with packet-4 framing.
+- `lib/graphlaw_ex.ex` — a long-lived `GraphlawEx.Host` GenServer holding one
+  serialized wasm instance (not instantiate-per-turn), with recycle-on-fault
+  and a compiled-module cache; exposes `admit/2` and `stop/1`; speaks ABI
+  version 1 (`gl_alloc` / `gl_call` / `gl_free`) with packet-4 framing.
 - `lib/graphlaw_ex/application.ex` — supervision tree, `GraphlawEx` as a
   named child, opt-in auto-start.
 
@@ -49,23 +50,29 @@ defp deps do
 end
 ```
 
-The wasm artifact is not a dependency — copy or vendor `priv/graphlaw.wasm`
-and its pin `priv/graphlaw.wasm.blake3` next to your application.
+The wasm artifact is not a dependency — copy or vendor `priv/graphlaw/graphlaw.wasm`
+and its pin `priv/graphlaw/MANIFEST.json` (`artifact.blake3` / `artifact.sha256`)
+next to your application. `lib/graphlaw_ex/wasm_config.ex` is the truth for how
+the pin is located and checked.
 
 ## Configuration
 
 | Option | Where | Default | Meaning |
 |---|---|---|---|
-| `:wasm_path` | start option → `:graphlaw_ex, :wasm_path` app env | `../priv/graphlaw.wasm` | Filesystem path of the graphlaw wasm artifact. A missing or unreadable file is a typed `{:error, {:wasm_load_failed, path, :enoent}}` from `start_link/1`, never a linked-process exit. |
+| `:wasm_path` | start option → `:graphlaw_ex, :wasm_path` app env | `priv/graphlaw/graphlaw.wasm` | Filesystem path of the graphlaw wasm artifact. A missing or unreadable file is a typed `{:error, {:wasm_load_failed, path, :enoent}}` from `start_link/1`, never a linked-process exit. |
 | `:auto_start` | `:graphlaw_ex, :auto_start` app env | `false` | When `true`, the supervision tree starts `GraphlawEx` as a named child. Opt-in so depending on the library never instantiates wasm implicitly and never races a caller's own instance. |
 
-Digest pin security property: the pin in `priv/graphlaw.wasm.blake3`
-(`c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c`) binds
-admission to exact artifact bytes. Verify before starting:
+Digest pin security property: the pin in `priv/graphlaw/MANIFEST.json`
+(`artifact.blake3`
+`c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c`,
+`artifact.sha256`
+`62cd95d4ef7294dcd5976a2f685b71580bb834816e9f4bba0d13d5555e35c8f8`,
+artifact size 62,909,537 bytes) binds admission to exact artifact bytes.
+Verify before starting:
 
 ```bash
-b3sum priv/graphlaw.wasm
-# c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c  priv/graphlaw.wasm
+b3sum priv/graphlaw/graphlaw.wasm
+# c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c  priv/graphlaw/graphlaw.wasm
 ```
 
 Any other digest means the bytes are not the pinned artifact — do not admit
@@ -76,7 +83,7 @@ not stand for artifact B.
 ## Quickstart
 
 ```elixir
-wasm_path = Path.expand("priv/graphlaw.wasm", File.cwd!())
+wasm_path = Path.expand("priv/graphlaw/graphlaw.wasm", File.cwd!())
 {:ok, _bridge} = GraphlawEx.start_link(wasm_path: wasm_path)
 
 honest = %{
@@ -114,7 +121,7 @@ Walk the same flow interactively in `graphlaw_ex.livemd`.
 ```bash
 cd graphlaw_ex
 mix deps.get
-PRIV_WASM=$PWD/../priv/graphlaw.wasm mix test
+PRIV_WASM=$PWD/priv/graphlaw/graphlaw.wasm mix test
 ```
 
 With the artifact present the instantiation court loads the real module and

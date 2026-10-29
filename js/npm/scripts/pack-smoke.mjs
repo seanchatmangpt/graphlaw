@@ -5,8 +5,8 @@
 //   - every packed entry is inside the allowlist (FAIL on offenders, listed)
 //   - no node_modules/, test/, src/, scripts/, tsconfig*, vitest* leakage (FAIL)
 //   - wasm/graphlaw.wasm present and within its class band: legacy
-//     pre-duckdb <10 MB, DuckDB-linked 40-64 MiB (FAIL)
-//   - total packed size < 68MB (FAIL)
+//     pre-duckdb <10 MB, DuckDB-linked 40-128 MiB (FAIL)
+//   - total packed size < 132MB (FAIL)
 //   - dist-nodejs/index.js, dist-nodejs/raw/index.js, dist-bundler/index.js,
 //     dist-web/index.js present (WARN before build, so pre-build runs pass)
 import { execFileSync } from "node:child_process";
@@ -28,13 +28,13 @@ const WASM_ENTRY = "wasm/graphlaw.wasm";
 //   - legacy pre-duckdb artifact: <10 MB (historical; current priv/graphlaw.wasm
 //     at ~7.1 MB is this class until the coordinator re-pin)
 //   - DuckDB-linked artifact (M4 witness): >=40 MB proves the engine link,
-//     hard ceiling 64 MiB (67108864)
+//     hard ceiling 128 MiB (134217728)
 const MIB = 1024 * 1024;
 const WASM_LEGACY_MIN_BYTES = 1 * MIB; // non-trivial module, any class
 const WASM_LEGACY_MAX_BYTES = 10 * MIB;
 const WASM_ENGINE_MIN_BYTES = 40 * MIB; // wasm >= 40 MB proves the engine link
-const WASM_HARD_CEILING_BYTES = 64 * MIB; // 67108864
-const TOTAL_MAX_BYTES = 68 * MIB; // wasm ceiling 64 MiB + package overhead
+const WASM_HARD_CEILING_BYTES = 128 * MIB; // GL28-13 re-anchored 2026-10-29: tests/wasm_size_court.rs
+const TOTAL_MAX_BYTES = 132 * MIB; // wasm ceiling 128 MiB + package overhead
 const FORBIDDEN = [
   /^node_modules\//,
   /^test\//,
@@ -113,10 +113,10 @@ if (!wasm) {
 } else {
   const size = wasm.size || 0;
   if (size >= WASM_ENGINE_MIN_BYTES) {
-    // Engine-link class: bounded by the 64 MiB hard ceiling.
+    // Engine-link class: bounded by the 128 MiB hard ceiling.
     if (size > WASM_HARD_CEILING_BYTES) {
       fails.push(
-        `${WASM_ENTRY} is ${fmtBytes(size)}, exceeds hard ceiling ${fmtBytes(WASM_HARD_CEILING_BYTES)} (64 MiB)`,
+        `${WASM_ENTRY} is ${fmtBytes(size)}, exceeds hard ceiling ${fmtBytes(WASM_HARD_CEILING_BYTES)} (128 MiB)`,
       );
     }
   } else if (size < WASM_LEGACY_MIN_BYTES || size >= WASM_LEGACY_MAX_BYTES) {

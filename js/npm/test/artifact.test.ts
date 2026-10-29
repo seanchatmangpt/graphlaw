@@ -33,7 +33,7 @@ describe('wasm artifact integrity', () => {
   });
 
   it('size matches its artifact class band (legacy pre-duckdb / DuckDB-linked)', () => {
-    // Size bands follow scripts/wasm_audit.sh: hard ceiling 64 MiB.
+    // Size bands follow scripts/wasm_audit.sh: hard ceiling 128 MiB (GL28-13).
     //   - legacy pre-duckdb class: <10 MB (historical; the current
     //     priv/graphlaw.wasm at 7.1 MB is this class until coordinator re-pin)
     //   - DuckDB-linked (M4 witness) class: >=40 MB proves the engine link,
@@ -41,7 +41,7 @@ describe('wasm artifact integrity', () => {
     const MIB = 1024 * 1024;
     const LEGACY_MAX_BYTES = 10 * MIB;
     const ENGINE_MIN_BYTES = 40 * MIB;
-    const HARD_CEILING_BYTES = 80 * MIB; // 80 MiB, mirrors wasm_size_court SCAR (fork-HEAD artifact 74,097,211 B; slimming follow-up open)
+    const HARD_CEILING_BYTES = 128 * MIB; // GL28-13 re-anchored 2026-10-29: tests/wasm_size_court.rs
     const size = statSync(wasmPath).size;
     if (size >= ENGINE_MIN_BYTES) {
       // Engine-link class: wasm >= 40 MB proves the DuckDB engine is linked.

@@ -23,22 +23,17 @@ Build command (root of the repository):
 # sysroot carries the C++ runtime matching libduckdb.a. The
 # published wasi-sdk-34 sysroot is new-EH-only and fails the final link with
 # `_Unwind_GetWasmLPadContext` / `__gxx_wasm_personality_v0` undefined.
-# Compile the in-tree wrap shim once — with a clang that carries a wasi
-# sysroot (Apple clang fails on errno.h); the cache's own bin/clang works:
-clang --target=wasm32-wasip1 -c \
-  tests/fixtures/wasm-shim/glaw_wrap_shim.c -o tests/fixtures/wasm-shim/glaw_wrap_shim.o
-# Then build. RUSTFLAGS carries the EH target feature plus the wrap shim:
-# it is the SOLE __wrap provider; --wrap redirects DuckDB's musl-word
-# open/openat through the musl->wasi fcntl translator (SQLRDF-27).
-# --wrap=fcntl (GL28-13): the shim's fcntl is renamed __wrap_fcntl so it is
-# the sole fcntl; without the wrap, wasi-libc's fcntl.c.obj is archive-pulled
-# by DuckDB's U fcntl and duplicates the shim's plain `fcntl` definition
-# (rust-lld: duplicate symbol: fcntl). The shim's defer path resolves
-# __real_fcntl to wasi-libc's real fcntl.
+# Compile and build:
+# frozen-duckdb 2.0.3 (local /Users/sac/frozen-duckdb checkout, commit 78e9b5c;
+# crates.io publication UNVERIFIED — Cargo.lock still resolves 2.0.2) internally
+# bridges musl and WASI open flag bitmasks. The wrap shim
+# (tests/fixtures/wasm-shim/glaw_wrap_shim.c/.o) is REQUIRED while Cargo.lock
+# resolves 2.0.2 — see tests/conftest.py WRAP_RUSTFLAGS.
+#
+# WASI_SDK_PATH points at the unpacked engine cache or wasi-sdk root: its
+# sysroot carries the C++ runtime matching libduckdb.a.
 WASI_SDK_PATH="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1" \
-  RUSTFLAGS="-C target-feature=+exception-handling \
--C link-arg=tests/fixtures/wasm-shim/glaw_wrap_shim.o \
--C link-arg=--wrap=open -C link-arg=--wrap=openat -C link-arg=--wrap=fcntl" \
+  RUSTFLAGS="-C target-feature=+exception-handling" \
   cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 ```
 
@@ -120,9 +115,7 @@ The pin is minted from this tree with:
 # Same canonical relink-8 recipe as the build section (compile the shim .o
 # first — see "Build command").
 WASI_SDK_PATH="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1" \
-  RUSTFLAGS="-C target-feature=+exception-handling \
--C link-arg=tests/fixtures/wasm-shim/glaw_wrap_shim.o \
--C link-arg=--wrap=open -C link-arg=--wrap=openat" \
+  RUSTFLAGS="-C target-feature=+exception-handling" \
   cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 ```
 
