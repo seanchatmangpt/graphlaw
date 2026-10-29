@@ -14,7 +14,8 @@
 # historical pin (superseded 2026-10-26 X2 lane re-mint at the migrated sql_ast surface): wasm 430da5728bca0d19c1c92cf8f9f0974648b53361190a1e5b4b8b7a07ad69fdf6 60893336 graphlaw_wasm.wasm
 # historical pin (superseded 2026-10-28 purrdf fork-swap rebuild @ 2223f894): wasm 0858a760f9df87c66cdc01a04f6f4ce15926f400cb974b67a7d14513a5ddd2f1 60895924 graphlaw_wasm.wasm
 # historical pin (superseded 2026-10-28 v26.10.28 release re-mint): wasm 348c97fd826f0fe93d353690ea09976be500f31955e526b1ae2e36ca4ec2bb1e 74097211 graphlaw_wasm.wasm
-wasm c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c 74097211 graphlaw_wasm.wasm
+# historical pin (superseded 2026-10-29 GL28-13 ICU-root-removal relink; wrap-fcntl shim recipe): wasm c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c 74097211 graphlaw_wasm.wasm
+wasm c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c 62909537 graphlaw_wasm.wasm
 registry blake3:6e1103673508ade20f2276e93c7c948dd4f7c31689a25a325fac4a308856035d - capability-registry.json
 surface blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9 - capability-registry.json
 receipt-surface blake3:11fb8f9ab810b8f387fb162da274cb53717752238b8d58b30fbb29e53042b5ca - src/duckdb_eval.rs+src/sql_ast.rs

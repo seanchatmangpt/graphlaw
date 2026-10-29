@@ -1,4 +1,6 @@
-/* SQLRDF-27 fcntl ABI bridge (linker --wrap variant, sole __wrap provider). */
+/* SQLRDF-27 fcntl ABI bridge (linker --wrap variant, sole __wrap provider).
+ * (+ --wrap=fcntl, GL28-13: the definition is __wrap_fcntl so rust-lld's
+ * --wrap=fcntl resolves libc.a's fcntl through it without a duplicate symbol.) */
 #include <errno.h>
 #include <stdarg.h>
 
@@ -49,7 +51,7 @@ int __wrap_openat(int dirfd, const char *path, int flags, ...) {
 
 extern int __real_fcntl(int fd, int cmd, ...);
 
-int fcntl(int fd, int cmd, ...) {
+int __wrap_fcntl(int fd, int cmd, ...) {
     if (cmd == F_SETLK || cmd == F_SETLKW) return 0;
     if (cmd == F_GETLK) {
         va_list ap; va_start(ap, cmd);

@@ -11,11 +11,12 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-// Was the 64 MiB sandbox wall; fork HEAD (seanchatmangpt/purrdf @ 2223f894)
-// grew the DuckDB-linked ONE-unit artifact to ~70.7 MiB (GeoSPARQL, extended
-// SPARQL surface). SCAR: slimming is WO-1 follow-up; the ceiling is raised
-// with that receipt rather than silently.
-const MAX_BYTES: u64 = 83_886_080; // 80 MiB
+// Size-policy ceiling re-anchor 2026-10-29 (GL28-13): 128 MB = 134,217,728 B.
+// Ceiling MATCHES POLICY, not a slimming claim — the policy ceiling was
+// re-anchored from the 64 MiB sandbox wall to 128 MB by operator decision;
+// the artifact is measured and pinned honestly at whatever the canonical
+// relink produces.
+const MAX_BYTES: u64 = 134_217_728; // 128 MB
 /// M4 witness class: a DuckDB-linked wasm engine artifact. Anything at or
 /// above this proves the engine actually linked; a 7.1 MB-class artifact is
 /// the legacy engine-free shape.

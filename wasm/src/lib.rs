@@ -63,20 +63,14 @@ mod duckdb_static_extensions {
         fn duckdb_register_static_extension(describe: Describe) -> i32;
         #[link_name = "duckdb_extension_core_functions_describe"]
         fn core_functions_describe(desc: *mut c_void) -> i32;
-        #[link_name = "duckdb_extension_icu_describe"]
-        fn icu_describe(desc: *mut c_void) -> i32;
     }
 
-    /// Register both describes; a failure is fatal (a database opened against
-    /// a half-registered registry throws later in
-    /// `LinkedExtensionRegistry::Get`). Returns 0 on success.
+    /// Register the describes (GL28-13: ICU dropped — core_functions only); a
+    /// failure is fatal (a database opened against a half-registered registry
+    /// throws later in `LinkedExtensionRegistry::Get`). Returns 0 on success.
     #[unsafe(no_mangle)]
     pub extern "C" fn graphlaw_wasm_register_static_extensions() -> i32 {
-        let mut rc = unsafe { duckdb_register_static_extension(core_functions_describe) };
-        if rc == 0 {
-            rc = unsafe { duckdb_register_static_extension(icu_describe) };
-        }
-        rc
+        unsafe { duckdb_register_static_extension(core_functions_describe) }
     }
 
     // .init_array entry: retained as a GC root by lld even though the static

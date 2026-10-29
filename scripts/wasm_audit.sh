@@ -48,11 +48,12 @@ else
     echo "== wasm_audit: subject = wasm v${VERSION} artifact =="
 fi
 
-# --- 64 MiB sandbox wall (docs/WASM.md). Historical note: pre-DuckDB-pin
-# artifacts were the 7.1 MB engine-free class; the DuckDB-linked artifact is
-# the M4 witness class (~45 MB). A tag-count-0 artifact at that size class
-# means the engine did not link. ---
-MAX_BYTES=83886080
+# --- 128 MB size-policy ceiling, re-anchored 2026-10-29 (GL28-13) from the
+# 64 MiB sandbox wall. Ceiling MATCHES POLICY, not a slimming claim.
+# Historical note: pre-DuckDB-pin artifacts were the 7.1 MB engine-free
+# class; the DuckDB-linked artifact is the M4 witness class (~45 MB). A
+# tag-count-0 artifact at that size class means the engine did not link. ---
+MAX_BYTES=134217728
 
 if [[ ! -f "$SUBJECT" ]]; then
     echo "[MISSING] wasm artifact not found: $SUBJECT" >&2
@@ -82,9 +83,9 @@ if ! strip "$TMP_COPY" 2>/dev/null; then
     cp "$SUBJECT" "$TMP_COPY"
 fi
 measured_size="$(stat -f%z "$TMP_COPY")"
-echo "measured size: ${measured_size} bytes (ceiling ${MAX_BYTES} = 64 MiB)"
+echo "measured size: ${measured_size} bytes (ceiling ${MAX_BYTES} = 128 MB)"
 if (( measured_size > MAX_BYTES )); then
-    echo "[FAIL] wasm size ${measured_size} exceeds ceiling ${MAX_BYTES} (64 MiB)" >&2
+    echo "[FAIL] wasm size ${measured_size} exceeds ceiling ${MAX_BYTES} (128 MB)" >&2
     echo "== wasm_audit: BREACH =="
     exit 1
 fi
