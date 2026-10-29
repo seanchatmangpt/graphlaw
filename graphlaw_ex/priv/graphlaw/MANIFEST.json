@@ -2,9 +2,9 @@
   "graphlaw_version": "26.10.28",
   "abi_version": 1,
   "artifact": {
-    "sha256": "34fd4ada7ffe57f3f07de14232f8faacab67ef78a4d9afc3a12e79d78f865d08",
+    "sha256": "62cd95d4ef7294dcd5976a2f685b71580bb834816e9f4bba0d13d5555e35c8f8",
     "url": "https://github.com/seanchatmangpt/graphlaw/releases/tag/v26.10.28",
-    "blake3": "c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c"
+    "blake3": "c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c"
   },
   "host_abi": {
     "import_module": "wasi_snapshot_preview1",
