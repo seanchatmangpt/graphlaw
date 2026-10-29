@@ -10,10 +10,12 @@ typed falsifier court.
 - WAVE 0 (window closure): GL28-9 mutation court solo -> GL28-10 ash_graphlaw
   P6/P7/P9 closure -> GL28-12 npm/Hex publish.
 - WAVE 1 (cheap enforcement teeth, in-tree): GL28-6 Art.14 Ed25519 kill-switch
-  -> GL28-7 A2A Authority ceiling -> GL28-5 conformance_claim matrix.
-  Parallel ungated: GL28-11 graphlaw_ex residuals, GL28-13 wasm slimming.
-- WAVE 2 (Article 12 persistence): GL28-8 disk BLAKE3 receipt chain ->
-  GL28-1 wasm4pm OCEL 2.0 stream -> GL28-4 EU ledger exporter.
+  -> GL28-7 A2A Authority ceiling. LANDED: GL28-5 conformance_claim matrix.
+  Parallel ungated: GL28-11 graphlaw_ex residuals, GL28-13 wasm slimming,
+  GL28-4 exporter spec, GL28-12 publish decisions.
+- WAVE 2 (Article 12 persistence): GL28-1 wasm4pm OCEL 2.0 stream ->
+  GL28-8 disk BLAKE3 receipt chain -> GL28-4 EU ledger exporter
+  (GL28-4 also parallelizable).
 - WAVE 3 (heavy cross-substrate): GL28-2 Smalt admission gate;
   GL28-3 ferroplan C01 lease adapter.
 
