@@ -8,5 +8,6 @@
   "nimble_parsec": {:hex, :nimble_parsec, "1.4.2", "8efba0122db06df95bfaa78f791344a89352ba04baedd3849593bfce4d0dc1c6", [:mix], [], "hexpm", "4b21398942dda052b403bbe1da991ccd03a053668d147d53fb8c4e0efe09c973"},
   "rustler": {:hex, :rustler, "0.38.0", "7a8906998ff0d28e3021c0a73264abcda719bda344b2e58307c6805b0f87c9b4", [:mix], [{:jason, "~> 1.0", [hex: :jason, repo: "hexpm", optional: false]}], "hexpm", "704c03c1bf66be12b031c5a389347b91c81c5cb819a24b068b0de36fe4a5652a"},
   "rustler_precompiled": {:hex, :rustler_precompiled, "0.10.1", "2895d3a3239d612c13c18945c0a693e07de4e8f9bc2b6b2297cba3d6576f9eea", [:mix], [{:rustler, "~> 0.28", [hex: :rustler, repo: "hexpm", optional: true]}], "hexpm", "0efa66bc2a4206aec64a2c422ca0b1d69bdc411c7b359ec928feb889357b4abb"},
+  "telemetry": {:hex, :telemetry, "1.4.2", "a0cb522801dffb1c49fe6e30561badffc7b6d0e180db1300df759faa22062855", [:rebar3], [], "hexpm", "928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1"},
   "wasmex": {:hex, :wasmex, "0.15.1", "174deca091e3740ec4975efd65eea9b27b4f035321cf86f1305989dcce96a0a8", [:mix], [{:rustler, "~> 0.38", [hex: :rustler, repo: "hexpm", optional: false]}, {:rustler_precompiled, "~> 0.9", [hex: :rustler_precompiled, repo: "hexpm", optional: false]}], "hexpm", "d34a765811a2cec520299978072f0a4c0b697148c43430d6c414e350a5e9c954"},
 }

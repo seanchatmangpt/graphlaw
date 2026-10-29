@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "ba1c38558ffc48516f8f852484592133bbace1d497749b9e9e2ab4235bf4117f",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T025218Z-Edit-ba1c3855.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/ash_graphlaw/gates/040_admission_vocab_contract.rq",
+  "timestamp_utc": "2026-10-29T025218Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

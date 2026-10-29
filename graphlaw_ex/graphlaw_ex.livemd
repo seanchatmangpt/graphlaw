@@ -1,0 +1,176 @@
+<!--
+SPDX-FileCopyrightText: 2026 graphlaw contributors <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
+# graphlaw_ex: admission through the wasm turnstile from BEAM
+
+```elixir
+Mix.install(
+  [
+    {:graphlaw_ex, path: __DIR__},
+    {:wasmex, "~> 0.15.1"},
+    {:jason, "~> 1.4"},
+    {:telemetry, "~> 1.2"}
+  ],
+  consolidate_protocols: false
+)
+```
+
+    18:31:59.436 [debug] Copying NIF from cache and extracting to .../libwasmex-v0.15.1-nif-2.15-aarch64-apple-darwin.so
+
+## The idea
+
+`graphlaw_ex` is the BEAM bridge over the graphlaw WASM law kernel. The BEAM side holds only
+the wasm byte-slice; the bridge owns bytes in and out over the module's ABI version 1
+(`gl_alloc` / `gl_call` / `gl_free`); the host owns authority, standing and refusals. Nothing on
+the Elixir side interprets RDF, SHACL, SQL or receipts — law admission happens *inside* the
+module (the deterministic turnstile boundary).
+
+```text
+BEAM caller
+    |
+    v
+GraphlawEx (GenServer) ---> packet-4 frame ---> wasm module (digest-pinned artifact)
+    |                                              |
+    v                                              v
+{:ok, response_map}  <--- ok: true          {:error, {:refused, error_map}}
+                            (typed refusal raised inside the module)
+```
+
+This notebook installs the checkout you opened it from (`path: __DIR__`). Every output below is
+produced when you evaluate the cell; none is pre-filled.
+
+## The pinned artifact
+
+The engine is a pinned artifact, not a dependency. The bridge refuses to start on a missing
+file and answers with a typed error instead of a linked-process exit. The pin lives in
+`priv/graphlaw.wasm.blake3`; verify the bytes you are about to load against it before starting
+the bridge:
+
+```bash
+b3sum ../priv/graphlaw.wasm   # from this notebook's directory (graphlaw_ex/)
+```
+
+    c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c  priv/graphlaw.wasm
+
+Any other digest means the bytes are not the pinned artifact — do not admit through them.
+
+## Start the bridge
+
+The application starts no engine by default (`:auto_start` is opt-in), so depending on the
+library never instantiates wasm implicitly. Start the bridge yourself against the pinned
+artifact:
+
+```elixir
+wasm_path = Path.expand("../priv/graphlaw.wasm", __DIR__)
+
+case GraphlawEx.start_link(wasm_path: wasm_path) do
+  {:ok, _bridge} -> :bridge_started
+  {:error, {:already_started, _}} -> :already_running
+end
+```
+
+    :bridge_started
+
+A missing artifact is a typed failure returned from `start_link/1`, never a crash:
+
+```elixir
+case GraphlawEx.start_link(wasm_path: "/nonexistent/graphlaw.wasm") do
+  {:ok, _} -> {:unexpected, :started}
+  {:error, {:wasm_load_failed, path, :enoent}} -> {:refused_load, path, :enoent}
+end
+```
+
+    {:refused_load, "/nonexistent/graphlaw.wasm", :enoent}
+
+## An honest admit
+
+One real round trip through the ABI: an RDFS entailment law runs *inside* the module and the
+receipt JSON comes back through `gl_alloc` / `gl_call` / `gl_free`.
+
+```elixir
+honest = %{
+  "op" => "law",
+  "data" => %{
+    "text" => "@prefix : <https://test.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n",
+    "dialect" => "turtle"
+  },
+  "steps" => [%{"step" => "rdfs"}]
+}
+
+case GraphlawEx.admit(Jason.encode!(honest)) do
+  {:ok, %{"ok" => true} = response} ->
+    {:admitted, nquads_bytes: byte_size(response["nquads"]), states: length(response["states"]),
+      receipts: length(response["receipts"])}
+
+  {:error, reason} ->
+    {:refused, reason}
+end
+```
+
+    {:admitted, nquads_bytes: 18113, states: 2, receipts: 1}
+
+The entailment (`:a :edge :c` follows from the transitive closure) was computed inside the wasm
+module; BEAM only moved bytes.
+
+## A tampered refuse
+
+An unknown op is refused *inside the module* — the kernel raises a typed refusal in the answer
+payload and the bridge surfaces it as `{:error, {:refused, error}}`:
+
+```elixir
+GraphlawEx.admit(Jason.encode!(%{"op" => "definitely-not-an-op"}))
+```
+
+    {:error,
+     {:refused,
+      %{
+        "dialect" => nil,
+        "engine" => nil,
+        "kind" => "Unsupported",
+        "message" => "unknown op `definitely-not-an-op`"
+      }}}
+
+Nothing was guessed on the host side: the refusal `kind`, `message` and closed structure are the
+module's own answer, relayed verbatim.
+
+## Telemetry
+
+Every admit emits a telemetry span on `[:graphlaw_ex, :admit, :stop]`. Attach a handler, make
+one call, read what the span reported:
+
+```elixir
+parent = self()
+handler_id = "livebook-admit-#{System.unique_integer([:positive])}"
+
+:telemetry.attach(
+  handler_id,
+  [:graphlaw_ex, :admit, :stop],
+  fn _event, _measurements, metadata, _config -> send(parent, {:span, metadata}) end,
+  nil
+)
+
+_ = GraphlawEx.admit(Jason.encode!(honest))
+:telemetry.detach(handler_id)
+
+receive do
+  {:span, metadata} -> {:span, metadata}
+after
+  1_000 -> :no_span_received
+end
+```
+
+    :no_span_received
+
+Status note (as of this build): the `[:graphlaw_ex, :admit, :stop]` span is the event name the
+`lib/` telemetry surface defines; this build does not emit it yet, so the honest output of this
+cell on the current tree is `:no_span_received` — a loud absence, not a faked pass. When the
+span lands, the same cell returns `{:span, metadata}`.
+
+## Where to go next
+
+  * `README.md` — pitch, architecture line, config table, loud-skip semantics.
+  * `test/graphlaw_ex_test.exs` — the instantiation court this notebook mirrors.
+  * `../docs/refusals.md` — the typed refusal register.

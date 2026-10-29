@@ -1,0 +1,18 @@
+# Tag v26.10.28 — PUSHED
+
+- Commit: `82814ac4f398274e64aeb47d2448d04f89cfefcd` (HEAD of main at cut)
+- Tag on disk: `v26.10.28` points at HEAD (`git tag --points-at HEAD`)
+- Release workflow (`release.yml`): run 40797877715 — **completed / success**,
+  35s, triggered by push (read via `gh run list --workflow=release.yml --limit 1`)
+
+Receipt (real command output):
+
+```
+$ git rev-parse HEAD && git tag --points-at HEAD
+82814ac4f398274e64aeb47d2448d04f89cfefcd
+v26.10.28
+$ gh run list --workflow=release.yml --limit 1
+completed	success	release: v26.10.28 — purrdf fork swap + graphlaw_ex BEAM turnstile	Release	main	push	40797877715	35s	2026-10-29T01:01:57Z
+```
+
+npm / Hex dry-runs: in flight at time of writing (PENDING receipt).

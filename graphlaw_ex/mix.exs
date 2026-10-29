@@ -29,7 +29,7 @@ defmodule GraphlawEx.MixProject do
   defp elixirc_paths(_), do: ["lib"]
 
   defp package do
-    [files: ~w(lib mix.exs README.md), licenses: ["Apache-2.0"], links: %{}]
+    [files: ~w(lib mix.exs README.md), licenses: ["Apache-2.0"], links: %{"GitHub" => "https://github.com/seanchatmangpt/graphlaw"}]
   end
 
   defp deps do
@@ -37,6 +37,7 @@ defmodule GraphlawEx.MixProject do
       # wasmex: Elixir bindings for wasmtime; 0.9.x is the current stable line.
       {:wasmex, "~> 0.15.1"},
       {:jason, "~> 1.4"},
+      {:telemetry, "~> 1.2"},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
   end

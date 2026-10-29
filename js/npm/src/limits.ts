@@ -46,10 +46,14 @@ export const LIMITS = {
   max_policy_entries: 100000,
   max_request_bytes: 16777216,
   n3_max_derived_facts: 500000,
-  n3_max_iterations: 4000,
-  n3_max_match_steps: 50000000,
+  n3_max_iterations: 4000000,
+  n3_max_match_steps: 200000,
   n3_max_term_bytes: 65536,
   n3_max_total_bytes: 268435456,
+  n3_max_backward_depth: 32,
+  n3_max_backward_solutions_per_goal: 1024,
+  n3_max_term_depth: 64,
+  n3_max_total_steps: 50000000,
 } as const;
 
 /** Union of the limit names (registry `limits` keys) mirrored in {@link LIMITS}. */

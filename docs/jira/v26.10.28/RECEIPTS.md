@@ -24,7 +24,7 @@ Local canonical checkout `/Users/sac/purrdf`, HEAD verified on disk
 Fork gate receipts (session witnesses, fork-side):
 
 - `cargo check` native + 2 wasm targets — exit 0.
-- Fork n3 suite — 89/89 passed.
+- Fork n3 suite — 89/89 passed (lib 28 + parse 28 + reason 16 + proofs 4 + forgery 13; the changelog's 85 cites the pre-forgery count).
 
 ## graphlaw-side changes
 
@@ -58,13 +58,13 @@ Ran 2026-10-28 on the swapped tree:
 | Rung | Command | Result |
 | --- | --- | --- |
 | check | `cargo check` | 0 errors |
-| court | `cargo test --test chicago_validation` | 8/8 passed |
-| court | `cargo test --test proof_pipeline` | 12/12 passed |
+| court | `cargo test --test chicago_validation` | 12/12 passed |
+| court | `cargo test --test n3_proof_pipeline_court` | 5/5 passed |
 | court | `cargo test --test n3_proof_lease_court` | 4/4 passed (`test tampered_proof_under_the_correct_lease_still_dies_in_the_checker ... ok`) |
 | court | `cargo test --test conformance` | 12/12 passed |
 | court | census court | 13/13 passed |
 | court | `cargo test --test abi_manifest_court` | 10/10 passed |
-| build | wasm link `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` (WASI_SDK_PATH + EH target-feature) | exit 0, 5m22s, artifact blake3 `348c97fd…` |
+| build | wasm link `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` (WASI_SDK_PATH + EH target-feature) | exit 0, 5m22s, artifact blake3 `348c97fd…` (superseded by the release re-mint `c38b1fdb…`) |
 
 The `n3_proof_lease_court` 4/4 was re-executed at receipt-writing time this
 session with real output embedded above; the other rows are session
@@ -86,9 +86,12 @@ The named-court ladder above is the verified surface.
 ## Standing
 
 purrdf fork swap @ 2223f894: **ALIVE** on the named-court ladder;
-full-suite **UNVERIFIED-AT-RECEIPT-TIME**. Wasm build **ALIVE** (link exit 0,
-5m22s, blake3 348c97fd…). Mutation court and SPC court remain unrun this
-session (see WORK-ORDERS.md WO-1/WO-2).
+full-suite **UNVERIFIED-AT-RECEIPT-TIME** (subsequently run by the closing
+wave). Wasm build **ALIVE** (link exit 0, 5m22s, blake3 `348c97fd…`, superseded
+by the release re-mint `c38b1fdb…` at v26.10.28). Mutation court remains unrun
+this session — the sole open gate (see WORK-ORDERS.md WO-2). SPC court: two
+independent receipts landed (Cpk 6.0979 / 14.4149,
+`receipts/spc-2026-10-28T165319.json` / `…T171756.json`).
 
 # Post-receipt verification wave (2026-10-28)
 
@@ -204,3 +207,69 @@ WASI_CLOCK_PATCH_APPLIED text.
 `rm -rf target-lane-closing` was refused by the permission system; the
 build-root lease `target-lane-closing` is left for the coordinator to
 delete at integration.
+
+## Adoption wave — ash_graphlaw on v26.10.28 (2026-10-29, docs-lane append)
+
+Commands executed by the appending lane on /Users/sac/ash_graphlaw at
+append time (real output, unedited):
+
+```
+$ python3 -c "import json; m=json.load(open('priv/graphlaw/MANIFEST.json')); print(m['abi_version'], m['graphlaw_version'])"
+1 26.10.28
+
+$ shasum -a 256 priv/graphlaw/graphlaw.wasm
+34fd4ada7ffe57f3f07de14232f8faacab67ef78a4d9afc3a12e79d78f865d08  priv/graphlaw/graphlaw.wasm
+$ python3 -c "import json; print(json.load(open('priv/graphlaw/MANIFEST.json'))['artifact']['sha256'])"
+34fd4ada7ffe57f3f07de14232f8faacab67ef78a4d9afc3a12e79d78f865d08
+
+$ grep -n "6e110367" priv/graphlaw/capability-registry.json priv/graphlaw/capability-registry.ttl
+priv/graphlaw/capability-registry.json:2461:  "registry_blake3": "blake3:6e1103673508ade20f2276e93c7c948dd4f7c31689a25a325fac4a308856035d",
+priv/graphlaw/capability-registry.ttl:2602:    gac:registryBlake3 "blake3:6e1103673508ade20f2276e93c7c948dd4f7c31689a25a325fac4a308856035d" ;
+
+$ grep -n "blake3:6e110367" lib/ash_graphlaw/capability.ex lib/ash_graphlaw/result/term.ex lib/ash_graphlaw/capability/api.ex
+lib/ash_graphlaw/capability.ex:12: ... registry digest `blake3:6e1103673508ade20f2276e93c7c948dd4f7c31689a25a325fac4a308856035d`
+lib/ash_graphlaw/result/term.ex:8: ...
+lib/ash_graphlaw/capability/api.ex:10: ...
+
+$ python3 -c "import json; ha=json.load(open('priv/graphlaw/MANIFEST.json'))['host_abi']; print(len(ha['imports']))"
+7            # consumer-side vendored manifest at read time
+$ python3 -c "import json; ha=json.load(open('/Users/sac/graphlaw/graphlaw_ex/priv/graphlaw/MANIFEST.json'))['host_abi']; print(len(ha['imports']))"
+28           # canonical 28-import allowlist (random_get ... path_unlink_file, poll_oneoff, proc_exit, sched_yield)
+
+$ for n in path_open fd_read poll_oneoff fd_write environ_get fd_seek random_get; do printf "%s " $n; grep -ac "$n" priv/graphlaw/graphlaw.wasm; done
+path_open 1
+fd_read 2
+poll_oneoff 1
+fd_write 1
+environ_get 1
+fd_seek 1
+random_get 1
+```
+
+Digest-rule script evidence (read, not run):
+
+```
+scripts/generate_capability_cards.py:67-89 — dkey = "registry_blake3" else
+"registry_sha256" (legacy); else `raise SystemExit("REFUSED(registry_digest_key_absent: ...)")`;
+computed-vs-declared mismatch -> `REFUSED(registry_digest_mismatch: declared %s computed %s)`.
+scripts/import_registry.sh:17 — "# The digest is recomputed from priv/graphlaw/capability-registry.json (DIGEST RULE)"
+```
+
+Status vocabulary at append time:
+
+- Pins: ALIVE (on-disk, receipts above).
+- Vendor+verify: sha-level ALIVE (artifact byte-match witnessed above);
+  engine-admitted/abi_version-1 execution witnessed by the adoption lane
+  (cited, not re-executed by this lane).
+- ggen regeneration: ALIVE (registry.ex + projections carry blake3:6e110367,
+  on disk).
+- Scripts: ALIVE (digest-rule-aware, read on disk).
+- Compile gate exit 0: lane-reported, not re-run by this lane.
+- **Parity court + full ash_graphlaw suite: PENDING at append time — not run,
+  not claimed.**
+- Consumer MANIFEST 7→28 re-vendor: PENDING at append time (consumer
+  manifest still listed 7 imports on disk; canonical graphlaw_ex manifest
+  carries 28).
+
+The mutation-court-open line in WORK-ORDERS.md (WO-2 gap) is intentionally
+untouched by this append.

@@ -1,6 +1,6 @@
 {
   "name": "@seanchatmangpt/graphlaw",
-  "version": "26.10.26",
+  "version": "26.10.28",
   "description": "GraphLaw: library-backed RDF law-state composition (parse, SPARQL, SHACL, ShEx, N3, entailment, datalog, hooks, law, policy) over a WASM ABI",
   "license": "MIT",
   "type": "module",
@@ -44,7 +44,8 @@
     "test": "vitest run",
     "test:browser": "vitest run --config vitest.browser.config.ts",
     "lint:pkg": "publint && attw --pack .",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "prepublishOnly": "npm run build && npm test"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
