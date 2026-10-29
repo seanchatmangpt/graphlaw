@@ -51,3 +51,22 @@ powl2/law_compiler.ex:92-153 → law verb (the ONLY step needing a
 with validate_shape/2 as differential oracle. Non-migrating: projections
 (envelope remap only). New adapter surface: JSON payload → JSON-LD
 serialization for `data` (dialect enum includes jsonld).
+
+## Receipt-source audit verdict (2026-10-29 — closes the delegation row)
+
+Neither smalt face (vc_export / affidavit_seal) can mint receipt_blake3:
+smalt has zero blake3 (all digests sha256; its only blake3 leg is a
+temp-file b3sum shim typed unverified_blake3_host), and graphlaw_ex's
+Elixir side is transport-only. The mint is kernel-side and already half-
+exists: src/attest.rs receipt_payload/1 (canonical sorted-key JSON) +
+blake3_hex — sign_receipt computes the fold internally, it just never
+emits it over the ABI at admission. Work order: (1) kernel — add
+receipt_blake3 = blake3_hex(receipt_payload(&ReceiptFields::from(&r)))
+at the two receipts.push sites in src/abi/ops/governance.rs (:440, :508);
+(2) Elixir — a thin envelope assembler beside the gate that byte-copies
+the kernel-minted digest + payload_bytes (never re-hash Elixir-side).
+Smalt's sha256 substrate (merkle root, sync receipt chain, VC proofs,
+journal frames 0x0A01/0x0A02) stays as the commit-boundary seal — the
+envelope rides on top. Pre-existing mislabel flagged:
+src/smalt_vc_export.erl:41 declares cryptosuite blake3-sha256-rdfc-2026
+while its proof is HMAC-SHA256 over term_to_binary.
