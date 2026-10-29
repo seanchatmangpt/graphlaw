@@ -50,3 +50,17 @@ twiggy/wasm-objdump section bloat census; feature-gate unused DuckDB
 extensions/ICU tables out of the wasm32 build; verify codegen-units=1,
 lto=fat, panic=abort; deterministic wasm-opt -Oz --strip-debug
 --strip-producers before BLAKE3 minting. Target: restore the 64 MiB gate.
+
+## Lane-contract addition (2026-10-29): PRIOR-ART FIRST
+
+Before any lane designs, drafts or implements, it searches the local
+canonical checkouts for prior art — ggen-marketplace packs (the
+blake3-digest-keys branch @ 041a039e is the working patched reference),
+ggen itself (sync stages, FM-WRITE-005/FM-PACK-008/013 semantics), and the
+sibling checkouts (graphlaw_ex facade, ash_graphlaw authority/telemetry/
+claims templates, ash_a2a ingress, ferroplan UniversalPlan, smalt PUT
+chain, wasm4pm OCEL consumer). Every deliverable opens with "Prior art
+consumed" naming exact files+lines and stating why the artifact differs
+from or delegates to what exists. A design that re-derives a sibling
+checkout's content is a REFUSED deliverable. graphlaw/src stays unread
+while the mutation court holds it solo.
