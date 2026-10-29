@@ -46,13 +46,22 @@ defmodule GraphlawEx.Capability.API do
   @doc """
   Runs the capability named `op_name` (a wire name from `GraphlawEx.Capability.Registry.names/0`).
 
+  The authority pre-gate (`GraphlawEx.Authority.check_op/2`) runs BEFORE
+  `module.run/2`: a construct-ceiling op (`n3`, `entail`, `datalog`, `hooks`,
+  `law`) whose `opts[:lease]` claims below `:construct` is refused
+  `:ceiling_unmet` before any engine dispatch. A well-formed signed lease is
+  forwarded verbatim to the engine on the same request (presentation check
+  only; signature, signer and expiry verification are the engine's job).
+
   Refuses with `:unknown_capability` when the registry has no such capability.
   """
   @spec run(String.t(), args(), keyword()) :: {:ok, term()} | {:error, Refusal.t()}
   def run(op_name, args, opts \\ []) when is_binary(op_name) do
     case Registry.module_for(op_name) do
       {:ok, module} ->
-        module.run(args, opts)
+        with :ok <- GraphlawEx.Authority.check_op(op_name, opts[:lease]) do
+          module.run(lease_args(args, module, opts), GraphlawEx.Authority.engine_opts(opts))
+        end
 
       :error ->
         {:error,
@@ -62,13 +71,52 @@ defmodule GraphlawEx.Capability.API do
     end
   end
 
+  # Lease forwarding (engine-side, unchanged vocabulary): when a signed lease
+  # was presented, merge it (plus trust anchors from opts) into the request
+  # args for the ops whose registry request carries the fields. Never adds
+  # `now_unix`, `lease` or `unverified_lease`.
+  defp lease_args(args, module, opts) do
+    case GraphlawEx.Authority.claim(opts[:lease]) do
+      %{signed_lease: nil} ->
+        args
+
+      %{signed_lease: signed} ->
+        forwards =
+          module.fields(:request)
+          |> Map.new(&{&1.name, true})
+
+        args
+        |> maybe_arg(forwards, "signed_lease", signed)
+        |> maybe_arg(forwards, "trusted_keys", opts[:trusted_keys])
+        |> maybe_arg(forwards, "max_skew_secs", opts[:max_skew_secs])
+
+      _ ->
+        args
+    end
+  end
+
+  defp maybe_arg(args, _forwards, _key, nil), do: args
+
+  defp maybe_arg(args, forwards, key, value) do
+    if Map.has_key?(forwards, key) do
+      if is_list(args) do
+        atom_key = String.to_existing_atom(key)
+        Keyword.put(args, atom_key, value)
+      else
+        Map.put(args, key, value)
+      end
+    else
+      args
+    end
+  end
+
   @doc ~S"""
   Runs the typed `capabilities` capability: Report ABI version, crate version, semantic authorities, dialects, ops and registry digests.
 
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Capabilities`) or `{:error, refusal}`.
   """
   @spec capabilities(args(), keyword()) :: {:ok, Capabilities.t()} | {:error, Refusal.t()}
-  def capabilities(args, opts \\ []), do: Capabilities.run(args, opts)
+  def capabilities(args, opts \\ []), do: run("capabilities", args, opts)
 
   @doc ~S"""
   Like `capabilities/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -87,7 +135,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Sniff`) or `{:error, refusal}`.
   """
   @spec sniff(args(), keyword()) :: {:ok, Sniff.t()} | {:error, Refusal.t()}
-  def sniff(args, opts \\ []), do: Sniff.run(args, opts)
+  def sniff(args, opts \\ []), do: run("sniff", args, opts)
 
   @doc ~S"""
   Like `sniff/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -106,7 +154,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Parse`) or `{:error, refusal}`.
   """
   @spec parse(args(), keyword()) :: {:ok, Parse.t()} | {:error, Refusal.t()}
-  def parse(args, opts \\ []), do: Parse.run(args, opts)
+  def parse(args, opts \\ []), do: run("parse", args, opts)
 
   @doc ~S"""
   Like `parse/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -125,7 +173,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Convert`) or `{:error, refusal}`.
   """
   @spec convert(args(), keyword()) :: {:ok, Convert.t()} | {:error, Refusal.t()}
-  def convert(args, opts \\ []), do: Convert.run(args, opts)
+  def convert(args, opts \\ []), do: run("convert", args, opts)
 
   @doc ~S"""
   Like `convert/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -144,7 +192,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Canonical`) or `{:error, refusal}`.
   """
   @spec canonical(args(), keyword()) :: {:ok, Canonical.t()} | {:error, Refusal.t()}
-  def canonical(args, opts \\ []), do: Canonical.run(args, opts)
+  def canonical(args, opts \\ []), do: run("canonical", args, opts)
 
   @doc ~S"""
   Like `canonical/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -163,7 +211,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Sparql`) or `{:error, refusal}`.
   """
   @spec sparql(args(), keyword()) :: {:ok, Sparql.t()} | {:error, Refusal.t()}
-  def sparql(args, opts \\ []), do: Sparql.run(args, opts)
+  def sparql(args, opts \\ []), do: run("sparql", args, opts)
 
   @doc ~S"""
   Like `sparql/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -182,7 +230,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Shacl`) or `{:error, refusal}`.
   """
   @spec shacl(args(), keyword()) :: {:ok, Shacl.t()} | {:error, Refusal.t()}
-  def shacl(args, opts \\ []), do: Shacl.run(args, opts)
+  def shacl(args, opts \\ []), do: run("shacl", args, opts)
 
   @doc ~S"""
   Like `shacl/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -201,7 +249,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Shex`) or `{:error, refusal}`.
   """
   @spec shex(args(), keyword()) :: {:ok, Shex.t()} | {:error, Refusal.t()}
-  def shex(args, opts \\ []), do: Shex.run(args, opts)
+  def shex(args, opts \\ []), do: run("shex", args, opts)
 
   @doc ~S"""
   Like `shex/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -220,7 +268,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.N3`) or `{:error, refusal}`.
   """
   @spec n3(args(), keyword()) :: {:ok, N3.t()} | {:error, Refusal.t()}
-  def n3(args, opts \\ []), do: N3.run(args, opts)
+  def n3(args, opts \\ []), do: run("n3", args, opts)
 
   @doc ~S"""
   Like `n3/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -239,7 +287,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Entail`) or `{:error, refusal}`.
   """
   @spec entail(args(), keyword()) :: {:ok, Entail.t()} | {:error, Refusal.t()}
-  def entail(args, opts \\ []), do: Entail.run(args, opts)
+  def entail(args, opts \\ []), do: run("entail", args, opts)
 
   @doc ~S"""
   Like `entail/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -258,7 +306,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Datalog`) or `{:error, refusal}`.
   """
   @spec datalog(args(), keyword()) :: {:ok, Datalog.t()} | {:error, Refusal.t()}
-  def datalog(args, opts \\ []), do: Datalog.run(args, opts)
+  def datalog(args, opts \\ []), do: run("datalog", args, opts)
 
   @doc ~S"""
   Like `datalog/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -277,7 +325,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Hooks`) or `{:error, refusal}`.
   """
   @spec hooks(args(), keyword()) :: {:ok, Hooks.t()} | {:error, Refusal.t()}
-  def hooks(args, opts \\ []), do: Hooks.run(args, opts)
+  def hooks(args, opts \\ []), do: run("hooks", args, opts)
 
   @doc ~S"""
   Like `hooks/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -296,7 +344,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Law`) or `{:error, refusal}`.
   """
   @spec law(args(), keyword()) :: {:ok, Law.t()} | {:error, Refusal.t()}
-  def law(args, opts \\ []), do: Law.run(args, opts)
+  def law(args, opts \\ []), do: run("law", args, opts)
 
   @doc ~S"""
   Like `law/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.
@@ -315,7 +363,7 @@ defmodule GraphlawEx.Capability.API do
   Returns `{:ok, result}` (see `GraphlawEx.Capability.Policy`) or `{:error, refusal}`.
   """
   @spec policy(args(), keyword()) :: {:ok, Policy.t()} | {:error, Refusal.t()}
-  def policy(args, opts \\ []), do: Policy.run(args, opts)
+  def policy(args, opts \\ []), do: run("policy", args, opts)
 
   @doc ~S"""
   Like `policy/2` but returns the result and raises `GraphlawEx.Error.Refused` on a refusal.

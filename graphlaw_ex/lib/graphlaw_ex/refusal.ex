@@ -40,6 +40,18 @@ defmodule GraphlawEx.Refusal do
     * `:invalid_encoding` - class `:refused_structure`, witnesses `:mu_on_O`. The request contained text that is not valid UTF-8 and was refused before reaching the engine.
     * `:resource_limit` - class `:blocked_resource`, witnesses `:R_missing_consequence`. A request or response exceeded a size cap, or the engine hit a resource limit, before it could decide.
     * `:engine_unclassified` - class `:unsupported`, witnesses `:R_missing_standing`. The engine returned a refusal variant this library does not know; it is carried verbatim and classified unsupported rather than guessed.
+
+  ### Capability-layer codes (the ONE table: host + capability + engine side)
+
+    * `:invalid_capability_request` - class `:refused_structure`, witnesses `:mu_on_O`. A typed capability request failed validation before the engine was called.
+    * `:unknown_capability` - class `:refused_structure`, witnesses `:mu_on_O`. The named capability is not in the GraphLaw capability registry.
+    * `:capability_response_undecodable` - class `:refused_structure`, witnesses `:mu_on_O`. The engine returned a capability response that is not a JSON object.
+    * `:policy_refused` - class `:refused_structure`, witnesses `:mu_on_O`. The engine refused the FOND policy as not strong-cyclic.
+    * `:not_admitted` - class `:refused_structure`, witnesses `:mu_on_O`. The engine did not admit the law chain.
+    * `:plan_refused` - class `:refused_structure`, witnesses `:mu_on_O`. The engine refused the plan step.
+    * `:receipt_required` - class `:refused_identity`, witnesses `:R_missing_identity`. The engine required a receipt the caller did not supply.
+    * `:engine_refused` - class `:unsupported`, witnesses `:R_missing_standing`. The engine refused without a more specific known code.
+    * `:lease_revoked` - class `:refused_identity`, witnesses `:R_missing_standing`. An Art.14 operator revocation epoch covers this engine (`GraphlawEx.KillSwitch`); the call was shed pre-envelope, before any engine mutation.
   """
 
   @codes [
@@ -54,7 +66,16 @@ defmodule GraphlawEx.Refusal do
     :invalid_json,
     :invalid_encoding,
     :resource_limit,
-    :engine_unclassified
+    :engine_unclassified,
+    :invalid_capability_request,
+    :unknown_capability,
+    :capability_response_undecodable,
+    :policy_refused,
+    :not_admitted,
+    :plan_refused,
+    :receipt_required,
+    :engine_refused,
+    :lease_revoked
   ]
 
   @classes [:blocked_resource, :refused_structure, :refused_identity, :unsupported]
@@ -64,15 +85,34 @@ defmodule GraphlawEx.Refusal do
   # UNSUPPORTED(generator-capability): engine error payload -> code policy. The
   # engine's error enums are non_exhaustive, so unknown variants map to
   # :engine_unclassified instead of crashing.
+  # The ONE engine wire-code map, shared by the host transport layer and the
+  # capability layer (`GraphlawEx.Capability.Refusal.from_engine/1` reads it
+  # through `engine_code_to_code/2`). Unknown variants -> :engine_unclassified.
   @engine_codes %{
-    "ResourceLimit" => :resource_limit
+    "ResourceLimit" => :resource_limit,
+    "PolicyRefused" => :policy_refused,
+    "NotAdmitted" => :not_admitted,
+    "PlanRefused" => :plan_refused,
+    "ReceiptRequired" => :receipt_required,
+    "ReceiptRefused" => :engine_refused,
+    "LeaseRefused" => :engine_refused,
+    "UnverifiedLeaseRefused" => :engine_refused,
+    "Refused" => :engine_refused
   }
+
+  # The capability-layer client codes (refused before the engine is called);
+  # a subset of `@codes`, exposed for `GraphlawEx.Capability.Refusal`.
+  @capability_client_codes [
+    :invalid_capability_request,
+    :unknown_capability,
+    :capability_response_undecodable
+  ]
 
   # Engine `RefusalKind` variants (graphlaw src/dialect.rs), carried in `details`
   # for classification by the caller; the host table itself has no engine
   # admission codes, so a known kind still maps through the table above.
 
-  @typedoc "Closed union of every refusal code."
+  @typedoc "Closed union of every refusal code (host + capability layers)."
   @type code ::
           :saturated
           | :call_timeout
@@ -86,6 +126,15 @@ defmodule GraphlawEx.Refusal do
           | :invalid_encoding
           | :resource_limit
           | :engine_unclassified
+          | :invalid_capability_request
+          | :unknown_capability
+          | :capability_response_undecodable
+          | :policy_refused
+          | :not_admitted
+          | :plan_refused
+          | :receipt_required
+          | :engine_refused
+          | :lease_revoked
 
   @typedoc "Closed union of refusal classes."
   @type class :: :blocked_resource | :refused_structure | :refused_identity | :unsupported
@@ -115,6 +164,18 @@ defmodule GraphlawEx.Refusal do
   @spec codes() :: [code()]
   def codes, do: @codes
 
+  @doc "The capability-layer client codes (refused before the engine is called)."
+  @spec capability_client_codes() :: [code()]
+  def capability_client_codes, do: @capability_client_codes
+
+  @doc """
+  Maps an engine wire code (the `error.code` string of a refusal envelope) onto
+  the one closed table. Unknown or non-binary codes map to `:engine_unclassified`.
+  """
+  @spec from_engine_code(term()) :: code()
+  def from_engine_code(code) when is_map_key(@engine_codes, code), do: Map.fetch!(@engine_codes, code)
+  def from_engine_code(_code), do: :engine_unclassified
+
   @doc "Every refusal class."
   @spec classes() :: [class()]
   def classes, do: @classes
@@ -142,6 +203,15 @@ defmodule GraphlawEx.Refusal do
   def class_of(:invalid_encoding), do: :refused_structure
   def class_of(:resource_limit), do: :blocked_resource
   def class_of(:engine_unclassified), do: :unsupported
+  def class_of(:invalid_capability_request), do: :refused_structure
+  def class_of(:unknown_capability), do: :refused_structure
+  def class_of(:capability_response_undecodable), do: :refused_structure
+  def class_of(:policy_refused), do: :refused_structure
+  def class_of(:not_admitted), do: :refused_structure
+  def class_of(:plan_refused), do: :refused_structure
+  def class_of(:receipt_required), do: :refused_identity
+  def class_of(:engine_refused), do: :unsupported
+  def class_of(:lease_revoked), do: :refused_identity
   def class_of(other), do: raise(ArgumentError, "unknown refusal code: #{inspect(other)}")
 
   @doc """
@@ -164,6 +234,15 @@ defmodule GraphlawEx.Refusal do
   def broken_term_of(:invalid_encoding), do: :mu_on_O
   def broken_term_of(:resource_limit), do: :R_missing_consequence
   def broken_term_of(:engine_unclassified), do: :R_missing_standing
+  def broken_term_of(:invalid_capability_request), do: :mu_on_O
+  def broken_term_of(:unknown_capability), do: :mu_on_O
+  def broken_term_of(:capability_response_undecodable), do: :mu_on_O
+  def broken_term_of(:policy_refused), do: :mu_on_O
+  def broken_term_of(:not_admitted), do: :mu_on_O
+  def broken_term_of(:plan_refused), do: :mu_on_O
+  def broken_term_of(:receipt_required), do: :R_missing_identity
+  def broken_term_of(:engine_refused), do: :R_missing_standing
+  def broken_term_of(:lease_revoked), do: :R_missing_standing
   def broken_term_of(other), do: raise(ArgumentError, "broken_term unknown for code: #{inspect(other)}")
 
   @doc "The one-line meaning of a code. Raises `ArgumentError` outside the closed table."
@@ -195,7 +274,31 @@ defmodule GraphlawEx.Refusal do
   def doc_of(:engine_unclassified),
     do: "The engine returned a refusal variant this library does not know; it is carried verbatim and classified unsupported rather than guessed."
 
-  def doc_of(other), do: raise(ArgumentError, "unknown refusal code: #{inspect(other)}")
+  def doc_of(:invalid_capability_request),
+    do: "A typed capability request failed validation before the engine was called."
+
+  def doc_of(:unknown_capability),
+    do: "The named capability is not in the GraphLaw capability registry."
+
+  def doc_of(:capability_response_undecodable),
+    do: "The engine returned a capability response that is not a JSON object, so it cannot be decoded into a typed result."
+
+  def doc_of(:policy_refused), do: "The engine refused the FOND policy as not strong-cyclic."
+
+  def doc_of(:not_admitted), do: "The engine did not admit the law chain."
+
+  def doc_of(:plan_refused), do: "The engine refused the plan step."
+
+  def doc_of(:receipt_required), do: "The engine required a receipt the caller did not supply."
+
+  def doc_of(:engine_refused), do: "The engine refused without a more specific known code."
+
+  def doc_of(:lease_revoked),
+    do: "An Art.14 operator revocation epoch covers this engine; the call was shed before any engine mutation."
+
+  @doc "Per-code constructor; see `new/3`."
+  @spec lease_revoked(String.t() | nil, map()) :: t()
+  def lease_revoked(message \\ nil, details \\ %{}) when is_map(details), do: new(:lease_revoked, message, details)
 
   @doc """
   Builds a refusal for `code`, filling `class` and `broken_term` from the closed

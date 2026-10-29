@@ -226,7 +226,10 @@ defmodule GraphlawEx.CapabilityTest do
       refusal = Refusal.build(:unknown_capability, nil, %{"op" => "x"})
       assert refusal.code == :unknown_capability
       assert refusal.message =~ "unknown_capability"
-      assert Refusal.client_codes() == ~w(invalid_capability_request unknown_capability capability_response_undecodable)a
+      # GL28-7 added :ceiling_unmet (the authority pre-gate code) to the layer's
+      # client codes; the re-exported one-table view carries it in front.
+      assert Refusal.client_codes() ==
+               ~w(ceiling_unmet invalid_capability_request unknown_capability capability_response_undecodable)a
     end
   end
 

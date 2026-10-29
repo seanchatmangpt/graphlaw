@@ -11,11 +11,42 @@ defmodule GraphlawEx.CapabilitySmokeTest do
   alias GraphlawEx.Result.Admitted
 
   @wasm_path System.get_env("PRIV_WASM") ||
-               Path.expand("priv/graphlaw.wasm", __DIR__)
+               Path.expand("priv/graphlaw/graphlaw.wasm", __DIR__)
 
   @require_engine System.get_env("GRAPHLAW_REQUIRE_ENGINE") == "1"
 
   @turtle "<https://x/s> <https://x/p> <https://x/o> ."
+
+  # GL28-7: construct-ceiling ops (n3, entail, datalog, hooks, law) require a
+  # signed lease claiming :construct; the authority pre-gate refuses before
+  # dispatch otherwise. Presentation only — the engine verifies nothing here.
+  # GL28-7: construct-ceiling ops (n3, entail, datalog, hooks, law) require a
+  # signed lease claiming :construct; the authority pre-gate refuses before
+  # dispatch otherwise. This fixture is a REAL engine-verifiable lease
+  # (Ed25519 over the canonical lease payload, minted offline with
+  # graphlaw-attest, seed 07x32): the engine verifies signature, scope
+  # (derive:rdfs) and expiry (year 2096) on the same request.
+  @smoke_seed_pubkey "ea4a6c63e29c520abef5507b132ec5f9954776aebebe7b92421eea691446d22c"
+
+  @construct_lease %{
+    signed_lease: %{
+      "lease" => %{
+        "id" => "smoke-lease",
+        "holder" => "graphlaw-ex-smoke",
+        "ceiling" => "construct",
+        "scope" => ["derive:rdfs"],
+        "expires_unix" => 4_000_000_000,
+        "issued_unix" => 0
+      },
+      "attestation" => %{
+        "key_id" => "0871f3aabc26e4582c508af5c03884e6a96f0989d1dd8cfb49cd17ed25792433",
+        "payload_blake3" => "33383ea00d21b84670233d4dbb3b03c442fe4475675e41f04b3b648daf087c9a",
+        "signature" => "0e5145971ddf69b02640f299e6a82000422f1eb608dd009b103d313e38cc9820a3aceaf2920e37373c891e3ec893eb900cd38c3a9544e3f9b86ab6a0e777230e"
+      }
+    }
+  }
+
+  @construct_lease_opts [lease: @construct_lease, trusted_keys: [@smoke_seed_pubkey]]
 
   setup_all do
     if File.regular?(@wasm_path) do
@@ -119,7 +150,7 @@ defmodule GraphlawEx.CapabilitySmokeTest do
   test "n3: bounded forward reasoning returns the reasoner output" do
     if engine_present?() do
       text = "@prefix : <https://x/> . :a :b :c ."
-      assert {:ok, result} = API.n3(text: text)
+      assert {:ok, result} = API.n3([text: text], @construct_lease_opts)
       assert not is_nil(result.derived)
     end
   end
@@ -132,7 +163,7 @@ defmodule GraphlawEx.CapabilitySmokeTest do
       <https://x/s> rdfs:domain <https://x/C> .
       """
 
-      assert {:ok, result} = API.entail(data: data, regime: "rdfs")
+      assert {:ok, result} = API.entail([data: data, regime: "rdfs"], @construct_lease_opts)
       assert is_binary(result.nquads)
       assert is_integer(result.added)
     end
@@ -144,7 +175,7 @@ defmodule GraphlawEx.CapabilitySmokeTest do
       rules = [%{"head" => ["?x", "anc", "?z"], "body" => [["?x", "anc", "?y"], ["?y", "anc", "?z"]]}]
       facts = [["a", "anc", "b"], ["b", "anc", "c"]]
 
-      assert {:ok, result} = API.datalog(rules: rules, facts: facts)
+      assert {:ok, result} = API.datalog([rules: rules, facts: facts], @construct_lease_opts)
       assert result.count >= 2
       assert ["a", "anc", "c"] in result.facts
     end
@@ -156,7 +187,7 @@ defmodule GraphlawEx.CapabilitySmokeTest do
       pack = hook_pack()
       data = @turtle
 
-      case API.hooks(pack: pack, data: data) do
+      case API.hooks([pack: pack, data: data], @construct_lease_opts) do
         {:ok, result} ->
           assert is_integer(result.rounds)
           assert is_binary(result.nquads)
@@ -175,7 +206,7 @@ defmodule GraphlawEx.CapabilitySmokeTest do
   test "law: an rdfs step admits and returns receipts (Result.Admitted)" do
     if engine_present?() do
       assert {:ok, %Admitted{} = admitted} =
-               API.law(data: @turtle, steps: [%{"step" => "rdfs"}])
+               API.law([data: @turtle, steps: [%{"step" => "rdfs"}]], @construct_lease_opts)
 
       assert is_list(admitted.states) and length(admitted.states) >= 1
       assert is_list(admitted.receipts)

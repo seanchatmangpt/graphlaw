@@ -1,39 +1,41 @@
 # SPDX-License-Identifier: Apache-2.0
-# UNSUPPORTED(generator-capability): open refusal struct for the typed
-# capability layer. `GraphlawEx.Refusal` (the host transport refusal) is a
-# defexception over a CLOSED code table that does not contain the
-# capability-layer codes (`:invalid_capability_request`,
-# `:unknown_capability`, `:capability_response_undecodable`), so this layer
-# carries its own typed refusal and `GraphlawEx.Error.Refused` wraps it.
+# CONSOLIDATED (GL28-11): the closed refusal table lives in ONE module,
+# `GraphlawEx.Refusal` (host + capability + engine-side codes, each with its
+# class and Chatman `broken_term`). This module is the capability layer's
+# re-export: a thin typed struct over that one table — every code, class,
+# broken term and engine wire mapping is read from `GraphlawEx.Refusal`, never
+# duplicated here. `GraphlawEx.Error.Refused` wraps this struct.
 
 defmodule GraphlawEx.Capability.Refusal do
   @moduledoc ~S"""
   Typed refusal carried by every `{:error, _}` of the capability layer.
 
-  A refusal is an observation about one exact input: it names a code, the
-  Chatman failure-taxonomy `broken_term` it witnesses and a closed-ish class.
-  `:raw` keeps the engine error map losslessly (`nil` for client-side
-  refusals built with `build/3`). A refusal never grants or withdraws
-  authority.
+  The closed code table is `GraphlawEx.Refusal` — one table for the host
+  transport codes (`:saturated`, `:call_trapped`, ...), the capability client
+  codes and the engine-side codes. This module re-exports that table for the
+  capability layer and carries the layer's own struct (no `class` field, since
+  the capability layer never classifies transport failures itself).
 
-  Client-side codes (built with `build/3`):
+  Client-side codes (built with `build/3`, see
+  `GraphlawEx.Refusal.capability_client_codes/0`):
 
-    * `:invalid_capability_request` - class `:refused_structure`,
-      witnesses `:mu_on_O`. A typed capability request failed validation
-      before the engine was called: unknown top-level keys, missing required
-      fields, or a value whose type does not match the registry field type.
-    * `:unknown_capability` - class `:refused_structure`, witnesses
-      `:mu_on_O`. The named capability is not in the GraphLaw capability
-      registry, so no typed request can be built for it.
-    * `:capability_response_undecodable` - class `:refused_structure`,
-      witnesses `:mu_on_O`. The engine returned a capability response that
-      is not a JSON object, so it cannot be decoded into a typed result; the
-      raw value is preserved on the refusal.
+    * `:invalid_capability_request` - A typed capability request failed
+      validation before the engine was called.
+    * `:unknown_capability` - The named capability is not in the GraphLaw
+      capability registry.
+    * `:capability_response_undecodable` - The engine returned a capability
+      response that is not a JSON object; the raw value is preserved on the
+      refusal.
+    * `:ceiling_unmet` - The authority pre-gate (`GraphlawEx.Authority`) refused
+      the call before engine dispatch: the presented lease claims a ceiling
+      below the op's floor. Class `:refused_structure`, broken term
+      `:R_missing_standing` (GL28-7).
 
   Engine-side codes (built with `from_engine/1`): `:resource_limit`,
   `:policy_refused`, `:not_admitted`, `:plan_refused`, `:receipt_required`,
   `:engine_refused`, and `:engine_unclassified` for a variant this library
-  does not know (carried verbatim in `:raw`, never guessed).
+  does not know (carried verbatim in `:raw`, never guessed). The wire-code
+  mapping is the one shared table in `GraphlawEx.Refusal`.
 
   Transport-side codes (built with `from_transport/1`): every
   `GraphlawEx.Refusal` code (`:saturated`, `:call_trapped`, ...), converted
@@ -42,21 +44,11 @@ defmodule GraphlawEx.Capability.Refusal do
 
   defstruct [:code, :message, :details, :raw, :broken_term]
 
-  @type code ::
-          :invalid_capability_request
-          | :unknown_capability
-          | :capability_response_undecodable
-          | :resource_limit
-          | :policy_refused
-          | :not_admitted
-          | :plan_refused
-          | :receipt_required
-          | :engine_refused
-          | :engine_unclassified
-          | GraphlawEx.Refusal.code()
-          | atom()
+  alias GraphlawEx.Refusal
 
-  @type class :: :refused_structure | :engine | :transport
+  @type code ::
+          Refusal.code()
+          | atom()
 
   @typedoc "A typed refusal: `code`, `message`, `details`, lossless `raw`."
   @type t :: %__MODULE__{
@@ -67,15 +59,24 @@ defmodule GraphlawEx.Capability.Refusal do
           broken_term: atom()
         }
 
-  @client_codes ~w(invalid_capability_request unknown_capability capability_response_undecodable)a
-
-  @doc "Every client-side refusal code this layer can build before the engine is called."
-  @spec client_codes() :: [code()]
-  def client_codes, do: @client_codes
+  @doc """
+  Every client-side refusal code this layer can build before the engine is
+  called. `:ceiling_unmet` is the GL28-7 authority pre-gate code (added
+  2026-10-28); the rest are the layer's pre-existing client codes.
+  """
+  @spec client_codes() :: [atom()]
+  def client_codes,
+    do: [
+      :ceiling_unmet,
+      :invalid_capability_request,
+      :unknown_capability,
+      :capability_response_undecodable
+    ]
 
   @doc """
   Builds a client-side refusal. `message` defaults to a rendering of `code`;
-  `details` defaults to `%{}`. Never raises on data.
+  `details` defaults to `%{}`. The `broken_term` comes from the one table when
+  the code is in it; never raises on data.
   """
   @spec build(code(), String.t() | nil, map()) :: t()
   def build(code, message \\ nil, details \\ %{}) do
@@ -83,21 +84,35 @@ defmodule GraphlawEx.Capability.Refusal do
       code: code,
       message: if(is_binary(message) and message != "", do: message, else: render(code)),
       details: if(is_map(details), do: details, else: %{}),
-      broken_term: :mu_on_O
+      broken_term: broken_term_of(code)
+    }
+  end
+
+  @doc """
+  Builds the `:ceiling_unmet` refusal of the authority pre-gate (GL28-7):
+  class `:refused_structure`, broken term `:R_missing_standing`, wire-safe
+  string-keyed details.
+  """
+  @spec ceiling_unmet(String.t(), map()) :: t()
+  def ceiling_unmet(message, details) when is_binary(message) and is_map(details) do
+    %__MODULE__{
+      code: :ceiling_unmet,
+      message: message,
+      details: details,
+      broken_term: :R_missing_standing
     }
   end
 
   @doc """
   Maps an engine refusal envelope (`%{"ok" => false, "error" => %{...}}`) onto
   a typed refusal, preserving the whole error map losslessly in `raw`. Never
-  raises: an unknown or non-map payload becomes `:engine_unclassified`.
+  raises: an unknown or non-map payload becomes `:engine_unclassified`. The
+  wire-code mapping is the host table's own `GraphlawEx.Refusal.from_engine/2`.
   """
   @spec from_engine(term()) :: t()
   def from_engine(%{"ok" => false, "error" => %{} = error} = _response) do
-    code = engine_code(Map.get(error, "code"), Map.get(error, "kind"))
-
     %__MODULE__{
-      code: code,
+      code: Refusal.from_engine(%{"code" => Map.get(error, "code"), "kind" => Map.get(error, "kind")}).code,
       message: string_or_nil(Map.get(error, "message")),
       details: %{"kind" => Map.get(error, "kind")},
       raw: error,
@@ -115,8 +130,8 @@ defmodule GraphlawEx.Capability.Refusal do
     }
 
   @doc "Converts a host transport refusal (`GraphlawEx.Refusal`) losslessly."
-  @spec from_transport(GraphlawEx.Refusal.t()) :: t()
-  def from_transport(%GraphlawEx.Refusal{} = refusal) do
+  @spec from_transport(Refusal.t()) :: t()
+  def from_transport(%Refusal{} = refusal) do
     %__MODULE__{
       code: refusal.code,
       message: refusal.message,
@@ -126,19 +141,18 @@ defmodule GraphlawEx.Capability.Refusal do
     }
   end
 
-  # Engine detail codes (`details.code` wire values) -> typed codes. Unknown
-  # variants map to :engine_unclassified (forward compatibility, never a
-  # crash, never a guess).
-  defp engine_code("ResourceLimit", _), do: :resource_limit
-  defp engine_code("PolicyRefused", _), do: :policy_refused
-  defp engine_code("NotAdmitted", _), do: :not_admitted
-  defp engine_code("PlanRefused", _), do: :plan_refused
-  defp engine_code("ReceiptRequired", _), do: :receipt_required
-  defp engine_code("ReceiptRefused", _), do: :engine_refused
-  defp engine_code("LeaseRefused", _), do: :engine_refused
-  defp engine_code("UnverifiedLeaseRefused", _), do: :engine_refused
-  defp engine_code("Refused", _), do: :engine_refused
-  defp engine_code(_, _), do: :engine_unclassified
+  # The table lookup, total on data: a code in the one table uses its
+  # broken_term; anything else stays :mu_on_O exactly as before consolidation.
+  # `:ceiling_unmet` is the one client-side code this layer owns outright
+  # (GL28-7 authority pre-gate): class `:refused_structure`, broken term
+  # `:R_missing_standing` — the host table stays closed.
+  defp broken_term_of(:ceiling_unmet), do: :R_missing_standing
+
+  defp broken_term_of(code) do
+    if code in Refusal.codes(), do: Refusal.broken_term_of(code), else: :mu_on_O
+  rescue
+    ArgumentError -> :mu_on_O
+  end
 
   defp string_or_nil(value) when is_binary(value), do: value
   defp string_or_nil(_), do: nil

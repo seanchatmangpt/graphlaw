@@ -82,6 +82,100 @@ defmodule GraphlawEx do
   end
 
   # ---------------------------------------------------------------------
+  # Typed capability verbs (re-exported from GraphlawEx.Capability.API)
+  # ---------------------------------------------------------------------
+
+  # GL28-11: the 14 typed capability verbs surface on the facade. Each
+  # `op(args, opts)` delegates to `GraphlawEx.Capability.API.op/2` and each
+  # `op!(args, opts)` to the raising twin; `{:error, %GraphlawEx.Capability.Refusal{}}`
+  # on refusal, or `GraphlawEx.Error.Refused` raised.
+  # Results are observations, never authority.
+
+  @doc "See `GraphlawEx.Capability.API.capabilities/2`."
+  defdelegate capabilities(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.capabilities!/2`."
+  defdelegate capabilities!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.sniff/2`."
+  defdelegate sniff(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.sniff!/2`."
+  defdelegate sniff!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.parse/2`."
+  defdelegate parse(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.parse!/2`."
+  defdelegate parse!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.convert/2`."
+  defdelegate convert(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.convert!/2`."
+  defdelegate convert!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.canonical/2`."
+  defdelegate canonical(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.canonical!/2`."
+  defdelegate canonical!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.sparql/2`."
+  defdelegate sparql(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.sparql!/2`."
+  defdelegate sparql!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.shacl/2`."
+  defdelegate shacl(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.shacl!/2`."
+  defdelegate shacl!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.shex/2`."
+  defdelegate shex(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.shex!/2`."
+  defdelegate shex!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.n3/2`."
+  defdelegate n3(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.n3!/2`."
+  defdelegate n3!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.entail/2`."
+  defdelegate entail(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.entail!/2`."
+  defdelegate entail!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.datalog/2`."
+  defdelegate datalog(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.datalog!/2`."
+  defdelegate datalog!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.hooks/2`."
+  defdelegate hooks(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.hooks!/2`."
+  defdelegate hooks!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.law/2`."
+  defdelegate law(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.law!/2`."
+  defdelegate law!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.policy/2`."
+  defdelegate policy(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  @doc "See `GraphlawEx.Capability.API.policy!/2`."
+  defdelegate policy!(args, opts \\ []), to: GraphlawEx.Capability.API
+
+  # ---------------------------------------------------------------------
   # Fail-closed preconditions
   # ---------------------------------------------------------------------
 

@@ -248,8 +248,22 @@ defmodule GraphlawEx.Host do
 
   def handle_call({:request, body, op, timeout}, from, state) do
     case saturated(state) do
-      nil -> run_request(body, op, timeout, from, state)
-      refusal -> {:reply, {:error, refusal}, state}
+      nil ->
+        # Art.14 pre-envelope check (GL28-6): after shedding, before
+        # run_request/5 — zero mutation on the refused path (no fuel, no
+        # gl_alloc, no gl_call, no recycle, no state change).
+        case GraphlawEx.KillSwitch.check(state.wasm_sha256) do
+          :ok ->
+            run_request(body, op, timeout, from, state)
+
+          {:error, %Refusal{} = refusal} ->
+            emit_call(System.monotonic_time(), op, {:error, refusal})
+            GenServer.reply(from, {:error, refusal})
+            {:noreply, state}
+        end
+
+      refusal ->
+        {:reply, {:error, refusal}, state}
     end
   end
 
