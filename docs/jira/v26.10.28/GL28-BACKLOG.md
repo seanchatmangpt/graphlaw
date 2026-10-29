@@ -187,3 +187,24 @@ live in BeamPM.GraphlawAdmission.
 ### Correction (2026-10-29)
 
 Falsifier (corrected 2026-10-29): the byte-exact replay is the GitHub codeload URL (curl https://codeload.github.com/seanchatmangpt/purrdf/tar.gz/44f4979f… — GitHub's own gzip + prefix entry), sha256 must equal dc6f5f183e440ad91cb590107ceef7a3894b8549fda6de7ec9df3866a5004a75. `git archive` is content-equivalent only (byte-different: no codeload prefix/root-entry/pax header) — never apply the dc6f5f18 gate to it. Mismatch on the codeload path = the blob was load-bearing, restore it.
+
+### ERRC tick-4 kept candidates (2026-10-29, adversarially scored)
+
+- **GL28-13.1 — build native/rf3-conformance-oracle** (beam4pm): cargo
+  build --release of native/rf3-ocel-oracle, placed at the path
+  GraphlawBridge.conformance_oracle_bin/0 checks — converts conform/1's
+  oracle leg from loud-skip to executed verdict + receipt. Falsifier:
+  injected num_events divergence must flip to :refused; binary removal
+  must restore the loud-skip.
+- **ash_a2a.1 — denials.n3 comment shrink** (S): the comment attributes
+  denial semantics to praxis `check_denials`; on the deployed engine the
+  bare fuse is inert (sentinel re-route is the path). One-paragraph fix.
+- **GL28-1.1 — register promotion to PARTIAL_ALIVE** (S): GL28-1 row
+  cites the landed bridge + conform/1 + receipt schema; tops out at
+  PARTIAL until (a) the oracle-binary court executes, (b) the
+  pe:sourceDigest Art. 12 leg lands, (c) a real [:graphlaw_ex, :admit,
+  :stop] emission witness replaces the synthetic-span court.
+- **purrdf.1 — bare-fuse finding upstream** (S): filed two-fuse
+  order-flip regression court in purrdf-n3 (first-match-only fired_fuse
+  is rule-order-dependent; suppresses second simultaneous denial). The
+  ash_a2a sentinel re-route is the permanent consumer answer either way.
