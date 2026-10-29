@@ -138,6 +138,10 @@ jobs:
       # native job above (cache key hashes the action recipe, not this file).
       - name: Stage WASI SDK + duckdb wasm archives
         uses: ./.github/actions/wasi-duckdb
+      # frozen-duckdb-sys host cmake needs libcurl dev headers (the runner
+      # image ships none — same apt step the native/js jobs carry).
+      - name: Install libcurl dev + pkg-config (frozen-duckdb-sys host cmake)
+        run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev pkg-config
       - name: Compile facade for wasm32-unknown-unknown
         run: cargo check --lib --target wasm32-unknown-unknown
       - name: Build WASI module
