@@ -5,12 +5,12 @@ defmodule GraphlawEx.Telemetry do
   `admit/3` emits, for the op `op`:
 
     * `[:graphlaw_ex, :admit, :start]` - measurements `%{system_time: integer}`,
-      metadata `%{op: String.t(), server: term}`.
+      metadata `%{op: String.t(), server: term, source_digest: String.t() | nil}`.
     * `[:graphlaw_ex, :admit, :stop]` - measurements `%{duration: integer}`
-      (native time units), metadata `%{op:, server:, outcome: :ok | :refused,
-      refusal_code: atom | nil}`. `{:ok, _}` is `:ok`; `{:error,
-      %GraphlawEx.Refusal{}}` is `:refused` with the refusal code. Any other
-      `{:error, _}` is `:refused` with a nil code.
+      (native time units), metadata `%{op:, server:, source_digest:,
+      outcome: :ok | :refused, refusal_code: atom | nil}`. `{:ok, _}` is
+      `:ok`; `{:error, %GraphlawEx.Refusal{}}` is `:refused` with the
+      refusal code. Any other `{:error, _}` is `:refused` with a nil code.
     * `[:graphlaw_ex, :admit, :exception]` - measurements `%{duration: integer}`,
       metadata `%{op:, server:, outcome: :exception, refusal_code: nil, kind:,
       reason:, stacktrace:}`. The exception is re-raised after the event.
@@ -18,6 +18,14 @@ defmodule GraphlawEx.Telemetry do
   `events/0` also lists the load-time receipt event
   `[:graphlaw_ex, :engine, :admit]`, emitted by `GraphlawEx.EngineLoad` with the
   wasm digest (`wasm_sha256`) — the load receipt.
+
+  `source_digest` is the caller-supplied identity of the law CONTENT the span
+  executes: the engine-minted `blake3:` of the RDFC-1.0 canonical N-Quads
+  (`LawState.id`, GL28-1 leg b / Art. 12). It is read from the admit opts and
+  is `nil` when the caller omits it. Telemetry only OBSERVES: a nil never
+  blocks emission here — enforcing the digest's presence is the consumer's
+  law (the beam4pm bridge ingest refuses an event whose
+  `attributes["pe:sourceDigest"]` is missing).
 
   ## Attaching a handler
 
@@ -54,7 +62,12 @@ defmodule GraphlawEx.Telemetry do
   @spec admit(String.t(), keyword(), (-> result)) :: result when result: term()
   def admit(op, opts, fun) when is_binary(op) and is_list(opts) and is_function(fun, 0) do
     server = Keyword.get(opts, :server, GraphlawEx)
-    base = %{op: op, server: server}
+
+    # GL28-1 leg (b): the caller may pin the identity of the law content this
+    # span executes (engine-minted `blake3:` LawState.id). Absent opt -> nil;
+    # the metadata shape never changes, and a nil here is an observation, not
+    # an enforcement point.
+    base = %{op: op, server: server, source_digest: Keyword.get(opts, :source_digest, nil)}
     started = System.monotonic_time()
 
     :telemetry.execute(@prefix ++ [:start], %{system_time: System.system_time()}, base)
