@@ -17,6 +17,7 @@ REGISTRY = {
     "registry/ARTIFACTS.blake3",
     "registry/capability-registry.json",
     "registry/capability-registry.ttl",
+    "registry/mcp-manifest.json",
 }
 PINS = {
     "courts/code-partition/axioms.blake3",

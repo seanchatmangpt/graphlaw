@@ -16,10 +16,12 @@
 
 mod definitions;
 mod emit_json;
+mod emit_mcp;
 mod emit_ttl;
 
 pub use definitions::*;
 pub use emit_json::*;
+pub use emit_mcp::*;
 pub use emit_ttl::*;
 
 #[cfg(test)]

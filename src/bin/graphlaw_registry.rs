@@ -1,22 +1,24 @@
 //! `graphlaw-registry`: emit or check the capability registry files.
 //!
 //! ```text
-//! graphlaw-registry --write | --check | --print-json | --print-ttl | --print-digests
+//! graphlaw-registry --write | --check | --print-json | --print-ttl | --print-mcp | --print-digests
 //! ```
 //!
-//! `--write` writes `registry/capability-registry.json` and `.ttl` under the crate
-//! root, and re-pins the ARTIFACTS.blake3 rows this bin owns (`registry`, `surface`,
-//! `receipt-surface`) from live computed digests. The `wasm` row pins a build artifact
-//! and is NOT touched by this bin — it is re-pinned by the wasm rebuild flow.
+//! `--write` writes `registry/capability-registry.json`, `.ttl` and
+//! `mcp-manifest.json` under the crate root, and re-pins the ARTIFACTS.blake3 rows
+//! this bin owns (`registry`, `surface`, `receipt-surface`, `mcp-manifest`) from
+//! live computed digests. The `wasm` row pins a build artifact and is NOT touched
+//! by this bin — it is re-pinned by the wasm rebuild flow.
 //! `--check` exits 1 with a difference summary when the committed files differ
-//! from what the Rust table emits (including the three owned ARTIFACTS rows).
+//! from what the Rust table emits (including the four owned ARTIFACTS rows).
 //! Exit codes: 0 ok, 1 drift, 2 usage or I/O error.
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use graphlaw::registry::{
-    receipt_surface_blake3, registry_blake3, registry_json_pretty, registry_turtle, surface_blake3,
+    mcp_manifest_blake3, mcp_manifest_pretty, receipt_surface_blake3, registry_blake3,
+    registry_json_pretty, registry_turtle, surface_blake3,
 };
 
 fn registry_dir() -> PathBuf {
@@ -27,25 +29,27 @@ const HELP: &str = "\
 graphlaw-registry — emit or check the capability registry files.
 
 Usage:
-  graphlaw-registry --write | --check | --print-json | --print-ttl | --print-digests
+  graphlaw-registry --write | --check | --print-json | --print-ttl | --print-mcp | --print-digests
 
 Modes (exactly one per invocation):
-  --write          Write registry/capability-registry.json and .ttl under the crate
-                   root and re-pin the ARTIFACTS.blake3 rows this bin owns
-                   (`registry`, `surface`, `receipt-surface`); the `wasm` row is
-                   never touched here — it is re-pinned by the wasm rebuild flow
+  --write          Write registry/capability-registry.json, .ttl and mcp-manifest.json
+                   under the crate root and re-pin the ARTIFACTS.blake3 rows this bin
+                   owns (`registry`, `surface`, `receipt-surface`, `mcp-manifest`);
+                   the `wasm` row is never touched here — it is re-pinned by the wasm
+                   rebuild flow
   --check          Compare the committed files against live output; exit 1 with a
                    first-difference summary on drift
   --print-json     Print the capability registry JSON to stdout
   --print-ttl      Print the capability registry Turtle to stdout
-  --print-digests  Print the live surface/registry BLAKE3 digests
+  --print-mcp      Print the MCP tool manifest JSON to stdout
+  --print-digests  Print the live surface/registry/mcp-manifest BLAKE3 digests
 
 Exit codes: 0 ok, 1 drift (`--check`), 2 usage or I/O error.";
 
 fn usage(msg: &str) -> ExitCode {
     eprintln!("graphlaw-registry: {msg}");
     eprintln!(
-        "usage: graphlaw-registry --write | --check | --print-json | --print-ttl | --print-digests"
+        "usage: graphlaw-registry --write | --check | --print-json | --print-ttl | --print-mcp | --print-digests"
     );
     eprintln!("run `graphlaw-registry --help` for mode details");
     ExitCode::from(2)
@@ -53,16 +57,20 @@ fn usage(msg: &str) -> ExitCode {
 
 const ARTIFACTS_FILE: &str = "ARTIFACTS.blake3";
 
-/// The three rows this bin owns, in fixed output order: kind, digest, byte-count
+/// The four rows this bin owns, in fixed output order: kind, digest, byte-count
 /// placeholder, name. The byte-count field is `-` for document digests (they are
 /// digests of canonical documents, not of any file on disk).
-fn owned_artifacts_rows() -> [String; 3] {
+fn owned_artifacts_rows() -> [String; 4] {
     [
         format!("registry {} - capability-registry.json", registry_blake3()),
         format!("surface {} - capability-registry.json", surface_blake3()),
         format!(
             "receipt-surface {} - src/duckdb_eval.rs+src/sql_ast.rs",
             receipt_surface_blake3()
+        ),
+        format!(
+            "mcp-manifest {} - registry/mcp-manifest.json",
+            mcp_manifest_blake3()
         ),
     ]
 }
@@ -94,7 +102,7 @@ fn parse_artifacts(text: &str) -> Artifacts {
             let mut fields = line.split_whitespace();
             match fields.next() {
                 Some("wasm") => wasm_row = Some(line.to_string()),
-                Some("registry" | "surface" | "receipt-surface") => {} // owned: regenerated
+                Some("registry" | "surface" | "receipt-surface" | "mcp-manifest") => {} // owned: regenerated
                 Some(other) => {
                     // Unknown row kinds are hand-authored pins; preserve them.
                     lines.push(line.to_string());
@@ -151,7 +159,7 @@ fn artifacts_repin(existing: Option<&str>) -> Result<String, String> {
 }
 
 /// The live digests as ARTIFACTS rows, for `--check`.
-fn artifacts_expected_rows() -> [String; 3] {
+fn artifacts_expected_rows() -> [String; 4] {
     owned_artifacts_rows()
 }
 
@@ -177,6 +185,7 @@ fn check() -> ExitCode {
     for (file, expected) in [
         ("capability-registry.json", registry_json_pretty()),
         ("capability-registry.ttl", registry_turtle()),
+        ("mcp-manifest.json", mcp_manifest_pretty()),
     ] {
         match std::fs::read_to_string(dir.join(file)) {
             Ok(found) if found == expected => println!("ok      {file}"),
@@ -244,6 +253,7 @@ fn write() -> ExitCode {
     for (file, body) in [
         ("capability-registry.json", registry_json_pretty()),
         ("capability-registry.ttl", registry_turtle()),
+        ("mcp-manifest.json", mcp_manifest_pretty()),
     ] {
         if let Err(e) = std::fs::write(dir.join(file), body) {
             return usage(&format!("cannot write {file}: {e}"));
@@ -278,9 +288,14 @@ fn main() -> ExitCode {
             print!("{}", registry_turtle());
             ExitCode::SUCCESS
         }
+        [a] if a == "--print-mcp" => {
+            print!("{}", mcp_manifest_pretty());
+            ExitCode::SUCCESS
+        }
         [a] if a == "--print-digests" => {
             println!("surface_blake3  {}", surface_blake3());
             println!("registry_blake3 {}", registry_blake3());
+            println!("mcp-manifest    {}", mcp_manifest_blake3());
             ExitCode::SUCCESS
         }
         [a] if a == "--help" || a == "-h" => {
@@ -288,7 +303,7 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         _ => usage(
-            "expected exactly one of --write, --check, --print-json, --print-ttl, --print-digests (try --help)",
+            "expected exactly one of --write, --check, --print-json, --print-ttl, --print-mcp, --print-digests (try --help)",
         ),
     }
 }

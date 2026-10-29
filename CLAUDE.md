@@ -86,6 +86,7 @@ cannot exit 1 is the failure.
 | Artifact | Regenerate |
 |---|---|
 | `registry/ARTIFACTS.blake3`, `registry/capability-registry.json` | registry sync flow (`src/registry.rs` / `graphlaw-registry` bin) |
+| `registry/mcp-manifest.json` | registry sync flow (`src/registry.rs` / `graphlaw-registry` bin) |
 | conformance vectors | `scripts/gen_w3c_manifest.sh` |
 | generated docs under `docs/reference-generated/` | their generators, never patch |
 
@@ -135,7 +136,8 @@ Loaded again on session start by `.claude/hooks/lithography_card.py`.
 
 - A pinned axiom is re-pinned only with a receipt. A generated projection
   (`docs/reference-generated/`, `registry/ARTIFACTS.blake3`,
-  `registry/capability-registry.json`, `registry/capability-registry.ttl`)
+  `registry/capability-registry.json`, `registry/capability-registry.ttl`,
+  `registry/mcp-manifest.json`)
   is regenerated, never patched. A leaf edit names one owned path and one court.
 - Every dispatch carries `/Users/sac/graphlaw` and a disjoint file lease.
 - Tool refusals: `GENERIC_AGENT_REFUSED`, `REFUSED(topology)`,

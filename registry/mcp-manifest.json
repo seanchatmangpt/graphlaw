@@ -1,0 +1,387 @@
+{
+  "capabilities": {
+    "tools": {
+      "listChanged": false
+    }
+  },
+  "protocolVersion": "2025-06-18",
+  "schema": "graphlaw.mcp-manifest/1",
+  "serverInfo": {
+    "name": "graphlaw",
+    "version": "26.10.28"
+  },
+  "tools": [
+    {
+      "description": "Report ABI version, crate version, semantic authorities, dialects, ops and registry digests.",
+      "inputSchema": {
+        "properties": {},
+        "required": [],
+        "type": "object"
+      },
+      "name": "capabilities"
+    },
+    {
+      "description": "Route text to a dialect and owning engine without parsing it.",
+      "inputSchema": {
+        "properties": {
+          "hint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "name": "sniff"
+    },
+    {
+      "description": "Parse text with the owning engine; counts quads or validates syntax.",
+      "inputSchema": {
+        "properties": {
+          "base": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dialect": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "name": "parse"
+    },
+    {
+      "description": "Serialize parsed RDF text into another RDF dialect.",
+      "inputSchema": {
+        "properties": {
+          "base": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dialect": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "to"
+        ],
+        "type": "object"
+      },
+      "name": "convert"
+    },
+    {
+      "description": "Canonicalize a dataset to N-Quads and return its content-addressed id.",
+      "inputSchema": {
+        "properties": {
+          "data": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "type": "object"
+      },
+      "name": "canonical"
+    },
+    {
+      "description": "Evaluate a SPARQL query over a dataset.",
+      "inputSchema": {
+        "properties": {
+          "base": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "object"
+          },
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "query"
+        ],
+        "type": "object"
+      },
+      "name": "sparql"
+    },
+    {
+      "description": "Validate a dataset against SHACL shapes.",
+      "inputSchema": {
+        "properties": {
+          "base": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "object"
+          },
+          "shapes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "shapes"
+        ],
+        "type": "object"
+      },
+      "name": "shacl"
+    },
+    {
+      "description": "Validate a dataset against a ShEx schema and shape map.",
+      "inputSchema": {
+        "properties": {
+          "base": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "object"
+          },
+          "map": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "schema_dialect": {
+            "default": "shexc",
+            "enum": [
+              "shexc",
+              "shexj"
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "schema",
+          "map"
+        ],
+        "type": "object"
+      },
+      "name": "shex"
+    },
+    {
+      "description": "Run bounded Notation3 forward reasoning over a document.",
+      "inputSchema": {
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "name": "n3"
+    },
+    {
+      "description": "Materialize an entailment regime over a dataset.",
+      "inputSchema": {
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "regime": {
+            "enum": [
+              "simple",
+              "rdf",
+              "rdfs",
+              "owl-rl",
+              "d"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "data",
+          "regime"
+        ],
+        "type": "object"
+      },
+      "name": "entail"
+    },
+    {
+      "description": "Evaluate Datalog rules over triple facts to a fixpoint.",
+      "inputSchema": {
+        "properties": {
+          "facts": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "array"
+          },
+          "rules": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "rules",
+          "facts"
+        ],
+        "type": "object"
+      },
+      "name": "datalog"
+    },
+    {
+      "description": "Materialize a knowledge-hook pack over a dataset.",
+      "inputSchema": {
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "pack": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "pack",
+          "data"
+        ],
+        "type": "object"
+      },
+      "name": "hooks"
+    },
+    {
+      "description": "Run an ordered chain of law steps with receipts and optional lease authorization.",
+      "inputSchema": {
+        "properties": {
+          "data": {
+            "type": "object"
+          },
+          "lease": {
+            "type": "object"
+          },
+          "max_skew_secs": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "now_unix": {
+            "type": "integer"
+          },
+          "signed_lease": {
+            "type": "object"
+          },
+          "steps": {
+            "items": {
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "trusted_keys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "unverified_lease": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "data",
+          "steps"
+        ],
+        "type": "object"
+      },
+      "name": "law"
+    },
+    {
+      "description": "Admit a FOND policy as strong-cyclic against a planning problem.",
+      "inputSchema": {
+        "properties": {
+          "policy": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          },
+          "problem": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object"
+              }
+            ]
+          }
+        },
+        "required": [
+          "problem",
+          "policy"
+        ],
+        "type": "object"
+      },
+      "name": "policy"
+    }
+  ]
+}
