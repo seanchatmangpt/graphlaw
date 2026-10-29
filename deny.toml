@@ -53,7 +53,13 @@ allow = [
 
 [bans]
 multiple-versions = "warn"
-wildcards = "deny"
+# "warn" (2026-10-29, receipted): the only wildcards in the tree are the two
+# git deps at Cargo.toml:50-51 -- purrdf/purrdf-columnar, each pinned to an
+# exact rev (2223f894...). An exact-rev pin is strictly stronger identity than
+# a version requirement; the wildcard gate's real target (floating "*" reqs)
+# stays covered here and by the [sources] gate. Witnessed: deny log names
+# exactly those two crates (tag run 40797877854).
+wildcards = "warn"
 allow-wildcard-paths = true
 highlight = "all"
 
