@@ -168,8 +168,15 @@ Full design authority per ticket: `GL28-2-SMALT-WIRE-SPEC.md` §5-§8,
   (RECEIPTS.md publish section stands PENDING; no publish receipt file in
   `receipts/`). The npm package itself already exists at 26.10.14 — see the
   Status sync row above.
-- **GL28-13** wasm slimming SCAR (80 MiB ceiling is carrying cost) —
-  census at `GL28-13-SLIMMING-CENSUS.md`; implementation not started.
+- **GL28-13** wasm slimming SCAR — **CLOSED 2026-10-29** (relink receipt:
+  RECEIPTS.md, "GL28-13 stage 2"). Measured 62,909,537 B — under even
+  the old 64 MiB gate by 4.2 MB; ceilings re-anchored to the operator's
+  128 MB policy (wasm_size_court MAX_BYTES, wasm_audit.sh, labels
+  truthful). Lever ledger: ICU drop delivered; `-Oz MinSizeRel`
+  libduckdb.a INVERTED (92,795,430 vs 88,161,726 B) — recorded for the
+  future IoT slimming pass alongside the census
+  (`GL28-13-SLIMMING-CENSUS.md`). Wrap-fcntl shim recipe landed
+  (fixes a pre-existing canonical-recipe duplicate-symbol defect).
 
 ### GL28-3 discovery (2026-10-29 census)
 

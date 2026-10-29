@@ -558,3 +558,35 @@ PARTIAL_ALIVE -> **ALIVE**; GL28-1.1 tick closed.
 Standing: ALIVE — every leg ran and passed this session with receipts
 on disk. beam4pm side committed fd63b705..(this batch); graphlaw side
 graphlaw_ex admit/3 commit + this fold.
+
+## GL28-13 stage 2 — relink receipt (2026-10-29)
+
+Artifact 74,097,211 -> **62,909,537 B** (sha256 `62cd95d4ef7294dc…`,
+blake3 `c92caeb6d5679258…`): under the old 64 MiB gate by 4.2 MB, under
+the operator's 128 MB policy ceiling by 71.3 MB. Lever ledger: the ICU
+drop (stage-1 cache gates `libicu_extension.a` ABSENT) delivered; the
+`-Oz MinSizeRel` libduckdb.a lever **inverted** (92,795,430 vs old
+Release 88,161,726 B — larger archive, smaller linked artifact).
+Ceilings re-anchored to policy (134,217,728 B) in
+`tests/wasm_size_court.rs` + `scripts/wasm_audit.sh`, labels truthful.
+
+The relink exposed a **pre-existing canonical-recipe defect**: rust-lld
+duplicate symbol `fcntl` (libc.a `fcntl.c.obj` vs the shim's plain
+definition) — the 2026-10-28 shipped artifact was built shim-less
+(v26.10.28 RECEIPTS line 67). Fixed with the wrap-fcntl shim recipe
+(rename + `--wrap=fcntl`, exact 1-line diff proven; tc08 COPY egress
+1/0 through the translated path); shim.c + shim.o landed so from-tree
+rebuilds reproduce the pinned bytes.
+
+Re-pins via sanctioned flows: ARTIFACTS wasm row (coordinator pin
+hatch; historical pin retained), priv/graphlaw.wasm + .blake3 (b3sum
+canonical 85 B), js/npm artifact-meta.ts + local wasm (npm build.mjs,
+exit 0), docs/WASM.md pin text. Siblings byte-identical.
+
+Courts, zero skips: wasm_abi 25, lifecycle_eh 4, env_isolation 3,
+fibo_fixtures_eh 3, fibo_egress_eh 1, native_differential 2,
+wasm_size_court 4, graphlaw_run_eh_court 7, op_differential 16,
+registry_artifacts 22/0 **with GRAPHLAW_REQUIRE_WASM_PIN=1** (stale-pin
+check witnessed flipping 21/1 -> 22/0 on the row landing);
+wasm_audit.sh PASS (1 Tag section = engine link proven); host contract
+graphlaw-wasm 10/0. Integration: `cargo check` clean; commit 09bafd2.
