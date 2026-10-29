@@ -85,11 +85,40 @@ Full design authority per ticket: `GL28-2-SMALT-WIRE-SPEC.md` §5-§8,
 
 ## Part B — drawn but unbuilt
 
-- **GL28-1** wasm4pm OCEL 2.0 conformance engine (Art. 12) — L, BLOCKED-external.
-  Telemetry handler projecting [:graphlaw_ex, :admit, :stop] into OCEL 2.0
-  records + a wasm4pm consumer court. Design authority:
-  `GL28-1-ENVELOPE-SPEC.md` (this dir). Falsifier: an injected non-conformant
-  event must fail the checker.
+- **GL28-1** wasm4pm OCEL 2.0 conformance engine (Art. 12) — L.
+  **PARTIAL_ALIVE** (promoted 2026-10-29 from BLOCKED-external / drawn-but-
+  unbuilt; promotion receipt: RECEIPTS.md, "GL28-1.1 register promotion",
+  this dir). Landed substrate, verified-on-disk 2026-10-29:
+  `BeamPM.GraphlawBridge` (/Users/sac/beam4pm/lib/beam4pm_graphlaw_bridge.ex)
+  — `attach/0` (idempotent `:telemetry.attach_many` on
+  `[:graphlaw_ex, :admit, :stop]`), `mapper/2` (pure
+  engine_op_mapper-style admit-span -> OCEL 2.0 envelope), `ingest/1`
+  (typed all-or-nothing refusals into the real `BeamPM.OcelAccumulator`),
+  `conform/1` (native RF3 oracle binary -> Elixir engine-handle -> typed
+  `{:error, {:conformance_oracle_absent, _}}`, one
+  `beam4pm-graphlaw-bridge-conformance/v1` receipt on every path);
+  envelope spec `GL28-1-ENVELOPE-SPEC.md` (this dir); 8-test court
+  /Users/sac/beam4pm/test/beam4pm_graphlaw_bridge_test.exs (flip-twins,
+  non-vacuity, conform leg — the loud-skip is now only the binary-absent
+  fallback). PARTIAL ceiling — never ALIVE while these remain: (b) the
+  pe:sourceDigest Art. 12 leg (the mapper's attribute set carries no
+  source digest; the court spec requires "missing pe:sourceDigest
+  attribute -> trace rejected"); (c) a real `[:graphlaw_ex, :admit,
+  :stop]` emission witness replacing the synthetic-span court (the court
+  bridges mapper/2 over synthetic measurements/metadata; no real
+  GraphlawEx admit call witnessed through the bridge). Leg (a) — executed
+  oracle-binary court receipt — CLOSED 2026-10-29:
+  `native/rf3-conformance-oracle` built from `native/rf3-ocel-oracle`
+  (cargo release; 40.6s cited from the build lane) and placed, sha256
+  `00fd5642…03361` byte-identical to the release artifact; bridge court
+  8/8 with the native path witnessed by two
+  `receipts/graphlaw_bridge/graphlaw-bridge-conform-*.json` receipts
+  (`outcome: conformant` + flip-twin `refused` on
+  `oracle_stats_diverged_from_accumulated`, both `oracle:
+  native_rf3_binary`); suite re-run this session: 8 tests, 0 failures
+  (receipt: RECEIPTS.md, "GL28-1 leg (a) — oracle-binary court executed").
+  Falsifier unchanged: an injected non-conformant event must fail the
+  checker (the refused flip-twin receipt is that flip, witnessed).
 - **GL28-2** Smalt local-cloud integration — XL. Deterministic wire protocol,
   wire-parity court (same receipt bytes both paths), admission-only commit
   gate keyed on R_receipt presence.
@@ -203,7 +232,9 @@ Falsifier (corrected 2026-10-29): the byte-exact replay is the GitHub codeload U
   cites the landed bridge + conform/1 + receipt schema; tops out at
   PARTIAL until (a) the oracle-binary court executes, (b) the
   pe:sourceDigest Art. 12 leg lands, (c) a real [:graphlaw_ex, :admit,
-  :stop] emission witness replaces the synthetic-span court.
+  :stop] emission witness replaces the synthetic-span court. (a) CLOSED
+  2026-10-29 — binary built + placed, court 8/8, two native-path run
+  receipts on disk (see the GL28-1 row and RECEIPTS.md); (b)/(c) open.
 - **purrdf.1 — bare-fuse finding upstream** (S): filed two-fuse
   order-flip regression court in purrdf-n3 (first-match-only fired_fuse
   is rule-order-dependent; suppresses second simultaneous denial). The

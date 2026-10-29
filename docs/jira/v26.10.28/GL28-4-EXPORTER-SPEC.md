@@ -7,7 +7,7 @@
 - **Conformance target**: EU AI Act Arts. 9/10/12/14/15 evidence bundle,
   machine-checkable; every claim row re-verifiable from the artifact alone
 - **Size**: M, **policy-gated** (see §8)
-- **Inputs read**: `documentation/reference/conformance_claim.md`,
+- **Inputs read**: `docs/reference/conformance_claim.md`,
   `src/attest.rs`, `registry/ARTIFACTS.blake3`,
   `registry/capability-registry.json`, `docs/jira/v26.10.28/TAG`
 
@@ -15,7 +15,7 @@
 
 ## 0. Landscape facts that shape the design
 
-- `documentation/reference/conformance_claim.md` is the court-to-article
+- `docs/reference/conformance_claim.md` is the court-to-article
   matrix. Its standing law is already receipt-gated: a count without a live
   run in the window is `UNVERIFIED`; a row promotes to `ALIVE` only via a
   dated receipt with embedded output. The exporter inherits this law — it
@@ -206,5 +206,5 @@ evidence; it does not actuate its distribution.
 - [ ] One real export for v26.10.28: the three files exist, the court
       verifies them, receipt under `receipts/attestation-v26.10.28.md`
       with real `blake3` + verify output.
-- [ ] `documentation/reference/conformance_claim.md` gains a pointer from
+- [ ] `docs/reference/conformance_claim.md` gains a pointer from
       each article section to the per-release attestation artifact.

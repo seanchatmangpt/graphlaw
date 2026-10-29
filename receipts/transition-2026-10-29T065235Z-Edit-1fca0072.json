@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "1fca007212cf9bd22b50eb7019a03ff4ae8ee678b7ec39ae1bd7f8374248e3a8",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T065235Z-Edit-1fca0072.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/smalt/lib/smalt/egress_router.ex",
+  "timestamp_utc": "2026-10-29T065235Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

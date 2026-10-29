@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "74416b6dd8fea3e36a731c9ef3939cfa6f4bfd67fb0d1b433cda9b8f371fad53",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T063839Z-Edit-74416b6d.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/smalt/lib/smalt/data_plane/kql.ex",
+  "timestamp_utc": "2026-10-29T063839Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

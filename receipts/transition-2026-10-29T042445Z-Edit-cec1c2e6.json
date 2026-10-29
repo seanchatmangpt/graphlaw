@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "cec1c2e6beaf79ffad3bd3cb10a2edce42d85486e17705f008d415a337471d48",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T042445Z-Edit-cec1c2e6.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.28/GL28-2-SMALT-WIRE-SPEC.md",
+  "timestamp_utc": "2026-10-29T042445Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

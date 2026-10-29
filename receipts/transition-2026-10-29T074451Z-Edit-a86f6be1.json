@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "a86f6be198d96d263c26ca08f9fbfc493259531bed5c705a795206d3b70b3f94",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T074451Z-Edit-a86f6be1.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/smalt/lib/smalt/messaging/kafka/records.ex",
+  "timestamp_utc": "2026-10-29T074451Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

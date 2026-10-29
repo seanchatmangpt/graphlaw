@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "93e188cfd141f0489320ceee32d6a14638483a1d896c6c14d2bd7023bdf46e83",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T065936Z-Write-93e188cf.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.28/GL28-6-KILLSWITCH-DESIGN.md",
+  "timestamp_utc": "2026-10-29T065936Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "a71aac2316388e77ef3402cf26feaafb7bdadbb3a5a8063f096900581d501ca9",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T070017Z-Write-a71aac23.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.28/GL28-7-AUTHORITY-PORT-DESIGN.md",
+  "timestamp_utc": "2026-10-29T070017Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

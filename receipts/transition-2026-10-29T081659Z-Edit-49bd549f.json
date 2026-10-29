@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "49bd549ffcd58727020fb216de1e94e81752199bbe2646bb2186729a894fc119",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T081659Z-Edit-49bd549f.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/smalt/lib/smalt/egress/KvRoutes.ex",
+  "timestamp_utc": "2026-10-29T081659Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

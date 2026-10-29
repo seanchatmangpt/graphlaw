@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "66546e480c8392239405a4baa92cd54dd737ec138aad648405699a681096120d",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T080639Z-Edit-66546e48.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/smalt/lib/smalt/messaging/amqp/sas_verifier.ex",
+  "timestamp_utc": "2026-10-29T080639Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

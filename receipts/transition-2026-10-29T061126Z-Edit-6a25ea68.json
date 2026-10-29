@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "6a25ea68d3f6c2d959dad939b52e80af19f45eac0f06e947b1be7f69008d7945",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T061126Z-Edit-6a25ea68.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/ash_graphlaw/documentation/how_to/run_the_parity_court.md",
+  "timestamp_utc": "2026-10-29T061126Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

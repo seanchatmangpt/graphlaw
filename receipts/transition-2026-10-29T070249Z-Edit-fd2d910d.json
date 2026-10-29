@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "fd2d910d5a541c1100cbcd3f1bfa594512c26063c7747983245a73f8c18c7669",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T070249Z-Edit-fd2d910d.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/smalt/lib/smalt/mcp/gen/smalt_mcp_surface.ttl",
+  "timestamp_utc": "2026-10-29T070249Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

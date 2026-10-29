@@ -288,12 +288,12 @@ rows marked **cited** are lane/coordinator claims not re-executed here.
   mtime 2026-10-28 20:19) exist with GL28 ticket content read this session.
 - **GL28-5 conformance_claim.md landed (receipt-gated standing)** —
   verified-on-disk:
-  `documentation/reference/conformance_claim.md` exists; its standing
+  `docs/reference/conformance_claim.md` exists; its standing
   header states the receipt-gated rule explicitly ("a count without a live
   run against the current tree is `UNVERIFIED`"; "No row on this page is
   `ALIVE`; a row is promoted only by a dated receipt") and currently marks
-  every row `UNVERIFIED`. Note: it lives under `documentation/reference/`,
-  not `docs/reference/` — recorded here as-found.
+  every row `UNVERIFIED`. Note: it lives under `docs/reference/` (moved
+  from `documentation/reference/` on 2026-10-28) — recorded as-moved.
 - **GL28-6 kill-switch design + GL28-7 authority port design filed** —
   verified-on-disk: `docs/jira/v26.10.28/GL28-6-KILLSWITCH-DESIGN.md` and
   `docs/jira/v26.10.28/GL28-7-AUTHORITY-PORT-DESIGN.md` exist with design
@@ -342,3 +342,123 @@ rows marked **cited** are lane/coordinator claims not re-executed here.
 - Upstream push of `blake3-digest-keys`: **PENDING** (unpushed, verified).
 - npm Trusted-Publisher flow + hex publish: **PENDING** (documented, not
   executed this session).
+
+# GL28-1.1 register promotion — GL28-1 -> PARTIAL_ALIVE (2026-10-29)
+
+Promotion of the GL28-1 row in GL28-BACKLOG.md (Part B) from
+"drawn but unbuilt / BLOCKED-external" to **PARTIAL_ALIVE**. Docs-lane
+promotion only — no bridge code, court, or oracle was executed by this
+lane. Every existence claim below was verified-on-disk at promotion time
+(existence + key content read from the file); execution claims are NOT
+made and are exactly the three open legs that hold the row at PARTIAL.
+
+## Verified-on-disk at promotion time (real output, this lane)
+
+```
+$ ls -la /Users/sac/beam4pm/lib/beam4pm_graphlaw_bridge.ex
+-rw-r--r--@ 1 sac  staff  23056 Oct 29 00:52 /Users/sac/beam4pm/lib/beam4pm_graphlaw_bridge.ex
+
+$ grep -c 'test "' /Users/sac/beam4pm/test/beam4pm_graphlaw_bridge_test.exs
+8
+
+$ file /Users/sac/beam4pm/native/rf3-conformance-oracle
+/Users/sac/beam4pm/native/rf3-conformance-oracle: cannot open ... (No such file or directory)
+
+$ ls /Users/sac/beam4pm/receipts/graphlaw_bridge
+(NO SUCH DIRECTORY)
+```
+
+- **Bridge module exists** — /Users/sac/beam4pm/lib/beam4pm_graphlaw_bridge.ex
+  (23056 bytes, mtime 2026-10-29 00:52), read in full this session:
+  `attach/0` (idempotent `:telemetry.attach_many` on
+  `[:graphlaw_ex, :admit, :stop]`), `mapper/2` (pure
+  engine_op_mapper-style mapping), `ingest/1` (typed all-or-nothing
+  refusals into `BeamPM.OcelAccumulator`), `conform/1` (native RF3
+  binary -> Elixir engine-handle -> typed
+  `{:error, {:conformance_oracle_absent, _}}`; receipt schema
+  `beam4pm-graphlaw-bridge-conformance/v1` at
+  beam4pm_graphlaw_bridge.ex:106, written on every path).
+- **Envelope spec exists** — `GL28-1-ENVELOPE-SPEC.md` in this dir
+  (verified-on-disk, content read).
+- **8-test court exists** — /Users/sac/beam4pm/test/
+  beam4pm_graphlaw_bridge_test.exs: exactly 8 `test "` definitions
+  (flip-twins at :113/:123, non-vacuity at :133, live-dispatch at :142,
+  conform leg at :181 with the named loud-skip). The suite was NOT run
+  by this lane — its pass/fail standing is not claimed here.
+- **The three PARTIAL legs are real absences, verified**: no oracle
+  binary (file above), no `receipts/graphlaw_bridge/` run receipts in
+  either /Users/sac/beam4pm or /Users/sac/graphlaw (leg (a) never
+  executed); the mapper's attribute set carries no source-digest
+  attribute (leg (b) absent from the landed code); the conform court
+  bridges synthetic spans (`mapper(@measurements, @ok_metadata)`), and
+  the :142 test dispatches synthetic metadata via `:telemetry.execute`
+  directly — no real GraphlawEx admit call witnessed through the bridge
+  (leg (c)).
+
+## Standing
+
+GL28-1: **PARTIAL_ALIVE** (register row updated this promotion; do not
+promote to ALIVE until (a) the oracle-binary court executes with a
+receipt, (b) the pe:sourceDigest Art. 12 leg lands, (c) a real
+`[:graphlaw_ex, :admit, :stop]` emission witness replaces the
+synthetic-span court). Other GL28 rows untouched.
+
+# GL28-1 leg (a) — oracle-binary court executed (2026-10-29)
+
+Closure of PARTIAL leg (a): conform/1's native leg has now executed with
+run receipts on disk. The binary build itself was executed by the build
+lane (cargo release of `native/rf3-ocel-oracle`, 40.6s — cited, not
+re-timed by this lane); everything below was verified-on-disk / re-run by
+the register lane at receipt time.
+
+## Verified-on-disk at receipt time (real output, this lane)
+
+```
+$ ls -la /Users/sac/beam4pm/native/rf3-conformance-oracle
+-rwxr-xr-x@ 1 sac staff 3674160 Oct 29 02:43 /Users/sac/beam4pm/native/rf3-conformance-oracle
+
+$ shasum -a 256 /Users/sac/beam4pm/native/rf3-conformance-oracle \
+               /Users/sac/beam4pm/native/rf3-ocel-oracle/target/release/rf3-ocel-oracle
+00fd5642216fc28ce6b2b95bb5490d02db23dc86aac070f9225e003b05803361  (placed, 02:43)
+00fd5642216fc28ce6b2b95bb5490d02db23dc86aac070f9225e003b05803361  (build, 02:28)
+```
+
+Byte-identical: the placed oracle IS the release build from
+`native/rf3-ocel-oracle`. Court run receipts
+(`/Users/sac/beam4pm/receipts/graphlaw_bridge/`, both read in full):
+
+- `graphlaw-bridge-conform-1793266968755-2` — outcome `conformant`,
+  oracle `native_rf3_binary`; stats match accumulated (1 event / 1
+  object).
+- `graphlaw-bridge-conform-1793267018414-6` — outcome `refused`
+  (flip-twin), oracle `native_rf3_binary`; reason
+  `{:oracle_stats_diverged_from_accumulated, [num_events: %{expected:
+  1, oracle_saw: 99}]}`.
+
+Both receipts carry `"replay": {"oracle_bin": "/Users/sac/beam4pm/native/
+rf3-conformance-oracle"}` and schema `beam4pm-graphlaw-bridge-conformance/
+v1`. The refused row is the falsifier flip witnessed (injected divergence
+-> `:refused`), so the conform court's non-vacuity is no longer asserted,
+it is receipted.
+
+## Court re-run (this lane, real output)
+
+```
+$ cd /Users/sac/beam4pm && mix test test/beam4pm_graphlaw_bridge_test.exs
+...
+Finished in 0.1 seconds (0.00s async, 0.1s sync)
+8 tests, 0 failures
+```
+
+8/8, zero skips — the conform leg executes the native binary (the
+loud-skip path is now only the binary-absent fallback). This re-run did
+not mint new `receipts/graphlaw_bridge/` files (mtime set unchanged at
+02:42/02:43); the two receipts above are the 02:42–02:43 execution's
+output and are the cited leg-(a) receipts.
+
+## Standing
+
+GL28-1 remains **PARTIAL_ALIVE** (register row updated in
+GL28-BACKLOG.md). Leg (a) CLOSED; legs (b) pe:sourceDigest Art. 12 and
+(c) real `[:graphlaw_ex, :admit, :stop]` emission witness remain open —
+the row does not move to ALIVE until both land.

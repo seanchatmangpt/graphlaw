@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "96b815eaeec741c4b32203c0527bc3ae894a39fe59ba1e94b226d9b3dd76ee3a",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T061201Z-Edit-96b815ea.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/ash_graphlaw/documentation/topics/upgrading.md",
+  "timestamp_utc": "2026-10-29T061201Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}
