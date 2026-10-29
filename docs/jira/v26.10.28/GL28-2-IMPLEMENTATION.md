@@ -26,3 +26,28 @@ court (byte-identical receipt hashes both paths); anti-vacuity flip
 Falsifier: an injected non-conformant mutation must fail the gate; a
 direct Store.put bypassing the gate is the residual risk the data-plane
 census names for follow-up lanes.
+
+## Insertion matrix (census, 2026-10-29 — full detail in lane receipt)
+
+Natural (no threading): router.ex child-PUT chokepoint validate_child_put
+(:2161, covers handle_child_put :2235 + sb_child_put :2566 + parented),
+eg_topic_put (:6479), both roleAssignment PUTs (:6784/:6837 — currently
+ungated beyond shape). Separate insertions: handle_cosmos_child_put
+(:2892, re-rolls the chain inline). Thread via headers/opts: cosmos.ex
+(signatures lack conn; routes pass tenant_headers) and blob_storage.ex
+(MERGED side; 17 write entries, commit points enumerated). Fabricate
+envelope: messaging/* engine writers bypass the wire guard into
+BlobStorage — synthetic engine-principal envelope or explicit exemption
+tier (the only chokepoint covering both faces is the BlobStorage layer).
+
+## Validator migration map (census, 2026-10-29)
+
+Order: (1) validator.ex:415-434 engine_verdict → Capability.API.shacl/2
+(validator.ex:422 apply swap; :engine_unavailable maps 1:1); (2)
+router.ex:3657 do_check_shape inherits via the validator (6 upstream
+check_shape sites); (3) sql_row_gate.ex:315 per-row shacl; (4)
+powl2/law_compiler.ex:92-153 → law verb (the ONLY step needing a
+:construct lease — :ceiling_unmet pre-gate applies); (5) tests dual-run
+with validate_shape/2 as differential oracle. Non-migrating: projections
+(envelope remap only). New adapter surface: JSON payload → JSON-LD
+serialization for `data` (dialect enum includes jsonld).
