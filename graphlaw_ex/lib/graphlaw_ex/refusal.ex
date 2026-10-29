@@ -75,7 +75,13 @@ defmodule GraphlawEx.Refusal do
     :plan_refused,
     :receipt_required,
     :engine_refused,
-    :lease_revoked
+    :lease_revoked,
+    :receipt_refused,
+    :lease_refused,
+    :unverified_lease_refused,
+    :fuse,
+    :duckdb_failure,
+    :batch_member_failed
   ]
 
   @classes [:blocked_resource, :refused_structure, :refused_identity, :unsupported]
@@ -94,10 +100,13 @@ defmodule GraphlawEx.Refusal do
     "NotAdmitted" => :not_admitted,
     "PlanRefused" => :plan_refused,
     "ReceiptRequired" => :receipt_required,
-    "ReceiptRefused" => :engine_refused,
-    "LeaseRefused" => :engine_refused,
-    "UnverifiedLeaseRefused" => :engine_refused,
-    "Refused" => :engine_refused
+    "ReceiptRefused" => :receipt_refused,
+    "LeaseRefused" => :lease_refused,
+    "UnverifiedLeaseRefused" => :unverified_lease_refused,
+    "Refused" => :engine_refused,
+    "Fuse" => :fuse,
+    "DuckDb" => :duckdb_failure,
+    "BatchMemberFailed" => :batch_member_failed
   }
 
   # The capability-layer client codes (refused before the engine is called);
@@ -135,6 +144,12 @@ defmodule GraphlawEx.Refusal do
           | :receipt_required
           | :engine_refused
           | :lease_revoked
+          | :receipt_refused
+          | :lease_refused
+          | :unverified_lease_refused
+          | :fuse
+          | :duckdb_failure
+          | :batch_member_failed
 
   @typedoc "Closed union of refusal classes."
   @type class :: :blocked_resource | :refused_structure | :refused_identity | :unsupported
@@ -212,6 +227,12 @@ defmodule GraphlawEx.Refusal do
   def class_of(:receipt_required), do: :refused_identity
   def class_of(:engine_refused), do: :unsupported
   def class_of(:lease_revoked), do: :refused_identity
+  def class_of(:receipt_refused), do: :refused_identity
+  def class_of(:lease_refused), do: :refused_identity
+  def class_of(:unverified_lease_refused), do: :refused_structure
+  def class_of(:fuse), do: :refused_structure
+  def class_of(:duckdb_failure), do: :blocked_resource
+  def class_of(:batch_member_failed), do: :blocked_resource
   def class_of(other), do: raise(ArgumentError, "unknown refusal code: #{inspect(other)}")
 
   @doc """
@@ -243,6 +264,12 @@ defmodule GraphlawEx.Refusal do
   def broken_term_of(:receipt_required), do: :R_missing_identity
   def broken_term_of(:engine_refused), do: :R_missing_standing
   def broken_term_of(:lease_revoked), do: :R_missing_standing
+  def broken_term_of(:receipt_refused), do: :R_missing_identity
+  def broken_term_of(:lease_refused), do: :R_missing_standing
+  def broken_term_of(:unverified_lease_refused), do: :mu_on_O
+  def broken_term_of(:fuse), do: :mu_on_O
+  def broken_term_of(:duckdb_failure), do: :R_missing_consequence
+  def broken_term_of(:batch_member_failed), do: :R_missing_consequence
   def broken_term_of(other), do: raise(ArgumentError, "broken_term unknown for code: #{inspect(other)}")
 
   @doc "The one-line meaning of a code. Raises `ArgumentError` outside the closed table."
@@ -295,6 +322,24 @@ defmodule GraphlawEx.Refusal do
 
   def doc_of(:lease_revoked),
     do: "An Art.14 operator revocation epoch covers this engine; the call was shed before any engine mutation."
+
+  def doc_of(:receipt_refused),
+    do: "The engine refused to mint or accept a receipt; the admission has no identity anchor."
+
+  def doc_of(:lease_refused),
+    do: "The engine refused the lease; the caller holds no standing for the operation."
+
+  def doc_of(:unverified_lease_refused),
+    do: "The lease could not be verified against the admitted structure, so the operation was refused."
+
+  def doc_of(:fuse),
+    do: "The engine's fuse tripped on a malformed or unadmitted structure before any evaluation."
+
+  def doc_of(:duckdb_failure),
+    do: "The engine's DuckDB statement failed to execute, so no consequence was produced."
+
+  def doc_of(:batch_member_failed),
+    do: "One batch member failed; the batch's partial receipt and observed/max counts are carried in details."
 
   @doc "Per-code constructor; see `new/3`."
   @spec lease_revoked(String.t() | nil, map()) :: t()
@@ -393,7 +438,20 @@ defmodule GraphlawEx.Refusal do
     engine_code = Map.get(error, "code")
     code = engine_code_to_code(engine_code, kind)
 
-    refusal = new(code, string_or_nil(Map.get(error, "message")), Map.put(details, "kind", kind))
+    # Per-code payload lifting: mirror the kernel's json! keys verbatim, so the
+    # fields the kernel emits for this code surface in `details` without the
+    # caller re-reading `raw`. Unknown fields stay lossless in `raw`.
+    lifted =
+      case code do
+        :receipt_refused -> Map.take(error, ["step", "reason"])
+        :lease_refused -> Map.take(error, ["reason", "lease_id", "step"])
+        :unverified_lease_refused -> Map.take(error, ["reason", "lease_id", "step"])
+        :batch_member_failed -> Map.take(error, ["member", "message", "partial_receipt", "limit", "observed", "max"])
+        _ -> %{}
+      end
+
+    refusal =
+      new(code, string_or_nil(Map.get(error, "message")), Map.put(details, "kind", kind) |> Map.merge(lifted))
 
     %{refusal | raw: error}
   end

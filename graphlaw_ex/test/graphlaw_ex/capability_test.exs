@@ -183,17 +183,54 @@ defmodule GraphlawEx.CapabilityTest do
     end
 
     test "law decodes to %Result.Admitted{} with receipts, NOT a Result.Law" do
-      assert {:ok, admitted} =
-               GraphlawEx.Capability.Law.decode(%{
-                 "states" => ["s0", "s1"],
-                 "receipts" => [%{"step" => "rdfs", "index" => 0}],
-                 "nquads" => "<a> <b> <c> .\n"
-               })
+      wire_map = %{
+        "states" => ["s0", "s1"],
+        "receipts" => [
+          %{
+            "step" => "rdfs",
+            "index" => 0,
+            "parent" => "s0",
+            "child" => "s1",
+            "added" => 3,
+            "authority" => "plan-authority",
+            "revision" => "rev-1",
+            "plan_blake3" => "b3cafe",
+            "lease_id" => "lease-1"
+          }
+        ],
+        "nquads" => "<a> <b> <c> .\n"
+      }
+
+      assert {:ok, admitted} = GraphlawEx.Capability.Law.decode(wire_map)
 
       assert %GraphlawEx.Result.Admitted{} = admitted
       assert admitted.states == ["s0", "s1"]
-      assert [%GraphlawEx.Result.Receipt{step: "rdfs", index: 0}] = admitted.receipts
       assert admitted.nquads == "<a> <b> <c> .\n"
+
+      assert [
+               %GraphlawEx.Result.Receipt{
+                 step: "rdfs",
+                 index: 0,
+                 parent: "s0",
+                 child: "s1",
+                 added: 3,
+                 authority: "plan-authority",
+                 revision: "rev-1",
+                 plan_blake3: "b3cafe",
+                 lease_id: "lease-1",
+                 subject_blake3: nil,
+                 raw: raw_receipt
+               }
+             ] = admitted.receipts
+
+      # `subject_blake3` is a reserved payload field (src/attest.rs:506-526),
+      # not yet emitted on the wire; unknown keys land in `:raw` losslessly.
+      assert raw_receipt["plan_blake3"] == "b3cafe"
+
+      future = %{wire_map | "receipts" => [Map.put(raw_receipt, "future_unknown_field", 1)]}
+
+      assert {:ok, admitted2} = GraphlawEx.Capability.Law.decode(future)
+      assert (admitted2.receipts |> hd() |> Map.get(:raw))["future_unknown_field"] == 1
     end
   end
 

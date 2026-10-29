@@ -8,20 +8,33 @@ defmodule GraphlawEx.Result.Receipt do
   @moduledoc ~S"""
   One transition receipt of a `law` result (`GraphlawEx.Result.Admitted`).
 
-  Forward-compatible: `from_map/1` reads the fields the engine reports
-  (`step`, `index`, `state`, `digest`, `attestation`) when present and keeps
-  the whole wire map in `:raw`, so `from_map(m).raw == m` for every `m`.
-  Never raises.
+  The fields mirror the kernel wire producers exactly (src/abi/ops/governance.rs):
+  plan receipts (:432-441, step/parent/child/added/authority/revision/
+  plan_blake3/lease_id, with `index` for plan steps) and transition receipts
+  (:501-508, same core fields plus `subject_blake3`).
+
+  Note: attestations are recorded as RDF triples inside the state
+  (src/receipt.rs:104-108), never as JSON on the wire; `subject_blake3` is a
+  reserved payload field (src/attest.rs:506-526) not yet emitted on the wire.
+  `:raw` preserves the wire map losslessly, so `from_map(m).raw == m` for
+  every `m`. Never raises.
   """
 
-  defstruct [:step, :index, :state, :digest, :attestation, :raw]
+  defstruct [:step, :parent, :child, :added, :authority, :revision, :plan_blake3, :lease_id, :index, :subject_blake3, :raw]
 
   @type t :: %__MODULE__{
           step: term(),
-          index: term(),
-          state: term(),
-          digest: term(),
-          attestation: term(),
+          parent: term(),
+          child: term(),
+          added: integer() | nil,
+          authority: String.t() | nil,
+          revision: String.t() | nil,
+          plan_blake3: String.t() | nil,
+          lease_id: String.t() | nil,
+          # plan receipts only
+          index: non_neg_integer() | nil,
+          # reserved payload field (src/attest.rs:506-526), not yet emitted on the wire
+          subject_blake3: String.t() | nil,
           raw: map()
         }
 
@@ -30,10 +43,16 @@ defmodule GraphlawEx.Result.Receipt do
   def from_map(map) when is_map(map) do
     %__MODULE__{
       step: Map.get(map, "step"),
+      parent: Map.get(map, "parent"),
+      child: Map.get(map, "child"),
+      added: Map.get(map, "added"),
+      authority: Map.get(map, "authority"),
+      revision: Map.get(map, "revision"),
+      plan_blake3: Map.get(map, "plan_blake3"),
+      lease_id: Map.get(map, "lease_id"),
       index: Map.get(map, "index"),
-      state: Map.get(map, "state"),
-      digest: Map.get(map, "digest") || Map.get(map, "blake3") || Map.get(map, "sha256"),
-      attestation: Map.get(map, "attestation"),
+      # reserved payload field (src/attest.rs:506-526), not yet emitted on the wire
+      subject_blake3: Map.get(map, "subject_blake3"),
       raw: map
     }
   end

@@ -18,16 +18,29 @@ defmodule GraphlawEx.Authority do
   Only a **signed** lease claims a ceiling above `:observe`: the `:lease` opt is
   a map or keyword list with a `:signed_lease` entry, itself a map
   `%{"lease" => %{"ceiling" => ...}, "attestation" => ...}` (string or atom
-  keys). Everything else grants `:observe`: a bare ceiling atom, a map with a
-  bare `:ceiling` key, an unsigned `:lease`, an `:unverified_lease`, `nil`.
+  keys). An `:unverified_lease` is a kernel-accepted lease with a caller-supplied
+  clock (`LeaseAuth::Unverified(l, now)`): it reaches the kernel and is
+  authorized there (scope + expiry, caller clock), so it is a real lease, never
+  observe-degraded here. Everything else grants `:observe`: a bare ceiling atom,
+  a map with a bare `:ceiling` key, an unsigned `:lease`, `nil`.
 
-  A caller can therefore never self-grant by writing an atom into opts. The
-  ceiling a signed lease *claims* is compared with the op's floor here, before
-  the engine is called; the signed lease is forwarded to the engine verbatim on
-  the same request. The pinned engine ignores lease keys entirely
-  (`UNSUPPORTED(engine-capability)`): the ONLY lease check enforced today is
-  this ceiling pre-check on the *claimed* ceiling. A lease-verifying engine
-  would refuse a forged claim as `:lease_refused`; the pinned one does not.
+  A caller can therefore never self-grant by writing an atom into opts. When a
+  caller *presents* a lease (signed or unverified), its *claimed* ceiling is
+  compared with the op's floor here, before the engine is called; the lease is
+  forwarded to the engine verbatim on the same request. The kernel enforces a
+  per-step lease check (`LeaseAuth::authorize` runs on every `Step`), so the
+  engine is not lease-blind: this module is an additive presentation check, not
+  the only lease enforcement. Lease-less law dispatch is kernel-legal
+  (`LeaseAuth::None` authorizes every step), so lease-less calls pass through
+  this gate.
+
+  ## Why n3/entail/datalog/hooks floors are `:observe`
+
+  Their kernel dispatch is unguarded with respect to a caller-presented lease
+  claim: the previous `:construct` floors gated only on a forgeable *claimed*
+  ceiling, which carried no authority. They are therefore `:observe` here —
+  lease-less calls pass through, and callers that present a lease keep the
+  additive pre-check on the claimed ceiling.
 
   ## Ceiling ordering (unchanged)
 
@@ -48,6 +61,26 @@ defmodule GraphlawEx.Authority do
   @ceiling_rank %{observe: 0, select: 1, construct: 2}
   @ceiling_names %{"observe" => :observe, "select" => :select, "construct" => :construct}
 
+  # Law step names, ported verbatim from `Step::name` (src/law.rs:118-127).
+  @law_step_names ~w(admit:shacl derive:n3 derive:hooks admit:plan admit:require-receipt
+                     admit:require-signed-receipt derive:rdfs derive:owl-rl admit:sql
+                     test:capability-probe)
+
+  # Required ceiling per step, from `Step::required_ceiling`: admit/test steps
+  # observe, the plan step select, derivation steps construct.
+  @law_step_required %{
+    "admit:shacl" => :observe,
+    "admit:sql" => :observe,
+    "admit:require-receipt" => :observe,
+    "admit:require-signed-receipt" => :observe,
+    "test:capability-probe" => :observe,
+    "admit:plan" => :select,
+    "derive:n3" => :construct,
+    "derive:hooks" => :construct,
+    "derive:rdfs" => :construct,
+    "derive:owl-rl" => :construct
+  }
+
   @op_ceilings %{
     "capabilities" => :observe,
     "sniff" => :observe,
@@ -58,20 +91,27 @@ defmodule GraphlawEx.Authority do
     "shacl" => :observe,
     "shex" => :observe,
     "policy" => :observe,
-    "n3" => :construct,
-    "entail" => :construct,
-    "datalog" => :construct,
-    "hooks" => :construct,
-    "law" => :construct
+    "n3" => :observe,
+    "entail" => :observe,
+    "datalog" => :observe,
+    "hooks" => :observe,
+    "law" => :observe
   }
 
   @typedoc """
   What a lease container presented: the ceiling it claims and the signed lease (if any).
 
   `signed_lease` is `nil` exactly when `ceiling` is `:observe` because nothing signed was
-  presented.
+  presented. `scope` is the lease's requested law-step scope (default `[]`);
+  `expires_unix` is the lease's expiry as claimed in its body (`nil` when absent —
+  no local expiry check is performed; the kernel owns the clock).
   """
-  @type claim :: %{ceiling: :observe | :select | :construct, signed_lease: map() | nil}
+  @type claim :: %{
+          ceiling: :observe | :select | :construct,
+          signed_lease: map() | nil,
+          scope: [String.t()],
+          expires_unix: integer() | nil
+        }
 
   @typedoc """
   Identity of the presented lease for receipts/logs.
@@ -91,15 +131,16 @@ defmodule GraphlawEx.Authority do
   above `:observe`.
 
   Total: any term is accepted, and anything that is not a well-formed signed-lease container
-  with a known ceiling claims `:observe` with `signed_lease: nil`.
+  with a known ceiling claims `:observe` with `signed_lease: nil`, `scope: []` and
+  `expires_unix: nil`.
 
   ## Examples
 
       iex> GraphlawEx.Authority.claim(nil)
-      %{ceiling: :observe, signed_lease: nil}
+      %{ceiling: :observe, signed_lease: nil, scope: [], expires_unix: nil}
 
       iex> GraphlawEx.Authority.claim(%{ceiling: :construct})
-      %{ceiling: :observe, signed_lease: nil}
+      %{ceiling: :observe, signed_lease: nil, scope: [], expires_unix: nil}
 
       iex> signed = %{"lease" => %{"ceiling" => "select"}, "attestation" => %{}}
       iex> GraphlawEx.Authority.claim(%{signed_lease: signed}).ceiling
@@ -110,9 +151,17 @@ defmodule GraphlawEx.Authority do
     with %{} = signed <- signed_lease(lease),
          %{} = body <- get(signed, "lease"),
          ceiling when is_map_key(@ceiling_rank, ceiling) <- ceiling_of(get(body, "ceiling")) do
-      %{ceiling: ceiling, signed_lease: signed}
+      %{
+        ceiling: ceiling,
+        signed_lease: signed,
+        scope: scope_of(get(body, "scope")),
+        expires_unix: expires_unix_of(get(body, "expires_unix"))
+      }
     else
-      _ -> %{ceiling: :observe, signed_lease: nil}
+      # Total function: a malformed/unpresented lease claims :observe with
+      # nothing signed — matches the @spec and keeps lease_args/3 total.
+      _ ->
+        %{ceiling: :observe, signed_lease: nil, scope: [], expires_unix: nil}
     end
   end
 
@@ -145,8 +194,8 @@ defmodule GraphlawEx.Authority do
   @doc """
   The minimum ceiling for engine op `op` (atom or string).
 
-  `:observe` for capabilities, sniff, parse, convert, canonical, sparql, shacl, shex and
-  policy; `:construct` for n3, entail, datalog, hooks and law. Any other op is a typed
+  `:observe` for capabilities, sniff, parse, convert, canonical, sparql, shacl, shex,
+  policy, n3, entail, datalog, hooks and law. Any other op is a typed
   `:unknown_capability` refusal.
   """
   @spec op_ceiling(atom() | String.t()) ::
@@ -174,14 +223,14 @@ defmodule GraphlawEx.Authority do
          })}
 
   @doc """
-  Checks the lease-vs-op-floor half of the authority gate: the ceiling `lease` claims must
-  be at least op `op`'s floor.
+  Checks the lease-vs-op-floor half of the authority gate: when a lease is
+  presented, the ceiling it claims must be at least op `op`'s floor.
 
-  `:observe`-floor ops always pass (back-compat: no lease → pass); a `:construct`-floor op
-  (`n3`, `entail`, `datalog`, `hooks`, `law`) with a lease claiming `:observe`/`:select` is
+  `:observe`-floor ops always pass (back-compat: no lease → pass). A presented
+  lease claiming `:observe` on a `:select`/`:construct`-floor op is
   `{:error, :ceiling_unmet}` before any engine dispatch. Unknown ops are
-  `:unknown_capability`. Presentation check only; the engine still verifies signature,
-  signer and expiry.
+  `:unknown_capability`. Presentation check only; the kernel verifies signature,
+  signer, scope and expiry per step.
   """
   @spec check_op(atom() | String.t(), term()) :: :ok | {:error, Refusal.t()}
   def check_op(op, lease) do
@@ -205,6 +254,65 @@ defmodule GraphlawEx.Authority do
         end
     end
   end
+
+  @doc """
+  Checks the presented lease against the requested law `steps` (names as in
+  `Step::name`, src/law.rs:118-127).
+
+  For each step: an unknown step name is `{:error, :unknown_capability}`;
+  a step outside the lease's `scope` is `{:error, :ceiling_unmet}` with
+  `"required_by" => "step"`; a step whose required ceiling exceeds the claimed
+  ceiling is `{:error, :ceiling_unmet}`. No local expiry check — the kernel owns
+  the clock. Presentation check only; the kernel re-checks every step.
+  """
+  @spec check_steps([String.t() | atom()], term()) :: :ok | {:error, Refusal.t()}
+  def check_steps(steps, lease) when is_list(steps) do
+    %{ceiling: granted, scope: scope} = claim(lease)
+
+    Enum.reduce_while(steps, :ok, fn step, :ok ->
+      with :ok <- check_step(step, granted, scope) do
+        {:cont, :ok}
+      else
+        {:error, %Refusal{} = refusal} -> {:halt, {:error, refusal}}
+      end
+    end)
+  end
+
+  defp check_step(step, granted, scope) when is_atom(step),
+    do: check_step(Atom.to_string(step), granted, scope)
+
+  defp check_step(step, granted, scope) when is_binary(step) do
+    cond do
+      not Map.has_key?(@law_step_required, step) ->
+        {:error,
+         Refusal.build(:unknown_capability, "no law step #{inspect(step)}", %{
+           "step" => step,
+           "known" => @law_step_names
+         })}
+
+      step not in scope ->
+        {:error,
+         Refusal.ceiling_unmet("step #{step} is outside the lease scope", %{
+           "required_by" => "step",
+           "step" => step,
+           "scope" => scope
+         })}
+
+      true ->
+        required = Map.fetch!(@law_step_required, step)
+
+        if Map.fetch!(@ceiling_rank, granted) >= Map.fetch!(@ceiling_rank, required) do
+          :ok
+        else
+          {:error,
+           Refusal.ceiling_unmet(
+             "step #{step} requires ceiling #{required}, lease grants #{granted}",
+             %{"required_by" => "step", "step" => step, "required" => required, "granted" => granted}
+           )}
+        end
+    end
+  end
+
   @doc """
   The engine options `run/3` sends: `:server`, `:timeout`, `:trusted_keys`,
   `:max_skew_secs` from caller opts (no runtime section), plus `:signed_lease` only when a
@@ -275,6 +383,14 @@ defmodule GraphlawEx.Authority do
   defp ceiling_of(value) when is_binary(value), do: Map.get(@ceiling_names, value)
   defp ceiling_of(value) when is_atom(value) and not is_nil(value), do: ceiling_of(Atom.to_string(value))
   defp ceiling_of(_value), do: nil
+
+  defp scope_of(list) when is_list(list),
+    do: Enum.filter(list, &is_binary/1)
+
+  defp scope_of(_other), do: []
+
+  defp expires_unix_of(n) when is_integer(n), do: n
+  defp expires_unix_of(_other), do: nil
 
   # String or atom keys; total on data.
   defp get(map, key) when is_map(map) do

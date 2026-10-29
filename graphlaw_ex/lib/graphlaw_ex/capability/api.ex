@@ -89,9 +89,6 @@ defmodule GraphlawEx.Capability.API do
         |> maybe_arg(forwards, "signed_lease", signed)
         |> maybe_arg(forwards, "trusted_keys", opts[:trusted_keys])
         |> maybe_arg(forwards, "max_skew_secs", opts[:max_skew_secs])
-
-      _ ->
-        args
     end
   end
 
