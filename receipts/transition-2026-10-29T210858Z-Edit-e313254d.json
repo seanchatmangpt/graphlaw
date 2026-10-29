@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "e313254d5a5660911eb34b55d04b46822575a938ea4435bbc28730c42750fc90",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T210858Z-Edit-e313254d.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/smalt/lib/smalt/arm_gateway/router.ex",
+  "timestamp_utc": "2026-10-29T210858Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}
