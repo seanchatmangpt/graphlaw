@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "1e17a3a4d6df45be383f2f150fa77994eabb88ddebd1c5ef557ab4f303e4a109",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T134942Z-Edit-1e17a3a4.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/.claude/hooks/lithography_guard.py",
+  "timestamp_utc": "2026-10-29T134942Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}
