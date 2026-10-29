@@ -462,3 +462,47 @@ GL28-1 remains **PARTIAL_ALIVE** (register row updated in
 GL28-BACKLOG.md). Leg (a) CLOSED; legs (b) pe:sourceDigest Art. 12 and
 (c) real `[:graphlaw_ex, :admit, :stop]` emission witness remain open —
 the row does not move to ALIVE until both land.
+
+## Window close-out — cross-repo publish receipt (2026-10-29)
+
+Window posture **GO** (GO-NO-GO.md). Every repo published; verification
+ladder receipts as-run:
+
+- **graphlaw** `be4e2a5..eba76da` pushed. Final sweep re-read at use
+  time: `mutants.out/outcomes.json` total 28, caught 19, unviable 9,
+  **missed 0**. Post-restore boundary rung:
+  `cargo test --test resource_limits` -> 10 passed / 0 failed (299.41s,
+  exit 0). A leftover cargo-mutants inversion in `src/abi.rs`
+  (`limit_response` -> `vec![0]`, from a court attempt killed
+  mid-restore) was restored byte-exact via `git checkout --` before
+  committing; `git diff src/abi.rs` empty.
+- **ash_graphlaw** `ff66078..55c1bc3` pushed. Parity court pins
+  26.10.28 (`test/unit/parity_test.exs:123-124`).
+- **ash_a2a** `df2cbfe5..ca22688d` pushed (blake3 consumer truth-syncs,
+  sentinel re-route for the retired N3 denial op).
+- **beam4pm** `ec24129d..827fd110` pushed (GraphlawBridge + native RF3
+  oracle leg, 8/8 bridge court).
+- **smalt** origin/main was unpushable since v26.10.21: two >100MB
+  blobs (explorer NIF .so 207MB @ 954c2f3d, ocel-1m.ndjson 298MB @
+  934d21aa) trip GitHub's hard limit on every push. Fix-forward without
+  rewrite: blobs untracked + ignored (8d88d7ac), GL28-2 gate config
+  landed (3cc3f35f), then a squash-forward graft
+  `git commit-tree main^{tree} -p origin/main` -> 95d4243d (a
+  `--squash`-form merge; no rebase, no force-push — origin/main
+  fast-forwards). The full 842-commit chain is preserved locally at
+  `refs/heads/main-pre-squash-20261029`. Router seams landed (28f9dcbe),
+  then the gate module + 6-court file + dev opt-in, which had been
+  worktree-only (a33622d1) — a fresh clone now compiles. smalt compile
+  gate under asdf elixir 1.20.4-otp-29 (`.tool-versions` pin; brew
+  elixir 1.19.5 fails the `~> 1.20` gate): exit 0.
+- **ggen-marketplace** branch `blake3-digest-keys` -> `535f33570`
+  pushed (new remote branch). ash_graphlaw's materialization pin
+  `glx:marketplaceSha "86735f4e"` is an ancestor of the branch tip.
+- **purrdf** fork `graphlaw-carried` replay key verified public:
+  `git ls-remote` -> `2223f8945e19eb9aed750fe038b0fa833bd17c83`.
+  Provenance /tmp tarballs expired after mint (sha256 + sizes embedded
+  in provenance/README.md); the fork commit is the durable subject.
+
+Open legs are filed, not forgotten: GL28-1 (b)/(c), GL28-13 slimming,
+GL28-14 MCP projection implementation, GL28-12 operator-gated npm
+Trusted Publisher + hex auth — see GL28-BACKLOG.md.
