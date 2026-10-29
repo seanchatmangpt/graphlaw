@@ -86,7 +86,7 @@ Full design authority per ticket: `GL28-2-SMALT-WIRE-SPEC.md` §5-§8,
 ## Part B — drawn but unbuilt
 
 - **GL28-1** wasm4pm OCEL 2.0 conformance engine (Art. 12) — L.
-  **PARTIAL_ALIVE** (promoted 2026-10-29 from BLOCKED-external / drawn-but-
+  **ALIVE** (promoted 2026-10-29 from BLOCKED-external / drawn-but-
   unbuilt; promotion receipt: RECEIPTS.md, "GL28-1.1 register promotion",
   this dir). Landed substrate, verified-on-disk 2026-10-29:
   `BeamPM.GraphlawBridge` (/Users/sac/beam4pm/lib/beam4pm_graphlaw_bridge.ex)
@@ -100,13 +100,23 @@ Full design authority per ticket: `GL28-2-SMALT-WIRE-SPEC.md` §5-§8,
   envelope spec `GL28-1-ENVELOPE-SPEC.md` (this dir); 8-test court
   /Users/sac/beam4pm/test/beam4pm_graphlaw_bridge_test.exs (flip-twins,
   non-vacuity, conform leg — the loud-skip is now only the binary-absent
-  fallback). PARTIAL ceiling — never ALIVE while these remain: (b) the
-  pe:sourceDigest Art. 12 leg (the mapper's attribute set carries no
-  source digest; the court spec requires "missing pe:sourceDigest
-  attribute -> trace rejected"); (c) a real `[:graphlaw_ex, :admit,
-  :stop]` emission witness replacing the synthetic-span court (the court
-  bridges mapper/2 over synthetic measurements/metadata; no real
-  GraphlawEx admit call witnessed through the bridge). Leg (a) — executed
+  fallback). (b) the pe:sourceDigest Art. 12 leg — **CLOSED 2026-10-29**:
+  mapper emits `attributes["pe:sourceDigest"]` from the caller-pinned
+  engine-minted `blake3:` LawState.id (`blake3:dc0088be…a46e`, two real
+  collaborators agreeing: law-op `states` head == canonical-op id, mint
+  receipt embedded), bridge ingest gate refuses absence typed
+  (`{:missing_field, :source_digest}`), flip-twin witnessed zero-writes;
+  receipt `receipts/graphlaw_bridge/gl28-1-legb-conform-1793284150930.json`
+  (conformant, native RF3 oracle). (c) the real `[:graphlaw_ex, :admit,
+  :stop]` emission witness — **CLOSED 2026-10-29**: real supervised
+  GraphlawEx over the pinned 26.10.28 artifact through the PUBLIC
+  admit path (made lawful by the admit/3 opts passthrough,
+  graphlaw_ex.ex + authority.ex), detach anti-vacuity flip witnessed;
+  witness receipt `receipts/graphlaw_bridge/
+  gl28-1-legc-witness-1793281937341.json` (engine_sha256 `34fd4ada…`
+  = on-disk artifact). Courts: graphlaw_ex 133 passed; bridge file
+  11 passed / 0 skips (receipts: RECEIPTS.md, "GL28-1 legs (b)+(c) —
+  ALIVE flip"). Leg (a) — executed
   oracle-binary court receipt — CLOSED 2026-10-29:
   `native/rf3-conformance-oracle` built from `native/rf3-ocel-oracle`
   (cargo release; 40.6s cited from the build lane) and placed, sha256
@@ -234,7 +244,11 @@ Falsifier (corrected 2026-10-29): the byte-exact replay is the GitHub codeload U
   pe:sourceDigest Art. 12 leg lands, (c) a real [:graphlaw_ex, :admit,
   :stop] emission witness replaces the synthetic-span court. (a) CLOSED
   2026-10-29 — binary built + placed, court 8/8, two native-path run
-  receipts on disk (see the GL28-1 row and RECEIPTS.md); (b)/(c) open.
+  receipts on disk (see the GL28-1 row and RECEIPTS.md); (b) CLOSED
+  2026-10-29 — admit/3 passthrough + ingest gate, mint
+  blake3:dc0088be…, receipt gl28-1-legb-conform-1793284150930.json;
+  (c) CLOSED 2026-10-29 — witness through the public admit path,
+  receipt gl28-1-legc-witness-1793281937341.json. Row: ALIVE.
 - **purrdf.1 — bare-fuse finding upstream** (S): filed two-fuse
   order-flip regression court in purrdf-n3 (first-match-only fired_fuse
   is rule-order-dependent; suppresses second simultaneous denial). The

@@ -520,3 +520,41 @@ the leftover processes. Law reinforced: after any mutation-court run —
 including a "completed" one — the coordinator re-checks `git status`
 for `~ changed by cargo-mutants ~` inversions BEFORE staging; a court
 process with no live listener on its outcome is an orphan, kill it.
+
+## GL28-1 legs (b)+(c) — ALIVE flip (2026-10-29)
+
+Leg (b), pe:sourceDigest Art. 12 — engine-minted digest, two real
+collaborators agreeing (`mix run /tmp/gl28-1-legb-mint.exs`:
+`LAW_STATES_HEAD=blake3:dc0088be1cab1b4c41922511b036ee65159c8098e33c5f6c8a7a5cad4485a46e`
+== `CANONICAL_ID`, `MINT_AGREES=true` over the real wasm, engine_sha256
+`34fd4ada…`); mapper attribute + typed bridge ingest gate
+(`{:missing_field, :source_digest}`), flip-twin zero-writes witnessed;
+receipt `receipts/graphlaw_bridge/gl28-1-legb-conform-1793284150930.json`
+(conformant, native RF3 oracle, `GATE_FLIP` + `COUNTS_AFTER_FLIP=1/1`
+embedded). pe:sourceDigest = content identity of the executed law
+(RDFC-1.0 canonical N-Quads), documented deviation from P01's
+exact-source-bytes BLAKE3.
+
+Leg (c), real emission witness — real supervised GraphlawEx over the
+pinned artifact through the PUBLIC admit path; the seam that made this
+lawful is the admit/3 opts passthrough (graphlaw_ex.ex + authority.ex
+engine_opts), landed in the same window after the leg-(b) lane proved
+the old hardwired opts made the gate unsatisfiable through admit.
+Witness receipt `receipts/graphlaw_bridge/
+gl28-1-legc-witness-1793281937341.json` (`ENGINE_REPLY_OK=true`,
+`COUNTS=%{events: 1, objects: 1}`, real `DURATION_NATIVE=5477750`
+refuting the synthetic constants, verdict `:conformant`, oracle
+`native_rf3_binary`, receipt `engine_sha256` == on-disk artifact
+digest). Anti-vacuity: detach -> second real admit -> counts unchanged.
+
+Ladder as-run (2026-10-29): `cargo test --test n3_proof_lease_court` 4
+passed; graphlaw_ex `mix test` 133 passed (88.0s); beam4pm bridge file
+`mix test test/beam4pm_graphlaw_bridge_test.exs` **11 passed / 0
+skips**; beam4pm full suite 69 pre-existing environmental failures
+(graphlaw CLI off PATH, autofde_lab module, rust4pm-wasm artifact
+unbuilt), zero reachable from the diffs. Register: GL28-1 row
+PARTIAL_ALIVE -> **ALIVE**; GL28-1.1 tick closed.
+
+Standing: ALIVE — every leg ran and passed this session with receipts
+on disk. beam4pm side committed fd63b705..(this batch); graphlaw side
+graphlaw_ex admit/3 commit + this fold.
