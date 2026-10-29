@@ -61,9 +61,9 @@ Full design authority per ticket: `GL28-2-SMALT-WIRE-SPEC.md` §5-§8,
 - **GL28-5 — LANDED.** `docs/reference/conformance_claim.md`
   exists on disk (verified this sync). The enforcement-teeth sequencing
   slot GL28-5 held is closed; no further order re-asks for it.
-- **GL28-6 — DESIGN filed** (`GL28-6-KILLSWITCH-DESIGN.md`, this dir);
+- **GL28-6 — LANDED @ 4d2ffd0** (kill-switch: KillSwitch epoch, Host pre-envelope, :lease_revoked; court `test/graphlaw_ex/kill_switch_test.exs`);
   implementation lane in flight. Standing: DESIGN, not LANDED.
-- **GL28-7 — DESIGN filed** (`GL28-7-AUTHORITY-PORT-DESIGN.md`, this dir);
+- **GL28-7 — LANDED @ 4d2ffd0** (authority: claim/check_op/check_ceiling, :ceiling_unmet pre-gate in run/3; court `test/a2a_authority_ceiling_court_test.exs`);
   implementation lane in flight. Standing: DESIGN, not LANDED.
 - **GL28-13 — census filed** (`GL28-13-SLIMMING-CENSUS.md`): ICU drop
   (−3 MB) + MinSizeRel wasm32 rebuild (−10–18 MB) restores the original
@@ -87,7 +87,8 @@ Full design authority per ticket: `GL28-2-SMALT-WIRE-SPEC.md` §5-§8,
 
 - **GL28-1** wasm4pm OCEL 2.0 conformance engine (Art. 12) — L, BLOCKED-external.
   Telemetry handler projecting [:graphlaw_ex, :admit, :stop] into OCEL 2.0
-  records + a wasm4pm consumer court. Falsifier: an injected non-conformant
+  records + a wasm4pm consumer court. Design authority:
+  `GL28-1-ENVELOPE-SPEC.md` (this dir). Falsifier: an injected non-conformant
   event must fail the checker.
 - **GL28-2** Smalt local-cloud integration — XL. Deterministic wire protocol,
   wire-parity court (same receipt bytes both paths), admission-only commit
