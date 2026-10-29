@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "62406928b117a8f04ad7d66edb3fb69786b8b79c8f193d348d0996a66b12e80b",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-29T121354Z-Write-62406928.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/.claude/projects/-Users-sac-graphlaw/memory/elixir-toolchain-shadowing.md",
+  "timestamp_utc": "2026-10-29T121354Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

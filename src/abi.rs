@@ -149,7 +149,7 @@ fn json_depth(b: &[u8]) -> usize {
 
 /// Response for a request that exceeds `MAX_REQUEST_BYTES` (used by the wasm shim).
 pub fn limit_response(name: &str, observed: usize, max: usize) -> Vec<u8> {
-    vec![1] /* ~ changed by cargo-mutants ~ */
+    respond(Err(limit(name, observed, max)))
 }
 
 /// Response for a call whose request buffer does not exist (`gl_alloc` refused).
