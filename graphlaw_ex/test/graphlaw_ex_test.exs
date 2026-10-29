@@ -5,8 +5,9 @@ defmodule GraphlawExTest do
   # artifact is a loud typed skip, never a faked pass — and when
   # GRAPHLAW_REQUIRE_ENGINE=1 is set, a skip is a failure (fail-closed gate).
   # No mocks, no sleeps.
+  # LOCAL FALLBACK until GraphlawEx.TestEngine.wasm_path/0 lands — swap to it.
   @wasm_path System.get_env("PRIV_WASM") ||
-               Path.expand("priv/graphlaw/graphlaw.wasm", __DIR__)
+               Path.expand("../priv/graphlaw/graphlaw.wasm", __DIR__)
 
   @require_engine System.get_env("GRAPHLAW_REQUIRE_ENGINE") == "1"
 

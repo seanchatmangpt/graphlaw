@@ -111,7 +111,12 @@ defmodule GraphlawEx.TelemetryTest do
     @tag :wasm
     @tag timeout: 300_000
     test "a real admit through the facade emits the full span" do
-      path = System.get_env("PRIV_WASM") || Path.expand("priv/graphlaw/graphlaw.wasm", __DIR__)
+      path =
+        System.get_env("PRIV_WASM") ||
+          if(Code.ensure_loaded?(GraphlawEx.TestEngine) and
+               function_exported?(GraphlawEx.TestEngine, :wasm_path, 0),
+            do: GraphlawEx.TestEngine.wasm_path(),
+            else: Path.expand("../../priv/graphlaw/graphlaw.wasm", __DIR__))
 
       if File.regular?(path) do
         collector = Collector.attach(:"admit-real-#{System.unique_integer()}", Telemetry.events())

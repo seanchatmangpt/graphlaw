@@ -76,7 +76,12 @@ defmodule GraphlawEx.EngineLoadTest do
 
   describe "cache" do
     test "only an admitted module is cached, and the real artifact round-trips the cache" do
-      path = System.get_env("PRIV_WASM") || Path.expand("priv/graphlaw/graphlaw.wasm", __DIR__)
+      path =
+        System.get_env("PRIV_WASM") ||
+          if(Code.ensure_loaded?(GraphlawEx.TestEngine) and
+               function_exported?(GraphlawEx.TestEngine, :wasm_path, 0),
+            do: GraphlawEx.TestEngine.wasm_path(),
+            else: Path.expand("../../priv/graphlaw/graphlaw.wasm", __DIR__))
 
       if File.regular?(path) do
         bytes = File.read!(path)

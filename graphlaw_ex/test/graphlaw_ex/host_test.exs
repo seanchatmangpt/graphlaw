@@ -9,7 +9,7 @@ defmodule GraphlawEx.HostTest do
   # (:sys.suspend/1 suspends the GenServer's message processing), never
   # time-based.
 
-  @wasm_path System.get_env("PRIV_WASM") || Path.expand("priv/graphlaw/graphlaw.wasm", __DIR__)
+  @wasm_path GraphlawEx.TestEngine.wasm_path()
   @require_engine System.get_env("GRAPHLAW_REQUIRE_ENGINE") == "1"
 
   # The first host start in a fresh VM compiles the real 74 MB artifact.

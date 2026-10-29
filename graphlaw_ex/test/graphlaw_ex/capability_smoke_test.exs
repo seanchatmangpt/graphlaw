@@ -11,7 +11,10 @@ defmodule GraphlawEx.CapabilitySmokeTest do
   alias GraphlawEx.Result.Admitted
 
   @wasm_path System.get_env("PRIV_WASM") ||
-               Path.expand("priv/graphlaw/graphlaw.wasm", __DIR__)
+               if(Code.ensure_loaded?(GraphlawEx.TestEngine) and
+                    function_exported?(GraphlawEx.TestEngine, :wasm_path, 0),
+                  do: GraphlawEx.TestEngine.wasm_path(),
+                  else: Path.expand("../../priv/graphlaw/graphlaw.wasm", __DIR__))
 
   @require_engine System.get_env("GRAPHLAW_REQUIRE_ENGINE") == "1"
 
@@ -82,7 +85,39 @@ defmodule GraphlawEx.CapabilitySmokeTest do
         assert name in caps.ops
       end
 
+      # Bidirectional gate: the engine's self-reported surface must equal the
+      # registry's pin exactly — set-equal ops, byte-equal digests, matching
+      # authority set. Any drift on either side flips this court.
+      assert Enum.sort(caps.ops) == Enum.sort(GraphlawEx.Capability.Registry.names())
+
+      assert caps.registry_blake3 == GraphlawEx.Capability.Registry.digest()
+      assert caps.surface_blake3 == GraphlawEx.Capability.Registry.surface_digest()
+
       assert is_list(caps.rdf_dialects) and is_list(caps.other_dialects)
+
+      # The engine reports fine-grained authority ids ({capability, authority,
+      # revision} objects), not the engines() display vocabulary. The current
+      # engine pins the frozen-duckdb engine plus the purrdf family; pin the
+      # exact closed set so any authority added or dropped on the engine side
+      # flips this court.
+      authorities =
+        for a <- caps.authorities || [], is_map(a), key <- [a["authority"]], is_binary(key), do: key
+
+      assert Enum.uniq(Enum.sort(authorities)) == [
+               "frozen-duckdb",
+               "purrdf",
+               "purrdf::datalog",
+               "purrdf::entail",
+               "purrdf::n3",
+               "purrdf::shapes",
+               "purrdf::shex",
+               "purrdf::sparql"
+             ]
+
+      for a <- caps.authorities || [] do
+        assert is_binary(a["capability"]) and is_binary(a["authority"]) and is_binary(a["revision"])
+      end
+
       assert caps.raw["ok"] == true
     end
   end

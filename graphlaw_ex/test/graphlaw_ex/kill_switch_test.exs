@@ -15,7 +15,7 @@ defmodule GraphlawEx.KillSwitchTest do
   alias GraphlawEx.KillSwitch
   alias GraphlawEx.Refusal
 
-  @wasm_path System.get_env("PRIV_WASM") || Path.expand("priv/graphlaw/graphlaw.wasm", __DIR__)
+  @wasm_path GraphlawEx.TestEngine.wasm_path()
   @require_engine System.get_env("GRAPHLAW_REQUIRE_ENGINE") == "1"
 
   setup do

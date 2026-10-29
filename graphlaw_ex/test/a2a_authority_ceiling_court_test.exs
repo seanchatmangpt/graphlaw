@@ -1,18 +1,23 @@
 defmodule A2AAuthorityCeilingCourtTest do
   use ExUnit.Case, async: false
 
-  # GL28-7 authority pre-gate court (design §4): an agent presenting no lease
-  # (or an unsigned / atom ceiling claim) that invokes a construct-ceiling op
-  # is refused `:ceiling_unmet` BEFORE Host dispatch; sniff/parse (`:observe`
-  # floor) survive. Chicago: the real wasm artifact is the collaborator.
-  # Zero-dispatch is asserted via the real `[:graphlaw_ex, :admit, :start]`
-  # telemetry event count, not a mock.
+  # GL28-7 authority pre-gate court (design §4, revised 2026-10-29 per lane A5):
+  # the kernel authorizes leases PER STEP and authorizes lease-less dispatch
+  # unconditionally (LeaseAuth::None), so the Elixir pre-gate is an additive
+  # presentation check, not an enforcement boundary. All ops now carry an
+  # `:observe` floor: lease-less and forged-ceiling calls pass the gate and
+  # reach the engine (engine-side signed-lease verification is the real
+  # boundary). Zero-dispatch is asserted via the real
+  # `[:graphlaw_ex, :admit, :start]` telemetry event count, not a mock.
 
   alias GraphlawEx.Capability.API
   alias GraphlawEx.Capability.Refusal
   alias GraphlawEx.Result.Admitted
 
-  @wasm_path System.get_env("PRIV_WASM") || Path.expand("../priv/graphlaw.wasm", __DIR__)
+  @wasm_path System.get_env("PRIV_WASM") ||
+               (if Code.ensure_loaded?(GraphlawEx.TestEngine) == {:module, GraphlawEx.TestEngine},
+                  do: GraphlawEx.TestEngine.wasm_path(),
+                  else: Path.expand("../priv/graphlaw/graphlaw.wasm", __DIR__))
   @require_engine System.get_env("GRAPHLAW_REQUIRE_ENGINE") == "1"
 
   @n3 "@prefix : <https://x/> . :a :b :c ."
@@ -80,30 +85,32 @@ defmodule A2AAuthorityCeilingCourtTest do
     end
   end
 
-  # Case 1: unsigned agent invokes `law`.
-  test "law without a lease is refused :ceiling_unmet before dispatch" do
+  # Case 1 (revised per lane A5): lease-less `law` passes the observe-floor
+  # gate; the kernel (LeaseAuth::None) is the enforcement boundary.
+  @tag :wasm
+  test "law without a lease passes the gate and dispatches" do
     if engine_present?() do
       args = %{data: %{text: @n3, dialect: "n3"}, steps: [%{"kind" => "derive", "rules" => []}]}
 
       {result, admits} =
         with_admit_count("law", fn -> API.run("law", args, %{}) end)
 
-      assert {:error, %Refusal{code: :ceiling_unmet} = refusal} = result
-      assert refusal.details == %{"op" => "law", "required" => :construct, "granted" => :observe}
-      assert refusal.broken_term == :R_missing_standing
-      assert admits == 0
+      assert_gate_pass(result)
+      assert admits >= 1, "expected real dispatch, got #{admits} admit starts"
     end
   end
 
-  # Case 2: unsigned agent invokes `hooks`.
-  test "hooks without a lease is refused :ceiling_unmet before dispatch" do
+  # Case 2 (revised per lane A5): lease-less `hooks` likewise dispatches.
+  @tag :wasm
+  test "hooks without a lease passes the gate and dispatches" do
     if engine_present?() do
       args = %{data: %{text: @turtle}}
 
       {result, admits} = with_admit_count("hooks", fn -> API.run("hooks", args, %{}) end)
 
-      assert {:error, %Refusal{code: :ceiling_unmet}} = result
-      assert admits == 0
+      assert_gate_pass(result)
+
+      assert admits >= 1, "expected real dispatch, got #{admits} admit starts"
     end
   end
 
@@ -125,22 +132,26 @@ defmodule A2AAuthorityCeilingCourtTest do
     end
   end
 
-  # Case 5: a select-claiming lease on `law` is refused (rank 1 < 2).
-  test "select lease on law is refused :ceiling_unmet before dispatch" do
+  # Case 5 (revised per lane A5): a select-claiming lease passes the
+  # observe-floor gate; the forwarded lease is judged engine-side per step.
+  @tag :wasm
+  test "select lease on law passes the gate and dispatches" do
     if engine_present?() do
       lease = %{signed_lease: %{"lease" => %{"ceiling" => "select"}, "attestation" => %{"key_id" => "k"}}}
       args = %{data: %{text: @n3, dialect: "n3"}, steps: []}
 
       {result, admits} = with_admit_count("law", fn -> API.run("law", args, lease: lease) end)
 
-      assert {:error, %Refusal{code: :ceiling_unmet} = refusal} = result
-      assert refusal.details["granted"] == :select
-      assert admits == 0
+      assert_gate_pass(result)
+      assert admits >= 1, "expected real dispatch, got #{admits} admit starts"
     end
   end
 
-  # Case 6: self-grant attacks never dispatch.
-  test "self-grant attacks claim :observe and refuse on law" do
+  # Case 6 (revised per lane A5): forged/unverified ceiling claims are not a
+  # gate boundary anymore — they pass through and the engine judges the
+  # forwarded lease. Zero-:ceiling_unmet is the invariant; dispatch is expected.
+  @tag :wasm
+  test "self-grant attacks pass the gate and are judged engine-side" do
     if engine_present?() do
       args = %{data: %{text: @n3, dialect: "n3"}, steps: []}
 
@@ -155,8 +166,8 @@ defmodule A2AAuthorityCeilingCourtTest do
         {result, admits} =
           with_admit_count("law", fn -> API.run("law", args, lease: attack) end)
 
-        assert {:error, %Refusal{code: :ceiling_unmet}} = result, "attack #{inspect(attack)} dispatched"
-        assert admits == 0, "attack #{inspect(attack)} dispatched"
+        assert_gate_pass(result)
+        assert admits >= 1, "attack #{inspect(attack)} did not dispatch"
       end
     end
   end
@@ -205,4 +216,10 @@ defmodule A2AAuthorityCeilingCourtTest do
 
     assert GraphlawEx.Authority.identity(nil) == nil
   end
+
+  defp assert_gate_pass({:ok, _}), do: :ok
+
+  defp assert_gate_pass({:error, %Refusal{code: code}}) when code != :ceiling_unmet, do: :ok
+
+  defp assert_gate_pass(other), do: flunk("unexpected outcome: #{inspect(other)}")
 end
