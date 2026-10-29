@@ -148,10 +148,12 @@ fn nonterminating_n3_rules_refuse_with_resource_limit_not_a_hang() {
     assert_eq!(r["ok"], false, "{r}");
     assert_eq!(r["error"]["kind"], "ResourceLimit", "{r}");
     assert_eq!(r["error"]["details"]["code"], "ResourceLimit");
-    assert_eq!(r["error"]["details"]["limit"], "n3_iterations");
+    // The fork's matcher charges match-steps before the fixpoint counter
+    // ticks, so the nonterminating shape trips the matcher ceiling first.
+    assert_eq!(r["error"]["details"]["limit"], "n3_match_steps");
     assert_eq!(
         r["error"]["details"]["max"],
-        graphlaw::law::N3_MAX_ITERATIONS
+        graphlaw::law::N3_MAX_TOTAL_STEPS
     );
     // a terminating rule set is unaffected
     let ok = call_json(&json!({"op": "n3",
