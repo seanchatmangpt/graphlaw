@@ -506,3 +506,17 @@ ladder receipts as-run:
 Open legs are filed, not forgotten: GL28-1 (b)/(c), GL28-13 slimming,
 GL28-14 MCP projection implementation, GL28-12 operator-gated npm
 Trusted Publisher + hex auth — see GL28-BACKLOG.md.
+
+## Incident receipt — court inversion raced into eba76da (2026-10-29)
+
+The successor mutation sweep (PID 1862) never exited after the
+receipted sweep completed; it kept applying in-place inversions. The
+coordinator's `git add -u` staging in eba76da raced one applied
+inversion (`src/abi.rs` `limit_response` -> `vec![1]`) into a pushed
+commit. Detected by post-close sweep (`git status` dirty on src/),
+verified via `git show HEAD:src/abi.rs`. Fix-forward d94cdba restored
+the file byte-exact from the last clean commit (ddfb587) after killing
+the leftover processes. Law reinforced: after any mutation-court run —
+including a "completed" one — the coordinator re-checks `git status`
+for `~ changed by cargo-mutants ~` inversions BEFORE staging; a court
+process with no live listener on its outcome is an orphan, kill it.
