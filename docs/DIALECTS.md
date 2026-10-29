@@ -64,6 +64,11 @@ In addition to pure RDF dataset and N3 logic dialects, GraphLaw admits declarati
   but dual-carrying either pair is REFUSAL-01 — exactly one projection list,
   one data source clause, one filter clause (`src/sql_ast.rs`; never silently
   ignored).
+- **Set operations** (SQLRDF-27 gap #1): `UNION [ALL] [BY NAME]`, `INTERSECT`,
+  `EXCEPT` compile from RDF ASTs (`src/sql_ast.rs`, `SetOpKind`) — `sql:setAll`
+  and `sql:byName` xsd:boolean flags, `BY NAME` valid on UNION only; UNION
+  dedups, UNION ALL preserves duplicates. Courts:
+  `tests/set_operations_court.rs`.
 - **Output**: Vectorized execution directly over Parquet partitions or in-memory tables, emitting typed RDF statements accompanied by a BLAKE3 query execution receipt.
 
 ### Projection surface (SQLRDF-25)

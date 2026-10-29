@@ -51,6 +51,11 @@ not publish to crates.io — distribution is this repository and GitHub releases
 
 ### Added
 
+- **sql-rdf:** set operations — `UNION [ALL] [BY NAME]`, `INTERSECT`, `EXCEPT` —
+  compile from RDF ASTs (SQLRDF-27 dialect gap #1, `6da1d33`): `sql:setAll` /
+  `sql:byName` xsd:boolean flags (`BY NAME` valid on UNION only); UNION dedups,
+  UNION ALL preserves duplicates. Courts: `tests/set_operations_court.rs`
+  (dedup/ALL/BY-NAME legs, INTERSECT/EXCEPT row-set twins).
 - **n3:** Proof-checker hardening (WP P01). `purrdf::n3::proof_check::CheckPolicy`
   (`trusted_resolve`, `trusted_digest`; hardened `false` by default;
   `CheckPolicy::legacy()` restores pre-hardening behavior for old proof documents
