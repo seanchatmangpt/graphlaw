@@ -41,8 +41,8 @@ use std::path::PathBuf;
 use graphlaw::abi::call_json;
 use serde_json::{Value, json};
 
-const PURRDF: &str = "2.0.2";
-const EYERON: &str = "0.7.9";
+const PURRDF: &str = "3.0.1";
+const N3_ENGINE: &str = "purrdf-n3/3.0.1";
 const GENERATOR: &str = "plan_replay_oracle_gen";
 
 // ------------------------------------------------------------------ datalog
@@ -971,7 +971,7 @@ fn build_vector_json(v: &Vector, rev: &str, version: &str) -> Value {
             "graphlaw_rev": rev,
             "graphlaw_version": version,
             "purrdf": PURRDF,
-            "eyeron": EYERON,
+            "n3_engine": N3_ENGINE,
             "generator": GENERATOR,
             "stratified": true,
         },

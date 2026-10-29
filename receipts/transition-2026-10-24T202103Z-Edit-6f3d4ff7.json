@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "6f3d4ff754e4c27502e0fee424d257693253c04f55e3c9008369427bb419fbcd",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T202103Z-Edit-6f3d4ff7.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/vendor/purrdf-sparql-eval/src/lib.rs",
+  "timestamp_utc": "2026-10-24T202103Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

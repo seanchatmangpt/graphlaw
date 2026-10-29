@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "7f80e9be507f4f783f3da0590d520bdad4b080652da24da6ccb91427d6e7e71b",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T203554Z-Write-7f80e9be.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/bat-templates/r4-banking.md",
+  "timestamp_utc": "2026-10-24T203554Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

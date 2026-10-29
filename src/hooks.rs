@@ -343,10 +343,12 @@ impl HookPack {
                     } else {
                         None
                     };
-                    let delta = if refuse_reason.is_some() {
-                        RdfDatasetBuilder::new()
-                            .freeze()
-                            .map_err(|e| Refusal::engine(Dialect::NQuads, e))?
+                    let mut b = RdfDatasetBuilder::new();
+                    b.push_dataset(current.dataset())
+                        .map_err(|e| Refusal::engine(Dialect::NQuads, e))?;
+                    if refuse_reason.is_some() {
+                        // Refusal hook: the firing is recorded over the current
+                        // state alone — no delta is merged.
                     } else {
                         match NativeSparqlEngine::new()
                             .query(
@@ -359,7 +361,9 @@ impl HookPack {
                             )
                             .map_err(|e| Refusal::engine(Dialect::Sparql, e))?
                         {
-                            SparqlResult::Graph(g) => g,
+                            SparqlResult::Graph(g) => b
+                                .push_dataset(&g)
+                                .map_err(|e| Refusal::engine(Dialect::NQuads, e))?,
                             other => {
                                 return Err(refuse(
                                     RefusalKind::Unsupported,
@@ -370,10 +374,7 @@ impl HookPack {
                                 ));
                             }
                         }
-                    };
-                    let mut b = RdfDatasetBuilder::new();
-                    b.push_dataset(current.dataset());
-                    b.push_dataset(&delta);
+                    }
                     let (f, ty, class, hook_p, hook_o) = (
                         b.intern_iri(&marker),
                         b.intern_iri("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
@@ -381,8 +382,17 @@ impl HookPack {
                         b.intern_iri(&format!("{KH}hook")),
                         b.intern_iri(&hook.iri),
                     );
-                    b.push_quad(f, ty, class, None);
-                    b.push_quad(f, hook_p, hook_o, None);
+                    let (f, ty, class, hook_p, hook_o) = (
+                        f.map_err(|e| Refusal::engine(Dialect::NQuads, e))?,
+                        ty.map_err(|e| Refusal::engine(Dialect::NQuads, e))?,
+                        class.map_err(|e| Refusal::engine(Dialect::NQuads, e))?,
+                        hook_p.map_err(|e| Refusal::engine(Dialect::NQuads, e))?,
+                        hook_o.map_err(|e| Refusal::engine(Dialect::NQuads, e))?,
+                    );
+                    b.push_quad(f, ty, class, None)
+                        .map_err(|e| Refusal::engine(Dialect::NQuads, e))?;
+                    b.push_quad(f, hook_p, hook_o, None)
+                        .map_err(|e| Refusal::engine(Dialect::NQuads, e))?;
                     let merged = b
                         .freeze()
                         .map_err(|e| Refusal::engine(Dialect::NQuads, e))?;

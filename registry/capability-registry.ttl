@@ -349,6 +349,22 @@
     gac:limitUnit "bytes" ;
     gac:limitValue 16777216 .
 
+<https://graphlaw.dev/registry#limit/n3_max_backward_depth>
+    a gac:Limit ;
+    gac:limitName "n3_max_backward_depth" ;
+    gac:limitScope "n3" ;
+    gac:limitSource "src/law.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 32 .
+
+<https://graphlaw.dev/registry#limit/n3_max_backward_solutions_per_goal>
+    a gac:Limit ;
+    gac:limitName "n3_max_backward_solutions_per_goal" ;
+    gac:limitScope "n3" ;
+    gac:limitSource "src/law.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 1024 .
+
 <https://graphlaw.dev/registry#limit/n3_max_derived_facts>
     a gac:Limit ;
     gac:limitName "n3_max_derived_facts" ;
@@ -363,7 +379,7 @@
     gac:limitScope "n3" ;
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "count" ;
-    gac:limitValue 4000 .
+    gac:limitValue 4000000 .
 
 <https://graphlaw.dev/registry#limit/n3_max_match_steps>
     a gac:Limit ;
@@ -371,7 +387,7 @@
     gac:limitScope "n3" ;
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "steps" ;
-    gac:limitValue 50000000 .
+    gac:limitValue 200000 .
 
 <https://graphlaw.dev/registry#limit/n3_max_term_bytes>
     a gac:Limit ;
@@ -381,6 +397,14 @@
     gac:limitUnit "bytes" ;
     gac:limitValue 65536 .
 
+<https://graphlaw.dev/registry#limit/n3_max_term_depth>
+    a gac:Limit ;
+    gac:limitName "n3_max_term_depth" ;
+    gac:limitScope "n3" ;
+    gac:limitSource "src/law.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 64 .
+
 <https://graphlaw.dev/registry#limit/n3_max_total_bytes>
     a gac:Limit ;
     gac:limitName "n3_max_total_bytes" ;
@@ -388,6 +412,14 @@
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "bytes" ;
     gac:limitValue 268435456 .
+
+<https://graphlaw.dev/registry#limit/n3_max_total_steps>
+    a gac:Limit ;
+    gac:limitName "n3_max_total_steps" ;
+    gac:limitScope "n3" ;
+    gac:limitSource "src/law.rs" ;
+    gac:limitUnit "steps" ;
+    gac:limitValue 50000000 .
 
 <https://graphlaw.dev/registry#model-enum/Ceiling/1>
     a gac:ModelEnumValue ;
@@ -1607,7 +1639,7 @@
 
 <https://graphlaw.dev/registry#op/n3/response/default/derived>
     a gac:CapabilityField ;
-    gac:fieldDoc "Reasoner output; shape is owned by Eyeron." ;
+    gac:fieldDoc "Reasoner output; shape is owned by purrdf::n3." ;
     gac:fieldName "derived" ;
     gac:fieldNullable false ;
     gac:fieldOrder 1 ;
@@ -2058,7 +2090,7 @@
 
 <https://graphlaw.dev/registry#op/sniff/response/default/engine>
     a gac:CapabilityField ;
-    gac:fieldDoc "Owning engine (PurRdf or Eyeron)." ;
+    gac:fieldDoc "Owning engine (PurRdf or FrozenDuckdb)." ;
     gac:fieldName "engine" ;
     gac:fieldNullable false ;
     gac:fieldOrder 2 ;
@@ -2564,10 +2596,10 @@
     a gac:Registry ;
     gac:abiVersion 1 ;
     gac:dialectCount 14 ;
-    gac:graphlawVersion "26.10.22" ;
+    gac:graphlawVersion "26.10.28" ;
     gac:opCount 14 ;
-    gac:receiptSurfaceBlake3 "blake3:7e34917e1499443427f7ac66939d430691572b484379907355824970e23725b4" ;
-    gac:registryBlake3 "blake3:2a4d109e8ba2c71ff0fc49cc38dbb829dbc8970e13960d9e6202da633ea81c7e" ;
+    gac:receiptSurfaceBlake3 "blake3:11fb8f9ab810b8f387fb162da274cb53717752238b8d58b30fbb29e53042b5ca" ;
+    gac:registryBlake3 "blake3:6e1103673508ade20f2276e93c7c948dd4f7c31689a25a325fac4a308856035d" ;
     gac:schemaId "graphlaw.capability-registry/1" ;
     gac:surfaceBlake3 "blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9" .
 
@@ -2581,12 +2613,6 @@
     a gac:VocabularyEntry ;
     gac:vocabOf "engines" ;
     gac:vocabOrder 2 ;
-    gac:vocabValue "Eyeron" .
-
-<https://graphlaw.dev/registry#vocab/engines/3>
-    a gac:VocabularyEntry ;
-    gac:vocabOf "engines" ;
-    gac:vocabOrder 3 ;
     gac:vocabValue "FrozenDuckdb" .
 
 <https://graphlaw.dev/registry#vocab/lease_ceilings/1>

@@ -142,7 +142,21 @@ pub mod refusal_arm {
     /// empty/whitespace one (never a silent `COLUMNS('')`). Recovery: one
     /// quoted pattern string.
     pub const COLUMNS_PATTERN: u16 = 52;
-    /// REFUSAL-01 arm (SQLRDF-27 dialect gap #1, appended append-only): a
+
+    /// Resolve a shape-message arm marker (`[REFUSAL-01 COLUMNS_PATTERN]`)
+    /// to the arm constant. Single source of truth remains the constants
+    /// themselves; this table only decodes the marker text the SHACL shapes
+    /// embed, so the gate re-emits typed arms instead of the generic
+    /// SHACL_VIOLATIONS carrier when a shape already names one.
+    pub fn by_marker(name: &str) -> Option<u16> {
+        Some(match name {
+            "COLUMNS_PATTERN" => COLUMNS_PATTERN,
+            "STAR_MODIFIER_POSITION" => STAR_MODIFIER_POSITION,
+            _ => return None,
+        })
+    }
+
+        /// REFUSAL-01 arm (SQLRDF-27 dialect gap #1, appended append-only): a
     /// `sql:SetOperationStatement` node carries no `sql:setRight` — the
     /// rendered SQL would be `( SELECT … ) UNION ` with an empty right
     /// operand. A set operation is binary by construction. Recovery: attach

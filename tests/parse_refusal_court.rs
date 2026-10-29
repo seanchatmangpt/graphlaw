@@ -36,16 +36,19 @@ fn bad_iri_from_relative_iri_without_base() {
     assert_eq!(err.reason, ReasonClass::BadIri, "got: {err}");
 }
 
-/// Undeclared prefixed name offered to Eyeron: `unknown prefix` surfaces as
+/// Undeclared prefixed name offered to purrdf-n3: `unknown prefix` surfaces as
 /// UndefinedPrefix with a byte offset and derived line/col.
 #[test]
 fn undefined_prefix_from_real_n3_document() {
     let bad = "ex:nope ex:nope ex:nope .\n";
     let err = check_typed(bad.as_bytes(), Dialect::N3, None).unwrap_err();
     assert_eq!(err.dialect, Dialect::N3);
-    assert_eq!(err.engine, Engine::Eyeron);
+    assert_eq!(err.engine, Engine::PurRdf);
     assert_eq!(err.reason, ReasonClass::UndefinedPrefix, "got: {err}");
-    assert!(err.byte_offset.is_some(), "Eyeron reports an offset: {err}");
+    assert!(
+        err.byte_offset.is_some(),
+        "purrdf-n3 reports an offset: {err}"
+    );
     assert!(err.line.is_some() && err.col.is_some());
 }
 
@@ -131,7 +134,7 @@ fn remote_context_array_detected_inline_object_not() {
 }
 
 /// Limit refusals carry the real observed/max counts, map from
-/// `eyeron::ReasonerLimit`, and convert to the legacy ResourceLimit kind.
+/// `n3::ReasonerLimit`, and convert to the legacy ResourceLimit kind.
 #[test]
 fn limit_class_carries_counts_and_maps_from_reasoner_limit() {
     let r = ParseRefusal::limit(
@@ -152,7 +155,7 @@ fn limit_class_carries_counts_and_maps_from_reasoner_limit() {
     let legacy: Refusal = r.into();
     assert_eq!(legacy.kind, RefusalKind::ResourceLimit);
 
-    let rc: ReasonClass = graphlaw::eyeron::ReasonerLimit::MatchSteps.into();
+    let rc: ReasonClass = graphlaw::n3::ReasonerLimit::MatchSteps.into();
     let ReasonClass::Limit { name, .. } = rc else {
         panic!("expected Limit");
     };

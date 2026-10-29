@@ -1,0 +1,46 @@
+{
+  "receipt": "spc",
+  "date": "2026-10-24",
+  "bench": "tc_hot_01",
+  "leg": "clone_path",
+  "mode": "SMOKE",
+  "inject_outlier": false,
+  "usl_ns": 250.0,
+  "cpk_min": 1.33,
+  "mean_ns": 107.091,
+  "stddev_ns": 4.663,
+  "cpk": 10.2158,
+  "cpk_batch": 10.2158,
+  "statistic_basis": "amortized per-op, windowed",
+  "p50_ns": 105,
+  "p95_ns": 120,
+  "p99_ns": 123,
+  "p999_ns": 130,
+  "max_ns": 130,
+  "iterations": 1000000,
+  "samples": 999,
+  "tail_gate": {
+    "tail_fraction": 0.0,
+    "tail_frac_max": 0.0001,
+    "max_sample_ns": 130,
+    "tail_max_budget_ns": 2500.0
+  },
+  "load": "quiet",
+  "load_provenance": "self-reported",
+  "shewhart": {
+    "rule1_beyond_3sigma": {
+      "flagged": true,
+      "count": 26,
+      "lcl_ns": 93.102,
+      "ucl_ns": 121.08
+    },
+    "rule2_monotonic_run_8": {
+      "flagged": false,
+      "longest_run": 4,
+      "direction": "up"
+    },
+    "assignable_cause_detected": true
+  },
+  "verdict": "PASS",
+  "reasons": null
+}

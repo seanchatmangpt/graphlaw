@@ -215,7 +215,7 @@ fn n3_and_datalog_agree_on_the_shared_recursive_closure() {
 fn malformed_n3_and_malformed_datalog_fail_closed() {
     let n3 = run(json!({"op": "n3", "text": "{ ?x a } =>"}));
     assert_eq!(n3["ok"], false, "{n3}");
-    assert_eq!(n3["error"]["engine"], "Eyeron", "{n3}");
+    assert_eq!(n3["error"]["engine"], "PurRdf", "{n3}");
 
     let datalog = run(json!({
         "op": "datalog",

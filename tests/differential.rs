@@ -71,7 +71,7 @@ fn n3_closure(es: &BTreeSet<(usize, usize)>) -> BTreeSet<(String, String)> {
          {{ ?x <{NS}ancestor> ?y . ?y <{NS}parent> ?z }} => {{ ?x <{NS}ancestor> ?z }} .\n",
         nt_edges(es)
     );
-    let out = graphlaw::n3::reason(&doc).expect("eyeron closure");
+    let out = graphlaw::n3::reason(&doc).expect("purrdf::n3 closure");
     let ds = graphlaw::rdf::parse_dataset(out.as_bytes(), "text/turtle", None).unwrap();
     ancestor_pairs(&ds)
 }
@@ -168,7 +168,7 @@ fn n3_datalog_and_owlrl_agree_on_transitive_closure() {
             truth,
             "datalog, seed {seed}, edges {es:?}"
         );
-        assert_eq!(n3_closure(&es), truth, "eyeron, seed {seed}, edges {es:?}");
+        assert_eq!(n3_closure(&es), truth, "purrdf::n3, seed {seed}, edges {es:?}");
         assert_eq!(
             owlrl_closure(&es),
             truth,

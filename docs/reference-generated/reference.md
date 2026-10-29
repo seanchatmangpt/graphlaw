@@ -28,1548 +28,152 @@
 | `typecheck` | script | tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit |  |  |  |  |
 
 
+### GraphlawEx
+
+| `admit` | function | admit/2 |  |  |  |  |
+
+| `handle_call` | function | handle_call/3 |  |  |  |  |
+
+| `init` | function | init/1 |  |  |  |  |
+
+| `start_link` | function | start_link/1 |  |  |  |  |
+
+| `stop` | function | stop/1 |  |  |  |  |
+
+| `abi_not_wired` | str_key | {:error, :abi_not_wired} |  |  |  |  |
+
+| `instance` | str_key | instance: instance |  |  |  |  |
+
+| `module` | str_key | module: module |  |  |  |  |
+
+| `name` | str_key | name: __MODULE__ |  |  |  |  |
+
+| `store` | str_key | store: store |  |  |  |  |
+
+| `wasm_load_failed` | str_key | {:error, {:wasm_load_failed, path, :enoent}} |  |  |  |  |
+
+| `wasm_path` | str_key | wasm_path: wasm_path |  |  |  |  |
+
+
+### GraphlawEx.Application
+
+| `start` | function | start/2 |  |  |  |  |
+
+| `name` | str_key | name: GraphlawEx.Supervisor |  |  |  |  |
+
+| `strategy` | str_key | strategy: :one_for_one |  |  |  |  |
+
+
+### benches/shacl_boundary_cliff.rs
+
+| `../ontologies/sql-ast.ttl` | str_key | CANONICAL_SHAPES = "../ontologies/sql-ast.ttl" |  |  |  |  |
+
+| `@prefix ex: <http://example.org/> .` | str_key | DATA_TTL = "@prefix ex: <http://example.org/> ." |  |  |  |  |
+
+| `@prefix sh: <http://www.w3.org/ns/shacl#> .` | str_key | PREFIX = "@prefix sh: <http://www.w3.org/ns/shacl#> ." |  |  |  |  |
+
+
+### benches/sieve_cliff.rs
+
+| `urn:s/` | str_key | SUBJECT = "urn:s/" |  |  |  |  |
+
+| `urn:v/` | str_key | VOCAB = "urn:v/" |  |  |  |  |
+
+
+### benches/sql_rdf_engine.rs
+
+| `@prefix sql: <http://graphlaw.org/sql#> .` | str_key | SELECT_TURTLE = "@prefix sql: <http://graphlaw.org/sql#> ." |  |  |  |  |
+
+| `CREATE TABLE t(id INTEGER, name VARCHAR); ` | str_key | SEED_SQL = "CREATE TABLE t(id INTEGER, name VARCHAR); " |  |  |  |  |
+
+
+### benches/statutory_boundary_50ms.rs
+
+| `SB_DEBUG` | env_key | std::env::var_os("SB_DEBUG") |  |  |  |  |
+
+| `@prefix : <http://example.org/sb#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#> .
+:trade_47 a :ProposedTrade .
+:trade_47 :notional 25000000 ;
+          :book :emea_deriv .
+{ ?t a :ProposedTrade ;
+     :notional ?n .
+  ?n math:greaterThan 10000000 .
+  ?t :book :emea_deriv }
+  => { ?t :violates :Rule15c3_1 ; :requires :pretrade_review } .
+{ ?t a :ProposedTrade ; :violates :Rule15c3_1 }
+  => { :desk :halt :trade_47 } .
+` | str_key | PROGRAM = "@prefix : <http://example.org/sb#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#> .
+:trade_47 a :ProposedTrade .
+:trade_47 :notional 25000000 ;
+          :book :emea_deriv .
+{ ?t a :ProposedTrade ;
+     :notional ?n .
+  ?n math:greaterThan 10000000 .
+  ?t :book :emea_deriv }
+  => { ?t :violates :Rule15c3_1 ; :requires :pretrade_review } .
+{ ?t a :ProposedTrade ; :violates :Rule15c3_1 }
+  => { :desk :halt :trade_47 } .
+" |  |  |  |  |
+
+| `@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.org/sb#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+ex:TradeShape a sh:NodeShape ;
+  sh:targetClass ex:Order ;
+  sh:closed true ;
+  sh:property [
+    sh:path rdf:type ; sh:minCount 1 ; sh:maxCount 1 ; sh:hasValue ex:Order
+  ] ;
+  sh:property [
+    sh:path ex:id ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer
+  ] ;
+  sh:property [
+    sh:path ex:acct ; sh:minCount 1 ; sh:maxCount 2 ; sh:nodeKind sh:IRI
+  ] ;
+  sh:property [
+    sh:path ex:qty ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer
+  ] .
+` | str_key | SHAPES_TTL = "@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.org/sb#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+ex:TradeShape a sh:NodeShape ;
+  sh:targetClass ex:Order ;
+  sh:closed true ;
+  sh:property [
+    sh:path rdf:type ; sh:minCount 1 ; sh:maxCount 1 ; sh:hasValue ex:Order
+  ] ;
+  sh:property [
+    sh:path ex:id ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer
+  ] ;
+  sh:property [
+    sh:path ex:acct ; sh:minCount 1 ; sh:maxCount 2 ; sh:nodeKind sh:IRI
+  ] ;
+  sh:property [
+    sh:path ex:qty ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer
+  ] .
+" |  |  |  |  |
+
+
 ### benches/tc_hot_01.rs
 
 | `TC_HOT_FULL` | env_key | std::env::var("TC_HOT_FULL") |  |  |  |  |
 
+| `TC_HOT_INJECT_OUTLIER_NS` | env_key | std::env::var("TC_HOT_INJECT_OUTLIER_NS") |  |  |  |  |
+
+| `TC_HOT_SPC_EXPORT` | env_key | std::env::var("TC_HOT_SPC_EXPORT") |  |  |  |  |
+
 
 ### benches/tc_hot_02.rs
 
+| `TC_HOT_CORPUS_PATH` | env_key | std::env::var("TC_HOT_CORPUS_PATH") |  |  |  |  |
+
 | `TC_HOT_FULL` | env_key | std::env::var("TC_HOT_FULL") |  |  |  |  |
 
-
-### crates/graphlaw-eyeron/src/ast.rs
-
-| `CRYPTO_SHA` | const | CRYPTO_SHA: &str |  |  |  |  |
-
-| `DT_DATATYPE` | const | DT_DATATYPE: &str |  |  |  |  |
-
-| `DT_LEXICAL_FORM` | const | DT_LEXICAL_FORM: &str |  |  |  |  |
-
-| `EYELING_DT_DATATYPE` | const | EYELING_DT_DATATYPE: &str |  |  |  |  |
-
-| `EYELING_DT_LEXICAL_FORM` | const | EYELING_DT_LEXICAL_FORM: &str |  |  |  |  |
-
-| `EYERON_UNQUOTE` | const | EYERON_UNQUOTE: &str |  |  |  |  |
-
-| `LIST_APPEND` | const | LIST_APPEND: &str |  |  |  |  |
-
-| `LIST_FIRST` | const | LIST_FIRST: &str |  |  |  |  |
-
-| `LIST_FIRST_REST` | const | LIST_FIRST_REST: &str |  |  |  |  |
-
-| `LIST_IN` | const | LIST_IN: &str |  |  |  |  |
-
-| `LIST_ITERATE` | const | LIST_ITERATE: &str |  |  |  |  |
-
-| `LIST_LAST` | const | LIST_LAST: &str |  |  |  |  |
-
-| `LIST_LENGTH` | const | LIST_LENGTH: &str |  |  |  |  |
-
-| `LIST_MAP` | const | LIST_MAP: &str |  |  |  |  |
-
-| `LIST_MEMBER` | const | LIST_MEMBER: &str |  |  |  |  |
-
-| `LIST_MEMBER_AT` | const | LIST_MEMBER_AT: &str |  |  |  |  |
-
-| `LIST_NOT_MEMBER` | const | LIST_NOT_MEMBER: &str |  |  |  |  |
-
-| `LIST_REMOVE` | const | LIST_REMOVE: &str |  |  |  |  |
-
-| `LIST_REST` | const | LIST_REST: &str |  |  |  |  |
-
-| `LIST_REVERSE` | const | LIST_REVERSE: &str |  |  |  |  |
-
-| `LIST_SORT` | const | LIST_SORT: &str |  |  |  |  |
-
-| `LOG_COLLECT_ALL_IN` | const | LOG_COLLECT_ALL_IN: &str |  |  |  |  |
-
-| `LOG_CONCLUSION` | const | LOG_CONCLUSION: &str |  |  |  |  |
-
-| `LOG_CONJUNCTION` | const | LOG_CONJUNCTION: &str |  |  |  |  |
-
-| `LOG_CONTENT` | const | LOG_CONTENT: &str |  |  |  |  |
-
-| `LOG_DTLIT` | const | LOG_DTLIT: &str |  |  |  |  |
-
-| `LOG_EQUAL_TO` | const | LOG_EQUAL_TO: &str |  |  |  |  |
-
-| `LOG_FOR_ALL_IN` | const | LOG_FOR_ALL_IN: &str |  |  |  |  |
-
-| `LOG_IMPLIED_BY` | const | LOG_IMPLIED_BY: &str |  |  |  |  |
-
-| `LOG_IMPLIES` | const | LOG_IMPLIES: &str |  |  |  |  |
-
-| `LOG_INCLUDES` | const | LOG_INCLUDES: &str |  |  |  |  |
-
-| `LOG_LANGLIT` | const | LOG_LANGLIT: &str |  |  |  |  |
-
-| `LOG_NAME_OF` | const | LOG_NAME_OF: &str |  |  |  |  |
-
-| `LOG_NOT_EQUAL_TO` | const | LOG_NOT_EQUAL_TO: &str |  |  |  |  |
-
-| `LOG_NOT_INCLUDES` | const | LOG_NOT_INCLUDES: &str |  |  |  |  |
-
-| `LOG_OUTPUT_STRING` | const | LOG_OUTPUT_STRING: &str |  |  |  |  |
-
-| `LOG_PARSED_AS_N3` | const | LOG_PARSED_AS_N3: &str |  |  |  |  |
-
-| `LOG_QUERY` | const | LOG_QUERY: &str |  |  |  |  |
-
-| `LOG_RAW_TYPE` | const | LOG_RAW_TYPE: &str |  |  |  |  |
-
-| `LOG_SEMANTICS` | const | LOG_SEMANTICS: &str |  |  |  |  |
-
-| `LOG_SEMANTICS_OR_ERROR` | const | LOG_SEMANTICS_OR_ERROR: &str |  |  |  |  |
-
-| `LOG_SKOLEM` | const | LOG_SKOLEM: &str |  |  |  |  |
-
-| `LOG_URI` | const | LOG_URI: &str |  |  |  |  |
-
-| `LOG_UUID` | const | LOG_UUID: &str |  |  |  |  |
-
-| `MATH_ABSOLUTE_VALUE` | const | MATH_ABSOLUTE_VALUE: &str |  |  |  |  |
-
-| `MATH_ACOS` | const | MATH_ACOS: &str |  |  |  |  |
-
-| `MATH_ASIN` | const | MATH_ASIN: &str |  |  |  |  |
-
-| `MATH_ATAN` | const | MATH_ATAN: &str |  |  |  |  |
-
-| `MATH_COS` | const | MATH_COS: &str |  |  |  |  |
-
-| `MATH_COSH` | const | MATH_COSH: &str |  |  |  |  |
-
-| `MATH_DEGREES` | const | MATH_DEGREES: &str |  |  |  |  |
-
-| `MATH_DIFFERENCE` | const | MATH_DIFFERENCE: &str |  |  |  |  |
-
-| `MATH_EQUAL_TO` | const | MATH_EQUAL_TO: &str |  |  |  |  |
-
-| `MATH_EXPONENTIATION` | const | MATH_EXPONENTIATION: &str |  |  |  |  |
-
-| `MATH_GREATER_THAN` | const | MATH_GREATER_THAN: &str |  |  |  |  |
-
-| `MATH_INTEGER_QUOTIENT` | const | MATH_INTEGER_QUOTIENT: &str |  |  |  |  |
-
-| `MATH_LESS_THAN` | const | MATH_LESS_THAN: &str |  |  |  |  |
-
-| `MATH_NEGATION` | const | MATH_NEGATION: &str |  |  |  |  |
-
-| `MATH_NOT_EQUAL_TO` | const | MATH_NOT_EQUAL_TO: &str |  |  |  |  |
-
-| `MATH_NOT_GREATER_THAN` | const | MATH_NOT_GREATER_THAN: &str |  |  |  |  |
-
-| `MATH_NOT_LESS_THAN` | const | MATH_NOT_LESS_THAN: &str |  |  |  |  |
-
-| `MATH_PRODUCT` | const | MATH_PRODUCT: &str |  |  |  |  |
-
-| `MATH_QUOTIENT` | const | MATH_QUOTIENT: &str |  |  |  |  |
-
-| `MATH_REMAINDER` | const | MATH_REMAINDER: &str |  |  |  |  |
-
-| `MATH_ROUNDED` | const | MATH_ROUNDED: &str |  |  |  |  |
-
-| `MATH_SIN` | const | MATH_SIN: &str |  |  |  |  |
-
-| `MATH_SINH` | const | MATH_SINH: &str |  |  |  |  |
-
-| `MATH_SUM` | const | MATH_SUM: &str |  |  |  |  |
-
-| `MATH_TAN` | const | MATH_TAN: &str |  |  |  |  |
-
-| `MATH_TANH` | const | MATH_TANH: &str |  |  |  |  |
-
-| `OWL_SAME_AS` | const | OWL_SAME_AS: &str |  |  |  |  |
-
-| `RDF_FIRST` | const | RDF_FIRST: &str |  |  |  |  |
-
-| `RDF_NIL` | const | RDF_NIL: &str |  |  |  |  |
-
-| `RDF_REST` | const | RDF_REST: &str |  |  |  |  |
-
-| `RDF_TYPE` | const | RDF_TYPE: &str |  |  |  |  |
-
-| `STRING_CONCATENATION` | const | STRING_CONCATENATION: &str |  |  |  |  |
-
-| `STRING_CONTAINS` | const | STRING_CONTAINS: &str |  |  |  |  |
-
-| `STRING_CONTAINS_IGNORING_CASE` | const | STRING_CONTAINS_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_ENDS_WITH` | const | STRING_ENDS_WITH: &str |  |  |  |  |
-
-| `STRING_EQUAL_IGNORING_CASE` | const | STRING_EQUAL_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_FORMAT` | const | STRING_FORMAT: &str |  |  |  |  |
-
-| `STRING_GREATER_THAN` | const | STRING_GREATER_THAN: &str |  |  |  |  |
-
-| `STRING_LESS_THAN` | const | STRING_LESS_THAN: &str |  |  |  |  |
-
-| `STRING_MATCHES` | const | STRING_MATCHES: &str |  |  |  |  |
-
-| `STRING_NOT_EQUAL_IGNORING_CASE` | const | STRING_NOT_EQUAL_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_NOT_GREATER_THAN` | const | STRING_NOT_GREATER_THAN: &str |  |  |  |  |
-
-| `STRING_NOT_LESS_THAN` | const | STRING_NOT_LESS_THAN: &str |  |  |  |  |
-
-| `STRING_NOT_MATCHES` | const | STRING_NOT_MATCHES: &str |  |  |  |  |
-
-| `STRING_REPLACE` | const | STRING_REPLACE: &str |  |  |  |  |
-
-| `STRING_SCRAPE` | const | STRING_SCRAPE: &str |  |  |  |  |
-
-| `STRING_STARTS_WITH` | const | STRING_STARTS_WITH: &str |  |  |  |  |
-
-| `SUDOKU_SOLVE` | const | SUDOKU_SOLVE: &str |  |  |  |  |
-
-| `TIME_DAY` | const | TIME_DAY: &str |  |  |  |  |
-
-| `TIME_HOUR` | const | TIME_HOUR: &str |  |  |  |  |
-
-| `TIME_LOCAL_TIME` | const | TIME_LOCAL_TIME: &str |  |  |  |  |
-
-| `TIME_MINUTE` | const | TIME_MINUTE: &str |  |  |  |  |
-
-| `TIME_MONTH` | const | TIME_MONTH: &str |  |  |  |  |
-
-| `TIME_SECOND` | const | TIME_SECOND: &str |  |  |  |  |
-
-| `TIME_TIME_ZONE` | const | TIME_TIME_ZONE: &str |  |  |  |  |
-
-| `TIME_YEAR` | const | TIME_YEAR: &str |  |  |  |  |
-
-| `Term` | enum | Term { Iri(Name), Var(Name), Blank(Name), Literal(Literal), List(Vec<Term>), Formula(Vec<Triple>) } |  |  |  |  |
-
-| `as_str` | function | as_str(&self) -> &str |  |  |  |  |
-
-| `blank` | function | blank(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `default_prefixes` | function | default_prefixes() -> BTreeMap<String, String> |  |  |  |  |
-
-| `formula` | function | formula(triples: Vec<Triple>) -> Self |  |  |  |  |
-
-| `fuse` | function | fuse(premise: Vec<Triple>) -> Self |  |  |  |  |
-
-| `iri` | function | iri(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `is_ground` | function | is_ground(&self) -> bool |  |  |  |  |
-
-| `is_variable` | function | is_variable(&self) -> bool |  |  |  |  |
-
-| `list` | function | list(items: Vec<Term>) -> Self |  |  |  |  |
-
-| `literal` | function | literal(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `merge` | function | merge(&mut self, other: Document) |  |  |  |  |
-
-| `new` | function | new(s: Term, p: Term, o: Term) -> Self |  |  |  |  |
-
-| `plain` | function | plain(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `var` | function | var(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `with_fuse` | function | with_fuse(mut self, is_fuse: bool) -> Self |  |  |  |  |
-
-| `with_query` | function | with_query(mut self, is_query: bool) -> Self |  |  |  |  |
-
-| `with_source` | function | with_source(mut self, source: Option<SourceRef>) -> Self |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#first` | str_key | RDF_FIRST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#nil` | str_key | RDF_NIL = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#rest` | str_key | RDF_REST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` | str_key | RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/crypto#sha` | str_key | CRYPTO_SHA = "http://www.w3.org/2000/10/swap/crypto#sha" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#append` | str_key | LIST_APPEND = "http://www.w3.org/2000/10/swap/list#append" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#first` | str_key | LIST_FIRST = "http://www.w3.org/2000/10/swap/list#first" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#firstRest` | str_key | LIST_FIRST_REST = "http://www.w3.org/2000/10/swap/list#firstRest" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#in` | str_key | LIST_IN = "http://www.w3.org/2000/10/swap/list#in" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#iterate` | str_key | LIST_ITERATE = "http://www.w3.org/2000/10/swap/list#iterate" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#last` | str_key | LIST_LAST = "http://www.w3.org/2000/10/swap/list#last" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#length` | str_key | LIST_LENGTH = "http://www.w3.org/2000/10/swap/list#length" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#map` | str_key | LIST_MAP = "http://www.w3.org/2000/10/swap/list#map" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#member` | str_key | LIST_MEMBER = "http://www.w3.org/2000/10/swap/list#member" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#memberAt` | str_key | LIST_MEMBER_AT = "http://www.w3.org/2000/10/swap/list#memberAt" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#notMember` | str_key | LIST_NOT_MEMBER = "http://www.w3.org/2000/10/swap/list#notMember" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#remove` | str_key | LIST_REMOVE = "http://www.w3.org/2000/10/swap/list#remove" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#rest` | str_key | LIST_REST = "http://www.w3.org/2000/10/swap/list#rest" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#reverse` | str_key | LIST_REVERSE = "http://www.w3.org/2000/10/swap/list#reverse" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#sort` | str_key | LIST_SORT = "http://www.w3.org/2000/10/swap/list#sort" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#collectAllIn` | str_key | LOG_COLLECT_ALL_IN = "http://www.w3.org/2000/10/swap/log#collectAllIn" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#conclusion` | str_key | LOG_CONCLUSION = "http://www.w3.org/2000/10/swap/log#conclusion" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#conjunction` | str_key | LOG_CONJUNCTION = "http://www.w3.org/2000/10/swap/log#conjunction" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#content` | str_key | LOG_CONTENT = "http://www.w3.org/2000/10/swap/log#content" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#dtlit` | str_key | LOG_DTLIT = "http://www.w3.org/2000/10/swap/log#dtlit" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#equalTo` | str_key | LOG_EQUAL_TO = "http://www.w3.org/2000/10/swap/log#equalTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#forAllIn` | str_key | LOG_FOR_ALL_IN = "http://www.w3.org/2000/10/swap/log#forAllIn" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#impliedBy` | str_key | LOG_IMPLIED_BY = "http://www.w3.org/2000/10/swap/log#impliedBy" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#implies` | str_key | LOG_IMPLIES = "http://www.w3.org/2000/10/swap/log#implies" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#includes` | str_key | LOG_INCLUDES = "http://www.w3.org/2000/10/swap/log#includes" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#langlit` | str_key | LOG_LANGLIT = "http://www.w3.org/2000/10/swap/log#langlit" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#nameOf` | str_key | LOG_NAME_OF = "http://www.w3.org/2000/10/swap/log#nameOf" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#notEqualTo` | str_key | LOG_NOT_EQUAL_TO = "http://www.w3.org/2000/10/swap/log#notEqualTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#notIncludes` | str_key | LOG_NOT_INCLUDES = "http://www.w3.org/2000/10/swap/log#notIncludes" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#outputString` | str_key | LOG_OUTPUT_STRING = "http://www.w3.org/2000/10/swap/log#outputString" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#parsedAsN3` | str_key | LOG_PARSED_AS_N3 = "http://www.w3.org/2000/10/swap/log#parsedAsN3" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#query` | str_key | LOG_QUERY = "http://www.w3.org/2000/10/swap/log#query" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#rawType` | str_key | LOG_RAW_TYPE = "http://www.w3.org/2000/10/swap/log#rawType" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#semantics` | str_key | LOG_SEMANTICS = "http://www.w3.org/2000/10/swap/log#semantics" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#semanticsOrError` | str_key | LOG_SEMANTICS_OR_ERROR = "http://www.w3.org/2000/10/swap/log#semanticsOrError" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#skolem` | str_key | LOG_SKOLEM = "http://www.w3.org/2000/10/swap/log#skolem" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#uri` | str_key | LOG_URI = "http://www.w3.org/2000/10/swap/log#uri" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#uuid` | str_key | LOG_UUID = "http://www.w3.org/2000/10/swap/log#uuid" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#absoluteValue` | str_key | MATH_ABSOLUTE_VALUE = "http://www.w3.org/2000/10/swap/math#absoluteValue" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#acos` | str_key | MATH_ACOS = "http://www.w3.org/2000/10/swap/math#acos" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#asin` | str_key | MATH_ASIN = "http://www.w3.org/2000/10/swap/math#asin" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#atan` | str_key | MATH_ATAN = "http://www.w3.org/2000/10/swap/math#atan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#cos` | str_key | MATH_COS = "http://www.w3.org/2000/10/swap/math#cos" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#cosh` | str_key | MATH_COSH = "http://www.w3.org/2000/10/swap/math#cosh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#degrees` | str_key | MATH_DEGREES = "http://www.w3.org/2000/10/swap/math#degrees" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#difference` | str_key | MATH_DIFFERENCE = "http://www.w3.org/2000/10/swap/math#difference" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#equalTo` | str_key | MATH_EQUAL_TO = "http://www.w3.org/2000/10/swap/math#equalTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#exponentiation` | str_key | MATH_EXPONENTIATION = "http://www.w3.org/2000/10/swap/math#exponentiation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#greaterThan` | str_key | MATH_GREATER_THAN = "http://www.w3.org/2000/10/swap/math#greaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#integerQuotient` | str_key | MATH_INTEGER_QUOTIENT = "http://www.w3.org/2000/10/swap/math#integerQuotient" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#lessThan` | str_key | MATH_LESS_THAN = "http://www.w3.org/2000/10/swap/math#lessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#negation` | str_key | MATH_NEGATION = "http://www.w3.org/2000/10/swap/math#negation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notEqualTo` | str_key | MATH_NOT_EQUAL_TO = "http://www.w3.org/2000/10/swap/math#notEqualTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notGreaterThan` | str_key | MATH_NOT_GREATER_THAN = "http://www.w3.org/2000/10/swap/math#notGreaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notLessThan` | str_key | MATH_NOT_LESS_THAN = "http://www.w3.org/2000/10/swap/math#notLessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#product` | str_key | MATH_PRODUCT = "http://www.w3.org/2000/10/swap/math#product" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#quotient` | str_key | MATH_QUOTIENT = "http://www.w3.org/2000/10/swap/math#quotient" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#remainder` | str_key | MATH_REMAINDER = "http://www.w3.org/2000/10/swap/math#remainder" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#rounded` | str_key | MATH_ROUNDED = "http://www.w3.org/2000/10/swap/math#rounded" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sin` | str_key | MATH_SIN = "http://www.w3.org/2000/10/swap/math#sin" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sinh` | str_key | MATH_SINH = "http://www.w3.org/2000/10/swap/math#sinh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sum` | str_key | MATH_SUM = "http://www.w3.org/2000/10/swap/math#sum" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#tan` | str_key | MATH_TAN = "http://www.w3.org/2000/10/swap/math#tan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#tanh` | str_key | MATH_TANH = "http://www.w3.org/2000/10/swap/math#tanh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#concatenation` | str_key | STRING_CONCATENATION = "http://www.w3.org/2000/10/swap/string#concatenation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#contains` | str_key | STRING_CONTAINS = "http://www.w3.org/2000/10/swap/string#contains" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#containsIgnoringCase` | str_key | STRING_CONTAINS_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#containsIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#endsWith` | str_key | STRING_ENDS_WITH = "http://www.w3.org/2000/10/swap/string#endsWith" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#equalIgnoringCase` | str_key | STRING_EQUAL_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#equalIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#format` | str_key | STRING_FORMAT = "http://www.w3.org/2000/10/swap/string#format" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#greaterThan` | str_key | STRING_GREATER_THAN = "http://www.w3.org/2000/10/swap/string#greaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#lessThan` | str_key | STRING_LESS_THAN = "http://www.w3.org/2000/10/swap/string#lessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#matches` | str_key | STRING_MATCHES = "http://www.w3.org/2000/10/swap/string#matches" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notEqualIgnoringCase` | str_key | STRING_NOT_EQUAL_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#notEqualIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notGreaterThan` | str_key | STRING_NOT_GREATER_THAN = "http://www.w3.org/2000/10/swap/string#notGreaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notLessThan` | str_key | STRING_NOT_LESS_THAN = "http://www.w3.org/2000/10/swap/string#notLessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notMatches` | str_key | STRING_NOT_MATCHES = "http://www.w3.org/2000/10/swap/string#notMatches" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#replace` | str_key | STRING_REPLACE = "http://www.w3.org/2000/10/swap/string#replace" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#scrape` | str_key | STRING_SCRAPE = "http://www.w3.org/2000/10/swap/string#scrape" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#startsWith` | str_key | STRING_STARTS_WITH = "http://www.w3.org/2000/10/swap/string#startsWith" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#day` | str_key | TIME_DAY = "http://www.w3.org/2000/10/swap/time#day" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#hour` | str_key | TIME_HOUR = "http://www.w3.org/2000/10/swap/time#hour" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#localTime` | str_key | TIME_LOCAL_TIME = "http://www.w3.org/2000/10/swap/time#localTime" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#minute` | str_key | TIME_MINUTE = "http://www.w3.org/2000/10/swap/time#minute" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#month` | str_key | TIME_MONTH = "http://www.w3.org/2000/10/swap/time#month" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#second` | str_key | TIME_SECOND = "http://www.w3.org/2000/10/swap/time#second" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#timeZone` | str_key | TIME_TIME_ZONE = "http://www.w3.org/2000/10/swap/time#timeZone" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#year` | str_key | TIME_YEAR = "http://www.w3.org/2000/10/swap/time#year" |  |  |  |  |
-
-| `http://www.w3.org/2002/07/owl#sameAs` | str_key | OWL_SAME_AS = "http://www.w3.org/2002/07/owl#sameAs" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/datatype#datatype` | str_key | EYELING_DT_DATATYPE = "https://eyereasoner.github.io/eyeling/datatype#datatype" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/datatype#lexicalForm` | str_key | EYELING_DT_LEXICAL_FORM = "https://eyereasoner.github.io/eyeling/datatype#lexicalForm" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/vocab/sudoku#solve` | str_key | SUDOKU_SOLVE = "https://eyereasoner.github.io/eyeling/vocab/sudoku#solve" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeron/datatype#datatype` | str_key | DT_DATATYPE = "https://eyereasoner.github.io/eyeron/datatype#datatype" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeron/datatype#lexicalForm` | str_key | DT_LEXICAL_FORM = "https://eyereasoner.github.io/eyeron/datatype#lexicalForm" |  |  |  |  |
-
-| `urn:eyeron:unquote` | str_key | EYERON_UNQUOTE = "urn:eyeron:unquote" |  |  |  |  |
-
-| `Document` | struct | Document { pub prefixes: BTreeMap<String, String>, pub base_iri: Option<String>, pub facts: Vec<Triple>, pub fact_sources: BTreeMap<Triple, SourceRef>, pub rules: Vec<Rule> } |  |  |  |  |
-
-| `Literal` | struct | Literal { pub value: Name, pub datatype: Option<Name>, pub language: Option<Name> } |  |  |  |  |
-
-| `Name` | struct | Name { Arc<str> } |  |  |  |  |
-
-| `Rule` | struct | Rule { pub premise: Vec<Triple>, pub conclusion: Vec<Triple>, pub is_forward: bool, pub is_query: bool, pub is_fuse: bool, pub source: Option<SourceRef>, pub proof_var_source_names: BTreeMap<String, String> } |  |  |  |  |
-
-| `SourceRef` | struct | SourceRef { pub label: String, pub line: usize } |  |  |  |  |
-
-| `Triple` | struct | Triple { pub s: Term, pub p: Term, pub o: Term } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/ast.rs
-
-| `CRYPTO_SHA` | const | CRYPTO_SHA: &str |  |  |  |  |
-
-| `DT_DATATYPE` | const | DT_DATATYPE: &str |  |  |  |  |
-
-| `DT_LEXICAL_FORM` | const | DT_LEXICAL_FORM: &str |  |  |  |  |
-
-| `EYELING_DT_DATATYPE` | const | EYELING_DT_DATATYPE: &str |  |  |  |  |
-
-| `EYELING_DT_LEXICAL_FORM` | const | EYELING_DT_LEXICAL_FORM: &str |  |  |  |  |
-
-| `EYERON_UNQUOTE` | const | EYERON_UNQUOTE: &str |  |  |  |  |
-
-| `LIST_APPEND` | const | LIST_APPEND: &str |  |  |  |  |
-
-| `LIST_FIRST` | const | LIST_FIRST: &str |  |  |  |  |
-
-| `LIST_FIRST_REST` | const | LIST_FIRST_REST: &str |  |  |  |  |
-
-| `LIST_IN` | const | LIST_IN: &str |  |  |  |  |
-
-| `LIST_ITERATE` | const | LIST_ITERATE: &str |  |  |  |  |
-
-| `LIST_LAST` | const | LIST_LAST: &str |  |  |  |  |
-
-| `LIST_LENGTH` | const | LIST_LENGTH: &str |  |  |  |  |
-
-| `LIST_MAP` | const | LIST_MAP: &str |  |  |  |  |
-
-| `LIST_MEMBER` | const | LIST_MEMBER: &str |  |  |  |  |
-
-| `LIST_MEMBER_AT` | const | LIST_MEMBER_AT: &str |  |  |  |  |
-
-| `LIST_NOT_MEMBER` | const | LIST_NOT_MEMBER: &str |  |  |  |  |
-
-| `LIST_REMOVE` | const | LIST_REMOVE: &str |  |  |  |  |
-
-| `LIST_REST` | const | LIST_REST: &str |  |  |  |  |
-
-| `LIST_REVERSE` | const | LIST_REVERSE: &str |  |  |  |  |
-
-| `LIST_SORT` | const | LIST_SORT: &str |  |  |  |  |
-
-| `LOG_COLLECT_ALL_IN` | const | LOG_COLLECT_ALL_IN: &str |  |  |  |  |
-
-| `LOG_CONCLUSION` | const | LOG_CONCLUSION: &str |  |  |  |  |
-
-| `LOG_CONJUNCTION` | const | LOG_CONJUNCTION: &str |  |  |  |  |
-
-| `LOG_CONTENT` | const | LOG_CONTENT: &str |  |  |  |  |
-
-| `LOG_DTLIT` | const | LOG_DTLIT: &str |  |  |  |  |
-
-| `LOG_EQUAL_TO` | const | LOG_EQUAL_TO: &str |  |  |  |  |
-
-| `LOG_FOR_ALL_IN` | const | LOG_FOR_ALL_IN: &str |  |  |  |  |
-
-| `LOG_IMPLIED_BY` | const | LOG_IMPLIED_BY: &str |  |  |  |  |
-
-| `LOG_IMPLIES` | const | LOG_IMPLIES: &str |  |  |  |  |
-
-| `LOG_INCLUDES` | const | LOG_INCLUDES: &str |  |  |  |  |
-
-| `LOG_LANGLIT` | const | LOG_LANGLIT: &str |  |  |  |  |
-
-| `LOG_NAME_OF` | const | LOG_NAME_OF: &str |  |  |  |  |
-
-| `LOG_NOT_EQUAL_TO` | const | LOG_NOT_EQUAL_TO: &str |  |  |  |  |
-
-| `LOG_NOT_INCLUDES` | const | LOG_NOT_INCLUDES: &str |  |  |  |  |
-
-| `LOG_OUTPUT_STRING` | const | LOG_OUTPUT_STRING: &str |  |  |  |  |
-
-| `LOG_PARSED_AS_N3` | const | LOG_PARSED_AS_N3: &str |  |  |  |  |
-
-| `LOG_QUERY` | const | LOG_QUERY: &str |  |  |  |  |
-
-| `LOG_RAW_TYPE` | const | LOG_RAW_TYPE: &str |  |  |  |  |
-
-| `LOG_SEMANTICS` | const | LOG_SEMANTICS: &str |  |  |  |  |
-
-| `LOG_SEMANTICS_OR_ERROR` | const | LOG_SEMANTICS_OR_ERROR: &str |  |  |  |  |
-
-| `LOG_SKOLEM` | const | LOG_SKOLEM: &str |  |  |  |  |
-
-| `LOG_URI` | const | LOG_URI: &str |  |  |  |  |
-
-| `LOG_UUID` | const | LOG_UUID: &str |  |  |  |  |
-
-| `MATH_ABSOLUTE_VALUE` | const | MATH_ABSOLUTE_VALUE: &str |  |  |  |  |
-
-| `MATH_ACOS` | const | MATH_ACOS: &str |  |  |  |  |
-
-| `MATH_ASIN` | const | MATH_ASIN: &str |  |  |  |  |
-
-| `MATH_ATAN` | const | MATH_ATAN: &str |  |  |  |  |
-
-| `MATH_COS` | const | MATH_COS: &str |  |  |  |  |
-
-| `MATH_COSH` | const | MATH_COSH: &str |  |  |  |  |
-
-| `MATH_DEGREES` | const | MATH_DEGREES: &str |  |  |  |  |
-
-| `MATH_DIFFERENCE` | const | MATH_DIFFERENCE: &str |  |  |  |  |
-
-| `MATH_EQUAL_TO` | const | MATH_EQUAL_TO: &str |  |  |  |  |
-
-| `MATH_EXPONENTIATION` | const | MATH_EXPONENTIATION: &str |  |  |  |  |
-
-| `MATH_GREATER_THAN` | const | MATH_GREATER_THAN: &str |  |  |  |  |
-
-| `MATH_INTEGER_QUOTIENT` | const | MATH_INTEGER_QUOTIENT: &str |  |  |  |  |
-
-| `MATH_LESS_THAN` | const | MATH_LESS_THAN: &str |  |  |  |  |
-
-| `MATH_NEGATION` | const | MATH_NEGATION: &str |  |  |  |  |
-
-| `MATH_NOT_EQUAL_TO` | const | MATH_NOT_EQUAL_TO: &str |  |  |  |  |
-
-| `MATH_NOT_GREATER_THAN` | const | MATH_NOT_GREATER_THAN: &str |  |  |  |  |
-
-| `MATH_NOT_LESS_THAN` | const | MATH_NOT_LESS_THAN: &str |  |  |  |  |
-
-| `MATH_PRODUCT` | const | MATH_PRODUCT: &str |  |  |  |  |
-
-| `MATH_QUOTIENT` | const | MATH_QUOTIENT: &str |  |  |  |  |
-
-| `MATH_REMAINDER` | const | MATH_REMAINDER: &str |  |  |  |  |
-
-| `MATH_ROUNDED` | const | MATH_ROUNDED: &str |  |  |  |  |
-
-| `MATH_SIN` | const | MATH_SIN: &str |  |  |  |  |
-
-| `MATH_SINH` | const | MATH_SINH: &str |  |  |  |  |
-
-| `MATH_SUM` | const | MATH_SUM: &str |  |  |  |  |
-
-| `MATH_TAN` | const | MATH_TAN: &str |  |  |  |  |
-
-| `MATH_TANH` | const | MATH_TANH: &str |  |  |  |  |
-
-| `OWL_SAME_AS` | const | OWL_SAME_AS: &str |  |  |  |  |
-
-| `RDF_FIRST` | const | RDF_FIRST: &str |  |  |  |  |
-
-| `RDF_NIL` | const | RDF_NIL: &str |  |  |  |  |
-
-| `RDF_REST` | const | RDF_REST: &str |  |  |  |  |
-
-| `RDF_TYPE` | const | RDF_TYPE: &str |  |  |  |  |
-
-| `STRING_CONCATENATION` | const | STRING_CONCATENATION: &str |  |  |  |  |
-
-| `STRING_CONTAINS` | const | STRING_CONTAINS: &str |  |  |  |  |
-
-| `STRING_CONTAINS_IGNORING_CASE` | const | STRING_CONTAINS_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_ENDS_WITH` | const | STRING_ENDS_WITH: &str |  |  |  |  |
-
-| `STRING_EQUAL_IGNORING_CASE` | const | STRING_EQUAL_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_FORMAT` | const | STRING_FORMAT: &str |  |  |  |  |
-
-| `STRING_GREATER_THAN` | const | STRING_GREATER_THAN: &str |  |  |  |  |
-
-| `STRING_LESS_THAN` | const | STRING_LESS_THAN: &str |  |  |  |  |
-
-| `STRING_MATCHES` | const | STRING_MATCHES: &str |  |  |  |  |
-
-| `STRING_NOT_EQUAL_IGNORING_CASE` | const | STRING_NOT_EQUAL_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_NOT_GREATER_THAN` | const | STRING_NOT_GREATER_THAN: &str |  |  |  |  |
-
-| `STRING_NOT_LESS_THAN` | const | STRING_NOT_LESS_THAN: &str |  |  |  |  |
-
-| `STRING_NOT_MATCHES` | const | STRING_NOT_MATCHES: &str |  |  |  |  |
-
-| `STRING_REPLACE` | const | STRING_REPLACE: &str |  |  |  |  |
-
-| `STRING_SCRAPE` | const | STRING_SCRAPE: &str |  |  |  |  |
-
-| `STRING_STARTS_WITH` | const | STRING_STARTS_WITH: &str |  |  |  |  |
-
-| `SUDOKU_SOLVE` | const | SUDOKU_SOLVE: &str |  |  |  |  |
-
-| `TIME_DAY` | const | TIME_DAY: &str |  |  |  |  |
-
-| `TIME_HOUR` | const | TIME_HOUR: &str |  |  |  |  |
-
-| `TIME_LOCAL_TIME` | const | TIME_LOCAL_TIME: &str |  |  |  |  |
-
-| `TIME_MINUTE` | const | TIME_MINUTE: &str |  |  |  |  |
-
-| `TIME_MONTH` | const | TIME_MONTH: &str |  |  |  |  |
-
-| `TIME_SECOND` | const | TIME_SECOND: &str |  |  |  |  |
-
-| `TIME_TIME_ZONE` | const | TIME_TIME_ZONE: &str |  |  |  |  |
-
-| `TIME_YEAR` | const | TIME_YEAR: &str |  |  |  |  |
-
-| `Term` | enum | Term { Iri(Name), Var(Name), Blank(Name), Literal(Literal), List(Vec<Term>), Formula(Vec<Triple>) } |  |  |  |  |
-
-| `as_str` | function | as_str(&self) -> &str |  |  |  |  |
-
-| `blank` | function | blank(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `default_prefixes` | function | default_prefixes() -> BTreeMap<String, String> |  |  |  |  |
-
-| `formula` | function | formula(triples: Vec<Triple>) -> Self |  |  |  |  |
-
-| `fuse` | function | fuse(premise: Vec<Triple>) -> Self |  |  |  |  |
-
-| `iri` | function | iri(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `is_ground` | function | is_ground(&self) -> bool |  |  |  |  |
-
-| `is_variable` | function | is_variable(&self) -> bool |  |  |  |  |
-
-| `list` | function | list(items: Vec<Term>) -> Self |  |  |  |  |
-
-| `literal` | function | literal(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `merge` | function | merge(&mut self, other: Document) |  |  |  |  |
-
-| `new` | function | new(s: Term, p: Term, o: Term) -> Self |  |  |  |  |
-
-| `plain` | function | plain(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `var` | function | var(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `with_fuse` | function | with_fuse(mut self, is_fuse: bool) -> Self |  |  |  |  |
-
-| `with_query` | function | with_query(mut self, is_query: bool) -> Self |  |  |  |  |
-
-| `with_source` | function | with_source(mut self, source: Option<SourceRef>) -> Self |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#first` | str_key | RDF_FIRST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#nil` | str_key | RDF_NIL = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#rest` | str_key | RDF_REST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` | str_key | RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/crypto#sha` | str_key | CRYPTO_SHA = "http://www.w3.org/2000/10/swap/crypto#sha" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#append` | str_key | LIST_APPEND = "http://www.w3.org/2000/10/swap/list#append" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#first` | str_key | LIST_FIRST = "http://www.w3.org/2000/10/swap/list#first" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#firstRest` | str_key | LIST_FIRST_REST = "http://www.w3.org/2000/10/swap/list#firstRest" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#in` | str_key | LIST_IN = "http://www.w3.org/2000/10/swap/list#in" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#iterate` | str_key | LIST_ITERATE = "http://www.w3.org/2000/10/swap/list#iterate" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#last` | str_key | LIST_LAST = "http://www.w3.org/2000/10/swap/list#last" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#length` | str_key | LIST_LENGTH = "http://www.w3.org/2000/10/swap/list#length" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#map` | str_key | LIST_MAP = "http://www.w3.org/2000/10/swap/list#map" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#member` | str_key | LIST_MEMBER = "http://www.w3.org/2000/10/swap/list#member" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#memberAt` | str_key | LIST_MEMBER_AT = "http://www.w3.org/2000/10/swap/list#memberAt" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#notMember` | str_key | LIST_NOT_MEMBER = "http://www.w3.org/2000/10/swap/list#notMember" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#remove` | str_key | LIST_REMOVE = "http://www.w3.org/2000/10/swap/list#remove" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#rest` | str_key | LIST_REST = "http://www.w3.org/2000/10/swap/list#rest" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#reverse` | str_key | LIST_REVERSE = "http://www.w3.org/2000/10/swap/list#reverse" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#sort` | str_key | LIST_SORT = "http://www.w3.org/2000/10/swap/list#sort" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#collectAllIn` | str_key | LOG_COLLECT_ALL_IN = "http://www.w3.org/2000/10/swap/log#collectAllIn" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#conclusion` | str_key | LOG_CONCLUSION = "http://www.w3.org/2000/10/swap/log#conclusion" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#conjunction` | str_key | LOG_CONJUNCTION = "http://www.w3.org/2000/10/swap/log#conjunction" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#content` | str_key | LOG_CONTENT = "http://www.w3.org/2000/10/swap/log#content" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#dtlit` | str_key | LOG_DTLIT = "http://www.w3.org/2000/10/swap/log#dtlit" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#equalTo` | str_key | LOG_EQUAL_TO = "http://www.w3.org/2000/10/swap/log#equalTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#forAllIn` | str_key | LOG_FOR_ALL_IN = "http://www.w3.org/2000/10/swap/log#forAllIn" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#impliedBy` | str_key | LOG_IMPLIED_BY = "http://www.w3.org/2000/10/swap/log#impliedBy" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#implies` | str_key | LOG_IMPLIES = "http://www.w3.org/2000/10/swap/log#implies" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#includes` | str_key | LOG_INCLUDES = "http://www.w3.org/2000/10/swap/log#includes" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#langlit` | str_key | LOG_LANGLIT = "http://www.w3.org/2000/10/swap/log#langlit" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#nameOf` | str_key | LOG_NAME_OF = "http://www.w3.org/2000/10/swap/log#nameOf" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#notEqualTo` | str_key | LOG_NOT_EQUAL_TO = "http://www.w3.org/2000/10/swap/log#notEqualTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#notIncludes` | str_key | LOG_NOT_INCLUDES = "http://www.w3.org/2000/10/swap/log#notIncludes" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#outputString` | str_key | LOG_OUTPUT_STRING = "http://www.w3.org/2000/10/swap/log#outputString" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#parsedAsN3` | str_key | LOG_PARSED_AS_N3 = "http://www.w3.org/2000/10/swap/log#parsedAsN3" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#query` | str_key | LOG_QUERY = "http://www.w3.org/2000/10/swap/log#query" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#rawType` | str_key | LOG_RAW_TYPE = "http://www.w3.org/2000/10/swap/log#rawType" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#semantics` | str_key | LOG_SEMANTICS = "http://www.w3.org/2000/10/swap/log#semantics" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#semanticsOrError` | str_key | LOG_SEMANTICS_OR_ERROR = "http://www.w3.org/2000/10/swap/log#semanticsOrError" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#skolem` | str_key | LOG_SKOLEM = "http://www.w3.org/2000/10/swap/log#skolem" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#uri` | str_key | LOG_URI = "http://www.w3.org/2000/10/swap/log#uri" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#uuid` | str_key | LOG_UUID = "http://www.w3.org/2000/10/swap/log#uuid" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#absoluteValue` | str_key | MATH_ABSOLUTE_VALUE = "http://www.w3.org/2000/10/swap/math#absoluteValue" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#acos` | str_key | MATH_ACOS = "http://www.w3.org/2000/10/swap/math#acos" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#asin` | str_key | MATH_ASIN = "http://www.w3.org/2000/10/swap/math#asin" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#atan` | str_key | MATH_ATAN = "http://www.w3.org/2000/10/swap/math#atan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#cos` | str_key | MATH_COS = "http://www.w3.org/2000/10/swap/math#cos" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#cosh` | str_key | MATH_COSH = "http://www.w3.org/2000/10/swap/math#cosh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#degrees` | str_key | MATH_DEGREES = "http://www.w3.org/2000/10/swap/math#degrees" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#difference` | str_key | MATH_DIFFERENCE = "http://www.w3.org/2000/10/swap/math#difference" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#equalTo` | str_key | MATH_EQUAL_TO = "http://www.w3.org/2000/10/swap/math#equalTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#exponentiation` | str_key | MATH_EXPONENTIATION = "http://www.w3.org/2000/10/swap/math#exponentiation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#greaterThan` | str_key | MATH_GREATER_THAN = "http://www.w3.org/2000/10/swap/math#greaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#integerQuotient` | str_key | MATH_INTEGER_QUOTIENT = "http://www.w3.org/2000/10/swap/math#integerQuotient" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#lessThan` | str_key | MATH_LESS_THAN = "http://www.w3.org/2000/10/swap/math#lessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#negation` | str_key | MATH_NEGATION = "http://www.w3.org/2000/10/swap/math#negation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notEqualTo` | str_key | MATH_NOT_EQUAL_TO = "http://www.w3.org/2000/10/swap/math#notEqualTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notGreaterThan` | str_key | MATH_NOT_GREATER_THAN = "http://www.w3.org/2000/10/swap/math#notGreaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notLessThan` | str_key | MATH_NOT_LESS_THAN = "http://www.w3.org/2000/10/swap/math#notLessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#product` | str_key | MATH_PRODUCT = "http://www.w3.org/2000/10/swap/math#product" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#quotient` | str_key | MATH_QUOTIENT = "http://www.w3.org/2000/10/swap/math#quotient" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#remainder` | str_key | MATH_REMAINDER = "http://www.w3.org/2000/10/swap/math#remainder" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#rounded` | str_key | MATH_ROUNDED = "http://www.w3.org/2000/10/swap/math#rounded" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sin` | str_key | MATH_SIN = "http://www.w3.org/2000/10/swap/math#sin" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sinh` | str_key | MATH_SINH = "http://www.w3.org/2000/10/swap/math#sinh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sum` | str_key | MATH_SUM = "http://www.w3.org/2000/10/swap/math#sum" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#tan` | str_key | MATH_TAN = "http://www.w3.org/2000/10/swap/math#tan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#tanh` | str_key | MATH_TANH = "http://www.w3.org/2000/10/swap/math#tanh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#concatenation` | str_key | STRING_CONCATENATION = "http://www.w3.org/2000/10/swap/string#concatenation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#contains` | str_key | STRING_CONTAINS = "http://www.w3.org/2000/10/swap/string#contains" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#containsIgnoringCase` | str_key | STRING_CONTAINS_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#containsIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#endsWith` | str_key | STRING_ENDS_WITH = "http://www.w3.org/2000/10/swap/string#endsWith" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#equalIgnoringCase` | str_key | STRING_EQUAL_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#equalIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#format` | str_key | STRING_FORMAT = "http://www.w3.org/2000/10/swap/string#format" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#greaterThan` | str_key | STRING_GREATER_THAN = "http://www.w3.org/2000/10/swap/string#greaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#lessThan` | str_key | STRING_LESS_THAN = "http://www.w3.org/2000/10/swap/string#lessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#matches` | str_key | STRING_MATCHES = "http://www.w3.org/2000/10/swap/string#matches" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notEqualIgnoringCase` | str_key | STRING_NOT_EQUAL_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#notEqualIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notGreaterThan` | str_key | STRING_NOT_GREATER_THAN = "http://www.w3.org/2000/10/swap/string#notGreaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notLessThan` | str_key | STRING_NOT_LESS_THAN = "http://www.w3.org/2000/10/swap/string#notLessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notMatches` | str_key | STRING_NOT_MATCHES = "http://www.w3.org/2000/10/swap/string#notMatches" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#replace` | str_key | STRING_REPLACE = "http://www.w3.org/2000/10/swap/string#replace" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#scrape` | str_key | STRING_SCRAPE = "http://www.w3.org/2000/10/swap/string#scrape" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#startsWith` | str_key | STRING_STARTS_WITH = "http://www.w3.org/2000/10/swap/string#startsWith" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#day` | str_key | TIME_DAY = "http://www.w3.org/2000/10/swap/time#day" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#hour` | str_key | TIME_HOUR = "http://www.w3.org/2000/10/swap/time#hour" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#localTime` | str_key | TIME_LOCAL_TIME = "http://www.w3.org/2000/10/swap/time#localTime" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#minute` | str_key | TIME_MINUTE = "http://www.w3.org/2000/10/swap/time#minute" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#month` | str_key | TIME_MONTH = "http://www.w3.org/2000/10/swap/time#month" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#second` | str_key | TIME_SECOND = "http://www.w3.org/2000/10/swap/time#second" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#timeZone` | str_key | TIME_TIME_ZONE = "http://www.w3.org/2000/10/swap/time#timeZone" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#year` | str_key | TIME_YEAR = "http://www.w3.org/2000/10/swap/time#year" |  |  |  |  |
-
-| `http://www.w3.org/2002/07/owl#sameAs` | str_key | OWL_SAME_AS = "http://www.w3.org/2002/07/owl#sameAs" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/datatype#datatype` | str_key | EYELING_DT_DATATYPE = "https://eyereasoner.github.io/eyeling/datatype#datatype" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/datatype#lexicalForm` | str_key | EYELING_DT_LEXICAL_FORM = "https://eyereasoner.github.io/eyeling/datatype#lexicalForm" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/vocab/sudoku#solve` | str_key | SUDOKU_SOLVE = "https://eyereasoner.github.io/eyeling/vocab/sudoku#solve" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeron/datatype#datatype` | str_key | DT_DATATYPE = "https://eyereasoner.github.io/eyeron/datatype#datatype" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeron/datatype#lexicalForm` | str_key | DT_LEXICAL_FORM = "https://eyereasoner.github.io/eyeron/datatype#lexicalForm" |  |  |  |  |
-
-| `urn:eyeron:unquote` | str_key | EYERON_UNQUOTE = "urn:eyeron:unquote" |  |  |  |  |
-
-| `Document` | struct | Document { pub prefixes: BTreeMap<String, String>, pub base_iri: Option<String>, pub facts: Vec<Triple>, pub fact_sources: BTreeMap<Triple, SourceRef>, pub rules: Vec<Rule> } |  |  |  |  |
-
-| `Literal` | struct | Literal { pub value: Name, pub datatype: Option<Name>, pub language: Option<Name> } |  |  |  |  |
-
-| `Name` | struct | Name { Arc<str> } |  |  |  |  |
-
-| `Rule` | struct | Rule { pub premise: Vec<Triple>, pub conclusion: Vec<Triple>, pub is_forward: bool, pub is_query: bool, pub is_fuse: bool, pub source: Option<SourceRef>, pub proof_var_source_names: BTreeMap<String, String> } |  |  |  |  |
-
-| `SourceRef` | struct | SourceRef { pub label: String, pub line: usize } |  |  |  |  |
-
-| `Triple` | struct | Triple { pub s: Term, pub p: Term, pub o: Term } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/error.rs
-
-| `at` | function | at(message: impl Into<String>, offset: usize) -> Self |  |  |  |  |
-
-| `new` | function | new(message: impl Into<String>) -> Self |  |  |  |  |
-
-| `with_source_location` | function | with_source_location(&self, source: &str, label: &str) -> String |  |  |  |  |
-
-| `EyeronError` | struct | EyeronError { pub message: String, pub offset: Option<usize> } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/error.rs
-
-| `at` | function | at(message: impl Into<String>, offset: usize) -> Self |  |  |  |  |
-
-| `new` | function | new(message: impl Into<String>) -> Self |  |  |  |  |
-
-| `with_source_location` | function | with_source_location(&self, source: &str, label: &str) -> String |  |  |  |  |
-
-| `EyeronError` | struct | EyeronError { pub message: String, pub offset: Option<usize> } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/lexer.rs
-
-| `TokenKind` | enum | TokenKind { AtPrefix, AtBase, AtVersion, Prefix, Base, Version, Iri(String), PName(String), Var(String), Blank(String), String(String), StringSingle(String), StringLong(String), StringLongSingle(String), StringLongExtraQuote(String), StringLongSingleExtraQuote(String), Lang(String), Number(String), Boolean(bool), A, Dot, Semicolon, Comma, LBrace, RBrace, LAnnotation, RAnnotation, LBracket, RBracket, LParen, RParen, LTriple, RTriple, Arrow, BackArrow, Reverse, HatHat, Equals, Eof } |  |  |  |  |
-
-| `lex` | function | lex(input: &str) -> Result<Vec<Token>> |  |  |  |  |
-
-| `Token` | struct | Token { pub kind: TokenKind, pub offset: usize } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/lexer.rs
-
-| `TokenKind` | enum | TokenKind { AtPrefix, AtBase, AtVersion, Prefix, Base, Version, Iri(String), PName(String), Var(String), Blank(String), String(String), StringSingle(String), StringLong(String), StringLongSingle(String), StringLongExtraQuote(String), StringLongSingleExtraQuote(String), Lang(String), Number(String), Boolean(bool), A, Dot, Semicolon, Comma, LBrace, RBrace, LAnnotation, RAnnotation, LBracket, RBracket, LParen, RParen, LTriple, RTriple, Arrow, BackArrow, Reverse, HatHat, Equals, Eof } |  |  |  |  |
-
-| `lex` | function | lex(input: &str) -> Result<Vec<Token>> |  |  |  |  |
-
-| `Token` | struct | Token { pub kind: TokenKind, pub offset: usize } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/lib.rs
-
-| `reason` | function | reason(input: &str) -> Result<String> |  |  |  |  |
-
-| `ast::{Document, Literal, Name, Rule, SourceRef, Term, Triple}` | use | ast::{Document, Literal, Name, Rule, SourceRef, Term, Triple} |  |  |  |  |
-
-| `error::{EyeronError, Result}` | use | error::{EyeronError, Result} |  |  |  |  |
-
-| `parser::{is_rdf_message_log, parse_n3, parse_n3_with_source, parse_rdf_message_log}` | use | parser::{is_rdf_message_log, parse_n3, parse_n3_with_source, parse_rdf_message_log} |  |  |  |  |
-
-| `printing::{ document_debug, fuse_report, rdf12_json, rdf_result_to_string, result_to_string, triples_to_n3, triples_to_trig, }` | use | printing::{ document_debug, fuse_report, rdf12_json, rdf_result_to_string, result_to_string, triples_to_n3, triples_to_trig, } |  |  |  |  |
-
-| `proof_writer::proof_to_n3` | use | proof_writer::proof_to_n3 |  |  |  |  |
-
-| `rdf_compat::{parse_rdf12, RdfFormat}` | use | rdf_compat::{parse_rdf12, RdfFormat} |  |  |  |  |
-
-| `reasoner::{ reason as reason_document, CompletionStatus, FiredFuse, PreparedReasoner, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, }` | use | reasoner::{ reason as reason_document, CompletionStatus, FiredFuse, PreparedReasoner, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/lib.rs
-
-| `reason` | function | reason(input: &str) -> Result<String> |  |  |  |  |
-
-| `ast::{Document, Literal, Name, Rule, SourceRef, Term, Triple}` | use | ast::{Document, Literal, Name, Rule, SourceRef, Term, Triple} |  |  |  |  |
-
-| `error::{EyeronError, Result}` | use | error::{EyeronError, Result} |  |  |  |  |
-
-| `parser::{is_rdf_message_log, parse_n3, parse_n3_with_source, parse_rdf_message_log}` | use | parser::{is_rdf_message_log, parse_n3, parse_n3_with_source, parse_rdf_message_log} |  |  |  |  |
-
-| `printing::{ document_debug, fuse_report, rdf12_json, rdf_result_to_string, result_to_string, triples_to_n3, triples_to_trig, }` | use | printing::{ document_debug, fuse_report, rdf12_json, rdf_result_to_string, result_to_string, triples_to_n3, triples_to_trig, } |  |  |  |  |
-
-| `proof_writer::proof_to_n3` | use | proof_writer::proof_to_n3 |  |  |  |  |
-
-| `rdf_compat::{parse_rdf12, RdfFormat}` | use | rdf_compat::{parse_rdf12, RdfFormat} |  |  |  |  |
-
-| `reasoner::{ reason as reason_document, CompletionStatus, FiredFuse, PreparedReasoner, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, }` | use | reasoner::{ reason as reason_document, CompletionStatus, FiredFuse, PreparedReasoner, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/main.rs
-
-| `CARGO_PKG_VERSION` | str_key | VERSION = "CARGO_PKG_VERSION" |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/main.rs
-
-| `CARGO_PKG_VERSION` | str_key | VERSION = "CARGO_PKG_VERSION" |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/parser.rs
-
-| `is_rdf_message_log` | function | is_rdf_message_log(input: &str) -> bool |  |  |  |  |
-
-| `parse_n3` | function | parse_n3(input: &str, base_iri: Option<&str>) -> Result<Document> |  |  |  |  |
-
-| `parse_n3_with_source` | function | parse_n3_with_source( input: &str, base_iri: Option<&str>, source_label: Option<&str>, ) -> Result<Document> |  |  |  |  |
-
-| `parse_rdf_message_log` | function | parse_rdf_message_log(input: &str, base_iri: Option<&str>) -> Result<Document> |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString` | str_key | RDF_DIR_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies` | str_key | RDF_REIFIES = "http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies" |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/parser.rs
-
-| `is_rdf_message_log` | function | is_rdf_message_log(input: &str) -> bool |  |  |  |  |
-
-| `parse_n3` | function | parse_n3(input: &str, base_iri: Option<&str>) -> Result<Document> |  |  |  |  |
-
-| `parse_n3_with_source` | function | parse_n3_with_source( input: &str, base_iri: Option<&str>, source_label: Option<&str>, ) -> Result<Document> |  |  |  |  |
-
-| `parse_rdf_message_log` | function | parse_rdf_message_log(input: &str, base_iri: Option<&str>) -> Result<Document> |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString` | str_key | RDF_DIR_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies` | str_key | RDF_REIFIES = "http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies" |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/printing.rs
-
-| `document_debug` | function | document_debug(doc: &Document) -> String |  |  |  |  |
-
-| `fuse_report` | function | fuse_report(prefixes: &BTreeMap<String, String>, fuse: &FiredFuse) -> String |  |  |  |  |
-
-| `rdf12_json` | function | rdf12_json(doc: &Document) -> String |  |  |  |  |
-
-| `rdf_result_to_string` | function | rdf_result_to_string(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `result_to_string` | function | result_to_string(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `term_to_n3_object` | function | term_to_n3_object(term: &Term, prefixes: &BTreeMap<String, String>) -> String |  |  |  |  |
-
-| `term_to_n3_predicate` | function | term_to_n3_predicate(term: &Term, prefixes: &BTreeMap<String, String>) -> String |  |  |  |  |
-
-| `triple_to_n3` | function | triple_to_n3(prefixes: &BTreeMap<String, String>, t: &Triple) -> String |  |  |  |  |
-
-| `triples_to_n3` | function | triples_to_n3(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `triples_to_trig` | function | triples_to_trig(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/printing.rs
-
-| `document_debug` | function | document_debug(doc: &Document) -> String |  |  |  |  |
-
-| `fuse_report` | function | fuse_report(prefixes: &BTreeMap<String, String>, fuse: &FiredFuse) -> String |  |  |  |  |
-
-| `rdf12_json` | function | rdf12_json(doc: &Document) -> String |  |  |  |  |
-
-| `rdf_result_to_string` | function | rdf_result_to_string(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `result_to_string` | function | result_to_string(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `term_to_n3_object` | function | term_to_n3_object(term: &Term, prefixes: &BTreeMap<String, String>) -> String |  |  |  |  |
-
-| `term_to_n3_predicate` | function | term_to_n3_predicate(term: &Term, prefixes: &BTreeMap<String, String>) -> String |  |  |  |  |
-
-| `triple_to_n3` | function | triple_to_n3(prefixes: &BTreeMap<String, String>, t: &Triple) -> String |  |  |  |  |
-
-| `triples_to_n3` | function | triples_to_n3(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `triples_to_trig` | function | triples_to_trig(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/proof_check.rs
-
-| `Checked` | enum | Checked { Verified, Trusted(&'static str) } |  |  |  |  |
-
-| `Kind` | enum | Kind { Rule, Fact, Builtin, Absent, Collected, Unproven } |  |  |  |  |
-
-| `Resolution` | enum | Resolution { Step(usize), Given, Unresolved(String) } |  |  |  |  |
-
-| `check` | function | check(document: &dyn Document) -> Report |  |  |  |  |
-
-| `label` | function | label(self) -> &'static str |  |  |  |  |
-
-| `valid` | function | valid(&self) -> bool |  |  |  |  |
-
-| `verdict` | function | verdict(&self) -> String |  |  |  |  |
-
-| `Failure` | struct | Failure { pub condition: &'static str, pub conclusion: String, pub detail: String } |  |  |  |  |
-
-| `Obligation` | struct | Obligation { pub kind: &'static str, pub conclusion: String } |  |  |  |  |
-
-| `Report` | struct | Report { pub steps: usize, pub verified: usize, pub obligations: Vec<Obligation>, pub failures: Vec<Failure>, pub counts: BTreeMap<&'static str, usize> } |  |  |  |  |
-
-| `Document` | trait |  |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/proof_check.rs
-
-| `Checked` | enum | Checked { Verified, Trusted(&'static str) } |  |  |  |  |
-
-| `Kind` | enum | Kind { Rule, Fact, Builtin, Absent, Collected, Unproven } |  |  |  |  |
-
-| `Resolution` | enum | Resolution { Step(usize), Given, Unresolved(String) } |  |  |  |  |
-
-| `check` | function | check(document: &dyn Document) -> Report |  |  |  |  |
-
-| `label` | function | label(self) -> &'static str |  |  |  |  |
-
-| `valid` | function | valid(&self) -> bool |  |  |  |  |
-
-| `verdict` | function | verdict(&self) -> String |  |  |  |  |
-
-| `Failure` | struct | Failure { pub condition: &'static str, pub conclusion: String, pub detail: String } |  |  |  |  |
-
-| `Obligation` | struct | Obligation { pub kind: &'static str, pub conclusion: String } |  |  |  |  |
-
-| `Report` | struct | Report { pub steps: usize, pub verified: usize, pub obligations: Vec<Obligation>, pub failures: Vec<Failure>, pub counts: BTreeMap<&'static str, usize> } |  |  |  |  |
-
-| `Document` | trait |  |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/proof_check_n3.rs
-
-| `check_proof` | function | check_proof(source: &str, proof: &str, label: &str) -> Result<Report> |  |  |  |  |
-
-| `check_proof_document` | function | check_proof_document(source: &crate::ast::Document, proof: &str) -> Result<Report> |  |  |  |  |
-
-| `read_document` | function | read_document(document: &crate::ast::Document, proof: &str) -> Result<Self> |  |  |  |  |
-
-| `@prefix : <http://example.org/> .` | str_key | SOURCE = "@prefix : <http://example.org/> ." |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#localTime` | str_key | IMPURE_BUILTINS = "http://www.w3.org/2000/10/swap/time#localTime" |  |  |  |  |
-
-| `https://eyereasoner.github.io/pe#` | str_key | PE = "https://eyereasoner.github.io/pe#" |  |  |  |  |
-
-| `N3Proof` | struct | N3Proof { rules: Vec<crate::ast::Rule>, given: BTreeSet<Triple>, rule_statements: Vec<Triple>, general: Vec<Triple>, steps: Vec<Step>, claims: Vec<Triple>, index: BTreeMap<Triple, usize> } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/proof_check_n3.rs
-
-| `check_proof` | function | check_proof(source: &str, proof: &str, label: &str) -> Result<Report> |  |  |  |  |
-
-| `check_proof_document` | function | check_proof_document(source: &crate::ast::Document, proof: &str) -> Result<Report> |  |  |  |  |
-
-| `read_document` | function | read_document(document: &crate::ast::Document, proof: &str) -> Result<Self> |  |  |  |  |
-
-| `@prefix : <http://example.org/> .` | str_key | SOURCE = "@prefix : <http://example.org/> ." |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#localTime` | str_key | IMPURE_BUILTINS = "http://www.w3.org/2000/10/swap/time#localTime" |  |  |  |  |
-
-| `https://eyereasoner.github.io/pe#` | str_key | PE = "https://eyereasoner.github.io/pe#" |  |  |  |  |
-
-| `N3Proof` | struct | N3Proof { rules: Vec<crate::ast::Rule>, given: BTreeSet<Triple>, rule_statements: Vec<Triple>, general: Vec<Triple>, steps: Vec<Step>, claims: Vec<Triple>, index: BTreeMap<Triple, usize> } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/proof_writer.rs
-
-| `proof_to_n3` | function | proof_to_n3(prefixes: &BTreeMap<String, String>, result: &ReasonerResult) -> String |  |  |  |  |
-
-| `rule_statement` | function | rule_statement(rule: &Rule) -> Triple |  |  |  |  |
-
-| `https://eyereasoner.github.io/pe#` | str_key | PE_NS = "https://eyereasoner.github.io/pe#" |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/proof_writer.rs
-
-| `proof_to_n3` | function | proof_to_n3(prefixes: &BTreeMap<String, String>, result: &ReasonerResult) -> String |  |  |  |  |
-
-| `rule_statement` | function | rule_statement(rule: &Rule) -> Triple |  |  |  |  |
-
-| `https://eyereasoner.github.io/pe#` | str_key | PE_NS = "https://eyereasoner.github.io/pe#" |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/rdf_compat.rs
-
-| `RdfFormat` | enum | RdfFormat { Turtle, NTriples, NQuads, Trig } |  |  |  |  |
-
-| `parse` | function | parse(value: &str) -> Option<Self> |  |  |  |  |
-
-| `parse_rdf12` | function | parse_rdf12(input: &str, base_iri: Option<&str>, format: RdfFormat) -> Result<Document> |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/rdf_compat.rs
-
-| `RdfFormat` | enum | RdfFormat { Turtle, NTriples, NQuads, Trig } |  |  |  |  |
-
-| `parse` | function | parse(value: &str) -> Option<Self> |  |  |  |  |
-
-| `parse_rdf12` | function | parse_rdf12(input: &str, base_iri: Option<&str>, format: RdfFormat) -> Result<Document> |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/reasoner.rs
-
-| `BackwardStep` | enum | BackwardStep { Rule(DerivedFact), Fact { fact: Triple }, Builtin { fact: Triple, builtin: Term }, Unproven { fact: Triple, reason: String } } |  |  |  |  |
-
-| `CompletionStatus` | enum | CompletionStatus { Complete, Incomplete } |  |  |  |  |
-
-| `ProofNode` | enum | ProofNode { Rule { df: DerivedFact, children: Vec<ProofNode>, }, Fact { fact: Triple, source: Option<SourceRef>, }, Builtin { fact: Triple, builtin: Term, }, Unproven { fact: Triple, reason: String, } } |  |  |  |  |
-
-| `ReasonerError` | enum | ReasonerError { UnsupportedBuiltin { builtin: String, premise: Triple, detail: String, } } |  |  |  |  |
-
-| `ReasonerLimit` | enum | ReasonerLimit { Iterations, MatchSteps, BackwardDepth, BackwardSolutionsPerGoal, TermSize, TermDepth, ClosureSize, ClosureFacts } |  |  |  |  |
-
-| `builtin_reads_outside_its_triple` | function | builtin_reads_outside_its_triple(predicate: &Term) -> bool |  |  |  |  |
-
-| `explain_backward` | function | explain_backward( goal: &Triple, facts: &[Triple], given: &BTreeSet<Triple>, rules: &[Rule], max_depth: usize, emit: &mut dyn FnMut(BackwardStep), ) -> bool |  |  |  |  |
-
-| `find_backward_proof_for_goal` | function | find_backward_proof_for_goal( goal: &Triple, facts: &[Triple], rules: &[Rule], max_depth: usize, ) -> Option<ProofNode> |  |  |  |  |
-
-| `incomplete_summary` | function | incomplete_summary(&self) -> Option<String> |  |  |  |  |
-
-| `is_complete` | function | is_complete(&self) -> bool |  |  |  |  |
-
-| `new` | function | new(program: Document) -> Self |  |  |  |  |
-
-| `program` | function | program(&self) -> &Document |  |  |  |  |
-
-| `reason` | function | reason(&self, data: &Document, options: &ReasonerOptions) -> ReasonerResult |  |  |  |  |
-
-| `verify_builtin_triple` | function | verify_builtin_triple(goal: &Triple) -> bool |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#List` | str_key | RDF_LIST_IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#List" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING_IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Formula` | str_key | LOG_FORMULA_IRI = "http://www.w3.org/2000/10/swap/log#Formula" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Literal` | str_key | LOG_LITERAL_IRI = "http://www.w3.org/2000/10/swap/log#Literal" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Other` | str_key | LOG_OTHER_IRI = "http://www.w3.org/2000/10/swap/log#Other" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#date` | str_key | XSD_DATE = "http://www.w3.org/2001/XMLSchema#date" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#dateTime` | str_key | XSD_DATE_TIME = "http://www.w3.org/2001/XMLSchema#dateTime" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#duration` | str_key | XSD_DURATION = "http://www.w3.org/2001/XMLSchema#duration" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#string` | str_key | XSD_STRING_IRI = "http://www.w3.org/2001/XMLSchema#string" |  |  |  |  |
-
-| `DerivedFact` | struct | DerivedFact { pub fact: Triple, pub rule: Arc<Rule>, pub premises: Vec<Triple>, pub bindings: Vec<(Name, Term)> } |  |  |  |  |
-
-| `FiredFuse` | struct | FiredFuse { pub rule: Rule, pub instance: Vec<Triple> } |  |  |  |  |
-
-| `PreparedReasoner` | struct | PreparedReasoner { program: Document, query_rules: Vec<Rule>, active_rules: Vec<Rule>, agenda_index: AgendaIndex } |  |  |  |  |
-
-| `ReasonerOptions` | struct | ReasonerOptions { pub max_iterations: usize, pub max_match_steps: usize, pub max_backward_depth: usize, pub max_backward_solutions_per_goal: usize, pub max_term_bytes: usize, pub max_total_bytes: usize, pub max_closure_facts: usize, pub max_total_steps: usize, pub trace: bool, pub proof: bool, pub include_explicit: bool } |  |  |  |  |
-
-| `ReasonerResult` | struct | ReasonerResult { pub status: CompletionStatus, pub limits_reached: Vec<ReasonerLimit>, pub errors: Vec<ReasonerError>, pub statistics: ReasonerStatistics, pub explicit: Vec<Triple>, pub explicit_sources: BTreeMap<Triple, SourceRef>, pub derived: Vec<Triple>, pub closure: Vec<Triple>, pub proofs: Vec<DerivedFact>, pub rules: Vec<Rule>, pub fuse: Option<FiredFuse> } |  |  |  |  |
-
-| `ReasonerStatistics` | struct | ReasonerStatistics { pub iterations: usize, pub match_steps: usize } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/reasoner.rs
-
-| `BackwardStep` | enum | BackwardStep { Rule(DerivedFact), Fact { fact: Triple }, Builtin { fact: Triple, builtin: Term }, Unproven { fact: Triple, reason: String } } |  |  |  |  |
-
-| `CompletionStatus` | enum | CompletionStatus { Complete, Incomplete } |  |  |  |  |
-
-| `ProofNode` | enum | ProofNode { Rule { df: DerivedFact, children: Vec<ProofNode>, }, Fact { fact: Triple, source: Option<SourceRef>, }, Builtin { fact: Triple, builtin: Term, }, Unproven { fact: Triple, reason: String, } } |  |  |  |  |
-
-| `ReasonerError` | enum | ReasonerError { UnsupportedBuiltin { builtin: String, premise: Triple, detail: String, } } |  |  |  |  |
-
-| `ReasonerLimit` | enum | ReasonerLimit { Iterations, MatchSteps, BackwardDepth, BackwardSolutionsPerGoal, TermSize, TermDepth, ClosureSize, ClosureFacts } |  |  |  |  |
-
-| `builtin_reads_outside_its_triple` | function | builtin_reads_outside_its_triple(predicate: &Term) -> bool |  |  |  |  |
-
-| `explain_backward` | function | explain_backward( goal: &Triple, facts: &[Triple], given: &BTreeSet<Triple>, rules: &[Rule], max_depth: usize, emit: &mut dyn FnMut(BackwardStep), ) -> bool |  |  |  |  |
-
-| `find_backward_proof_for_goal` | function | find_backward_proof_for_goal( goal: &Triple, facts: &[Triple], rules: &[Rule], max_depth: usize, ) -> Option<ProofNode> |  |  |  |  |
-
-| `incomplete_summary` | function | incomplete_summary(&self) -> Option<String> |  |  |  |  |
-
-| `is_complete` | function | is_complete(&self) -> bool |  |  |  |  |
-
-| `new` | function | new(program: Document) -> Self |  |  |  |  |
-
-| `program` | function | program(&self) -> &Document |  |  |  |  |
-
-| `reason` | function | reason(&self, data: &Document, options: &ReasonerOptions) -> ReasonerResult |  |  |  |  |
-
-| `verify_builtin_triple` | function | verify_builtin_triple(goal: &Triple) -> bool |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#List` | str_key | RDF_LIST_IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#List" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING_IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Formula` | str_key | LOG_FORMULA_IRI = "http://www.w3.org/2000/10/swap/log#Formula" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Literal` | str_key | LOG_LITERAL_IRI = "http://www.w3.org/2000/10/swap/log#Literal" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Other` | str_key | LOG_OTHER_IRI = "http://www.w3.org/2000/10/swap/log#Other" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#date` | str_key | XSD_DATE = "http://www.w3.org/2001/XMLSchema#date" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#dateTime` | str_key | XSD_DATE_TIME = "http://www.w3.org/2001/XMLSchema#dateTime" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#duration` | str_key | XSD_DURATION = "http://www.w3.org/2001/XMLSchema#duration" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#string` | str_key | XSD_STRING_IRI = "http://www.w3.org/2001/XMLSchema#string" |  |  |  |  |
-
-| `DerivedFact` | struct | DerivedFact { pub fact: Triple, pub rule: Arc<Rule>, pub premises: Vec<Triple>, pub bindings: Vec<(Name, Term)> } |  |  |  |  |
-
-| `FiredFuse` | struct | FiredFuse { pub rule: Rule, pub instance: Vec<Triple> } |  |  |  |  |
-
-| `PreparedReasoner` | struct | PreparedReasoner { program: Document, query_rules: Vec<Rule>, active_rules: Vec<Rule>, agenda_index: AgendaIndex } |  |  |  |  |
-
-| `ReasonerOptions` | struct | ReasonerOptions { pub max_iterations: usize, pub max_match_steps: usize, pub max_backward_depth: usize, pub max_backward_solutions_per_goal: usize, pub max_term_bytes: usize, pub max_total_bytes: usize, pub max_closure_facts: usize, pub max_total_steps: usize, pub trace: bool, pub proof: bool, pub include_explicit: bool } |  |  |  |  |
-
-| `ReasonerResult` | struct | ReasonerResult { pub status: CompletionStatus, pub limits_reached: Vec<ReasonerLimit>, pub errors: Vec<ReasonerError>, pub statistics: ReasonerStatistics, pub explicit: Vec<Triple>, pub explicit_sources: BTreeMap<Triple, SourceRef>, pub derived: Vec<Triple>, pub closure: Vec<Triple>, pub proofs: Vec<DerivedFact>, pub rules: Vec<Rule>, pub fuse: Option<FiredFuse> } |  |  |  |  |
-
-| `ReasonerStatistics` | struct | ReasonerStatistics { pub iterations: usize, pub match_steps: usize } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/sudoku.rs
-
-| `solve_sudoku_string` | function | solve_sudoku_string(puzzle: &str) -> Result<String, String> |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/sudoku.rs
-
-| `solve_sudoku_string` | function | solve_sudoku_string(puzzle: &str) -> Result<String, String> |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/w3c_rdf.rs
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#` | str_key | RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML` | str_key | RDF_HTML = "http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#JSON` | str_key | RDF_JSON = "http://www.w3.org/1999/02/22-rdf-syntax-ns#JSON" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#Property` | str_key | RDF_PROPERTY = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#Proposition` | str_key | RDF_PROPOSITION = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Proposition" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#TripleTerm` | str_key | RDF_TRIPLE_TERM = "http://www.w3.org/1999/02/22-rdf-syntax-ns#TripleTerm" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral` | str_key | RDF_XML_LITERAL = "http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString` | str_key | RDF_DIR_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies` | str_key | RDF_REIFIES = "http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#` | str_key | RDFS = "http://www.w3.org/2000/01/rdf-schema#" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Class` | str_key | RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty` | str_key | RDFS_CONTAINER_MEMBERSHIP_PROPERTY = "http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Datatype` | str_key | RDFS_DATATYPE = "http://www.w3.org/2000/01/rdf-schema#Datatype" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Literal` | str_key | RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Proposition` | str_key | RDFS_PROPOSITION = "http://www.w3.org/2000/01/rdf-schema#Proposition" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Resource` | str_key | RDFS_RESOURCE = "http://www.w3.org/2000/01/rdf-schema#Resource" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#domain` | str_key | RDFS_DOMAIN = "http://www.w3.org/2000/01/rdf-schema#domain" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#member` | str_key | RDFS_MEMBER = "http://www.w3.org/2000/01/rdf-schema#member" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#range` | str_key | RDFS_RANGE = "http://www.w3.org/2000/01/rdf-schema#range" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#subClassOf` | str_key | RDFS_SUBCLASS_OF = "http://www.w3.org/2000/01/rdf-schema#subClassOf" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#subPropertyOf` | str_key | RDFS_SUBPROPERTY_OF = "http://www.w3.org/2000/01/rdf-schema#subPropertyOf" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#boolean` | str_key | XSD_BOOLEAN = "http://www.w3.org/2001/XMLSchema#boolean" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#decimal` | str_key | XSD_DECIMAL = "http://www.w3.org/2001/XMLSchema#decimal" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#double` | str_key | XSD_DOUBLE = "http://www.w3.org/2001/XMLSchema#double" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#float` | str_key | XSD_FLOAT = "http://www.w3.org/2001/XMLSchema#float" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#int` | str_key | XSD_INT = "http://www.w3.org/2001/XMLSchema#int" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#integer` | str_key | XSD_INTEGER = "http://www.w3.org/2001/XMLSchema#integer" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#string` | str_key | XSD_STRING = "http://www.w3.org/2001/XMLSchema#string" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#` | str_key | MF = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action` | str_key | MF_ACTION = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entailmentRegime` | str_key | MF_ENTAILMENT_REGIME = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entailmentRegime" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entries` | str_key | MF_ENTRIES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entries" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#include` | str_key | MF_INCLUDE = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#include" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name` | str_key | MF_NAME = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#recognizedDatatypes` | str_key | MF_RECOGNIZED_DATATYPES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#recognizedDatatypes" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result` | str_key | MF_RESULT = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#unrecognizedDatatypes` | str_key | MF_UNRECOGNIZED_DATATYPES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#unrecognizedDatatypes" |  |  |  |  |
-
-| `http://www.w3.org/ns/rdftest#` | str_key | RDFT = "http://www.w3.org/ns/rdftest#" |  |  |  |  |
-
-| `https://w3c.github.io/rdf-tests/rdf/rdf11/rdf-n-triples/manifest.ttl` | str_key | DEFAULT_MANIFESTS = "https://w3c.github.io/rdf-tests/rdf/rdf11/rdf-n-triples/manifest.ttl" |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/w3c_rdf.rs
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#` | str_key | RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML` | str_key | RDF_HTML = "http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#JSON` | str_key | RDF_JSON = "http://www.w3.org/1999/02/22-rdf-syntax-ns#JSON" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#Property` | str_key | RDF_PROPERTY = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#Proposition` | str_key | RDF_PROPOSITION = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Proposition" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#TripleTerm` | str_key | RDF_TRIPLE_TERM = "http://www.w3.org/1999/02/22-rdf-syntax-ns#TripleTerm" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral` | str_key | RDF_XML_LITERAL = "http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString` | str_key | RDF_DIR_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies` | str_key | RDF_REIFIES = "http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#` | str_key | RDFS = "http://www.w3.org/2000/01/rdf-schema#" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Class` | str_key | RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty` | str_key | RDFS_CONTAINER_MEMBERSHIP_PROPERTY = "http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Datatype` | str_key | RDFS_DATATYPE = "http://www.w3.org/2000/01/rdf-schema#Datatype" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Literal` | str_key | RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Proposition` | str_key | RDFS_PROPOSITION = "http://www.w3.org/2000/01/rdf-schema#Proposition" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Resource` | str_key | RDFS_RESOURCE = "http://www.w3.org/2000/01/rdf-schema#Resource" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#domain` | str_key | RDFS_DOMAIN = "http://www.w3.org/2000/01/rdf-schema#domain" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#member` | str_key | RDFS_MEMBER = "http://www.w3.org/2000/01/rdf-schema#member" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#range` | str_key | RDFS_RANGE = "http://www.w3.org/2000/01/rdf-schema#range" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#subClassOf` | str_key | RDFS_SUBCLASS_OF = "http://www.w3.org/2000/01/rdf-schema#subClassOf" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#subPropertyOf` | str_key | RDFS_SUBPROPERTY_OF = "http://www.w3.org/2000/01/rdf-schema#subPropertyOf" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#boolean` | str_key | XSD_BOOLEAN = "http://www.w3.org/2001/XMLSchema#boolean" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#decimal` | str_key | XSD_DECIMAL = "http://www.w3.org/2001/XMLSchema#decimal" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#double` | str_key | XSD_DOUBLE = "http://www.w3.org/2001/XMLSchema#double" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#float` | str_key | XSD_FLOAT = "http://www.w3.org/2001/XMLSchema#float" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#int` | str_key | XSD_INT = "http://www.w3.org/2001/XMLSchema#int" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#integer` | str_key | XSD_INTEGER = "http://www.w3.org/2001/XMLSchema#integer" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#string` | str_key | XSD_STRING = "http://www.w3.org/2001/XMLSchema#string" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#` | str_key | MF = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action` | str_key | MF_ACTION = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entailmentRegime` | str_key | MF_ENTAILMENT_REGIME = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entailmentRegime" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entries` | str_key | MF_ENTRIES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entries" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#include` | str_key | MF_INCLUDE = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#include" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name` | str_key | MF_NAME = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#recognizedDatatypes` | str_key | MF_RECOGNIZED_DATATYPES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#recognizedDatatypes" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result` | str_key | MF_RESULT = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#unrecognizedDatatypes` | str_key | MF_UNRECOGNIZED_DATATYPES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#unrecognizedDatatypes" |  |  |  |  |
-
-| `http://www.w3.org/ns/rdftest#` | str_key | RDFT = "http://www.w3.org/ns/rdftest#" |  |  |  |  |
-
-| `https://w3c.github.io/rdf-tests/rdf/rdf11/rdf-n-triples/manifest.ttl` | str_key | DEFAULT_MANIFESTS = "https://w3c.github.io/rdf-tests/rdf/rdf11/rdf-n-triples/manifest.ttl" |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/wasm.rs
-
-| `new` | function | new(program: &str, proof: bool) -> std::result::Result<EyeronSession, JsValue> |  |  |  |  |
-
-| `program_facts` | function | program_facts(&self) -> usize |  |  |  |  |
-
-| `program_rules` | function | program_rules(&self) -> usize |  |  |  |  |
-
-| `reason` | function | reason(input: &str) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `reason_report` | function | reason_report(&self, data: &str, rdf: bool, rdf_format: &str) -> String |  |  |  |  |
-
-| `reason_with_data` | function | reason_with_data( program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `reason_with_data_report` | function | reason_with_data_report( program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> String |  |  |  |  |
-
-| `reason_with_options` | function | reason_with_options( input: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `version` | function | version() -> String |  |  |  |  |
-
-| `EyeronSession` | struct | EyeronSession { prepared: PreparedReasoner, proof: bool } |  |  |  |  |
-
-
-### crates/graphlaw-eyeron/src/wasm.rs
-
-| `new` | function | new(program: &str, proof: bool) -> std::result::Result<EyeronSession, JsValue> |  |  |  |  |
-
-| `program_facts` | function | program_facts(&self) -> usize |  |  |  |  |
-
-| `program_rules` | function | program_rules(&self) -> usize |  |  |  |  |
-
-| `reason` | function | reason(input: &str) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `reason_report` | function | reason_report(&self, data: &str, rdf: bool, rdf_format: &str) -> String |  |  |  |  |
-
-| `reason_with_data` | function | reason_with_data( program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `reason_with_data_report` | function | reason_with_data_report( program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> String |  |  |  |  |
-
-| `reason_with_options` | function | reason_with_options( input: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `version` | function | version() -> String |  |  |  |  |
-
-| `EyeronSession` | struct | EyeronSession { prepared: PreparedReasoner, proof: bool } |  |  |  |  |
+| `thread_affinity=unavailable_stable_rust_macos (core_affinity crate not added)` | str_key | ISOLATION_DISCLOSURE = "thread_affinity=unavailable_stable_rust_macos (core_affinity crate not added)" |  |  |  |  |
 
 
 ### examples/allen_datalog.rs
@@ -1581,9 +185,9 @@
 
 | `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
 
-| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+| `3.0.1` | str_key | PURRDF = "3.0.1" |  |  |  |  |
 
-| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+| `purrdf-n3/3.0.1` | str_key | N3_ENGINE = "purrdf-n3/3.0.1" |  |  |  |  |
 
 | `t` | str_key | SUBJ = "t" |  |  |  |  |
 
@@ -1596,18 +200,23 @@
 
 | `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
 
-| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+| `3.0.1` | str_key | PURRDF = "3.0.1" |  |  |  |  |
 
-| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+| `purrdf-n3/3.0.1` | str_key | N3_ENGINE = "purrdf-n3/3.0.1" |  |  |  |  |
+
+
+### examples/blackbox_fixture.rs
+
+| `0123456789abcdef0123456789abcdef01234567` | str_key | SUBJECT = "0123456789abcdef0123456789abcdef01234567" |  |  |  |  |
 
 
 ### examples/breed_oracle_gen.rs
 
 | `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
 
-| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+| `3.0.1` | str_key | PURRDF = "3.0.1" |  |  |  |  |
 
-| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+| `purrdf-n3/3.0.1` | str_key | N3_ENGINE = "purrdf-n3/3.0.1" |  |  |  |  |
 
 
 ### examples/event_calculus_vectors.rs
@@ -1618,13 +227,15 @@
 
 | `t` | env_key | var("t") |  |  |  |  |
 
-| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+| `3.0.1` | str_key | PURRDF = "3.0.1" |  |  |  |  |
 
-| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+| `CARGO_PKG_VERSION` | str_key | GL_VERSION = "CARGO_PKG_VERSION" |  |  |  |  |
 
 | `event_calculus-paper-narrative` | str_key | SCENARIOS = "event_calculus-paper-narrative" |  |  |  |  |
 
 | `event_calculus_vectors` | str_key | GENERATOR = "event_calculus_vectors" |  |  |  |  |
+
+| `purrdf-n3/3.0.1` | str_key | N3_ENGINE = "purrdf-n3/3.0.1" |  |  |  |  |
 
 | `urn:ec:clipped` | str_key | P_CLIPPED = "urn:ec:clipped" |  |  |  |  |
 
@@ -1658,16 +269,11 @@
 
 | `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
 
-| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
-
-| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+| `3.0.1` | str_key | PURRDF = "3.0.1" |  |  |  |  |
 
 | `plan_replay_oracle_gen` | str_key | GENERATOR = "plan_replay_oracle_gen" |  |  |  |  |
 
-
-### examples/sql_in_rdf_duckdb.rs
-
-| `extract_select_statement` | function | extract_select_statement(&self, query_node: &String) -> Result<SelectStatement, AstError> |  |  |  |  |
+| `purrdf-n3/3.0.1` | str_key | N3_ENGINE = "purrdf-n3/3.0.1" |  |  |  |  |
 
 
 ### ggen/sql-dialect/sql_extensions.rs
@@ -1716,9 +322,21 @@
 
 | `missing_buffer_response` | function | missing_buffer_response() -> Vec<u8> |  |  |  |  |
 
+| `unknown_buffer_response` | function | unknown_buffer_response() -> Vec<u8> |  |  |  |  |
+
+| `Fail` | struct | Fail { pub(in crate::abi) refusal: Refusal, pub(in crate::abi) details: Option<Value> } |  |  |  |  |
+
+| `ops::plan_from_json` | use | ops::plan_from_json |  |  |  |  |
+
+
+### src/abi/ops/governance.rs
+
 | `plan_from_json` | function | plan_from_json(plan: &Value) -> Result<crate::plan::Plan, String> |  |  |  |  |
 
-| `Fail` | struct | Fail { refusal: Refusal, details: Option<Value> } |  |  |  |  |
+
+### src/abi/ops/mod.rs
+
+| `governance::plan_from_json` | use | governance::plan_from_json |  |  |  |  |
 
 
 ### src/abi_manifest.rs
@@ -1740,7 +358,11 @@
 
 ### src/attest.rs
 
+| `GLAW_RECEIPT_V2` | const | GLAW_RECEIPT_V2: &[u8; 15] |  |  |  |  |
+
 | `AttestError` | enum | AttestError { BadSignature, UnknownKey, Malformed(String) } |  |  |  |  |
+
+| `canon_arrow_empty_v1` | function | canon_arrow_empty_v1() -> [u8; 32] |  |  |  |  |
 
 | `from_bytes` | function | from_bytes(bytes: &[u8; 32]) -> Result<Self, AttestError> |  |  |  |  |
 
@@ -1764,6 +386,8 @@
 
 | `key_id` | function | key_id(&self) -> String |  |  |  |  |
 
+| `lease_digest` | function | lease_digest(payload: &[u8]) -> String |  |  |  |  |
+
 | `lease_payload` | function | lease_payload(l: &Lease) -> String |  |  |  |  |
 
 | `len` | function | len(&self) -> usize |  |  |  |  |
@@ -1771,6 +395,10 @@
 | `new` | function | new() -> Self |  |  |  |  |
 
 | `receipt_payload` | function | receipt_payload(f: &ReceiptFields<'_>) -> String |  |  |  |  |
+
+| `receipt_v1` | function | receipt_v1( h_query: &[u8; 32], h_pre: &[u8; 32], h_post: &[u8; 32], h_triples: &[u8; 32], epoch: u64, ) -> [u8; 32] |  |  |  |  |
+
+| `receipt_v2` | function | receipt_v2( h_query: &[u8; 32], h_pre: &[u8; 32], h_post: &[u8; 32], h_triples: &[u8; 32], h_columnar: &[u8; 32], epoch: u64, ) -> [u8; 32] |  |  |  |  |
 
 | `sign_bytes` | function | sign_bytes(key: &SigningKey, payload: &[u8]) -> Attestation |  |  |  |  |
 
@@ -1790,6 +418,8 @@
 
 | `verifying_key` | function | verifying_key(&self) -> VerifyingKey |  |  |  |  |
 
+| `GLAW_RECEIPT_V2` | str_key | GLAW_RECEIPT_V2 = "GLAW_RECEIPT_V2" |  |  |  |  |
+
 | `Attestation` | struct | Attestation { pub payload_blake3: String, pub key_id: String, pub signature: String } |  |  |  |  |
 
 | `ReceiptFields` | struct | ReceiptFields { pub parent: &'a str, pub child: &'a str, pub step: &'a str, pub authority: &'a str, pub revision: &'a str, pub added: u64, pub lease_id: Option<&'a str>, pub plan_blake3: Option<&'a str>, pub subject_blake3: Option<&'a str> } |  |  |  |  |
@@ -1803,12 +433,135 @@
 
 ### src/bin/dl_dualroute.rs
 
+| `WASM4PM_FIXTURES` | env_key | std::env::var("WASM4PM_FIXTURES") |  |  |  |  |
+
 | `https://graphlaw.dev/dl#` | str_key | DL = "https://graphlaw.dev/dl#" |  |  |  |  |
 
 
-### src/bin/graphlaw_run.rs
+### src/bin/graphlaw_attest.rs
+
+| `graphlaw-attest — sign or verify an arbitrary file with Ed25519 attestations.
+
+Usage:
+  graphlaw-attest sign   --key-seed-hex <hex> --in <file> [--out <attestation.json>]
+  graphlaw-attest verify --in <file> --attestation <json> --trusted-key <hex> [...]
+  graphlaw-attest pubkey --key-seed-hex <hex>
+
+Commands:
+  sign    Sign the file; writes (or prints) the canonical attestation JSON
+  verify  Re-read the file and attestation; prints `VERIFIED` or `REFUSED: <error>`
+  pubkey  Print the Ed25519 public key derived from the 32-byte seed
+
+Flags:
+  --key-seed-hex <hex>  Signing seed, 64 hex chars (32 bytes)
+  --in <file>           Payload file to sign or verify
+  --out <file>          Where `sign` writes the attestation (default: stdout)
+  --attestation <file>  Attestation JSON for `verify`
+  --trusted-key <hex>   Ed25519 public key, 64 hex chars (32 bytes); repeatable
+
+Exit codes: 0 ok, 1 refused (signature/verification failure), 2 usage or I/O error.` | str_key | HELP = "graphlaw-attest — sign or verify an arbitrary file with Ed25519 attestations.
+
+Usage:
+  graphlaw-attest sign   --key-seed-hex <hex> --in <file> [--out <attestation.json>]
+  graphlaw-attest verify --in <file> --attestation <json> --trusted-key <hex> [...]
+  graphlaw-attest pubkey --key-seed-hex <hex>
+
+Commands:
+  sign    Sign the file; writes (or prints) the canonical attestation JSON
+  verify  Re-read the file and attestation; prints `VERIFIED` or `REFUSED: <error>`
+  pubkey  Print the Ed25519 public key derived from the 32-byte seed
+
+Flags:
+  --key-seed-hex <hex>  Signing seed, 64 hex chars (32 bytes)
+  --in <file>           Payload file to sign or verify
+  --out <file>          Where `sign` writes the attestation (default: stdout)
+  --attestation <file>  Attestation JSON for `verify`
+  --trusted-key <hex>   Ed25519 public key, 64 hex chars (32 bytes); repeatable
+
+Exit codes: 0 ok, 1 refused (signature/verification failure), 2 usage or I/O error." |  |  |  |  |
+
+
+### src/bin/graphlaw_registry.rs
+
+| `# receipt-surface: blake3 of the canonical graphlaw.receipt-surface/1 document` | str_key | ARTIFACTS_TRAILING_COMMENTS = "# receipt-surface: blake3 of the canonical graphlaw.receipt-surface/1 document" |  |  |  |  |
+
+| `# wasm row: never re-pinned by graphlaw-registry; re-pinned by the wasm rebuild flow.` | str_key | WASM_ROW_NOTE = "# wasm row: never re-pinned by graphlaw-registry; re-pinned by the wasm rebuild flow." |  |  |  |  |
+
+| `ARTIFACTS.blake3` | str_key | ARTIFACTS_FILE = "ARTIFACTS.blake3" |  |  |  |  |
+
+| `graphlaw-registry — emit or check the capability registry files.
+
+Usage:
+  graphlaw-registry --write | --check | --print-json | --print-ttl | --print-digests
+
+Modes (exactly one per invocation):
+  --write          Write registry/capability-registry.json and .ttl under the crate
+                   root and re-pin the ARTIFACTS.blake3 rows this bin owns
+                   (`registry`, `surface`, `receipt-surface`); the `wasm` row is
+                   never touched here — it is re-pinned by the wasm rebuild flow
+  --check          Compare the committed files against live output; exit 1 with a
+                   first-difference summary on drift
+  --print-json     Print the capability registry JSON to stdout
+  --print-ttl      Print the capability registry Turtle to stdout
+  --print-digests  Print the live surface/registry BLAKE3 digests
+
+Exit codes: 0 ok, 1 drift (`--check`), 2 usage or I/O error.` | str_key | HELP = "graphlaw-registry — emit or check the capability registry files.
+
+Usage:
+  graphlaw-registry --write | --check | --print-json | --print-ttl | --print-digests
+
+Modes (exactly one per invocation):
+  --write          Write registry/capability-registry.json and .ttl under the crate
+                   root and re-pin the ARTIFACTS.blake3 rows this bin owns
+                   (`registry`, `surface`, `receipt-surface`); the `wasm` row is
+                   never touched here — it is re-pinned by the wasm rebuild flow
+  --check          Compare the committed files against live output; exit 1 with a
+                   first-difference summary on drift
+  --print-json     Print the capability registry JSON to stdout
+  --print-ttl      Print the capability registry Turtle to stdout
+  --print-digests  Print the live surface/registry BLAKE3 digests
+
+Exit codes: 0 ok, 1 drift (`--check`), 2 usage or I/O error." |  |  |  |  |
+
+
+### src/bin/graphlaw_run_eh.rs
 
 | `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+
+### src/bin/graphlaw_verify.rs
+
+| `graphlaw-verify — offline third-party replay + attestation check of an admitted plan.
+
+Usage:
+  graphlaw-verify --start <state.nq|.nt|.ttl|.trig> --plan <plan.json> --receipts <dir>
+                  [--subject <key>] --trusted-key <hex> [--trusted-key <hex>...]
+
+Flags:
+  --start <path>        Start state (dialect chosen by extension; default N-Quads)
+  --plan <path>         Plan JSON to replay via Plan::admit
+  --receipts <dir>      Receipt store root; defaults subject discovery to its only
+                        subdirectory unless --subject is given
+  --subject <key>       Subject key within the receipt store
+  --trusted-key <hex>   Ed25519 public key, 64 hex chars (32 bytes); repeatable
+
+Output: `ADMITTED` or `REFUSED: <code>: <detail>` on stdout.
+Exit codes: 0 admitted, 1 refused, 2 usage or I/O error.` | str_key | HELP = "graphlaw-verify — offline third-party replay + attestation check of an admitted plan.
+
+Usage:
+  graphlaw-verify --start <state.nq|.nt|.ttl|.trig> --plan <plan.json> --receipts <dir>
+                  [--subject <key>] --trusted-key <hex> [--trusted-key <hex>...]
+
+Flags:
+  --start <path>        Start state (dialect chosen by extension; default N-Quads)
+  --plan <path>         Plan JSON to replay via Plan::admit
+  --receipts <dir>      Receipt store root; defaults subject discovery to its only
+                        subdirectory unless --subject is given
+  --subject <key>       Subject key within the receipt store
+  --trusted-key <hex>   Ed25519 public key, 64 hex chars (32 bytes); repeatable
+
+Output: `ADMITTED` or `REFUSED: <code>: <detail>` on stdout.
+Exit codes: 0 admitted, 1 refused, 2 usage or I/O error." |  |  |  |  |
 
 
 ### src/bin/sa2a_run14_verify.rs
@@ -1818,15 +571,81 @@
 | `https://sa2a.dev/ontology#` | str_key | V1 = "https://sa2a.dev/ontology#" |  |  |  |  |
 
 
+### src/bin/smon_broaden_topic.rs
+
+| `--in-ttl` | str_key | VALUE_FLAGS = "--in-ttl" |  |  |  |  |
+
+| `smon-broaden-topic — disclosed counterfactual post-processor over an already-emitted smon: graph.
+Prints a full audit of every triple it changes.
+
+Usage:
+  smon-broaden-topic --in-ttl IN.ttl --out-ttl OUT.ttl [--canonical-topic T]
+
+Flags:
+  --in-ttl <path>         Input Turtle graph (required)
+  --out-ttl <path>        Output Turtle graph (required)
+  --canonical-topic <t>   Topic to collapse GroundingQuestion topics to
+                          (default: e2e-capability-grounding)
+
+Exit codes: 0 ok, 1 usage, I/O or parse error.` | str_key | HELP = "smon-broaden-topic — disclosed counterfactual post-processor over an already-emitted smon: graph.
+Prints a full audit of every triple it changes.
+
+Usage:
+  smon-broaden-topic --in-ttl IN.ttl --out-ttl OUT.ttl [--canonical-topic T]
+
+Flags:
+  --in-ttl <path>         Input Turtle graph (required)
+  --out-ttl <path>        Output Turtle graph (required)
+  --canonical-topic <t>   Topic to collapse GroundingQuestion topics to
+                          (default: e2e-capability-grounding)
+
+Exit codes: 0 ok, 1 usage, I/O or parse error." |  |  |  |  |
+
+
+### src/bin/smon_transcript_to_turtle.rs
+
+| `--assistant-only` | str_key | SWITCHES = "--assistant-only" |  |  |  |  |
+
+| `--transcript` | str_key | VALUE_FLAGS = "--transcript" |  |  |  |  |
+
+| `smon-transcript-to-turtle — emit smon: Turtle facts from a Claude Code session transcript (.jsonl).
+
+Usage:
+  smon-transcript-to-turtle --transcript T.jsonl --out OUT.ttl
+      [--session-id ID] [--base IRI] [--assistant-only] [--topic-filter S]
+
+Flags:
+  --transcript <path>  Session transcript in JSONL format (required)
+  --out <path>         Turtle output file (required)
+  --session-id <id>    Session id (default: transcript file stem)
+  --base <iri>         Base IRI for emitted subjects
+                       (default: .../sessions/<session-id>)
+  --assistant-only     Switch: keep only assistant turns
+  --topic-filter <s>   Also print turns whose grounding topic contains <s>
+
+Exit codes: 0 ok, 1 usage, I/O or parse error.` | str_key | HELP = "smon-transcript-to-turtle — emit smon: Turtle facts from a Claude Code session transcript (.jsonl).
+
+Usage:
+  smon-transcript-to-turtle --transcript T.jsonl --out OUT.ttl
+      [--session-id ID] [--base IRI] [--assistant-only] [--topic-filter S]
+
+Flags:
+  --transcript <path>  Session transcript in JSONL format (required)
+  --out <path>         Turtle output file (required)
+  --session-id <id>    Session id (default: transcript file stem)
+  --base <iri>         Base IRI for emitted subjects
+                       (default: .../sessions/<session-id>)
+  --assistant-only     Switch: keep only assistant turns
+  --topic-filter <s>   Also print turns whose grounding topic contains <s>
+
+Exit codes: 0 ok, 1 usage, I/O or parse error." |  |  |  |  |
+
+
 ### src/dialect.rs
 
 | `Dialect` | enum | Dialect { Turtle, TriG, NTriples, NQuads, RdfXml, JsonLd, YamlLd, TriX, HexTuples, N3, ShExC, ShExJ, Sparql, SqlRdf } |  |  |  |  |
 
-| `Engine` | enum | Engine { PurRdf, Eyeron, FrozenDuckdb } |  |  |  |  |
-
-| `ReasonClass` | enum | ReasonClass { Syntax, UndefinedPrefix, BadIri, FormulaInRdfLayer, NotSemanticContent, AmbiguousDialect, RemoteContext, Limit { name: String, observed: u64, max: u64, } } |  |  |  |  |
-
-| `RefusalKind` | enum | RefusalKind { NotSemanticContent, Ambiguous, EngineRejected, Unsupported, ResourceLimit, TierMismatch, DuckDb } |  |  |  |  |
+| `Engine` | enum | Engine { PurRdf, FrozenDuckdb } |  |  |  |  |
 
 | `admit_bytes` | function | admit_bytes( bytes: &[u8], hint: Option<&str>, base: Option<&str>, ) -> Result<LawState, Refusal> |  |  |  |  |
 
@@ -1840,38 +659,90 @@
 
 | `media_type` | function | media_type(self) -> Option<&'static str> |  |  |  |  |
 
-| `new` | function | new( dialect: Dialect, reason: ReasonClass, message: impl Into<String>, ) -> Self |  |  |  |  |
+| `new` | function | new(dialect: Dialect, reason: ReasonClass, message: impl Into<String>) -> Self |  |  |  |  |
 
 | `parse_rdf` | function | parse_rdf( bytes: &[u8], dialect: Dialect, base: Option<&str>, ) -> Result<Arc<purrdf::RdfDataset>, Refusal> |  |  |  |  |
 
 | `parse_rdf_typed` | function | parse_rdf_typed( bytes: &[u8], dialect: Dialect, base: Option<&str>, ) -> Result<Arc<purrdf::RdfDataset>, Box<ParseRefusal>> |  |  |  |  |
 
-| `sniff` | function | sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> |  |  |  |  |
-
 | `ParseRefusal` | struct | ParseRefusal { pub dialect: Dialect, pub engine: Engine, pub reason: ReasonClass, pub line: Option<u32>, pub col: Option<u32>, pub byte_offset: Option<usize>, pub snippet: Option<String>, pub message: String } |  |  |  |  |
 
-| `Refusal` | struct | Refusal { pub kind: RefusalKind, pub dialect: Option<Dialect>, pub engine: Option<Engine>, pub message: String } |  |  |  |  |
+| `refusal::{ReasonClass, Refusal, RefusalKind, RefusalMessage}` | use | refusal::{ReasonClass, Refusal, RefusalKind, RefusalMessage} |  |  |  |  |
+
+| `sniff::sniff` | use | sniff::sniff |  |  |  |  |
+
+
+### src/dialect/refusal.rs
+
+| `ReasonClass` | enum | ReasonClass { Syntax, UndefinedPrefix, BadIri, FormulaInRdfLayer, NotSemanticContent, AmbiguousDialect, RemoteContext, Limit { name: String, observed: u64, max: u64, } } |  |  |  |  |
+
+| `RefusalKind` | enum | RefusalKind { NotSemanticContent, Ambiguous, EngineRejected, Unsupported, ResourceLimit, TierMismatch, DuckDb, BareSql, Fuse } |  |  |  |  |
+
+| `RefusalMessage` | enum | RefusalMessage { Static(&'static str), Dynamic(String) } |  |  |  |  |
+
+| `as_str` | function | as_str(&self) -> &str |  |  |  |  |
+
+| `Refusal` | struct | Refusal { pub kind: RefusalKind, pub dialect: Option<Dialect>, pub engine: Option<Engine>, pub message: RefusalMessage } |  |  |  |  |
+
+
+### src/dialect/sniff.rs
+
+| `sniff` | function | sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> |  |  |  |  |
+
+| `http://graphlaw.org/sql#` | str_key | SQL_IRI = "http://graphlaw.org/sql#" |  |  |  |  |
+
+| `sql:` | str_key | SQL = "sql:" |  |  |  |  |
 
 
 ### src/duckdb_eval.rs
 
-| `EvaluatorError` | enum | EvaluatorError { DuckDb(frozen_duckdb::DuckDBError), ConversionError { column: String, row: usize, details: String, }, ReceiptError(String) } |  |  |  |  |
+| `DEFAULT_ROW_ENVELOPE` | const | DEFAULT_ROW_ENVELOPE: usize |  |  |  |  |
 
-| `admitted_statement_hash` | function | admitted_statement_hash( canonical_graph: &[u8], params: &[SqlLiteral], ) -> [u8; 32] |  |  |  |  |
+| `PARAM_BYTES_INLINE` | const | PARAM_BYTES_INLINE: usize |  |  |  |  |
+
+| `ROW_ENVELOPE_LIMIT` | const | ROW_ENVELOPE_LIMIT: &str |  |  |  |  |
+
+| `EvaluatorError` | enum | EvaluatorError { DuckDb(frozen_duckdb::DuckDBError), ConversionError { column: String, row: usize, details: String, }, ReceiptError(String), NoCanonicalGraph(String), BatchMemberFailed { index: usize, source: Box<EvaluatorError>, partial: BatchReceipt, }, RowEnvelopeExceeded { limit: &'static str, observed: usize, max: usize, } } |  |  |  |  |
+
+| `ParamBytes` | enum | ParamBytes { Inline { buf: [u8; PARAM_BYTES_INLINE], len: usize, }, Digest([u8; 32]) } |  |  |  |  |
+
+| `admitted_statement_hash` | function | admitted_statement_hash(canonical_graph: &[u8], params: &[SqlLiteral]) -> [u8; 32] |  |  |  |  |
 
 | `canonical_ast_graph_bytes` | function | canonical_ast_graph_bytes(turtle: &str) -> Result<Vec<u8>, EvaluatorError> |  |  |  |  |
 
+| `coarse_elapsed_ns` | function | coarse_elapsed_ns(start_ns: u64) -> u64 |  |  |  |  |
+
+| `coarse_now_ns` | function | coarse_now_ns() -> u64 |  |  |  |  |
+
+| `encode` | function | encode(params: &[SqlLiteral]) -> ParamBytes |  |  |  |  |
+
 | `eval_admitted_ast` | function | eval_admitted_ast( &self, ast_turtle: &str, query_iri: &str, compiled: &CompiledQuery, subject_iri_prefix: &str, predicate_iri_prefix: &str, ) -> Result<ExecutionReceipt, EvaluatorError> |  |  |  |  |
+
+| `eval_ast_document` | function | eval_ast_document( &self, query_iri: &str, document: &crate::sql_ast::CompiledDocument, subject_iri_prefix: &str, predicate_iri_prefix: &str, atomic: bool, ) -> Result<BatchReceipt, EvaluatorError> |  |  |  |  |
+
+| `eval_ast_document_bounded` | function | eval_ast_document_bounded( &self, query_iri: &str, document: &crate::sql_ast::CompiledDocument, subject_iri_prefix: &str, predicate_iri_prefix: &str, atomic: bool, max_rows: usize, ) -> Result<BatchReceipt, EvaluatorError> |  |  |  |  |
 
 | `eval_ast_query` | function | eval_ast_query( &self, query_iri: &str, compiled: &CompiledQuery, subject_iri_prefix: &str, predicate_iri_prefix: &str, ) -> Result<ExecutionReceipt, EvaluatorError> |  |  |  |  |
 
+| `eval_ast_query_bounded` | function | eval_ast_query_bounded( &self, query_iri: &str, compiled: &CompiledQuery, subject_iri_prefix: &str, predicate_iri_prefix: &str, max_rows: usize, ) -> Result<ExecutionReceipt, EvaluatorError> |  |  |  |  |
+
 | `explain_ast_query` | function | explain_ast_query(&self, compiled: &CompiledQuery) -> Result<String, EvaluatorError> |  |  |  |  |
+
+| `fold` | function | fold(&self, hasher: &mut blake3::Hasher) |  |  |  |  |
+
+| `fold_params_anchored` | function | fold_params_anchored(h_ast: &[u8; 32], params: &[SqlLiteral]) -> [u8; 32] |  |  |  |  |
 
 | `from_connection` | function | from_connection(conn: frozen_duckdb::Connection) -> Self |  |  |  |  |
 
 | `from_connection_with_cache` | function | from_connection_with_cache( conn: frozen_duckdb::Connection, cache: std::sync::Arc<crate::query_cache::QueryCache>, ) -> Self |  |  |  |  |
 
+| `h_columnar_canon` | function | h_columnar_canon(triples: &[RdfTriple]) -> [u8; 32] |  |  |  |  |
+
+| `h_triples_serterm` | function | h_triples_serterm(triples: &[RdfTriple]) -> [u8; 32] |  |  |  |  |
+
 | `hash_param_buffer` | function | hash_param_buffer(hasher: &mut blake3::Hasher, params: &[SqlLiteral]) |  |  |  |  |
+
+| `is_inline` | function | is_inline(&self) -> bool |  |  |  |  |
 
 | `open_in_memory` | function | open_in_memory() -> Result<Self, EvaluatorError> |  |  |  |  |
 
@@ -1879,15 +750,41 @@
 
 | `open_in_memory_with_cache` | function | open_in_memory_with_cache( cache: std::sync::Arc<crate::query_cache::QueryCache>, ) -> Result<Self, EvaluatorError> |  |  |  |  |
 
+| `prepared_statement_cache_hits` | function | prepared_statement_cache_hits(&self) -> u64 |  |  |  |  |
+
+| `prepared_statements` | function | prepared_statements(&self) -> usize |  |  |  |  |
+
 | `raw_connection` | function | raw_connection(&self) -> &frozen_duckdb::Connection |  |  |  |  |
+
+| `receipt_v2_state_sentinel` | function | receipt_v2_state_sentinel() -> &'static [u8; 32] |  |  |  |  |
+
+| `register_csv_view` | function | register_csv_view( &self, view_name: &str, glob_pattern: &str, ) -> Result<(), EvaluatorError> |  |  |  |  |
 
 | `register_parquet_view` | function | register_parquet_view( &self, view_name: &str, glob_pattern: &str, hive_partitioning: bool, ) -> Result<(), EvaluatorError> |  |  |  |  |
 
+| `register_purrdf_parquet_views` | function | register_purrdf_parquet_views( &self, directory: &std::path::Path, ) -> Result<(), EvaluatorError> |  |  |  |  |
+
 | `shared_cache` | function | shared_cache(&self) -> std::sync::Arc<crate::query_cache::QueryCache> |  |  |  |  |
 
-| `ExecutionReceipt` | struct | ExecutionReceipt { pub query_iri: String, pub query_hash: [u8; 32], pub sql_statement: String, pub rows_emitted: usize, pub execution_ms: f64, pub result_triples: Vec<RdfTriple>, pub cached: bool, pub consult_ms: f64 } |  |  |  |  |
+| `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/` | str_key | TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" |  |  |  |  |
 
-| `GraphLawDuckDB` | struct | GraphLawDuckDB { conn: frozen_duckdb::Connection, cache: std::sync::Arc<crate::query_cache::QueryCache> } |  |  |  |  |
+| `duckdb_result_rows` | str_key | ROW_ENVELOPE_LIMIT = "duckdb_result_rows" |  |  |  |  |
+
+| `seq_atomic_abort` | str_key | TABLE = "seq_atomic_abort" |  |  |  |  |
+
+| `seq_atomic_ok` | str_key | TABLE = "seq_atomic_ok" |  |  |  |  |
+
+| `seq_court_events` | str_key | TABLE = "seq_court_events" |  |  |  |  |
+
+| `seq_court_partial` | str_key | TABLE = "seq_court_partial" |  |  |  |  |
+
+| `seq_inverted` | str_key | TABLE = "seq_inverted" |  |  |  |  |
+
+| `BatchReceipt` | struct | BatchReceipt { pub query_iri: String, pub doc_hash: [u8; 32], pub members: Vec<ExecutionReceipt>, pub rows_emitted: Vec<usize>, pub failed_at: Option<usize>, pub status: String, pub state_delta: u64 } |  |  |  |  |
+
+| `ExecutionReceipt` | struct | ExecutionReceipt { pub query_iri: String, pub query_hash: [u8; 32], pub sql_statement: String, pub rows_emitted: usize, pub execution_ms: f64, pub result_triples: Vec<RdfTriple>, pub cached: bool, pub consult_ms: f64, pub artifact_digest_hex: Option<String>, pub artifact_bytes: Option<u64>, pub artifact_warning: Option<String>, pub columnar_digest_hex: Option<String>, pub receipt_v2_hex: Option<String> } |  |  |  |  |
+
+| `GraphLawDuckDB` | struct | GraphLawDuckDB { conn: frozen_duckdb::Connection, cache: std::sync::Arc<crate::query_cache::QueryCache>, stmt_cache: StmtCacheSeam } |  |  |  |  |
 
 | `RdfTriple` | struct | RdfTriple { pub subject: String, pub predicate: String, pub object: TermValue } |  |  |  |  |
 
@@ -1902,16 +799,78 @@
 
 | `MAX_CHUNK_ROWS` | const | MAX_CHUNK_ROWS: usize |  |  |  |  |
 
+| `MAX_SESSIONS` | const | MAX_SESSIONS: usize |  |  |  |  |
+
+| `GRAPHLAW_ATTACH_ROOTS` | env_key | std::env::var("GRAPHLAW_ATTACH_ROOTS") |  |  |  |  |
+
 | `dispatch` | function | dispatch(v: &Value) -> Result<Value, Fail> |  |  |  |  |
 
+| `leading_sql_token` | function | leading_sql_token(sql: &str) -> Option<String> |  |  |  |  |
+
 | `32MiB` | str_key | DUCKDB_MEMORY_LIMIT = "32MiB" |  |  |  |  |
+
+
+### src/egress/arrow.rs
+
+| `FLAGS_MASK` | const | FLAGS_MASK: u16 |  |  |  |  |
+
+| `FLAG_BIG_ENDIAN` | const | FLAG_BIG_ENDIAN: u16 |  |  |  |  |
+
+| `FLAG_HAS_NULLS` | const | FLAG_HAS_NULLS: u16 |  |  |  |  |
+
+| `FLAG_STRICT_PROJECTION_ORDER` | const | FLAG_STRICT_PROJECTION_ORDER: u16 |  |  |  |  |
+
+| `MAGIC` | const | MAGIC: [u8; 8] |  |  |  |  |
+
+| `PAYLOAD_OFFSET` | const | PAYLOAD_OFFSET: u32 |  |  |  |  |
+
+| `SCHEMA_VERSION` | const | SCHEMA_VERSION: u16 |  |  |  |  |
+
+| `SIZE` | const | SIZE: usize |  |  |  |  |
+
+| `ArrowEgressHeaderError` | enum | ArrowEgressHeaderError { BadMagic, BadSchemaVersion(u16), BadFlags(u16), BadPayloadOffset(u32), BadTotalLen { payload_byte_len: u64, total_byte_len: u64, }, ReservedNotZero } |  |  |  |  |
+
+| `CANON_ARROW_EMPTY_V1` | function | CANON_ARROW_EMPTY_V1() -> &'static [u8; 32] |  |  |  |  |
+
+| `canon_arrow_empty_v1` | function | canon_arrow_empty_v1() -> &'static [u8; 32] |  |  |  |  |
+
+| `from_bytes` | function | from_bytes(bytes: &[u8; Self::SIZE]) -> Result<Self, ArrowEgressHeaderError> |  |  |  |  |
+
+| `to_bytes` | function | to_bytes(&self) -> [u8; Self::SIZE] |  |  |  |  |
+
+| `GLAWARRW` | str_key | MAGIC = "GLAWARRW" |  |  |  |  |
+
+| `ArrowEgressHeader` | struct | ArrowEgressHeader { pub magic: [u8; 8], pub schema_version: u16, pub flags: u16, pub batch_count: u32, pub payload_offset: u32, pub payload_byte_len: u64, pub total_byte_len: u64, pub triples_digest: [u8; 32], pub columnar_digest: [u8; 32], pub reserved: [u8; 24] } |  |  |  |  |
+
+
+### src/egress/collector.rs
+
+| `CanonArrowCell` | enum | CanonArrowCell { Null, Bool(bool), I8(i8), I16(i16), I32(i32), I64(i64), U8(u8), U16(u16), U32(u32), U64(u64), F32(f32), F64(f64), Dec128(i128), Str(String), Bytes(Vec<u8>), Date32(i32), Time64(CanonArrowTimeUnit, i64), Timestamp(CanonArrowTimeUnit, i64), Interval { months: i32, days: i32, nanos: i64, } } |  |  |  |  |
+
+| `CanonArrowCollectorError` | enum | CanonArrowCollectorError { ColumnIndexOutOfRange { column: usize, columns: usize, }, CellTypeMismatch { column: usize, declared: CanonArrowType, cell: &'static str, }, RaggedRows { lengths: Vec<usize>, }, Overflow { what: &'static str, } } |  |  |  |  |
+
+| `CanonArrowTimeUnit` | enum | CanonArrowTimeUnit { Second, Millisecond, Microsecond, Nanosecond } |  |  |  |  |
+
+| `CanonArrowType` | enum | CanonArrowType { Null, Bool, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float32, Float64, Decimal128 { precision: u8, scale: i8, }, Utf8, Binary, Date32, Time64(CanonArrowTimeUnit), Timestamp(CanonArrowTimeUnit, Option<String>), IntervalMonthDayNano } |  |  |  |  |
+
+| `columns` | function | columns(&self) -> usize |  |  |  |  |
+
+| `new` | function | new(schema: Vec<CanonArrowField>) -> Self |  |  |  |  |
+
+| `push` | function | push(&mut self, column: usize, cell: CanonArrowCell) -> Result<(), CanonArrowCollectorError> |  |  |  |  |
+
+| `schema` | function | schema(&self) -> &[CanonArrowField] |  |  |  |  |
+
+| `CanonArrowCollector` | struct | CanonArrowCollector { schema: Vec<CanonArrowField>, columns: Vec<ColumnBuilder>, payload: Vec<u8>, hasher: blake3::Hasher, batches: u32, any_nulls: bool } |  |  |  |  |
+
+| `CanonArrowField` | struct | CanonArrowField { pub name: String, pub ty: CanonArrowType } |  |  |  |  |
 
 
 ### src/evidence_ring.rs
 
 | `RING_CAPACITY` | const | RING_CAPACITY: usize |  |  |  |  |
 
-| `PushOutcome` | enum | PushOutcome { Buffered, DroppedNewest } |  |  |  |  |
+| `PushOutcome` | enum | PushOutcome { Buffered, DroppedNewest, RefusedTornPad } |  |  |  |  |
 
 | `RingError` | enum | RingError { Io(String), BrokenChain { detail: String, }, Malformed { line: usize, }, TornSlot { line: usize, }, SequenceGap { detail: String, }, AlreadyInitialized } |  |  |  |  |
 
@@ -1925,9 +884,15 @@
 
 | `init_global` | function | init_global(dir: impl AsRef<Path>) -> Result<(), RingError> |  |  |  |  |
 
+| `init_global_with_ledger` | function | init_global_with_ledger( dir: impl AsRef<Path>, ledger_dir: impl AsRef<Path>, ) -> Result<(), RingError> |  |  |  |  |
+
 | `init_with_ledger` | function | init_with_ledger( dir: impl AsRef<Path>, ledger_dir: impl AsRef<Path>, ) -> Result<Arc<Self>, RingError> |  |  |  |  |
 
+| `init_with_ledger_restart` | function | init_with_ledger_restart( dir: impl AsRef<Path>, ledger_dir: impl AsRef<Path>, producer_attempted: u64, ) -> Result<Arc<Self>, RingError> |  |  |  |  |
+
 | `last_ledger_error` | function | last_ledger_error(&self) -> Option<String> |  |  |  |  |
+
+| `last_write_error` | function | last_write_error(&self) -> Option<RingError> |  |  |  |  |
 
 | `ledger_dir` | function | ledger_dir(&self) -> Option<&Path> |  |  |  |  |
 
@@ -1945,15 +910,19 @@
 
 | `set_drainer_paused` | function | set_drainer_paused(&self, paused: bool) |  |  |  |  |
 
+| `torn_via` | function | torn_via(&self, f: impl FnOnce(&mut [u8; 3], &mut [u8; 8])) -> Self |  |  |  |  |
+
 | `verify` | function | verify(dir: impl AsRef<Path>) -> Result<(usize, usize, u64), RingError> |  |  |  |  |
+
+| `with_torn_pad` | function | with_torn_pad(&self, f: impl FnOnce(&[u8; 3], &[u8; 8]) -> R) -> R |  |  |  |  |
 
 | `0000000000000000000000000000000000000000000000000000000000000000` | str_key | GENESIS = "0000000000000000000000000000000000000000000000000000000000000000" |  |  |  |  |
 
 | `DroppedEvidence` | struct | DroppedEvidence { pub dropped_count: u64, pub refused_h_query: [u8; 32], pub refused_at_ms: u64 } |  |  |  |  |
 
-| `EvidenceRing` | struct | EvidenceRing { dir: PathBuf, ledger_dir: Option<PathBuf>, producer: Mutex<Option<Producer<EvidenceSlot>>>, consumer: Mutex<Option<Consumer<EvidenceSlot>>>, seq_counter: Arc<AtomicU64>, dropped: AtomicU64, paused_flag: Arc<AtomicBool>, shutdown_flag: Arc<AtomicBool>, ledger_error: Arc<Mutex<Option<String>>>, drainer: Mutex<Option<std::thread::JoinHandle<()>>> } |  |  |  |  |
+| `EvidenceRing` | struct | EvidenceRing { dir: PathBuf, ledger_dir: Option<PathBuf>, producer: Mutex<Option<Producer<EvidenceSlot>>>, consumer: Mutex<Option<Consumer<EvidenceSlot>>>, seq_counter: Arc<AtomicU64>, dropped: AtomicU64, paused_flag: Arc<AtomicBool>, shutdown_flag: Arc<AtomicBool>, ledger_error: Arc<Mutex<Option<String>>>, write_error: Arc<Mutex<Option<String>>>, drainer: Mutex<Option<std::thread::JoinHandle<()>>> } |  |  |  |  |
 
-| `RingDescriptor` | struct | RingDescriptor { pub h_query: [u8; 32], pub rows_emitted: u64, pub execution_ms: u32, pub cached: u8, pub pad1: [u8; 3], pub timestamp_ms: u64, pub pad2: [u8; 8] } |  |  |  |  |
+| `RingDescriptor` | struct | RingDescriptor { pub h_query: [u8; 32], pub rows_emitted: u64, pub execution_ms: u32, pub cached: u8, pad1: [u8; 3], pub timestamp_ms: u64, pad2: [u8; 8] } |  |  |  |  |
 
 
 ### src/hooks.rs
@@ -1997,15 +966,25 @@
 
 | `DEFAULT_MAX_SKEW_SECS` | const | DEFAULT_MAX_SKEW_SECS: u64 |  |  |  |  |
 
+| `N3_MAX_BACKWARD_DEPTH` | const | N3_MAX_BACKWARD_DEPTH: usize |  |  |  |  |
+
+| `N3_MAX_BACKWARD_SOLUTIONS_PER_GOAL` | const | N3_MAX_BACKWARD_SOLUTIONS_PER_GOAL: usize |  |  |  |  |
+
 | `N3_MAX_DERIVED_FACTS` | const | N3_MAX_DERIVED_FACTS: usize |  |  |  |  |
 
 | `N3_MAX_ITERATIONS` | const | N3_MAX_ITERATIONS: usize |  |  |  |  |
 
+| `N3_MAX_MATCH_STEPS` | const | N3_MAX_MATCH_STEPS: usize |  |  |  |  |
+
 | `N3_MAX_TERM_BYTES` | const | N3_MAX_TERM_BYTES: usize |  |  |  |  |
+
+| `N3_MAX_TERM_DEPTH` | const | N3_MAX_TERM_DEPTH: usize |  |  |  |  |
 
 | `N3_MAX_TOTAL_BYTES` | const | N3_MAX_TOTAL_BYTES: usize |  |  |  |  |
 
 | `N3_MAX_TOTAL_STEPS` | const | N3_MAX_TOTAL_STEPS: usize |  |  |  |  |
+
+| `REFUSAL_UNKNOWN_STEP_CAPABILITY` | const | REFUSAL_UNKNOWN_STEP_CAPABILITY: &str |  |  |  |  |
 
 | `Ceiling` | enum | Ceiling { Observe, Select, Construct } |  |  |  |  |
 
@@ -2013,13 +992,15 @@
 
 | `LeaseReason` | enum | LeaseReason { Expired, OutOfScope, Ceiling, BadSignature, UntrustedKey, ClockSkew } |  |  |  |  |
 
-| `N3Error` | enum | N3Error { Limit { limit: &'static str, observed: usize, max: usize, summary: String, }, Refused(Refusal) } |  |  |  |  |
+| `N3Error` | enum | N3Error { Limit { limit: &'static str, observed: usize, max: usize, summary: String, }, Refused(Refusal), Fuse { report: String, } } |  |  |  |  |
 
 | `ReceiptReason` | enum | ReceiptReason { Unattested, BadSignature, UntrustedKey } |  |  |  |  |
 
-| `Step` | enum | Step { AdmitShacl { shapes_ttl: &'a str, }, DeriveN3 { rules: &'a str, ruleset: &'a crate::tier::RuleSet, }, Hooks { pack: &'a crate::hooks::HookPack, }, Plan { plan: &'a crate::plan::Plan, }, RequireReceipt { step: &'a str, }, RequireSignedReceipt { step: &'a str, trusted: &'a crate::attest::TrustedKeys, }, EntailRdfs, EntailOwlRl } |  |  |  |  |
+| `Step` | enum | Step { AdmitShacl { shapes_ttl: &'a str, }, DeriveN3 { rules: &'a str, ruleset: &'a crate::tier::RuleSet, }, Hooks { pack: &'a crate::hooks::HookPack, }, Plan { plan: &'a crate::plan::Plan, }, RequireReceipt { step: &'a str, }, RequireSignedReceipt { step: &'a str, trusted: &'a crate::attest::TrustedKeys, }, EntailRdfs, EntailOwlRl, AdmitSql, TestCapabilityProbe(&'static str) } |  |  |  |  |
 
 | `as_str` | function | as_str(self) -> &'static str |  |  |  |  |
+
+| `authority_for_capability` | function | authority_for_capability(capability: &str) -> Result<BackendAuthority, LawError> |  |  |  |  |
 
 | `authorize` | function | authorize( &self, step: &str, required: Ceiling, trusted: &crate::attest::TrustedKeys, clock: &dyn Clock, max_skew_secs: u64, ) -> Result<(), LawError> |  |  |  |  |
 
@@ -2047,6 +1028,8 @@
 
 | `with_subject` | function | with_subject(mut self, subject_blake3: impl Into<String>) -> Self |  |  |  |  |
 
+| `UNKNOWN-STEP-CAPABILITY` | str_key | REFUSAL_UNKNOWN_STEP_CAPABILITY = "UNKNOWN-STEP-CAPABILITY" |  |  |  |  |
+
 | `FixedClock` | struct | FixedClock { pub u64 } |  |  |  |  |
 
 | `LawState` | struct | LawState { dataset: Arc<purrdf::RdfDataset>, id: String } |  |  |  |  |
@@ -2063,6 +1046,8 @@
 
 | `Clock` | trait |  |  |  |  |  |
 
+| `ReasonerLimitCensus` | trait |  |  |  |  |  |
+
 
 ### src/lib.rs
 
@@ -2074,10 +1059,6 @@
 
 | `BackendAuthority` | struct | BackendAuthority { pub capability: &'static str, pub authority: &'static str, pub revision: &'static str } |  |  |  |  |
 
-| `eyeron` | use | eyeron |  |  |  |  |
-
-| `eyeron::{ CompletionStatus, EyeronError, PreparedReasoner, RdfFormat, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, Result, parse_n3, parse_rdf12, proof_to_n3, reason, reason_document, result_to_string, triples_to_n3, triples_to_trig, }` | use | eyeron::{ CompletionStatus, EyeronError, PreparedReasoner, RdfFormat, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, Result, parse_n3, parse_rdf12, proof_to_n3, reason, reason_document, result_to_string, triples_to_n3, triples_to_trig, } |  |  |  |  |
-
 | `law::LawState` | use | law::LawState |  |  |  |  |
 
 | `purrdf` | use | purrdf |  |  |  |  |
@@ -2088,13 +1069,27 @@
 
 | `purrdf::events::*` | use | purrdf::events::* |  |  |  |  |
 
+| `purrdf::geo::*` | use | purrdf::geo::* |  |  |  |  |
+
+| `purrdf::gts::*` | use | purrdf::gts::* |  |  |  |  |
+
+| `purrdf::n3::*` | use | purrdf::n3::* |  |  |  |  |
+
+| `purrdf::retrieval::*` | use | purrdf::retrieval::* |  |  |  |  |
+
 | `purrdf::shapes::*` | use | purrdf::shapes::* |  |  |  |  |
 
 | `purrdf::shex::*` | use | purrdf::shex::* |  |  |  |  |
 
 | `purrdf::sparql::*` | use | purrdf::sparql::* |  |  |  |  |
 
-| `purrdf::{ CanonHash, RdfDataset, RdfDatasetBuilder, RdfDiagnostic, RdfLiteral, SerializeGraph, SparqlEngine, SparqlRequest, SparqlResult, TermId, TermValue, canonicalize, parse_dataset, parse_dataset_with, serialize_dataset, try_canonicalize, }` | use | purrdf::{ CanonHash, RdfDataset, RdfDatasetBuilder, RdfDiagnostic, RdfLiteral, SerializeGraph, SparqlEngine, SparqlRequest, SparqlResult, TermId, TermValue, canonicalize, parse_dataset, parse_dataset_with, serialize_dataset, try_canonicalize, } |  |  |  |  |
+| `purrdf::text::*` | use | purrdf::text::* |  |  |  |  |
+
+| `purrdf::validate::*` | use | purrdf::validate::* |  |  |  |  |
+
+| `purrdf::{ CanonHash, RdfDataset, RdfDatasetBuilder, RdfDiagnostic, RdfLiteral, SerializeGraph, SparqlEngine, SparqlRequest, SparqlResult, TermId, TermValue, parse_dataset, parse_dataset_with, serialize_dataset, try_canonicalize, }` | use | purrdf::{ CanonHash, RdfDataset, RdfDatasetBuilder, RdfDiagnostic, RdfLiteral, SerializeGraph, SparqlEngine, SparqlRequest, SparqlResult, TermId, TermValue, parse_dataset, parse_dataset_with, serialize_dataset, try_canonicalize, } |  |  |  |  |
+
+| `purrdf_columnar` | use | purrdf_columnar |  |  |  |  |
 
 | `receipt_chain::{ReceiptRecord, validator::ReceiptValidator}` | use | receipt_chain::{ReceiptRecord, validator::ReceiptValidator} |  |  |  |  |
 
@@ -2179,6 +1174,21 @@
 | `json::admit` | use | json::admit |  |  |  |  |
 
 
+### src/proof_lease.rs
+
+| `ProofLeaseError` | enum | ProofLeaseError { LeaseDigestMismatch { lease_digest: String, source_digest: String, }, Parse(String) } |  |  |  |  |
+
+| `lease_digest_source` | function | lease_digest_source(source: &str) -> String |  |  |  |  |
+
+| `verify_leased_proof` | function | verify_leased_proof( lease_digest: &str, source: &str, proof: &str, label: &str, ) -> Result<Report, ProofLeaseError> |  |  |  |  |
+
+| `@prefix : <http://example.org/> .
+:Socrates a :Human .
+` | str_key | SOURCE = "@prefix : <http://example.org/> .
+:Socrates a :Human .
+" |  |  |  |  |
+
+
 ### src/qualification.rs
 
 | `Standing` | enum | Standing { Unqualified, Observed, Attacked, Qualified, Refused, Unknown } |  |  |  |  |
@@ -2198,7 +1208,7 @@
 
 | `bump` | function | bump(&self) -> u64 |  |  |  |  |
 
-| `consult` | function | consult(&self, h_query: [u8; 32], grounding: Option<&[u8]>) -> Option<(ExecutionReceipt, u64)> |  |  |  |  |
+| `consult` | function | consult( &self, h_query: [u8; 32], grounding: Option<&[u8]>, ) -> Option<(ExecutionReceipt, u64)> |  |  |  |  |
 
 | `epoch` | function | epoch(&self) -> u64 |  |  |  |  |
 
@@ -2212,12 +1222,21 @@
 
 | `store` | function | store(&self, entry: CacheEntry) |  |  |  |  |
 
+| `with_entries` | function | with_entries(&self, f: impl FnOnce(&mut HashMap<[u8; 32], CacheEntry>) -> R) -> R |  |  |  |  |
+
 | `CacheEntry` | struct | CacheEntry { pub h_query: [u8; 32], pub receipt: ExecutionReceipt, pub grounding: Vec<u8>, pub epoch: u64, pub stored_at: u64 } |  |  |  |  |
 
 | `QueryCache` | struct | QueryCache { entries: Mutex<HashMap<[u8; 32], CacheEntry>>, epoch: AtomicU64 } |  |  |  |  |
 
 
 ### src/query_ledger.rs
+
+| `batch::*` | use | batch::* |  |  |  |  |
+
+| `storage::*` | use | storage::* |  |  |  |  |
+
+
+### src/query_ledger/batch.rs
 
 | `FLUSH_AGE_MS` | const | FLUSH_AGE_MS: u64 |  |  |  |  |
 
@@ -2227,15 +1246,30 @@
 
 | `LedgerError` | enum | LedgerError { Io(String), DigestMismatch { file: String, expected: String, actual: String, }, Malformed { file: String, }, BrokenChain { detail: String, }, Fork { parent: String, }, DoubleGenesis { digest: String, }, MissingAgg { batch: String, }, AggMismatch { batch: String, }, ChainIndex { detail: String, } } |  |  |  |  |
 
+| `content_digest` | function | content_digest(bytes: &[u8]) -> String |  |  |  |  |
+
+| `fold_batch` | function | fold_batch(batch: &str, records: &[Descriptor]) -> BatchAgg |  |  |  |  |
+
+| `0000000000000000000000000000000000000000000000000000000000000000` | str_key | GENESIS = "0000000000000000000000000000000000000000000000000000000000000000" |  |  |  |  |
+
+| `Aggregate` | struct | Aggregate { pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool, pub complete: bool, pub batches: usize } |  |  |  |  |
+
+| `BatchAgg` | struct | BatchAgg { pub batch: String, pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool } |  |  |  |  |
+
+| `ChainState` | struct | ChainState { pub head: String, pub tail: String, pub batches: u64, pub next_seq: u64, pub aggs: BTreeMap<String, String> } |  |  |  |  |
+
+| `Descriptor` | struct | Descriptor { pub h_query: [u8; 32], pub rows_emitted: u32, pub flags: u8, pub ts_unix_ms: u64, pub epoch: u64 } |  |  |  |  |
+
+
+### src/query_ledger/storage.rs
+
+| `accounted_descriptors` | function | accounted_descriptors(dir: impl AsRef<Path>) -> Result<u64, LedgerError> |  |  |  |  |
+
 | `aggregate` | function | aggregate(&self, from_ms: u64, to_ms: u64) -> Result<Aggregate, LedgerError> |  |  |  |  |
 
 | `chain_state` | function | chain_state(&self) -> ChainState |  |  |  |  |
 
-| `content_digest` | function | content_digest(bytes: &[u8]) -> String |  |  |  |  |
-
 | `flush` | function | flush(&mut self) -> Result<(), LedgerError> |  |  |  |  |
-
-| `fold_batch` | function | fold_batch(batch: &str, records: &[Descriptor]) -> BatchAgg |  |  |  |  |
 
 | `gaps` | function | gaps(&self) -> Result<Vec<(u64, u64)>, LedgerError> |  |  |  |  |
 
@@ -2253,17 +1287,7 @@
 
 | `verify` | function | verify(&self) -> Result<ChainState, LedgerError> |  |  |  |  |
 
-| `0000000000000000000000000000000000000000000000000000000000000000` | str_key | GENESIS = "0000000000000000000000000000000000000000000000000000000000000000" |  |  |  |  |
-
-| `Aggregate` | struct | Aggregate { pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool, pub complete: bool, pub batches: usize } |  |  |  |  |
-
-| `BatchAgg` | struct | BatchAgg { pub batch: String, pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool } |  |  |  |  |
-
-| `ChainState` | struct | ChainState { pub head: String, pub tail: String, pub batches: u64, pub next_seq: u64 } |  |  |  |  |
-
-| `Descriptor` | struct | Descriptor { pub h_query: [u8; 32], pub rows_emitted: u32, pub flags: u8, pub ts_unix_ms: u64, pub epoch: u64 } |  |  |  |  |
-
-| `QueryLedger` | struct | QueryLedger { dir: PathBuf, parent: String, next_seq: u64, batches: u64, head: String, tail: String, buf: Vec<Descriptor>, buf_first_seq: u64, buf_opened_ms: u64, pub last_flush_error: Option<LedgerError> } |  |  |  |  |
+| `QueryLedger` | struct | QueryLedger { dir: PathBuf, parent: String, next_seq: u64, batches: u64, head: String, tail: String, buf: Vec<Descriptor>, buf_first_seq: u64, buf_opened_ms: u64, aggs: BTreeMap<String, String>, pub last_flush_error: Option<LedgerError> } |  |  |  |  |
 
 
 ### src/receipt.rs
@@ -2281,173 +1305,63 @@
 
 ### src/receipt_chain.rs
 
-| `ADMITTED` | const | ADMITTED: Self |  |  |  |  |
-
-| `AUTHORIZATION_DENIED` | const | AUTHORIZATION_DENIED: Self |  |  |  |  |
-
-| `CHAIN_RULE_BASE` | const | CHAIN_RULE_BASE: &str |  |  |  |  |
-
-| `CHAIN_RULE_V2_FOLD` | const | CHAIN_RULE_V2_FOLD: &str |  |  |  |  |
-
-| `CONFORMANCE_GATE_FAILED` | const | CONFORMANCE_GATE_FAILED: Self |  |  |  |  |
-
-| `DEFAULT_RECEIPTS_DIR` | const | DEFAULT_RECEIPTS_DIR: &str |  |  |  |  |
-
-| `GENESIS_CHAIN_HASH` | const | GENESIS_CHAIN_HASH: [u8; 32] |  |  |  |  |
-
-| `LEDGER_FILE_NAME` | const | LEDGER_FILE_NAME: &str |  |  |  |  |
-
 | `MIGRATION_LAW_1_TO_2` | const | MIGRATION_LAW_1_TO_2: &str |  |  |  |  |
-
-| `OBJECT_LIFECYCLE_VIOLATION` | const | OBJECT_LIFECYCLE_VIOLATION: Self |  |  |  |  |
-
-| `PRECONDITION_FAILED` | const | PRECONDITION_FAILED: Self |  |  |  |  |
-
-| `RECEIPT_RECORD_VERSION` | const | RECEIPT_RECORD_VERSION: u32 |  |  |  |  |
-
-| `RESOURCE_EXHAUSTED` | const | RESOURCE_EXHAUSTED: Self |  |  |  |  |
 
 | `SCHEMA_V1` | const | SCHEMA_V1: &str |  |  |  |  |
 
 | `SCHEMA_V2` | const | SCHEMA_V2: &str |  |  |  |  |
 
-| `SLA_BREACH` | const | SLA_BREACH: Self |  |  |  |  |
-
-| `WATCHDOG_DRAINED` | const | WATCHDOG_DRAINED: Self |  |  |  |  |
-
 | `AdmissionDecision` | enum | AdmissionDecision { Admitted, Quarantined, Refused } |  |  |  |  |
 
 | `AdmissionLedger` | enum | AdmissionLedger { LegacyUnrecorded, Recorded(Vec<AdmissionItem>) } |  |  |  |  |
-
-| `Andon` | enum | Andon { Green, Halted { unmet: Vec<Obligation>, refusals: Vec<RefusalScenario>, at: u64, }, Overridden { by: String, reason: String, at: u64, } } |  |  |  |  |
 
 | `AndonLevel` | enum | AndonLevel { Red, Yellow, Green } |  |  |  |  |
 
 | `CeilingLevel` | enum | CeilingLevel { Red, LegacyObserved, Yellow, Green } |  |  |  |  |
 
-| `ChainRule` | enum | ChainRule { Base, V2Fold } |  |  |  |  |
-
-| `ChainStanding` | enum | ChainStanding { FullyBound, LegacyV2Unbound } |  |  |  |  |
-
-| `ChainVerification` | enum | ChainVerification { Verified(ChainStanding), Mismatch { rule: ChainRule, recomputed: [u8; 32], } } |  |  |  |  |
-
 | `CheckOutcome` | enum | CheckOutcome { Pass, Fail(String), Skip(String) } |  |  |  |  |
 
-| `CoreError` | enum | CoreError { SerializationFailed(String), HexDecodeFailed(String), ReceiptChainRuleInvalid(String), Io(String), ReceiptSchemaPayloadMismatch(String), UnrecognizedReceiptSchema(String), CeilingExceedsMeet { requested: crate::receipt_chain::epoch::CeilingLevel, allowed: crate::receipt_chain::epoch::CeilingLevel, }, PromotionRefused { reason: String, } } |  |  |  |  |
-
 | `EquivalenceStatus` | enum | EquivalenceStatus { Unknown, Equivalent, Divergent(String) } |  |  |  |  |
-
-| `Obligation` | enum | Obligation { Precondition { predicate_id: String, params_hash: [u8; 32], }, BlockingConstraint { reason: String, }, EvidenceRequired { evidence_type: String, } } |  |  |  |  |
 
 | `ObligationCount` | enum | ObligationCount { Unknown, Tracked { required: u32, discharged: u32, } } |  |  |  |  |
 
 | `ObservedOutcome` | enum | ObservedOutcome { Pass, Fail, Unknown } |  |  |  |  |
 
-| `RefusalCategory` | enum | RefusalCategory { Identity, Capacity, Topology, Temporal, Lifecycle, Authorization, Prerequisites, Reserved } |  |  |  |  |
-
-| `RefusalScenario` | enum | RefusalScenario { BlockingConstraint { reason: String, }, MissingEvidence { evidence_type: String, }, UnsatisfiedPrecondition { predicate_id: String, }, WatchdogDrained, PreconditionFailed, SlaBreach, AuthorizationDenied, ResourceExhausted, ObjectLifecycleViolation, ConformanceGateFailed } |  |  |  |  |
-
 | `admission_item` | function | admission_item(mut self, item: AdmissionItem) -> Self |  |  |  |  |
 
 | `all_unknown` | function | all_unknown() -> Self |  |  |  |  |
 
-| `append` | function | append(&self, record: &ReceiptRecord) -> Result<(), CoreError> |  |  |  |  |
-
-| `as_str` | function | as_str(self) -> &'static str |  |  |  |  |
-
 | `build` | function | build(self) -> Result<ReceiptEpochV2, CoreError> |  |  |  |  |
-
-| `build_admission_frame` | function | build_admission_frame( payload_hash: &[u8; 32], prev_chain_hash: &[u8; 32], meta: &ReceiptMeta, ts_ns: u64, ) -> OcelCausalFrame |  |  |  |  |
-
-| `category` | function | category(&self) -> RefusalCategory |  |  |  |  |
-
-| `chain` | function | chain(&mut self, frame: &OcelCausalFrame) |  |  |  |  |
-
-| `chain_from_frame` | function | chain_from_frame(prev_chain_hash: &[u8; 32], frame: &OcelCausalFrame) -> [u8; 32] |  |  |  |  |
-
-| `chain_hash` | function | chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
-
-| `compose` | function | compose(self, other: Self) -> Self |  |  |  |  |
-
-| `compose_denials` | function | compose_denials( scenarios: impl IntoIterator<Item = &'a RefusalScenario>, ) -> DenialPolarity |  |  |  |  |
 
 | `compute_ceiling` | function | compute_ceiling(prev: CeilingLevel, components: &ComponentLevels) -> CeilingLevel |  |  |  |  |
 
 | `compute_obligation_count` | function | compute_obligation_count(ledger: &AdmissionLedger) -> ObligationCount |  |  |  |  |
 
-| `declared_chain_rule` | function | declared_chain_rule(&self) -> Result<Option<ChainRule>, CoreError> |  |  |  |  |
-
-| `denial_lane` | function | denial_lane(scenario: &RefusalScenario) -> DenialPolarity |  |  |  |  |
-
 | `derive_andon` | function | derive_andon(ledger: &AdmissionLedger) -> AndonLevel |  |  |  |  |
 
 | `equivalence` | function | equivalence(mut self, map: EquivalenceMap) -> Self |  |  |  |  |
 
-| `first_declared` | function | first_declared(&self) -> Option<usize> |  |  |  |  |
-
-| `genesis` | function | genesis(run_id: [u8; 32]) -> Self |  |  |  |  |
-
-| `is_admitted` | function | is_admitted(self) -> bool |  |  |  |  |
-
 | `is_pass` | function | is_pass(&self) -> bool |  |  |  |  |
-
-| `last_chain_hash` | function | last_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
 
 | `legacy_bounded` | function | legacy_bounded() -> Self |  |  |  |  |
 
 | `level` | function | level(&self) -> AndonLevel |  |  |  |  |
 
-| `load_all` | function | load_all(&self) -> Result<Vec<ReceiptRecord>, CoreError> |  |  |  |  |
-
-| `name` | function | name(&self) -> &'static str |  |  |  |  |
-
 | `new` | function | new(prev_ceiling: CeilingLevel, components: ComponentLevels) -> Self |  |  |  |  |
 
-| `observe` | function | observe( &mut self, idx: usize, record: &ReceiptRecord, standing: ChainStanding, ) -> Result<(), CoreError> |  |  |  |  |
-
-| `observe_declared` | function | observe_declared( &mut self, idx: usize, declared: bool, standing: ChainStanding, ) -> Result<(), CoreError> |  |  |  |  |
-
-| `open` | function | open(dir: impl AsRef<Path>) -> Result<Self, CoreError> |  |  |  |  |
-
-| `open_default` | function | open_default() -> Result<Self, CoreError> |  |  |  |  |
-
-| `parse` | function | parse(s: &str) -> Result<Self, CoreError> |  |  |  |  |
-
-| `path` | function | path(&self) -> &Path |  |  |  |  |
-
-| `payload_hash` | function | payload_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
-
-| `prev_chain_hash` | function | prev_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
-
 | `read_receipt_epoch` | function | read_receipt_epoch(record: &super::ReceiptRecord) -> Result<ReceiptEpochV2, CoreError> |  |  |  |  |
-
-| `recompute_chain_hash` | function | recompute_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
-
-| `recompute_chain_hash_lawful` | function | recompute_chain_hash_lawful(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
-
-| `recompute_chain_hash_under` | function | recompute_chain_hash_under(&self, rule: ChainRule) -> Result<[u8; 32], CoreError> |  |  |  |  |
 
 | `recoverable` | function | recoverable(prev: CeilingLevel) -> CeilingLevel |  |  |  |  |
 
 | `remaining` | function | remaining(&self) -> Option<u32> |  |  |  |  |
 
-| `scenario_for_denial_lane` | function | scenario_for_denial_lane(lane: DenialPolarity) -> Option<RefusalScenario> |  |  |  |  |
-
 | `supported` | function | supported(components: &ComponentLevels) -> CeilingLevel |  |  |  |  |
-
-| `to_fired_mask` | function | to_fired_mask(self) -> u64 |  |  |  |  |
-
-| `to_hash_bytes` | function | to_hash_bytes(&self) -> [u8; 99] |  |  |  |  |
 
 | `uniform` | function | uniform(level: AndonLevel) -> Self |  |  |  |  |
 
 | `validate` | function | validate(records: &[ReceiptRecord], clock: &dyn Clock) -> Verdict |  |  |  |  |
 
 | `validate_promotion` | function | validate_promotion( current_ceiling: CeilingLevel, actuator_identity: &str, witness: &PromotionWitness, ) -> Result<CeilingLevel, CoreError> |  |  |  |  |
-
-| `verify_chain` | function | verify_chain(&self) -> Result<ChainVerification, CoreError> |  |  |  |  |
-
-| `verify_chain_against` | function | verify_chain_against(&self, stored: [u8; 32]) -> Result<ChainVerification, CoreError> |  |  |  |  |
 
 | `with_explicit_ceiling` | function | with_explicit_ceiling(mut self, level: CeilingLevel) -> Self |  |  |  |  |
 
@@ -2461,21 +1375,9 @@
 
 | `ggen-receipt/v2` | str_key | SCHEMA_V2 = "ggen-receipt/v2" |  |  |  |  |
 
-| `graphlaw-chain/base` | str_key | CHAIN_RULE_BASE = "graphlaw-chain/base" |  |  |  |  |
-
-| `graphlaw-chain/v2-fold` | str_key | CHAIN_RULE_V2_FOLD = "graphlaw-chain/v2-fold" |  |  |  |  |
-
-| `receipts` | str_key | DEFAULT_RECEIPTS_DIR = "receipts" |  |  |  |  |
-
-| `receipts.jsonl` | str_key | LEDGER_FILE_NAME = "receipts.jsonl" |  |  |  |  |
-
 | `AdmissionItem` | struct | AdmissionItem { pub evidence_id: String, pub observed_outcome: ObservedOutcome, pub decision: AdmissionDecision, pub reason: String, pub obligations_discharged: Vec<String>, pub obligations_created: Vec<String>, pub generation: u64 } |  |  |  |  |
 
-| `ChainRuleMonotonicity` | struct | ChainRuleMonotonicity { first_declared: Option<usize> } |  |  |  |  |
-
 | `ComponentLevels` | struct | ComponentLevels { pub lint: AndonLevel, pub test: AndonLevel, pub fmt: AndonLevel, pub gate: AndonLevel } |  |  |  |  |
-
-| `DenialPolarity` | struct | DenialPolarity { pub u64 } |  |  |  |  |
 
 | `EquivalenceMap` | struct | EquivalenceMap { pub source: EquivalenceStatus, pub compiled_binary: EquivalenceStatus, pub docs: EquivalenceStatus, pub tests: EquivalenceStatus, pub receipts: EquivalenceStatus, pub evidence: EquivalenceStatus, pub gates: EquivalenceStatus, pub config: EquivalenceStatus } |  |  |  |  |
 
@@ -2483,25 +1385,13 @@
 
 | `MigrationReceipt` | struct | MigrationReceipt { pub migration_law: String, pub from_schema: String, pub to_schema: String, pub final_v1_chain_hash_hex: String, pub first_v2_chain_hash_hex: String, pub carries_forward: Vec<String>, pub becomes_unknown: Vec<String>, pub resulting_ceiling: CeilingLevel } |  |  |  |  |
 
-| `OcelCausalFrame` | struct | OcelCausalFrame { pub instruction_id: u64, pub fired_mask: u64, pub denial: DenialPolarity, pub obj_refs: [PackedObjRef; 8], pub ts_ns: u64, pub activity_idx: u16, pub node_kind: u8, pub pad: [u8; 5], pub prior_hash: [u8; 32] } |  |  |  |  |
-
-| `OcelCausalReceipt` | struct | OcelCausalReceipt { pub chain_hash: [u8; 32], pub frame_count: u64, pub run_id: [u8; 32], pub replay_ptr: u64 } |  |  |  |  |
-
-| `PackedObjRef` | struct | PackedObjRef { pub u32 } |  |  |  |  |
-
 | `PromotionWitness` | struct | PromotionWitness { pub from_ceiling: CeilingLevel, pub to_ceiling: CeilingLevel, pub evidence_receipts: Vec<String>, pub closed_obligations: Vec<String>, pub verifier_identity: String, pub authorization_basis: String } |  |  |  |  |
 
 | `ReceiptEpochV2` | struct | ReceiptEpochV2 { pub admission: AdmissionLedger, pub standing_ceiling: CeilingLevel, pub equivalence: EquivalenceMap, pub obligation_count: ObligationCount, pub andon: AndonLevel, pub promotion_eligible: bool, pub generation: u64 } |  |  |  |  |
 
 | `ReceiptEpochV2Builder` | struct | ReceiptEpochV2Builder { prev_ceiling: CeilingLevel, components: ComponentLevels, admission: Vec<AdmissionItem>, equivalence: EquivalenceMap, explicit_ceiling: Option<CeilingLevel>, promoted: bool, generation: u64 } |  |  |  |  |
 
-| `ReceiptMeta` | struct | ReceiptMeta { pub instruction_id: u64, pub activity_idx: u16, pub node_kind: u8, pub ts_ns: Option<u64>, pub denial: DenialPolarity, pub andon: Andon, pub object_ids: Vec<String>, pub obligation_count: u32 } |  |  |  |  |
-
-| `ReceiptRecord` | struct | ReceiptRecord { pub version: u32, pub instruction_id: u64, pub activity_idx: u16, pub activity: Option<String>, pub node_kind: u8, pub ts_ns: u64, pub duration_ms: Option<u64>, pub origin: Option<String>, pub payload_hash_hex: String, pub prev_chain_hash_hex: String, pub chain_hash_hex: String, pub andon: Andon, pub obligation_count: u32, pub object_ids: Vec<String>, pub signature_hex: Option<String>, pub schema: String, pub v2: Option<epoch::ReceiptEpochV2>, pub chain_rule: Option<String> } |  |  |  |  |
-
 | `ReceiptRecordV1Legacy` | struct | ReceiptRecordV1Legacy { pub version: u32, pub instruction_id: u64, pub activity_idx: u16, pub activity: Option<String>, pub node_kind: u8, pub ts_ns: u64, pub duration_ms: Option<u64>, pub payload_hash_hex: String, pub prev_chain_hash_hex: String, pub chain_hash_hex: String, pub andon: super::Andon, pub obligation_count: u32, pub object_ids: Vec<String>, pub signature_hex: Option<String> } |  |  |  |  |
-
-| `ReceiptStore` | struct | ReceiptStore { path: PathBuf } |  |  |  |  |
 
 | `ReceiptValidator` | struct |  |  |  |  |  |
 
@@ -2512,6 +1402,153 @@
 | `Verdict` | struct | Verdict { pub ok: bool, pub stages: Vec<StageResult>, pub records_checked: usize } |  |  |  |  |
 
 | `Clock` | trait |  |  |  |  |  |
+
+| `record::*` | use | record::* |  |  |  |  |
+
+
+### src/receipt_chain/frame.rs
+
+| `ADMITTED` | const | ADMITTED: Self |  |  |  |  |
+
+| `AUTHORIZATION_DENIED` | const | AUTHORIZATION_DENIED: Self |  |  |  |  |
+
+| `CONFORMANCE_GATE_FAILED` | const | CONFORMANCE_GATE_FAILED: Self |  |  |  |  |
+
+| `OBJECT_LIFECYCLE_VIOLATION` | const | OBJECT_LIFECYCLE_VIOLATION: Self |  |  |  |  |
+
+| `PRECONDITION_FAILED` | const | PRECONDITION_FAILED: Self |  |  |  |  |
+
+| `RESOURCE_EXHAUSTED` | const | RESOURCE_EXHAUSTED: Self |  |  |  |  |
+
+| `SLA_BREACH` | const | SLA_BREACH: Self |  |  |  |  |
+
+| `WATCHDOG_DRAINED` | const | WATCHDOG_DRAINED: Self |  |  |  |  |
+
+| `chain` | function | chain(&mut self, frame: &OcelCausalFrame) |  |  |  |  |
+
+| `compose` | function | compose(self, other: Self) -> Self |  |  |  |  |
+
+| `genesis` | function | genesis(run_id: [u8; 32]) -> Self |  |  |  |  |
+
+| `is_admitted` | function | is_admitted(self) -> bool |  |  |  |  |
+
+| `to_fired_mask` | function | to_fired_mask(self) -> u64 |  |  |  |  |
+
+| `to_hash_bytes` | function | to_hash_bytes(&self) -> [u8; 99] |  |  |  |  |
+
+| `DenialPolarity` | struct | DenialPolarity { pub u64 } |  |  |  |  |
+
+| `OcelCausalFrame` | struct | OcelCausalFrame { pub instruction_id: u64, pub fired_mask: u64, pub denial: DenialPolarity, pub obj_refs: [PackedObjRef; 8], pub ts_ns: u64, pub activity_idx: u16, pub node_kind: u8, pub pad: [u8; 5], pub prior_hash: [u8; 32] } |  |  |  |  |
+
+| `OcelCausalReceipt` | struct | OcelCausalReceipt { pub chain_hash: [u8; 32], pub frame_count: u64, pub run_id: [u8; 32], pub replay_ptr: u64 } |  |  |  |  |
+
+| `PackedObjRef` | struct | PackedObjRef { pub u32 } |  |  |  |  |
+
+
+### src/receipt_chain/record.rs
+
+| `CHAIN_RULE_BASE` | const | CHAIN_RULE_BASE: &str |  |  |  |  |
+
+| `CHAIN_RULE_V2_FOLD` | const | CHAIN_RULE_V2_FOLD: &str |  |  |  |  |
+
+| `RECEIPT_RECORD_VERSION` | const | RECEIPT_RECORD_VERSION: u32 |  |  |  |  |
+
+| `Andon` | enum | Andon { Green, Halted { unmet: Vec<Obligation>, refusals: Vec<RefusalScenario>, at: u64, }, Overridden { by: String, reason: String, at: u64, } } |  |  |  |  |
+
+| `ChainRule` | enum | ChainRule { Base, V2Fold } |  |  |  |  |
+
+| `ChainStanding` | enum | ChainStanding { FullyBound, LegacyV2Unbound } |  |  |  |  |
+
+| `ChainVerification` | enum | ChainVerification { Verified(ChainStanding), Mismatch { rule: ChainRule, recomputed: [u8; 32], } } |  |  |  |  |
+
+| `CoreError` | enum | CoreError { SerializationFailed(String), HexDecodeFailed(String), ReceiptChainRuleInvalid(String), Io(String), ReceiptSchemaPayloadMismatch(String), UnrecognizedReceiptSchema(String), CeilingExceedsMeet { requested: crate::receipt_chain::epoch::CeilingLevel, allowed: crate::receipt_chain::epoch::CeilingLevel, }, PromotionRefused { reason: String, } } |  |  |  |  |
+
+| `Obligation` | enum | Obligation { Precondition { predicate_id: String, params_hash: [u8; 32], }, BlockingConstraint { reason: String, }, EvidenceRequired { evidence_type: String, } } |  |  |  |  |
+
+| `RefusalCategory` | enum | RefusalCategory { Identity, Capacity, Topology, Temporal, Lifecycle, Authorization, Prerequisites, Reserved } |  |  |  |  |
+
+| `RefusalScenario` | enum | RefusalScenario { BlockingConstraint { reason: String, }, MissingEvidence { evidence_type: String, }, UnsatisfiedPrecondition { predicate_id: String, }, WatchdogDrained, PreconditionFailed, SlaBreach, AuthorizationDenied, ResourceExhausted, ObjectLifecycleViolation, ConformanceGateFailed } |  |  |  |  |
+
+| `as_str` | function | as_str(self) -> &'static str |  |  |  |  |
+
+| `build_admission_frame` | function | build_admission_frame( payload_hash: &[u8; 32], prev_chain_hash: &[u8; 32], meta: &ReceiptMeta, ts_ns: u64, ) -> OcelCausalFrame |  |  |  |  |
+
+| `category` | function | category(&self) -> RefusalCategory |  |  |  |  |
+
+| `chain_from_frame` | function | chain_from_frame(prev_chain_hash: &[u8; 32], frame: &OcelCausalFrame) -> [u8; 32] |  |  |  |  |
+
+| `chain_hash` | function | chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `compose_denials` | function | compose_denials( scenarios: impl IntoIterator<Item = &'a RefusalScenario>, ) -> DenialPolarity |  |  |  |  |
+
+| `declared_chain_rule` | function | declared_chain_rule(&self) -> Result<Option<ChainRule>, CoreError> |  |  |  |  |
+
+| `denial_lane` | function | denial_lane(scenario: &RefusalScenario) -> DenialPolarity |  |  |  |  |
+
+| `first_declared` | function | first_declared(&self) -> Option<usize> |  |  |  |  |
+
+| `name` | function | name(&self) -> &'static str |  |  |  |  |
+
+| `new` | function | new() -> Self |  |  |  |  |
+
+| `observe` | function | observe( &mut self, idx: usize, record: &ReceiptRecord, standing: ChainStanding, ) -> Result<(), CoreError> |  |  |  |  |
+
+| `observe_declared` | function | observe_declared( &mut self, idx: usize, declared: bool, standing: ChainStanding, ) -> Result<(), CoreError> |  |  |  |  |
+
+| `parse` | function | parse(s: &str) -> Result<Self, CoreError> |  |  |  |  |
+
+| `payload_hash` | function | payload_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `prev_chain_hash` | function | prev_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `recompute_chain_hash` | function | recompute_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `recompute_chain_hash_lawful` | function | recompute_chain_hash_lawful(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `recompute_chain_hash_under` | function | recompute_chain_hash_under(&self, rule: ChainRule) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `scenario_for_denial_lane` | function | scenario_for_denial_lane(lane: DenialPolarity) -> Option<RefusalScenario> |  |  |  |  |
+
+| `verify_chain` | function | verify_chain(&self) -> Result<ChainVerification, CoreError> |  |  |  |  |
+
+| `verify_chain_against` | function | verify_chain_against(&self, stored: [u8; 32]) -> Result<ChainVerification, CoreError> |  |  |  |  |
+
+| `graphlaw-chain/base` | str_key | CHAIN_RULE_BASE = "graphlaw-chain/base" |  |  |  |  |
+
+| `graphlaw-chain/v2-fold` | str_key | CHAIN_RULE_V2_FOLD = "graphlaw-chain/v2-fold" |  |  |  |  |
+
+| `ChainRuleMonotonicity` | struct | ChainRuleMonotonicity { first_declared: Option<usize> } |  |  |  |  |
+
+| `ReceiptMeta` | struct | ReceiptMeta { pub instruction_id: u64, pub activity_idx: u16, pub node_kind: u8, pub ts_ns: Option<u64>, pub denial: DenialPolarity, pub andon: Andon, pub object_ids: Vec<String>, pub obligation_count: u32 } |  |  |  |  |
+
+| `ReceiptRecord` | struct | ReceiptRecord { pub version: u32, pub instruction_id: u64, pub activity_idx: u16, pub activity: Option<String>, pub node_kind: u8, pub ts_ns: u64, pub duration_ms: Option<u64>, pub origin: Option<String>, pub payload_hash_hex: String, pub prev_chain_hash_hex: String, pub chain_hash_hex: String, pub andon: Andon, pub obligation_count: u32, pub object_ids: Vec<String>, pub signature_hex: Option<String>, pub schema: String, pub v2: Option<epoch::ReceiptEpochV2>, pub chain_rule: Option<String> } |  |  |  |  |
+
+
+### src/receipt_chain/store.rs
+
+| `DEFAULT_RECEIPTS_DIR` | const | DEFAULT_RECEIPTS_DIR: &str |  |  |  |  |
+
+| `GENESIS_CHAIN_HASH` | const | GENESIS_CHAIN_HASH: [u8; 32] |  |  |  |  |
+
+| `LEDGER_FILE_NAME` | const | LEDGER_FILE_NAME: &str |  |  |  |  |
+
+| `append` | function | append(&self, record: &ReceiptRecord) -> Result<(), CoreError> |  |  |  |  |
+
+| `last_chain_hash` | function | last_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `load_all` | function | load_all(&self) -> Result<Vec<ReceiptRecord>, CoreError> |  |  |  |  |
+
+| `open` | function | open(dir: impl AsRef<Path>) -> Result<Self, CoreError> |  |  |  |  |
+
+| `open_default` | function | open_default() -> Result<Self, CoreError> |  |  |  |  |
+
+| `path` | function | path(&self) -> &Path |  |  |  |  |
+
+| `receipts` | str_key | DEFAULT_RECEIPTS_DIR = "receipts" |  |  |  |  |
+
+| `receipts.jsonl` | str_key | LEDGER_FILE_NAME = "receipts.jsonl" |  |  |  |  |
+
+| `ReceiptStore` | struct | ReceiptStore { path: PathBuf } |  |  |  |  |
 
 
 ### src/receipt_store.rs
@@ -2536,6 +1573,15 @@
 
 
 ### src/registry.rs
+
+| `definitions::*` | use | definitions::* |  |  |  |  |
+
+| `emit_json::*` | use | emit_json::* |  |  |  |  |
+
+| `emit_ttl::*` | use | emit_ttl::* |  |  |  |  |
+
+
+### src/registry/definitions.rs
 
 | `ENGINES` | const | ENGINES: &[&str] |  |  |  |  |
 
@@ -2571,29 +1617,13 @@
 
 | `FieldDefault` | enum | FieldDefault { None, Str(&'static str), Int(i64), Bool(bool) } |  |  |  |  |
 
-| `canonical` | function | canonical(v: &Value) -> String |  |  |  |  |
-
 | `op_names` | function | op_names() -> Vec<&'static str> |  |  |  |  |
 
 | `other_dialect_names` | function | other_dialect_names() -> Vec<&'static str> |  |  |  |  |
 
 | `rdf_dialect_names` | function | rdf_dialect_names() -> Vec<&'static str> |  |  |  |  |
 
-| `receipt_surface_blake3` | function | receipt_surface_blake3() -> String |  |  |  |  |
-
-| `registry_blake3` | function | registry_blake3() -> String |  |  |  |  |
-
-| `registry_json_pretty` | function | registry_json_pretty() -> String |  |  |  |  |
-
-| `registry_turtle` | function | registry_turtle() -> String |  |  |  |  |
-
-| `registry_value` | function | registry_value() -> Value |  |  |  |  |
-
-| `surface_blake3` | function | surface_blake3() -> String |  |  |  |  |
-
 | `EngineRejected` | str_key | KINDS_ENGINE = "EngineRejected" |  |  |  |  |
-
-| `Lease` | str_key | MODELS = "Lease" |  |  |  |  |
 
 | `MissingEntry` | str_key | POLICY_REFUSAL_KINDS = "MissingEntry" |  |  |  |  |
 
@@ -2621,8 +1651,6 @@
 
 | `https://graphlaw.dev/registry#` | str_key | REGISTRY_BASE = "https://graphlaw.dev/registry#" |  |  |  |  |
 
-| `max_request_bytes` | str_key | LIMIT_META = "max_request_bytes" |  |  |  |  |
-
 | `n3` | str_key | OTHER_DIALECTS = "n3" |  |  |  |  |
 
 | `observe` | str_key | LEASE_CEILINGS = "observe" |  |  |  |  |
@@ -2630,8 +1658,6 @@
 | `shacl` | str_key | LAW_STEPS = "shacl" |  |  |  |  |
 
 | `simple` | str_key | REGIMES = "simple" |  |  |  |  |
-
-| `src/duckdb_eval.rs` | str_key | FILES = "src/duckdb_eval.rs" |  |  |  |  |
 
 | `turtle` | str_key | RDF_DIALECTS = "turtle" |  |  |  |  |
 
@@ -2650,6 +1676,32 @@
 | `Variant` | struct | Variant { pub tag: Option<&'static str>, pub tag_field: Option<&'static str>, pub fields: &'static [Field] } |  |  |  |  |
 
 
+### src/registry/emit_json.rs
+
+| `canonical` | function | canonical(v: &Value) -> String |  |  |  |  |
+
+| `receipt_surface_blake3` | function | receipt_surface_blake3() -> String |  |  |  |  |
+
+| `registry_blake3` | function | registry_blake3() -> String |  |  |  |  |
+
+| `registry_json_pretty` | function | registry_json_pretty() -> String |  |  |  |  |
+
+| `registry_value` | function | registry_value() -> Value |  |  |  |  |
+
+| `surface_blake3` | function | surface_blake3() -> String |  |  |  |  |
+
+| `Lease` | str_key | MODELS = "Lease" |  |  |  |  |
+
+| `max_request_bytes` | str_key | LIMIT_META = "max_request_bytes" |  |  |  |  |
+
+| `src/duckdb_eval.rs` | str_key | FILES = "src/duckdb_eval.rs" |  |  |  |  |
+
+
+### src/registry/emit_ttl.rs
+
+| `registry_turtle` | function | registry_turtle() -> String |  |  |  |  |
+
+
 ### src/rules/builtins.rs
 
 | `BuiltinError` | enum | BuiltinError { Eval(EvaluatorError), InvalidArguments { expected: String, got: String }, AstError(String) } |  |  |  |  |
@@ -2663,9 +1715,25 @@
 
 ### src/shacl_guard.rs
 
+| `MAX_SHACL_DEGREE` | const | MAX_SHACL_DEGREE: usize |  |  |  |  |
+
+| `MAX_SHACL_QUADS` | const | MAX_SHACL_QUADS: usize |  |  |  |  |
+
+| `MAX_SHACL_SHAPES_BYTES` | const | MAX_SHACL_SHAPES_BYTES: usize |  |  |  |  |
+
 | `MAX_SHACL_VALIDATION_DEPTH` | const | MAX_SHACL_VALIDATION_DEPTH: usize |  |  |  |  |
 
+| `ShaclLimitExceeded` | enum | ShaclLimitExceeded { Bytes { observed: usize, }, Quads { observed: usize, }, Degree { observed: usize, }, Depth { observed: usize, } } |  |  |  |  |
+
+| `cap` | function | cap(&self) -> usize |  |  |  |  |
+
 | `check_shape_depth` | function | check_shape_depth(shapes_ttl: &str) -> Result<(), DepthExceeded> |  |  |  |  |
+
+| `check_shape_limits` | function | check_shape_limits(shapes_ttl: &str) -> Result<(), ShaclLimitExceeded> |  |  |  |  |
+
+| `limit_name` | function | limit_name(&self) -> &'static str |  |  |  |  |
+
+| `observed` | function | observed(&self) -> usize |  |  |  |  |
 
 | `and` | str_key | SHAPE_LIST_PREDICATES = "and" |  |  |  |  |
 
@@ -2735,53 +1803,92 @@
 
 ### src/sql_ast.rs
 
-| `REFUSAL_01_MALFORMED_AST` | const | REFUSAL_01_MALFORMED_AST: &str |  |  |  |  |
+| `CompositeKind` | enum | CompositeKind { Struct, List, Index, Slice } |  |  |  |  |
 
-| `REFUSAL_02_UNIMPLEMENTED` | const | REFUSAL_02_UNIMPLEMENTED: &str |  |  |  |  |
+| `compile_turtle` | function | compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> |  |  |  |  |
 
-| `REFUSAL_03_SCOPE_INTEGRITY` | const | REFUSAL_03_SCOPE_INTEGRITY: &str |  |  |  |  |
+| `compile_turtle_document` | function | compile_turtle_document(turtle: &str) -> Result<CompiledDocument, AstError> |  |  |  |  |
 
-| `AggregateFunction` | enum | AggregateFunction { Count, Sum, Avg, Min, Max } |  |  |  |  |
+| `validate_ast_shacl` | function | validate_ast_shacl(turtle_dataset: &str, shapes_ttl: &str) -> Result<(), AstError> |  |  |  |  |
 
-| `AstError` | enum | AstError { InvalidIdentifier(String), MissingProperty(String, String), RecursionLimitExceeded(usize), MalformedList, UnsupportedTerm(String), MalformedNode(String), ShaclViolation(String) } |  |  |  |  |
+| ` ;` | str_key | WHERE = " ;" |  |  |  |  |
+
+| `@prefix sql: <http://graphlaw.org/sql#> .` | str_key | SELECT_HEAD = "@prefix sql: <http://graphlaw.org/sql#> ." |  |  |  |  |
+
+| `[ sql:windowFunction [ sql:functionName ` | str_key | ROW_NUMBER_WINDOW = "[ sql:windowFunction [ sql:functionName " |  |  |  |  |
+
+| `http://graphlaw.org/sql#` | str_key | SQL_NS = "http://graphlaw.org/sql#" |  |  |  |  |
+
+| `http://graphlaw.org/sql#Columns` | str_key | COLUMNS = "http://graphlaw.org/sql#Columns" |  |  |  |  |
+
+| `http://graphlaw.org/sql#Star` | str_key | STAR = "http://graphlaw.org/sql#Star" |  |  |  |  |
+
+| `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` | str_key | RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" |  |  |  |  |
+
+| `http://www.w3.org/2001/XMLSchema#boolean` | str_key | XSD_BOOLEAN = "http://www.w3.org/2001/XMLSchema#boolean" |  |  |  |  |
+
+| `statementIndex` | str_key | KNOWN_SQL_PREDICATES = "statementIndex" |  |  |  |  |
+
+| `sum` | str_key | AGGREGATES = "sum" |  |  |  |  |
+
+| `RdfAstGraphReader` | trait |  |  |  |  |  |
+
+| `ast::*` | use | ast::* |  |  |  |  |
+
+| `refusals::*` | use | refusals::* |  |  |  |  |
+
+| `refusals::refusal_arm` | use | refusals::refusal_arm |  |  |  |  |
+
+| `serializer::*` | use | serializer::* |  |  |  |  |
+
+
+### src/sql_ast/ast.rs
+
+| `AggregateFunction` | enum | AggregateFunction { Count, Sum, Avg, Min, Max, RowNumber } |  |  |  |  |
+
+| `FrameBound` | enum | FrameBound { UnboundedPreceding, Preceding(u64), CurrentRow, Following(u64), UnboundedFollowing } |  |  |  |  |
+
+| `FrameUnit` | enum | FrameUnit { Rows, Range } |  |  |  |  |
 
 | `JoinType` | enum | JoinType { Inner, LeftOuter } |  |  |  |  |
 
-| `Operator` | enum | Operator { Equals, NotEquals, GreaterThan, GreaterThanOrEq, LessThan, LessThanOrEq, And, Or, Like, ILike, Add, Subtract, Multiply, Divide, Modulo } |  |  |  |  |
+| `Operator` | enum | Operator { Equals, NotEquals, GreaterThan, GreaterThanOrEq, LessThan, LessThanOrEq, And, Or, Like, ILike, Add, Subtract, Multiply, Divide, Modulo, JsonExtract, JsonExtractText } |  |  |  |  |
 
 | `Scope` | enum | Scope { View, Process } |  |  |  |  |
 
-| `ScopePos` | enum | ScopePos { SelectList, OrderBy, Having, Predicate, GroupBy, AggregateArgument, PredicateAggregateArgument } |  |  |  |  |
+| `ScopePos` | enum | ScopePos { SelectList, OrderBy, Having, Predicate, GroupBy, AggregateArgument, PredicateAggregateArgument, Qualify } |  |  |  |  |
 
-| `SqlExpr` | enum | SqlExpr { ColumnRef { column: String, table_alias: Option<String>, }, Literal(SqlLiteral), Binary { op: Operator, left: Box<SqlExpr>, right: Box<SqlExpr>, }, FunctionCall { function: AggregateFunction, argument: Box<SqlExpr>, }, Alias { expr: Box<SqlExpr>, alias: String, } } |  |  |  |  |
+| `SqlExpr` | enum | SqlExpr { ColumnRef { column: String, table_alias: Option<String>, }, Literal(SqlLiteral), Binary { op: Operator, left: Box<SqlExpr>, right: Box<SqlExpr>, }, FunctionCall { function: AggregateFunction, argument: Box<SqlExpr>, }, WindowFn { function: Box<SqlExpr>, partition_by: Vec<SqlExpr>, order_by: Vec<OrderTerm>, frame: Option<FrameSpec>, }, Alias { expr: Box<SqlExpr>, alias: String, }, StructLiteral { fields: Vec<(String, SqlExpr)>, }, ListLiteral { items: Vec<SqlExpr> }, IndexAccess { base: Box<SqlExpr>, index: Box<SqlExpr>, }, SliceAccess { base: Box<SqlExpr>, start: Box<SqlExpr>, end: Option<Box<SqlExpr>>, } } |  |  |  |  |
 
 | `SqlLiteral` | enum | SqlLiteral { String(String), Integer(i64), Float(f64), Boolean(bool), Null } |  |  |  |  |
 
 | `as_sql` | function | as_sql(&self) -> &'static str |  |  |  |  |
 
-| `compile` | function | compile(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
-
 | `compile_merge` | function | compile_merge(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
-
-| `compile_turtle` | function | compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> |  |  |  |  |
 
 | `from_iri` | function | from_iri(iri: &str) -> Result<Self, AstError> |  |  |  |  |
 
 | `from_token` | function | from_token(token: &str) -> Result<Self, AstError> |  |  |  |  |
 
-| `validate_ast_shacl` | function | validate_ast_shacl( turtle_dataset: &str, shapes_ttl: &str, ) -> Result<(), AstError> |  |  |  |  |
+| `parse_token` | function | parse_token(token: &str) -> Result<Self, AstError> |  |  |  |  |
+
+| `seal_bytes` | function | seal_bytes(&self) -> [u8; 32] |  |  |  |  |
+
+| `validate_composite` | function | validate_composite(&self) -> Result<(), AstError> |  |  |  |  |
 
 | `validate_identifier` | function | validate_identifier(ident: &str) -> Result<&str, AstError> |  |  |  |  |
 
 | `validate_qualified_identifier` | function | validate_qualified_identifier(ident: &str) -> Result<(), AstError> |  |  |  |  |
 
-| `[REFUSAL-01] MalformedAstRefusal:` | str_key | REFUSAL_01_MALFORMED_AST = "[REFUSAL-01] MalformedAstRefusal:" |  |  |  |  |
+| `verify_seal` | function | verify_seal(&self) -> bool |  |  |  |  |
 
-| `[REFUSAL-02] UnimplementedStatementRefusal:` | str_key | REFUSAL_02_UNIMPLEMENTED = "[REFUSAL-02] UnimplementedStatementRefusal:" |  |  |  |  |
+| `CompiledDocument` | struct | CompiledDocument { pub statements: Vec<CompiledQuery>, pub doc_hash: [u8; 32], pub atomic: bool } |  |  |  |  |
 
-| `[REFUSAL-03] ScopeIntegrityRefusal:` | str_key | REFUSAL_03_SCOPE_INTEGRITY = "[REFUSAL-03] ScopeIntegrityRefusal:" |  |  |  |  |
+| `CompiledQuery` | struct | CompiledQuery { pub sql: String, pub params: Vec<SqlLiteral>, pub ast_graph_turtle: Option<String>, pub canon_graph_bytes: Option<Vec<u8>>, pub receipt_state: Option<[u8; 32]>, pub cacheable: bool, pub(super) admission_seal: [u8; 32] } |  |  |  |  |
 
-| `CompiledQuery` | struct | CompiledQuery { pub sql: String, pub params: Vec<SqlLiteral>, pub ast_graph_turtle: Option<String>, pub canon_graph_bytes: Option<Vec<u8>>, pub receipt_state: Option<blake3::Hasher>, pub cacheable: bool } |  |  |  |  |
+| `Cte` | struct | Cte { pub name: String, pub columns: Vec<String>, pub query: Box<SelectStatement>, pub recursive: bool } |  |  |  |  |
+
+| `FrameSpec` | struct | FrameSpec { pub unit: FrameUnit, pub start: FrameBound, pub end: Option<FrameBound> } |  |  |  |  |
 
 | `JoinClause` | struct | JoinClause { pub join_type: JoinType, pub table: TableRef, pub condition: SqlExpr } |  |  |  |  |
 
@@ -2789,11 +1896,223 @@
 
 | `OrderTerm` | struct | OrderTerm { pub expr: SqlExpr, pub descending: bool } |  |  |  |  |
 
-| `SelectStatement` | struct | SelectStatement { pub from: TableRef, pub joins: Vec<JoinClause>, pub select_list: Vec<SqlExpr>, pub where_clause: Option<SqlExpr>, pub group_by: Vec<SqlExpr>, pub having: Option<SqlExpr>, pub order_by: Vec<OrderTerm>, pub limit: Option<usize>, pub offset: Option<usize> } |  |  |  |  |
-
 | `TableRef` | struct | TableRef { pub name: String, pub alias: Option<String>, pub schema: Option<String> } |  |  |  |  |
 
-| `RdfAstGraphReader` | trait |  |  |  |  |  |
+
+### src/sql_ast/refusals.rs
+
+| `AGG_IN_POSITION` | const | AGG_IN_POSITION: u16 |  |  |  |  |
+
+| `AGG_IN_PREDICATE` | const | AGG_IN_PREDICATE: u16 |  |  |  |  |
+
+| `ALIASED_AGG_ARG` | const | ALIASED_AGG_ARG: u16 |  |  |  |  |
+
+| `ALIAS_IN_AGG_ARG` | const | ALIAS_IN_AGG_ARG: u16 |  |  |  |  |
+
+| `ATOMIC_LITERAL` | const | ATOMIC_LITERAL: u16 |  |  |  |  |
+
+| `CANONICALIZATION` | const | CANONICALIZATION: u16 |  |  |  |  |
+
+| `COLUMNS_LAMBDA` | const | COLUMNS_LAMBDA: u16 |  |  |  |  |
+
+| `COLUMNS_PATTERN` | const | COLUMNS_PATTERN: u16 |  |  |  |  |
+
+| `COMPOSITE_DEPTH` | const | COMPOSITE_DEPTH: u16 |  |  |  |  |
+
+| `COMPOSITE_MEMBER` | const | COMPOSITE_MEMBER: u16 |  |  |  |  |
+
+| `CTE_NO_QUERY` | const | CTE_NO_QUERY: u16 |  |  |  |  |
+
+| `DIRECTION_IRI` | const | DIRECTION_IRI: u16 |  |  |  |  |
+
+| `DIRECTION_LEX` | const | DIRECTION_LEX: u16 |  |  |  |  |
+
+| `DISCRIMINATORS` | const | DISCRIMINATORS: u16 |  |  |  |  |
+
+| `DUAL_FROM` | const | DUAL_FROM: u16 |  |  |  |  |
+
+| `DUAL_HAVING` | const | DUAL_HAVING: u16 |  |  |  |  |
+
+| `DUAL_LEFT_OPERAND` | const | DUAL_LEFT_OPERAND: u16 |  |  |  |  |
+
+| `DUAL_OPERATOR_FORMS` | const | DUAL_OPERATOR_FORMS: u16 |  |  |  |  |
+
+| `DUAL_RIGHT_OPERAND` | const | DUAL_RIGHT_OPERAND: u16 |  |  |  |  |
+
+| `DUAL_SELECT` | const | DUAL_SELECT: u16 |  |  |  |  |
+
+| `DUAL_WHERE` | const | DUAL_WHERE: u16 |  |  |  |  |
+
+| `DUP_CLAUSE_PREDICATE` | const | DUP_CLAUSE_PREDICATE: u16 |  |  |  |  |
+
+| `EMPTY_FROM` | const | EMPTY_FROM: u16 |  |  |  |  |
+
+| `EMPTY_PROJECTION` | const | EMPTY_PROJECTION: u16 |  |  |  |  |
+
+| `EXPRESSION_WRAPPER` | const | EXPRESSION_WRAPPER: u16 |  |  |  |  |
+
+| `FRAME_BOUND` | const | FRAME_BOUND: u16 |  |  |  |  |
+
+| `FRAME_UNIT` | const | FRAME_UNIT: u16 |  |  |  |  |
+
+| `INDEX_BAD_DTYPE` | const | INDEX_BAD_DTYPE: u16 |  |  |  |  |
+
+| `INDEX_DUP` | const | INDEX_DUP: u16 |  |  |  |  |
+
+| `INDEX_MISSING` | const | INDEX_MISSING: u16 |  |  |  |  |
+
+| `INDEX_NEGATIVE` | const | INDEX_NEGATIVE: u16 |  |  |  |  |
+
+| `INDEX_NOT_INT` | const | INDEX_NOT_INT: u16 |  |  |  |  |
+
+| `INDEX_SEQUENCE_DISORDER` | const | INDEX_SEQUENCE_DISORDER: u16 |  |  |  |  |
+
+| `JOIN_TYPE_IRI` | const | JOIN_TYPE_IRI: u16 |  |  |  |  |
+
+| `LEGACY_MESSAGE` | const | LEGACY_MESSAGE: u16 |  |  |  |  |
+
+| `LIMIT_DUP` | const | LIMIT_DUP: u16 |  |  |  |  |
+
+| `LIMIT_MALFORMED` | const | LIMIT_MALFORMED: u16 |  |  |  |  |
+
+| `LIMIT_NOT_INT` | const | LIMIT_NOT_INT: u16 |  |  |  |  |
+
+| `MERGE_ON_NO_TARGET_COLUMN` | const | MERGE_ON_NO_TARGET_COLUMN: u16 |  |  |  |  |
+
+| `MIXED_DOCUMENT_ROOTS` | const | MIXED_DOCUMENT_ROOTS: u16 |  |  |  |  |
+
+| `NO_FROM` | const | NO_FROM: u16 |  |  |  |  |
+
+| `NO_PROJECTION` | const | NO_PROJECTION: u16 |  |  |  |  |
+
+| `NO_SQL_TEMPLATE` | const | NO_SQL_TEMPLATE: u16 |  |  |  |  |
+
+| `OFFSET_DUP` | const | OFFSET_DUP: u16 |  |  |  |  |
+
+| `OFFSET_MALFORMED` | const | OFFSET_MALFORMED: u16 |  |  |  |  |
+
+| `OFFSET_NOT_INT` | const | OFFSET_NOT_INT: u16 |  |  |  |  |
+
+| `OPERATOR_TOKEN` | const | OPERATOR_TOKEN: u16 |  |  |  |  |
+
+| `PARSE_DATASET` | const | PARSE_DATASET: u16 |  |  |  |  |
+
+| `PARSE_SHAPES` | const | PARSE_SHAPES: u16 |  |  |  |  |
+
+| `PROCESS_SCOPE_IN_SELECT` | const | PROCESS_SCOPE_IN_SELECT: u16 |  |  |  |  |
+
+| `QUALIFY_EXPR` | const | QUALIFY_EXPR: u16 |  |  |  |  |
+
+| `REFUSAL_01_MALFORMED_AST` | const | REFUSAL_01_MALFORMED_AST: &str |  |  |  |  |
+
+| `REFUSAL_02_UNIMPLEMENTED` | const | REFUSAL_02_UNIMPLEMENTED: &str |  |  |  |  |
+
+| `REFUSAL_03_SCOPE_INTEGRITY` | const | REFUSAL_03_SCOPE_INTEGRITY: &str |  |  |  |  |
+
+| `REFUSAL_05_UNBOUNDED_MUTATION` | const | REFUSAL_05_UNBOUNDED_MUTATION: &str |  |  |  |  |
+
+| `REFUSAL_IDENT_BYTES` | const | REFUSAL_IDENT_BYTES: usize |  |  |  |  |
+
+| `SCOPE_CARDINALITY` | const | SCOPE_CARDINALITY: u16 |  |  |  |  |
+
+| `SCOPE_INDIVIDUAL` | const | SCOPE_INDIVIDUAL: u16 |  |  |  |  |
+
+| `SCOPE_IN_PRED_AGG_ARG` | const | SCOPE_IN_PRED_AGG_ARG: u16 |  |  |  |  |
+
+| `SCOPE_ON_TABLE_REF` | const | SCOPE_ON_TABLE_REF: u16 |  |  |  |  |
+
+| `SCOPE_WRONG_NODE` | const | SCOPE_WRONG_NODE: u16 |  |  |  |  |
+
+| `SEQUENCE_EMPTY` | const | SEQUENCE_EMPTY: u16 |  |  |  |  |
+
+| `SET_OP_BY_NAME_KIND` | const | SET_OP_BY_NAME_KIND: u16 |  |  |  |  |
+
+| `SET_OP_FLAG_LEX` | const | SET_OP_FLAG_LEX: u16 |  |  |  |  |
+
+| `SET_OP_KIND_TOKEN` | const | SET_OP_KIND_TOKEN: u16 |  |  |  |  |
+
+| `SET_OP_NO_RIGHT` | const | SET_OP_NO_RIGHT: u16 |  |  |  |  |
+
+| `SHACL_DEPTH` | const | SHACL_DEPTH: u16 |  |  |  |  |
+
+| `SHACL_ENGINE` | const | SHACL_ENGINE: u16 |  |  |  |  |
+
+| `SHACL_VIOLATIONS` | const | SHACL_VIOLATIONS: u16 |  |  |  |  |
+
+| `SQL_ALIAS_IN_AGG_ARG` | const | SQL_ALIAS_IN_AGG_ARG: u16 |  |  |  |  |
+
+| `STAR_MODIFIER_POSITION` | const | STAR_MODIFIER_POSITION: u16 |  |  |  |  |
+
+| `UNBOUNDED_MUTATION` | const | UNBOUNDED_MUTATION: u16 |  |  |  |  |
+
+| `UNIMPLEMENTED_STATEMENT` | const | UNIMPLEMENTED_STATEMENT: u16 |  |  |  |  |
+
+| `UNKNOWN_STATEMENT_PREDICATE` | const | UNKNOWN_STATEMENT_PREDICATE: u16 |  |  |  |  |
+
+| `UNSUPPORTED_GENERIC` | const | UNSUPPORTED_GENERIC: u16 |  |  |  |  |
+
+| `VIEW_SCOPE_IN_PREDICATE` | const | VIEW_SCOPE_IN_PREDICATE: u16 |  |  |  |  |
+
+| `WINDOW_FN_POSITION` | const | WINDOW_FN_POSITION: u16 |  |  |  |  |
+
+| `RefusalCode` | enum | RefusalCode { MalformedAst = 1, UnimplementedStatement = 2, ScopeIntegrity = 3, Capability = 4, InvalidIdentifier = 16, MissingProperty = 17, RecursionLimitExceeded = 18, MalformedList = 19, UnsupportedTerm = 20, MalformedNode = 21, LiteralNotInt = 36, LiteralNotFloat = 37, UnboundedMutation = 5 } |  |  |  |  |
+
+| `InvalidIdentifier` | function | InvalidIdentifier(a: String) -> Self |  |  |  |  |
+
+| `MalformedNode` | function | MalformedNode(a: String) -> Self |  |  |  |  |
+
+| `MissingProperty` | function | MissingProperty(a: String, b: String) -> Self |  |  |  |  |
+
+| `RecursionLimitExceeded` | function | RecursionLimitExceeded(n: usize) -> Self |  |  |  |  |
+
+| `ShaclViolation` | function | ShaclViolation(msg: String) -> Self |  |  |  |  |
+
+| `UnsupportedTerm` | function | UnsupportedTerm(a: String) -> Self |  |  |  |  |
+
+| `as_str_lossy` | function | as_str_lossy(&self) -> std::borrow::Cow<'_, str> |  |  |  |  |
+
+| `by_marker` | function | by_marker(name: &str) -> Option<u16> |  |  |  |  |
+
+| `marker` | function | marker(self) -> Option<&'static str> |  |  |  |  |
+
+| `pack` | function | pack(v: impl fmt::Display) -> Self |  |  |  |  |
+
+| `packed2` | function | packed2(a: impl fmt::Display, b: impl fmt::Display) -> Self |  |  |  |  |
+
+| `push` | function | push(&mut self, v: impl fmt::Display) |  |  |  |  |
+
+| `[REFUSAL-01] MalformedAstRefusal:` | str_key | REFUSAL_01_MALFORMED_AST = "[REFUSAL-01] MalformedAstRefusal:" |  |  |  |  |
+
+| `[REFUSAL-02] UnimplementedStatementRefusal:` | str_key | REFUSAL_02_UNIMPLEMENTED = "[REFUSAL-02] UnimplementedStatementRefusal:" |  |  |  |  |
+
+| `[REFUSAL-03] ScopeIntegrityRefusal:` | str_key | REFUSAL_03_SCOPE_INTEGRITY = "[REFUSAL-03] ScopeIntegrityRefusal:" |  |  |  |  |
+
+| `[REFUSAL-05] UnboundedMutationRefusal:` | str_key | REFUSAL_05_UNBOUNDED_MUTATION = "[REFUSAL-05] UnboundedMutationRefusal:" |  |  |  |  |
+
+| `AstError` | struct | AstError { pub code: RefusalCode, pub ctx: RefusalContext } |  |  |  |  |
+
+| `PackedIdent` | struct | PackedIdent { len: u8, bytes: [u8; REFUSAL_IDENT_BYTES] } |  |  |  |  |
+
+| `RefusalContext` | struct | RefusalContext { pub shape_id: u16, pub predicate_idx: u16, pub num: u32, pub aux_num: u32, pub ident: PackedIdent, pub aux_ident: PackedIdent } |  |  |  |  |
+
+
+### src/sql_ast/serializer.rs
+
+| `SelectItem` | enum | SelectItem { Expr(SqlExpr), Star { exclude: Vec<String>, replace: Vec<(SqlExpr, String)>, }, Columns(String) } |  |  |  |  |
+
+| `SetOpKind` | enum | SetOpKind { Union, Intersect, Except } |  |  |  |  |
+
+| `as_sql` | function | as_sql(&self) -> &'static str |  |  |  |  |
+
+| `compile` | function | compile(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
+
+| `compile_set_operation` | function | compile_set_operation(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
+
+| `from_token` | function | from_token(token: &str) -> Result<Self, AstError> |  |  |  |  |
+
+| `SelectStatement` | struct | SelectStatement { pub ctes: Vec<Cte>, pub from: TableRef, pub joins: Vec<JoinClause>, pub select_list: Vec<SelectItem>, pub where_clause: Option<SqlExpr>, pub group_by: Vec<SqlExpr>, pub having: Option<SqlExpr>, pub order_by: Vec<OrderTerm>, pub limit: Option<usize>, pub offset: Option<usize>, pub qualify: Option<SqlExpr> } |  |  |  |  |
+
+| `SetOperationStatement` | struct | SetOperationStatement { pub left: SelectStatement, pub kind: SetOpKind, pub all: bool, pub by_name: bool, pub right: SelectStatement } |  |  |  |  |
 
 
 ### src/tier.rs
@@ -2806,7 +2125,7 @@
 
 | `admit_bytes_tiered` | function | admit_bytes_tiered( bytes: &[u8], hint: Option<&str>, base: Option<&str>, decl: Option<DialectDecl>, ) -> Result<Admitted, Refusal> |  |  |  |  |
 
-| `admit_declared` | function | admit_declared(bytes: &[u8], decl: DialectDecl, base: Option<&str>) -> Result<Admitted, Refusal> |  |  |  |  |
+| `admit_declared` | function | admit_declared( bytes: &[u8], decl: DialectDecl, base: Option<&str>, ) -> Result<Admitted, Refusal> |  |  |  |  |
 
 | `rule_count` | function | rule_count(&self) -> usize |  |  |  |  |
 
@@ -2818,12 +2137,30 @@
 
 | `DialectDecl` | struct | DialectDecl { pub tier: Tier, pub dialect: Dialect } |  |  |  |  |
 
-| `RuleSet` | struct | RuleSet { pub document: eyeron::Document } |  |  |  |  |
+| `RuleSet` | struct | RuleSet { pub document: n3::Document } |  |  |  |  |
 
 
 ### tests/abi_manifest_court.rs
 
 | `0807060504030201887766554433221100ff0000000000000100000002000000030000000400000005000000060000000700000008000000bebafecaefbeaddeefbe2aa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5` | str_key | GOLDEN_FRAME_HASH_HEX = "0807060504030201887766554433221100ff0000000000000100000002000000030000000400000005000000060000000700000008000000bebafecaefbeaddeefbe2aa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5" |  |  |  |  |
+
+
+### tests/attach_bypass_court.rs
+
+| `/etc/passwd` | str_key | ATTACK_PATH = "/etc/passwd" |  |  |  |  |
+
+| `attach path outside GRAPHLAW_ATTACH_ROOTS allowlist` | str_key | STABLE_REFUSAL = "attach path outside GRAPHLAW_ATTACH_ROOTS allowlist" |  |  |  |  |
+
+
+### tests/bcbs_aggregation_court.rs
+
+| `SUB-A` | str_key | SUBSIDIARIES = "SUB-A" |  |  |  |  |
+
+| `bcbs-01` | str_key | SESSION = "bcbs-01" |  |  |  |  |
+
+| `bcbs-02` | str_key | SESSION = "bcbs-02" |  |  |  |  |
+
+| `bcbs-03` | str_key | SESSION = "bcbs-03" |  |  |  |  |
 
 
 ### tests/canonical_cross_dialect.rs
@@ -2854,27 +2191,145 @@
 | `[ a sql:BinaryExpression ; sql:operator ` | str_key | AGGREGATE_WHERE = "[ a sql:BinaryExpression ; sql:operator " |  |  |  |  |
 
 
+### tests/combinatorial_eight_court.rs
+
+| `http://example.org/crs/planar` | str_key | CRS_PLANAR = "http://example.org/crs/planar" |  |  |  |  |
+
+| `http://example.org/geo#` | str_key | GEO = "http://example.org/geo#" |  |  |  |  |
+
+| `http://example.org/geof/` | str_key | GEOF = "http://example.org/geof/" |  |  |  |  |
+
+| `http://example.org/sf#` | str_key | SF = "http://example.org/sf#" |  |  |  |  |
+
+| `http://example.org/unit/metre` | str_key | METRE = "http://example.org/unit/metre" |  |  |  |  |
+
+
+### tests/common/enclosure.rs
+
+| `CALIBRATION_FLOOR` | const | CALIBRATION_FLOOR: u64 |  |  |  |  |
+
+| `CALIBRATION_SEED` | const | CALIBRATION_SEED: u64 |  |  |  |  |
+
+| `EPOCH_DISARMED_TICKS` | const | EPOCH_DISARMED_TICKS: u64 |  |  |  |  |
+
+| `UNBOUNDED_FUEL` | const | UNBOUNDED_FUEL: u64 |  |  |  |  |
+
+| `WALL_BYTES` | const | WALL_BYTES: u64 |  |  |  |  |
+
+| `WATCHDOG_INTERVAL` | const | WATCHDOG_INTERVAL: Duration |  |  |  |  |
+
+| `EnclosureError` | enum | EnclosureError { Fuel { budget: u64 }, Epoch { ticks: u64 }, Trap(String), Fatal(String) } |  |  |  |  |
+
+| `FuelPolicy` | enum | FuelPolicy { Unbounded, PerOp(BTreeMap<String, u64>) } |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `alloc_raw` | function | alloc_raw(&mut self, len: u32) -> Option<u32> |  |  |  |  |
+
+| `artifact_path` | function | artifact_path() -> PathBuf |  |  |  |  |
+
+| `budget` | function | budget(&self) -> Option<u64> |  |  |  |  |
+
+| `budget_for` | function | budget_for(&self, op: &str) -> Option<u64> |  |  |  |  |
+
+| `calibrate` | function | calibrate(&mut self, control: &Value) -> (u64, u64) |  |  |  |  |
+
+| `call_raw` | function | call_raw(&mut self, ptr: u32, len: u32) -> (u32, u32) |  |  |  |  |
+
+| `exec` | function | exec(&mut self, req: &Value) -> Value |  |  |  |  |
+
+| `exec_seeded` | function | exec_seeded(&mut self, req: &Value, fuel_seed: u64) -> (Value, u64) |  |  |  |  |
+
+| `exec_seeded_bytes` | function | exec_seeded_bytes(&mut self, req: &Value, fuel_seed: u64) -> (Vec<u8>, u64) |  |  |  |  |
+
+| `free_raw` | function | free_raw(&mut self, ptr: u32, len: u32) |  |  |  |  |
+
+| `grow_memory` | function | grow_memory(&mut self, delta_pages: u64) -> Result<u64, wasmtime::Error> |  |  |  |  |
+
+| `limit_name` | function | limit_name(&self) -> Option<&'static str> |  |  |  |  |
+
+| `memory_max_pages` | function | memory_max_pages(&mut self) -> Option<u64> |  |  |  |  |
+
+| `memory_pages` | function | memory_pages(&mut self) -> u64 |  |  |  |  |
+
+| `new` | function | new() -> Self |  |  |  |  |
+
+| `next_pow2_ceil` | function | next_pow2_ceil(x: u64) -> u64 |  |  |  |  |
+
+| `peak_wall_bytes` | function | peak_wall_bytes(&self) -> u64 |  |  |  |  |
+
+| `peek_out` | function | peek_out(&mut self, ptr: u32, len: u32) -> Vec<u8> |  |  |  |  |
+
+| `probe` | function | probe(&mut self, req: &Value) -> Result<Value, EnclosureError> |  |  |  |  |
+
+| `read_out` | function | read_out(&mut self, ptr: u32, len: u32) -> Vec<u8> |  |  |  |  |
+
+| `request_envelope` | function | request_envelope(&mut self, req: &Value) -> Vec<u8> |  |  |  |  |
+
+| `request_envelope_leaking` | function | request_envelope_leaking(&mut self, req: &Value) -> Vec<u8> |  |  |  |  |
+
+| `set_epoch_ticks_per_request` | function | set_epoch_ticks_per_request(&mut self, ticks: u64) |  |  |  |  |
+
+| `synthesized_envelope` | function | synthesized_envelope(e: &EnclosureError) -> Vec<u8> |  |  |  |  |
+
+| `write_body` | function | write_body(&mut self, ptr: u32, body: &[u8]) |  |  |  |  |
+
+| `EnclosureHost` | struct | EnclosureHost { store: Store<EncState>, memory: Memory, alloc_fn: TypedFunc<u32, u32>, free_fn: TypedFunc<(u32, u32), ()>, call_fn: TypedFunc<(u32, u32), u64>, policy: FuelPolicy, epoch_ticks: u64, _watchdog: Watchdog } |  |  |  |  |
+
+| `WallLimiter` | struct | WallLimiter { pub peak: u64 } |  |  |  |  |
+
+
 ### tests/common/mod.rs
+
+| `ENGINE_LOCK` | const | ENGINE_LOCK: Mutex<()> |  |  |  |  |
+
+| `HostError` | enum | HostError { Trap(String), Fatal(String) } |  |  |  |  |
 
 | `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
 
+| `CARGO_TARGET_DIR` | env_key | std::env::var_os("CARGO_TARGET_DIR") |  |  |  |  |
+
 | `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `close_session` | function | close_session(h: &mut Host, name: &str) |  |  |  |  |
+
+| `engine_lock` | function | engine_lock() -> std::sync::MutexGuard<'static, ()> |  |  |  |  |
+
+| `exec` | function | exec(&mut self, req: &Value) -> Value |  |  |  |  |
+
+| `fail_classify` | function | fail_classify(stage: &str, e: wasmtime::Error) -> HostError |  |  |  |  |
+
+| `host_or_skip` | function | host_or_skip(test_name: &str, preopen_tmp: bool) -> Option<Host> |  |  |  |  |
 
 | `native` | function | native(req: &Value) -> Value |  |  |  |  |
 
 | `native_bytes` | function | native_bytes(req: &Value) -> Vec<u8> |  |  |  |  |
 
+| `new` | function | new(bytes: &[u8], preopen_tmp: bool) -> Result<Self, HostError> |  |  |  |  |
+
 | `ok` | function | ok(req: &Value) -> Value |  |  |  |  |
+
+| `open_session` | function | open_session(h: &mut Host, name: &str) |  |  |  |  |
 
 | `read` | function | read(path: &str) -> String |  |  |  |  |
 
 | `refused` | function | refused(req: &Value) -> Value |  |  |  |  |
+
+| `request` | function | request(&mut self, req: &Value) -> Result<Value, HostError> |  |  |  |  |
+
+| `request_bytes` | function | request_bytes(&mut self, body: &[u8]) -> Result<Vec<u8>, HostError> |  |  |  |  |
+
+| `stream_all` | function | stream_all(&mut self, session: &str, cursor: &str) -> String |  |  |  |  |
+
+| `try_host` | function | try_host(preopen_tmp: bool) -> Result<Host, String> |  |  |  |  |
 
 | `wasm` | function | wasm(req: &Value) -> Value |  |  |  |  |
 
 | `wasm_bytes` | function | wasm_bytes(req: &Value) -> Vec<u8> |  |  |  |  |
 
 | `wasm_path` | function | wasm_path() -> PathBuf |  |  |  |  |
+
+| `Host` | struct | Host { store: Store<WasiP1Ctx>, memory: Memory, alloc: TypedFunc<u32, u32>, free: TypedFunc<(u32, u32), ()>, call: TypedFunc<(u32, u32), u64> } |  |  |  |  |
 
 
 ### tests/corpus_conformance.rs
@@ -2888,29 +2343,64 @@
 | `ontologies` | str_key | ROOTS = "ontologies" |  |  |  |  |
 
 
+### tests/determinism_court.rs
+
+| `248cd97b412685441df24bf44b52461a001f8ee8c70bd0a2c8a16e41b151a324` | str_key | GOLDEN_H_TRIPLES_SERTERM = "248cd97b412685441df24bf44b52461a001f8ee8c70bd0a2c8a16e41b151a324" |  |  |  |  |
+
+| `4d51ca3c8cf5bc73780cb8cd3bed526293fa6b3fe34c5ad10cf3f8e8d14e8ff4` | str_key | GOLDEN_H_COLUMNAR_CANON = "4d51ca3c8cf5bc73780cb8cd3bed526293fa6b3fe34c5ad10cf3f8e8d14e8ff4" |  |  |  |  |
+
+| `CREATE TABLE revenue (region TEXT, v BIGINT);` | str_key | P04_SEED_SQL = "CREATE TABLE revenue (region TEXT, v BIGINT);" |  |  |  |  |
+
+| `GLAW_P04_PROBE_CHILD` | str_key | ENV_CHILD = "GLAW_P04_PROBE_CHILD" |  |  |  |  |
+
+| `P04_PROBE_BEGIN` | str_key | PROBE_BEGIN = "P04_PROBE_BEGIN" |  |  |  |  |
+
+| `P04_PROBE_END` | str_key | PROBE_END = "P04_PROBE_END" |  |  |  |  |
+
+| `http://www.w3.org/2001/XMLSchema#integer` | str_key | XSD_INT = "http://www.w3.org/2001/XMLSchema#integer" |  |  |  |  |
+
+| `urn:p04:obj:00` | str_key | OBJ_IDS = "urn:p04:obj:00" |  |  |  |  |
+
+
 ### tests/differential.rs
 
 | `https://example.org/` | str_key | NS = "https://example.org/" |  |  |  |  |
 
 
-### tests/docs_release_claims.rs
+### tests/dl_dualroute_vector_pin.rs
 
-| `.github/workflows/release.yml` | str_key | WORKFLOW = ".github/workflows/release.yml" |  |  |  |  |
+| `/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw` | str_key | OUT_DIR = "/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw" |  |  |  |  |
 
-| `README.md` | str_key | README = "README.md" |  |  |  |  |
+| `a-paper-baader-el` | str_key | PINS = "a-paper-baader-el" |  |  |  |  |
 
-| `cargo cicd publish run` | str_key | LOCAL_ONLY_MARKER = "cargo cicd publish run" |  |  |  |  |
-
-| `cargo publish -p graphlaw` | str_key | PUBLISH_STEP = "cargo publish -p graphlaw" |  |  |  |  |
+| `graphlaw_rev` | str_key | REV_LINE = "graphlaw_rev" |  |  |  |  |
 
 
 ### tests/duckdb_statement_kinds.rs
 
-| `/Users/sac/frozen-duckdb/target/wasm-build/duckdb/src/parser/peg/grammar/statements/common.gram` | str_key | GRAM = "/Users/sac/frozen-duckdb/target/wasm-build/duckdb/src/parser/peg/grammar/statements/common.gram" |  |  |  |  |
-
 | `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB` | str_key | EXPR_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB" |  |  |  |  |
 
 | `core_functions` | str_key | CERTIFIED = "core_functions" |  |  |  |  |
+
+
+### tests/dvp_settlement_court.rs
+
+| `dvp-01` | str_key | SESSION = "dvp-01" |  |  |  |  |
+
+| `dvp-02` | str_key | SESSION = "dvp-02" |  |  |  |  |
+
+| `dvp-03` | str_key | SESSION = "dvp-03" |  |  |  |  |
+
+
+### tests/graphlaw_run_eh_court.rs
+
+| `GRAPHLAW_RUN_EH` | env_key | std::env::var_os("GRAPHLAW_RUN_EH") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `target/debug/graphlaw-run-eh` | str_key | DEFAULT_BIN = "target/debug/graphlaw-run-eh" |  |  |  |  |
+
+| `target/wasm32-wasip1/wasm/graphlaw_wasm.wasm` | str_key | DEFAULT_ARTIFACT = "target/wasm32-wasip1/wasm/graphlaw_wasm.wasm" |  |  |  |  |
 
 
 ### tests/gws12_coldchain_cross_engine.rs
@@ -2930,7 +2420,9 @@
 
 ### tests/gws4_ipc_injection_court.rs
 
-| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `@prefix sql: <http://graphlaw.org/sql#> .` | str_key | AGG_TURTLE = "@prefix sql: <http://graphlaw.org/sql#> ." |  |  |  |  |
 
 
 ### tests/insa_chain_differential.rs
@@ -2942,9 +2434,9 @@
 
 ### tests/insa_law_order.rs
 
-| `INSA_LAW_PACK_ONTOLOGY` | env_key | std::env::var("INSA_LAW_PACK_ONTOLOGY") |  |  |  |  |
+| `INSA_LAW_PACK` | env_key | std::env::var("INSA_LAW_PACK") |  |  |  |  |
 
-| `/Users/sac/ggen-marketplace/packs/insa-law-pack/ontology.ttl` | str_key | ONTOLOGY_PATH = "/Users/sac/ggen-marketplace/packs/insa-law-pack/ontology.ttl" |  |  |  |  |
+| `INSA_LAW_PACK_ONTOLOGY` | env_key | std::env::var("INSA_LAW_PACK_ONTOLOGY") |  |  |  |  |
 
 | `19d9ec90cb861e8b1e320ef01e5e0d8a54022b19357f2b4856f379417dcc79d7` | str_key | ONTOLOGY_BLAKE3 = "19d9ec90cb861e8b1e320ef01e5e0d8a54022b19357f2b4856f379417dcc79d7" |  |  |  |  |
 
@@ -2962,11 +2454,141 @@
 | `observe` | str_key | CEILING_NAMES = "observe" |  |  |  |  |
 
 
+### tests/n3_boundary_fuzz.rs
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `NotSemanticContent` | str_key | REFUSAL_KINDS = "NotSemanticContent" |  |  |  |  |
+
+| `P19-WASM-IDENTITY-SKIP` | str_key | MARKER = "P19-WASM-IDENTITY-SKIP" |  |  |  |  |
+
+| `urn:n:a` | str_key | COPY_FOOTPRINT_OVERHEAD = "urn:n:a" |  |  |  |  |
+
+
+### tests/n3_corpus_court.rs
+
+| `/Users/sac/purrdf/corpora/n3` | str_key | CORPUS = "/Users/sac/purrdf/corpora/n3" |  |  |  |  |
+
+| `literals-collections-conforming` | str_key | KNOWN_DIVERGENCES = "literals-collections-conforming" |  |  |  |  |
+
+
+### tests/n3_fuse_court.rs
+
+| `http://example.org/n3-fuse/` | str_key | NS = "http://example.org/n3-fuse/" |  |  |  |  |
+
+
+### tests/n3_halt_latency_court.rs
+
+| `http://example.org/n3-halt/` | str_key | NS = "http://example.org/n3-halt/" |  |  |  |  |
+
+
+### tests/n3_hypothesis_isolation_court.rs
+
+| `http://example.org/iso/` | str_key | NS = "http://example.org/iso/" |  |  |  |  |
+
+| `http://www.w3.org/2000/10/swap/log#implies` | str_key | LOG_IMPLIES = "http://www.w3.org/2000/10/swap/log#implies" |  |  |  |  |
+
+
+### tests/n3_limit_census_court.rs
+
+| `n3_iterations` | str_key | NAMES = "n3_iterations" |  |  |  |  |
+
+
+### tests/n3_proof_lease_court.rs
+
+| `@prefix : <http://example.org/lease-court/> .
+
+:tweety :is :chick .
+:chick :is :bird .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+` | str_key | ORIGINAL_SOURCE = "@prefix : <http://example.org/lease-court/> .
+
+:tweety :is :chick .
+:chick :is :bird .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+" |  |  |  |  |
+
+| `@prefix : <http://example.org/lease-court/> .
+
+:tweety :is :chick .
+:chick :is :finch .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+` | str_key | TAMPERED_SOURCE = "@prefix : <http://example.org/lease-court/> .
+
+:tweety :is :chick .
+:chick :is :finch .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+" |  |  |  |  |
+
+| `n3_proof_lease_court.n3` | str_key | LABEL = "n3_proof_lease_court.n3" |  |  |  |  |
+
+
+### tests/n3_proof_pipeline_court.rs
+
+| `:daffy :is :animal` | str_key | CLAIM_TAMPERED = ":daffy :is :animal" |  |  |  |  |
+
+| `:tweety :is :animal` | str_key | CLAIM = ":tweety :is :animal" |  |  |  |  |
+
+| `@prefix : <http://example.org/proof-court/> .
+
+:tweety :is :chick .
+:chick :is :bird .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+` | str_key | CHAIN_SOURCE = "@prefix : <http://example.org/proof-court/> .
+
+:tweety :is :chick .
+:chick :is :bird .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+" |  |  |  |  |
+
+| `@prefix : <http://example.org/proof-court/> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+
+:t :trigger true .
+:a :holds { :u :p _:q } .
+{ :t :trigger true . :a :holds ?F . ?F log:skolem ?S } => { :t :out ?S } .
+` | str_key | SKOLEM_SOURCE = "@prefix : <http://example.org/proof-court/> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+
+:t :trigger true .
+:a :holds { :u :p _:q } .
+{ :t :trigger true . :a :holds ?F . ?F log:skolem ?S } => { :t :out ?S } .
+" |  |  |  |  |
+
+| `http://example.org/proof-court/` | str_key | NS = "http://example.org/proof-court/" |  |  |  |  |
+
+| `https://eyereasoner.github.io/.well-known/genid/` | str_key | SKOLEM_NS = "https://eyereasoner.github.io/.well-known/genid/" |  |  |  |  |
+
+| `n3_proof_pipeline_court.n3` | str_key | LABEL = "n3_proof_pipeline_court.n3" |  |  |  |  |
+
+
+### tests/n3_quantifier_court.rs
+
+| `http://example.org/q/` | str_key | NS = "http://example.org/q/" |  |  |  |  |
+
+| `https://eyereasoner.github.io/.well-known/genid/` | str_key | GENID = "https://eyereasoner.github.io/.well-known/genid/" |  |  |  |  |
+
+
+### tests/n3_transition_isolation_court.rs
+
+| `@prefix : <urn:n:> .` | str_key | GOOD_RULES = "@prefix : <urn:n:> ." |  |  |  |  |
+
+
 ### tests/no_mock_markers.rs
 
 | `mock` | str_key | BANNED = "mock" |  |  |  |  |
 
 | `tests/no_mock_markers.rs` | str_key | ALLOWLIST = "tests/no_mock_markers.rs" |  |  |  |  |
+
+| `tests/set_operations_court.rs` | str_key | ORACLE_ALLOWLIST = "tests/set_operations_court.rs" |  |  |  |  |
+
+| `tests/wasm_env_isolation_court.rs` | str_key | UNWRAP_ALLOWLIST = "tests/wasm_env_isolation_court.rs" |  |  |  |  |
 
 
 ### tests/op_differential.rs
@@ -3004,6 +2626,37 @@
 | `b3dbbc7c945a7883a75933dfc12699af393dac5fe711009bb5f4d694a2ac399b` | str_key | ONTOLOGY_BLAKE3 = "b3dbbc7c945a7883a75933dfc12699af393dac5fe711009bb5f4d694a2ac399b" |  |  |  |  |
 
 
+### tests/purrdf_capabilities.rs
+
+| `PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/> ` | str_key | PFX = "PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/> " |  |  |  |  |
+
+| `http://example.org/crs/planar` | str_key | CRS = "http://example.org/crs/planar" |  |  |  |  |
+
+| `http://example.org/geo#` | str_key | GEO = "http://example.org/geo#" |  |  |  |  |
+
+| `http://example.org/geof/` | str_key | GEOF = "http://example.org/geof/" |  |  |  |  |
+
+| `http://example.org/sf#` | str_key | SF = "http://example.org/sf#" |  |  |  |  |
+
+| `http://example.org/unit/metre` | str_key | METRE = "http://example.org/unit/metre" |  |  |  |  |
+
+| `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` | str_key | TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" |  |  |  |  |
+
+| `http://www.w3.org/2000/01/rdf-schema#subClassOf` | str_key | SUBCLASS = "http://www.w3.org/2000/01/rdf-schema#subClassOf" |  |  |  |  |
+
+| `http://www.w3.org/2001/XMLSchema#double` | str_key | XSD_DOUBLE = "http://www.w3.org/2001/XMLSchema#double" |  |  |  |  |
+
+| `https://example.org/` | str_key | EX = "https://example.org/" |  |  |  |  |
+
+| `https://example.org/Animal` | str_key | ANIMAL = "https://example.org/Animal" |  |  |  |  |
+
+| `https://example.org/Cat` | str_key | CAT = "https://example.org/Cat" |  |  |  |  |
+
+| `https://example.org/knows` | str_key | KNOWS = "https://example.org/knows" |  |  |  |  |
+
+| `https://example.org/tom` | str_key | TOM = "https://example.org/tom" |  |  |  |  |
+
+
 ### tests/receipt_chain_golden_test.rs
 
 | `d52282d8c48e9021ff6f78e413d8a79dbffbc6b28e28db9a9d855f5810bb3185` | str_key | FIXTURE_BLAKE3 = "d52282d8c48e9021ff6f78e413d8a79dbffbc6b28e28db9a9d855f5810bb3185" |  |  |  |  |
@@ -3018,14 +2671,57 @@
 | `derive:rdfs` | str_key | GATE = "derive:rdfs" |  |  |  |  |
 
 
+### tests/receipt_integrity_court.rs
+
+| `CARGO_MANIFEST_DIR` | str_key | ROOT = "CARGO_MANIFEST_DIR" |  |  |  |  |
+
+| `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/-` | str_key | PATH_CLASS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/-" |  |  |  |  |
+
+| `receipts` | str_key | RECEIPTS_REL = "receipts" |  |  |  |  |
+
+| `receipts/logs/` | str_key | LOG_PREFIX = "receipts/logs/" |  |  |  |  |
+
+
 ### tests/receipt_store.rs
 
 | `0123456789abcdef0123456789abcdef01234567` | str_key | SUBJECT = "0123456789abcdef0123456789abcdef01234567" |  |  |  |  |
 
 
+### tests/receipt_v2_court.rs
+
+| `0bca2e430b2d2b856ae5b262031b0cadd1dd6ee40230ecb75d7ba3b0baf86662` | str_key | H_PRE = "0bca2e430b2d2b856ae5b262031b0cadd1dd6ee40230ecb75d7ba3b0baf86662" |  |  |  |  |
+
+| `0ce59900a950fd16a9546ae14eed62b0b4ea63102b80812c00157a56c7a1d669` | str_key | H_TRIPLES = "0ce59900a950fd16a9546ae14eed62b0b4ea63102b80812c00157a56c7a1d669" |  |  |  |  |
+
+| `48fc721fbbc172e0925fa27af1671de225ba927134802998b10a1568a188652b` | str_key | SETTLED_V1_INPUTS = "48fc721fbbc172e0925fa27af1671de225ba927134802998b10a1568a188652b" |  |  |  |  |
+
+| `61054d964e2ecadcaac7d82d06fc1bd5f732a7595824376792a3f0970aae96c1` | str_key | V2_GOLDEN = "61054d964e2ecadcaac7d82d06fc1bd5f732a7595824376792a3f0970aae96c1" |  |  |  |  |
+
+| `63bff90dee1c16beb2881e11664a1e8c0b6942abe39ba5726d9ce1f9708a8ffe` | str_key | SETTLED_V1_GOLDEN = "63bff90dee1c16beb2881e11664a1e8c0b6942abe39ba5726d9ce1f9708a8ffe" |  |  |  |  |
+
+| `7a364272788ab0a7a56b8444e9f6f76b1f0f7d90d3e5725e3496a78e732d92fd` | str_key | H_QUERY = "7a364272788ab0a7a56b8444e9f6f76b1f0f7d90d3e5725e3496a78e732d92fd" |  |  |  |  |
+
+| `9d79bfadd4c208bad3a87982bdd8f9d05991011f16b96de3cf1c5c33cf7c58df` | str_key | H_COLUMNAR = "9d79bfadd4c208bad3a87982bdd8f9d05991011f16b96de3cf1c5c33cf7c58df" |  |  |  |  |
+
+| `b208929e36eafbe6511114fe40910c486b265eff351b4e7edc47f86476db6539` | str_key | H_POST = "b208929e36eafbe6511114fe40910c486b265eff351b4e7edc47f86476db6539" |  |  |  |  |
+
+| `db2da6fc6ec068a661a7028f220524ea6fad4b3cbf7f72df336dd99fd44f7b0c` | str_key | EMPTY_GOLDEN = "db2da6fc6ec068a661a7028f220524ea6fad4b3cbf7f72df336dd99fd44f7b0c" |  |  |  |  |
+
+| `f641cf9578e7ddf23bfbb9df055c15b79fe920b9d98910ca22be069deb20f774` | str_key | V1_GOLDEN = "f641cf9578e7ddf23bfbb9df055c15b79fe920b9d98910ca22be069deb20f774" |  |  |  |  |
+
+
+### tests/receipt_v2_emission_court.rs
+
+| `7ac44b45bd8c91a1ee1a1035ba43494bd08054231a4ea6dcb9175d8cdfc04593` | str_key | SENTINEL_PIN = "7ac44b45bd8c91a1ee1a1035ba43494bd08054231a4ea6dcb9175d8cdfc04593" |  |  |  |  |
+
+| `d53d18c23212ea7b6300594bb89bce60218f6eff2b9d628b8cc42d3e79bbd5ab` | str_key | EMPTY_TRIPLES_PIN = "d53d18c23212ea7b6300594bb89bce60218f6eff2b9d628b8cc42d3e79bbd5ab" |  |  |  |  |
+
+| `db2da6fc6ec068a661a7028f220524ea6fad4b3cbf7f72df336dd99fd44f7b0c` | str_key | EMPTY_COLUMNAR_PIN = "db2da6fc6ec068a661a7028f220524ea6fad4b3cbf7f72df336dd99fd44f7b0c" |  |  |  |  |
+
+
 ### tests/refusal_crosswalk_differential.rs
 
-| `/Users/sac/ggen-marketplace/packs/refusal-vocabulary-pack` | str_key | SIBLING_ROOT = "/Users/sac/ggen-marketplace/packs/refusal-vocabulary-pack" |  |  |  |  |
+| `REFUSAL_VOCAB_PACK` | env_key | std::env::var("REFUSAL_VOCAB_PACK") |  |  |  |  |
 
 | `malformed_frame` | str_key | VALVE_EXPECTED = "malformed_frame" |  |  |  |  |
 
@@ -3066,18 +2762,57 @@
 | `max_request_bytes` | str_key | EXPECTED = "max_request_bytes" |  |  |  |  |
 
 
+### tests/rehypothecation_gate_court.rs
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `rehy-01` | str_key | SESSION = "rehy-01" |  |  |  |  |
+
+| `rehy-02` | str_key | SESSION = "rehy-02" |  |  |  |  |
+
+| `rehy-03` | str_key | SESSION = "rehy-03" |  |  |  |  |
+
+
 ### tests/sa2a_run14.rs
 
 | `CARGO_BIN_EXE_sa2a-run14-verify` | str_key | BIN = "CARGO_BIN_EXE_sa2a-run14-verify" |  |  |  |  |
+
+
+### tests/shacl_boundary_cliff_court.rs
+
+| `../ontologies/sql-ast.ttl` | str_key | CANONICAL_SHAPES = "../ontologies/sql-ast.ttl" |  |  |  |  |
+
+| `@prefix sh: <http://www.w3.org/ns/shacl#> .` | str_key | PREFIX = "@prefix sh: <http://www.w3.org/ns/shacl#> ." |  |  |  |  |
+
+| `@prefix sql: <http://graphlaw.org/sql#> .` | str_key | AST_DOC = "@prefix sql: <http://graphlaw.org/sql#> ." |  |  |  |  |
+
+
+### tests/sieve_court.rs
+
+| `urn:s/` | str_key | SUBJECT = "urn:s/" |  |  |  |  |
+
+| `urn:v/` | str_key | VOCAB = "urn:v/" |  |  |  |  |
 
 
 ### tests/sql_rdf_conformance.rs
 
 | `CONFORMANCE_REPORT` | env_key | std::env::var("CONFORMANCE_REPORT") |  |  |  |  |
 
+| `../docs/reference/sql-rdf-rec.md` | str_key | REC = "../docs/reference/sql-rdf-rec.md" |  |  |  |  |
+
 | `../docs/refusals.md` | str_key | REFUSALS_MD = "../docs/refusals.md" |  |  |  |  |
 
 | `../ontologies/sql-ast.ttl` | str_key | SQL_AST_TTL = "../ontologies/sql-ast.ttl" |  |  |  |  |
+
+| `../src/sql_ast/refusals.rs` | str_key | REFUSALS_RS = "../src/sql_ast/refusals.rs" |  |  |  |  |
+
+| `@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .` | str_key | B = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ." |  |  |  |  |
+
+| `@prefix sql: <http://graphlaw.org/sql#> .` | str_key | A = "@prefix sql: <http://graphlaw.org/sql#> ." |  |  |  |  |
+
+| `ALIASED_AGG_ARG` | str_key | PINNED_GAPS = "ALIASED_AGG_ARG" |  |  |  |  |
+
+| `OPERATOR_TOKEN` | str_key | REGISTERED_ARMS = "OPERATOR_TOKEN" |  |  |  |  |
 
 | `core_functions` | str_key | CERTIFIED_EXTENSION_RESULTS = "core_functions" |  |  |  |  |
 
@@ -3089,6 +2824,11 @@
 | `hash` | str_key | GATES = "hash" |  |  |  |  |
 
 | `tests/fixtures/strata_gate_differential` | str_key | FIXTURE_ROOT = "tests/fixtures/strata_gate_differential" |  |  |  |  |
+
+
+### tests/tc_mega_antivacuity.rs
+
+| `docs/jira/v26.10.22/mega/tc-mega-fibo-01` | str_key | MEGA = "docs/jira/v26.10.22/mega/tc-mega-fibo-01" |  |  |  |  |
 
 
 ### tests/temprun_framing.rs
@@ -3103,6 +2843,21 @@
 ### tests/tier_court.rs
 
 | `@prefix : <https://e/> .` | str_key | N3_RULES = "@prefix : <https://e/> ." |  |  |  |  |
+
+
+### tests/ubo_sanctions_court.rs
+
+| `http://example.org/ubo#` | str_key | NS = "http://example.org/ubo#" |  |  |  |  |
+
+| `http://graphlaw.org/sql#` | str_key | SQL = "http://graphlaw.org/sql#" |  |  |  |  |
+
+| `http://www.w3.org/2001/XMLSchema#` | str_key | XSD = "http://www.w3.org/2001/XMLSchema#" |  |  |  |  |
+
+| `ubo-01` | str_key | SESSION = "ubo-01" |  |  |  |  |
+
+| `ubo-02` | str_key | SESSION = "ubo-02" |  |  |  |  |
+
+| `ubo-03` | str_key | SESSION = "ubo-03" |  |  |  |  |
 
 
 ### tests/verify_cli.rs
@@ -3157,24 +2912,102 @@
 | `BATCH-R1` | str_key | COLD1_RELEASED = "BATCH-R1" |  |  |  |  |
 
 
+### tests/wasm_duckdb_lifecycle_eh.rs
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e` | str_key | LEGACY_DIGEST = "f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e" |  |  |  |  |
+
+| `fibo_accounts` | str_key | FIBO_TABLE = "fibo_accounts" |  |  |  |  |
+
+| `lifecycle-a` | str_key | SESSION = "lifecycle-a" |  |  |  |  |
+
+| `lifecycle-b` | str_key | SESSION = "lifecycle-b" |  |  |  |  |
+
+
 ### tests/wasm_duckdb_op.rs
 
 | `SELECT batch_id, SUM(cost) AS total_cost FROM telemetry WHERE (latency > $1) GROUP BY batch_id` | str_key | AGG_SQL = "SELECT batch_id, SUM(cost) AS total_cost FROM telemetry WHERE (latency > $1) GROUP BY batch_id" |  |  |  |  |
 
+| `abi-court` | str_key | SESSION = "abi-court" |  |  |  |  |
+
 | `batch_id,cost,latency` | str_key | TELEMETRY_HEADER = "batch_id,cost,latency" |  |  |  |  |
 
 | `https://example.org/data` | str_key | SUBJECT = "https://example.org/data" |  |  |  |  |
+
+| `https://example.org/queries` | str_key | Q_PREFIX = "https://example.org/queries" |  |  |  |  |
 
 | `https://example.org/queries/q1` | str_key | Q1 = "https://example.org/queries/q1" |  |  |  |  |
 
 | `https://example.org/vocab` | str_key | VOCAB = "https://example.org/vocab" |  |  |  |  |
 
 
-### tests/wasm_memory_wall.rs
+### tests/wasm_enclosure_court.rs
+
+| `CARGO_TARGET_DIR` | env_key | std::env::var_os("CARGO_TARGET_DIR") |  |  |  |  |
+
+| `GRAPHLAW_RUN_EH` | env_key | std::env::var_os("GRAPHLAW_RUN_EH") |  |  |  |  |
+
+| `capabilities` | str_key | OPS = "capabilities" |  |  |  |  |
+
+| `debug/graphlaw-run-eh` | str_key | EH_BIN_REL = "debug/graphlaw-run-eh" |  |  |  |  |
+
+
+### tests/wasm_env_isolation_court.rs
 
 | `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
 
+| `CARGO_TARGET_DIR` | env_key | std::env::var_os("CARGO_TARGET_DIR") |  |  |  |  |
+
+| `GRAPHLAW_RUN_EH` | env_key | std::env::var_os("GRAPHLAW_RUN_EH") |  |  |  |  |
+
 | `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/` | str_key | ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" |  |  |  |  |
+
+| `SECRET_TEST_TOKEN` | str_key | TOKEN_NAME = "SECRET_TEST_TOKEN" |  |  |  |  |
+
+| `gl-env-court-canary-6f19e2ac` | str_key | TOKEN_VALUE = "gl-env-court-canary-6f19e2ac" |  |  |  |  |
+
+
+### tests/wasm_fibo_egress_eh.rs
+
+| `GRAPHLAW_DIAG_NO_EH` | env_key | std::env::var("GRAPHLAW_DIAG_NO_EH") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `FD_ALLOCATE` | str_key | RIGHTS = "FD_ALLOCATE" |  |  |  |  |
+
+| `fibo-08` | str_key | SESSION = "fibo-08" |  |  |  |  |
+
+| `http://example.org/fibo#stmt1` | str_key | FIBO_SUBJECT = "http://example.org/fibo#stmt1" |  |  |  |  |
+
+
+### tests/wasm_fibo_fixtures_eh.rs
+
+| `GRAPHLAW_DIAG_NO_EH` | env_key | std::env::var("GRAPHLAW_DIAG_NO_EH") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `FD_ALLOCATE` | str_key | RIGHTS = "FD_ALLOCATE" |  |  |  |  |
+
+| `fibo-01` | str_key | SESSION = "fibo-01" |  |  |  |  |
+
+| `fibo-02` | str_key | SESSION = "fibo-02" |  |  |  |  |
+
+| `fibo-03` | str_key | SESSION = "fibo-03" |  |  |  |  |
+
+| `http://example.org/fibo#stmt1` | str_key | FIBO_SUBJECT = "http://example.org/fibo#stmt1" |  |  |  |  |
+
+
+### tests/wasm_frame_bound_court.rs
+
+| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+
+| `CARGO_TARGET_DIR` | env_key | std::env::var_os("CARGO_TARGET_DIR") |  |  |  |  |
+
+
+### tests/wasm_memory_wall.rs
 
 | `@prefix ex: <https://e/> . ex:s ex:p ex:o .` | str_key | SAMPLE = "@prefix ex: <https://e/> . ex:s ex:p ex:o ." |  |  |  |  |
 
@@ -3199,6 +3032,19 @@
 | `GRAPHLAW_WASM` | env_key | std::env::var("GRAPHLAW_WASM") |  |  |  |  |
 
 
+### tests/wire_completeness_court.rs
+
+| `Ambiguous` | str_key | UNWITNESSED_KINDS = "Ambiguous" |  |  |  |  |
+
+| `NotSemanticContent` | str_key | REFUSAL_KINDS = "NotSemanticContent" |  |  |  |  |
+
+| `RDF 1.2 / codecs / storage IR` | str_key | CAPABILITY_OPS = "RDF 1.2 / codecs / storage IR" |  |  |  |  |
+
+| `ResourceLimit` | str_key | REFUSAL_CODES = "ResourceLimit" |  |  |  |  |
+
+| `https://graphlaw.dev/wire-court#` | str_key | NS = "https://graphlaw.dev/wire-court#" |  |  |  |  |
+
+
 ### wasm/src/abi_meta.rs
 
 | `ABI_VERSION` | const | ABI_VERSION: u32 |  |  |  |  |
@@ -3281,6 +3127,36 @@
 | `gl_call` | function | gl_call(ptr: *mut u8, len: u32) -> u64 |  |  |  |  |
 
 | `gl_free` | function | gl_free(ptr: *mut u8, len: u32) |  |  |  |  |
+
+
+### wasm/src/lib.rs
+
+| `__cxa_atexit` | function | __cxa_atexit( _func: unsafe extern "C" fn(*mut c_void), _arg: *mut c_void, _dso: *mut c_void, ) -> i32 |  |  |  |  |
+
+| `__cxa_finalize` | function | __cxa_finalize(_d: *mut c_void) |  |  |  |  |
+
+| `__funcs_on_exit` | function | __funcs_on_exit() |  |  |  |  |
+
+| `atexit` | function | atexit(_func: unsafe extern "C" fn()) -> i32 |  |  |  |  |
+
+| `graphlaw_wasm_register_static_extensions` | function | graphlaw_wasm_register_static_extensions() -> i32 |  |  |  |  |
+
+| `C` | str_key | REGISTER = "C" |  |  |  |  |
+
+
+### wasm/src/lib.rs
+
+| `__cxa_atexit` | function | __cxa_atexit( _func: unsafe extern "C" fn(*mut c_void), _arg: *mut c_void, _dso: *mut c_void, ) -> i32 |  |  |  |  |
+
+| `__cxa_finalize` | function | __cxa_finalize(_d: *mut c_void) |  |  |  |  |
+
+| `__funcs_on_exit` | function | __funcs_on_exit() |  |  |  |  |
+
+| `atexit` | function | atexit(_func: unsafe extern "C" fn()) -> i32 |  |  |  |  |
+
+| `graphlaw_wasm_register_static_extensions` | function | graphlaw_wasm_register_static_extensions() -> i32 |  |  |  |  |
+
+| `C` | str_key | REGISTER = "C" |  |  |  |  |
 
 
 
@@ -3307,1461 +3183,137 @@
 
 | `typecheck` | script | tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit |  |  |  |  |
 
-| `TC_HOT_FULL` | env_key | std::env::var("TC_HOT_FULL") |  |  |  |  |
+| `admit` | function | admit/2 |  |  |  |  |
+
+| `handle_call` | function | handle_call/3 |  |  |  |  |
+
+| `init` | function | init/1 |  |  |  |  |
+
+| `start_link` | function | start_link/1 |  |  |  |  |
+
+| `stop` | function | stop/1 |  |  |  |  |
+
+| `abi_not_wired` | str_key | {:error, :abi_not_wired} |  |  |  |  |
+
+| `instance` | str_key | instance: instance |  |  |  |  |
+
+| `module` | str_key | module: module |  |  |  |  |
+
+| `name` | str_key | name: __MODULE__ |  |  |  |  |
+
+| `store` | str_key | store: store |  |  |  |  |
+
+| `wasm_load_failed` | str_key | {:error, {:wasm_load_failed, path, :enoent}} |  |  |  |  |
+
+| `wasm_path` | str_key | wasm_path: wasm_path |  |  |  |  |
+
+| `start` | function | start/2 |  |  |  |  |
+
+| `name` | str_key | name: GraphlawEx.Supervisor |  |  |  |  |
+
+| `strategy` | str_key | strategy: :one_for_one |  |  |  |  |
+
+| `../ontologies/sql-ast.ttl` | str_key | CANONICAL_SHAPES = "../ontologies/sql-ast.ttl" |  |  |  |  |
+
+| `@prefix ex: <http://example.org/> .` | str_key | DATA_TTL = "@prefix ex: <http://example.org/> ." |  |  |  |  |
+
+| `@prefix sh: <http://www.w3.org/ns/shacl#> .` | str_key | PREFIX = "@prefix sh: <http://www.w3.org/ns/shacl#> ." |  |  |  |  |
+
+| `urn:s/` | str_key | SUBJECT = "urn:s/" |  |  |  |  |
+
+| `urn:v/` | str_key | VOCAB = "urn:v/" |  |  |  |  |
+
+| `@prefix sql: <http://graphlaw.org/sql#> .` | str_key | SELECT_TURTLE = "@prefix sql: <http://graphlaw.org/sql#> ." |  |  |  |  |
+
+| `CREATE TABLE t(id INTEGER, name VARCHAR); ` | str_key | SEED_SQL = "CREATE TABLE t(id INTEGER, name VARCHAR); " |  |  |  |  |
+
+| `SB_DEBUG` | env_key | std::env::var_os("SB_DEBUG") |  |  |  |  |
+
+| `@prefix : <http://example.org/sb#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#> .
+:trade_47 a :ProposedTrade .
+:trade_47 :notional 25000000 ;
+          :book :emea_deriv .
+{ ?t a :ProposedTrade ;
+     :notional ?n .
+  ?n math:greaterThan 10000000 .
+  ?t :book :emea_deriv }
+  => { ?t :violates :Rule15c3_1 ; :requires :pretrade_review } .
+{ ?t a :ProposedTrade ; :violates :Rule15c3_1 }
+  => { :desk :halt :trade_47 } .
+` | str_key | PROGRAM = "@prefix : <http://example.org/sb#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#> .
+:trade_47 a :ProposedTrade .
+:trade_47 :notional 25000000 ;
+          :book :emea_deriv .
+{ ?t a :ProposedTrade ;
+     :notional ?n .
+  ?n math:greaterThan 10000000 .
+  ?t :book :emea_deriv }
+  => { ?t :violates :Rule15c3_1 ; :requires :pretrade_review } .
+{ ?t a :ProposedTrade ; :violates :Rule15c3_1 }
+  => { :desk :halt :trade_47 } .
+" |  |  |  |  |
+
+| `@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.org/sb#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+ex:TradeShape a sh:NodeShape ;
+  sh:targetClass ex:Order ;
+  sh:closed true ;
+  sh:property [
+    sh:path rdf:type ; sh:minCount 1 ; sh:maxCount 1 ; sh:hasValue ex:Order
+  ] ;
+  sh:property [
+    sh:path ex:id ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer
+  ] ;
+  sh:property [
+    sh:path ex:acct ; sh:minCount 1 ; sh:maxCount 2 ; sh:nodeKind sh:IRI
+  ] ;
+  sh:property [
+    sh:path ex:qty ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer
+  ] .
+` | str_key | SHAPES_TTL = "@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix ex: <http://example.org/sb#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+ex:TradeShape a sh:NodeShape ;
+  sh:targetClass ex:Order ;
+  sh:closed true ;
+  sh:property [
+    sh:path rdf:type ; sh:minCount 1 ; sh:maxCount 1 ; sh:hasValue ex:Order
+  ] ;
+  sh:property [
+    sh:path ex:id ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer
+  ] ;
+  sh:property [
+    sh:path ex:acct ; sh:minCount 1 ; sh:maxCount 2 ; sh:nodeKind sh:IRI
+  ] ;
+  sh:property [
+    sh:path ex:qty ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer
+  ] .
+" |  |  |  |  |
 
 | `TC_HOT_FULL` | env_key | std::env::var("TC_HOT_FULL") |  |  |  |  |
 
-| `CRYPTO_SHA` | const | CRYPTO_SHA: &str |  |  |  |  |
+| `TC_HOT_INJECT_OUTLIER_NS` | env_key | std::env::var("TC_HOT_INJECT_OUTLIER_NS") |  |  |  |  |
 
-| `DT_DATATYPE` | const | DT_DATATYPE: &str |  |  |  |  |
+| `TC_HOT_SPC_EXPORT` | env_key | std::env::var("TC_HOT_SPC_EXPORT") |  |  |  |  |
 
-| `DT_LEXICAL_FORM` | const | DT_LEXICAL_FORM: &str |  |  |  |  |
+| `TC_HOT_CORPUS_PATH` | env_key | std::env::var("TC_HOT_CORPUS_PATH") |  |  |  |  |
 
-| `EYELING_DT_DATATYPE` | const | EYELING_DT_DATATYPE: &str |  |  |  |  |
+| `TC_HOT_FULL` | env_key | std::env::var("TC_HOT_FULL") |  |  |  |  |
 
-| `EYELING_DT_LEXICAL_FORM` | const | EYELING_DT_LEXICAL_FORM: &str |  |  |  |  |
-
-| `EYERON_UNQUOTE` | const | EYERON_UNQUOTE: &str |  |  |  |  |
-
-| `LIST_APPEND` | const | LIST_APPEND: &str |  |  |  |  |
-
-| `LIST_FIRST` | const | LIST_FIRST: &str |  |  |  |  |
-
-| `LIST_FIRST_REST` | const | LIST_FIRST_REST: &str |  |  |  |  |
-
-| `LIST_IN` | const | LIST_IN: &str |  |  |  |  |
-
-| `LIST_ITERATE` | const | LIST_ITERATE: &str |  |  |  |  |
-
-| `LIST_LAST` | const | LIST_LAST: &str |  |  |  |  |
-
-| `LIST_LENGTH` | const | LIST_LENGTH: &str |  |  |  |  |
-
-| `LIST_MAP` | const | LIST_MAP: &str |  |  |  |  |
-
-| `LIST_MEMBER` | const | LIST_MEMBER: &str |  |  |  |  |
-
-| `LIST_MEMBER_AT` | const | LIST_MEMBER_AT: &str |  |  |  |  |
-
-| `LIST_NOT_MEMBER` | const | LIST_NOT_MEMBER: &str |  |  |  |  |
-
-| `LIST_REMOVE` | const | LIST_REMOVE: &str |  |  |  |  |
-
-| `LIST_REST` | const | LIST_REST: &str |  |  |  |  |
-
-| `LIST_REVERSE` | const | LIST_REVERSE: &str |  |  |  |  |
-
-| `LIST_SORT` | const | LIST_SORT: &str |  |  |  |  |
-
-| `LOG_COLLECT_ALL_IN` | const | LOG_COLLECT_ALL_IN: &str |  |  |  |  |
-
-| `LOG_CONCLUSION` | const | LOG_CONCLUSION: &str |  |  |  |  |
-
-| `LOG_CONJUNCTION` | const | LOG_CONJUNCTION: &str |  |  |  |  |
-
-| `LOG_CONTENT` | const | LOG_CONTENT: &str |  |  |  |  |
-
-| `LOG_DTLIT` | const | LOG_DTLIT: &str |  |  |  |  |
-
-| `LOG_EQUAL_TO` | const | LOG_EQUAL_TO: &str |  |  |  |  |
-
-| `LOG_FOR_ALL_IN` | const | LOG_FOR_ALL_IN: &str |  |  |  |  |
-
-| `LOG_IMPLIED_BY` | const | LOG_IMPLIED_BY: &str |  |  |  |  |
-
-| `LOG_IMPLIES` | const | LOG_IMPLIES: &str |  |  |  |  |
-
-| `LOG_INCLUDES` | const | LOG_INCLUDES: &str |  |  |  |  |
-
-| `LOG_LANGLIT` | const | LOG_LANGLIT: &str |  |  |  |  |
-
-| `LOG_NAME_OF` | const | LOG_NAME_OF: &str |  |  |  |  |
-
-| `LOG_NOT_EQUAL_TO` | const | LOG_NOT_EQUAL_TO: &str |  |  |  |  |
-
-| `LOG_NOT_INCLUDES` | const | LOG_NOT_INCLUDES: &str |  |  |  |  |
-
-| `LOG_OUTPUT_STRING` | const | LOG_OUTPUT_STRING: &str |  |  |  |  |
-
-| `LOG_PARSED_AS_N3` | const | LOG_PARSED_AS_N3: &str |  |  |  |  |
-
-| `LOG_QUERY` | const | LOG_QUERY: &str |  |  |  |  |
-
-| `LOG_RAW_TYPE` | const | LOG_RAW_TYPE: &str |  |  |  |  |
-
-| `LOG_SEMANTICS` | const | LOG_SEMANTICS: &str |  |  |  |  |
-
-| `LOG_SEMANTICS_OR_ERROR` | const | LOG_SEMANTICS_OR_ERROR: &str |  |  |  |  |
-
-| `LOG_SKOLEM` | const | LOG_SKOLEM: &str |  |  |  |  |
-
-| `LOG_URI` | const | LOG_URI: &str |  |  |  |  |
-
-| `LOG_UUID` | const | LOG_UUID: &str |  |  |  |  |
-
-| `MATH_ABSOLUTE_VALUE` | const | MATH_ABSOLUTE_VALUE: &str |  |  |  |  |
-
-| `MATH_ACOS` | const | MATH_ACOS: &str |  |  |  |  |
-
-| `MATH_ASIN` | const | MATH_ASIN: &str |  |  |  |  |
-
-| `MATH_ATAN` | const | MATH_ATAN: &str |  |  |  |  |
-
-| `MATH_COS` | const | MATH_COS: &str |  |  |  |  |
-
-| `MATH_COSH` | const | MATH_COSH: &str |  |  |  |  |
-
-| `MATH_DEGREES` | const | MATH_DEGREES: &str |  |  |  |  |
-
-| `MATH_DIFFERENCE` | const | MATH_DIFFERENCE: &str |  |  |  |  |
-
-| `MATH_EQUAL_TO` | const | MATH_EQUAL_TO: &str |  |  |  |  |
-
-| `MATH_EXPONENTIATION` | const | MATH_EXPONENTIATION: &str |  |  |  |  |
-
-| `MATH_GREATER_THAN` | const | MATH_GREATER_THAN: &str |  |  |  |  |
-
-| `MATH_INTEGER_QUOTIENT` | const | MATH_INTEGER_QUOTIENT: &str |  |  |  |  |
-
-| `MATH_LESS_THAN` | const | MATH_LESS_THAN: &str |  |  |  |  |
-
-| `MATH_NEGATION` | const | MATH_NEGATION: &str |  |  |  |  |
-
-| `MATH_NOT_EQUAL_TO` | const | MATH_NOT_EQUAL_TO: &str |  |  |  |  |
-
-| `MATH_NOT_GREATER_THAN` | const | MATH_NOT_GREATER_THAN: &str |  |  |  |  |
-
-| `MATH_NOT_LESS_THAN` | const | MATH_NOT_LESS_THAN: &str |  |  |  |  |
-
-| `MATH_PRODUCT` | const | MATH_PRODUCT: &str |  |  |  |  |
-
-| `MATH_QUOTIENT` | const | MATH_QUOTIENT: &str |  |  |  |  |
-
-| `MATH_REMAINDER` | const | MATH_REMAINDER: &str |  |  |  |  |
-
-| `MATH_ROUNDED` | const | MATH_ROUNDED: &str |  |  |  |  |
-
-| `MATH_SIN` | const | MATH_SIN: &str |  |  |  |  |
-
-| `MATH_SINH` | const | MATH_SINH: &str |  |  |  |  |
-
-| `MATH_SUM` | const | MATH_SUM: &str |  |  |  |  |
-
-| `MATH_TAN` | const | MATH_TAN: &str |  |  |  |  |
-
-| `MATH_TANH` | const | MATH_TANH: &str |  |  |  |  |
-
-| `OWL_SAME_AS` | const | OWL_SAME_AS: &str |  |  |  |  |
-
-| `RDF_FIRST` | const | RDF_FIRST: &str |  |  |  |  |
-
-| `RDF_NIL` | const | RDF_NIL: &str |  |  |  |  |
-
-| `RDF_REST` | const | RDF_REST: &str |  |  |  |  |
-
-| `RDF_TYPE` | const | RDF_TYPE: &str |  |  |  |  |
-
-| `STRING_CONCATENATION` | const | STRING_CONCATENATION: &str |  |  |  |  |
-
-| `STRING_CONTAINS` | const | STRING_CONTAINS: &str |  |  |  |  |
-
-| `STRING_CONTAINS_IGNORING_CASE` | const | STRING_CONTAINS_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_ENDS_WITH` | const | STRING_ENDS_WITH: &str |  |  |  |  |
-
-| `STRING_EQUAL_IGNORING_CASE` | const | STRING_EQUAL_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_FORMAT` | const | STRING_FORMAT: &str |  |  |  |  |
-
-| `STRING_GREATER_THAN` | const | STRING_GREATER_THAN: &str |  |  |  |  |
-
-| `STRING_LESS_THAN` | const | STRING_LESS_THAN: &str |  |  |  |  |
-
-| `STRING_MATCHES` | const | STRING_MATCHES: &str |  |  |  |  |
-
-| `STRING_NOT_EQUAL_IGNORING_CASE` | const | STRING_NOT_EQUAL_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_NOT_GREATER_THAN` | const | STRING_NOT_GREATER_THAN: &str |  |  |  |  |
-
-| `STRING_NOT_LESS_THAN` | const | STRING_NOT_LESS_THAN: &str |  |  |  |  |
-
-| `STRING_NOT_MATCHES` | const | STRING_NOT_MATCHES: &str |  |  |  |  |
-
-| `STRING_REPLACE` | const | STRING_REPLACE: &str |  |  |  |  |
-
-| `STRING_SCRAPE` | const | STRING_SCRAPE: &str |  |  |  |  |
-
-| `STRING_STARTS_WITH` | const | STRING_STARTS_WITH: &str |  |  |  |  |
-
-| `SUDOKU_SOLVE` | const | SUDOKU_SOLVE: &str |  |  |  |  |
-
-| `TIME_DAY` | const | TIME_DAY: &str |  |  |  |  |
-
-| `TIME_HOUR` | const | TIME_HOUR: &str |  |  |  |  |
-
-| `TIME_LOCAL_TIME` | const | TIME_LOCAL_TIME: &str |  |  |  |  |
-
-| `TIME_MINUTE` | const | TIME_MINUTE: &str |  |  |  |  |
-
-| `TIME_MONTH` | const | TIME_MONTH: &str |  |  |  |  |
-
-| `TIME_SECOND` | const | TIME_SECOND: &str |  |  |  |  |
-
-| `TIME_TIME_ZONE` | const | TIME_TIME_ZONE: &str |  |  |  |  |
-
-| `TIME_YEAR` | const | TIME_YEAR: &str |  |  |  |  |
-
-| `Term` | enum | Term { Iri(Name), Var(Name), Blank(Name), Literal(Literal), List(Vec<Term>), Formula(Vec<Triple>) } |  |  |  |  |
-
-| `as_str` | function | as_str(&self) -> &str |  |  |  |  |
-
-| `blank` | function | blank(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `default_prefixes` | function | default_prefixes() -> BTreeMap<String, String> |  |  |  |  |
-
-| `formula` | function | formula(triples: Vec<Triple>) -> Self |  |  |  |  |
-
-| `fuse` | function | fuse(premise: Vec<Triple>) -> Self |  |  |  |  |
-
-| `iri` | function | iri(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `is_ground` | function | is_ground(&self) -> bool |  |  |  |  |
-
-| `is_variable` | function | is_variable(&self) -> bool |  |  |  |  |
-
-| `list` | function | list(items: Vec<Term>) -> Self |  |  |  |  |
-
-| `literal` | function | literal(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `merge` | function | merge(&mut self, other: Document) |  |  |  |  |
-
-| `new` | function | new(s: Term, p: Term, o: Term) -> Self |  |  |  |  |
-
-| `plain` | function | plain(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `var` | function | var(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `with_fuse` | function | with_fuse(mut self, is_fuse: bool) -> Self |  |  |  |  |
-
-| `with_query` | function | with_query(mut self, is_query: bool) -> Self |  |  |  |  |
-
-| `with_source` | function | with_source(mut self, source: Option<SourceRef>) -> Self |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#first` | str_key | RDF_FIRST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#nil` | str_key | RDF_NIL = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#rest` | str_key | RDF_REST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` | str_key | RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/crypto#sha` | str_key | CRYPTO_SHA = "http://www.w3.org/2000/10/swap/crypto#sha" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#append` | str_key | LIST_APPEND = "http://www.w3.org/2000/10/swap/list#append" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#first` | str_key | LIST_FIRST = "http://www.w3.org/2000/10/swap/list#first" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#firstRest` | str_key | LIST_FIRST_REST = "http://www.w3.org/2000/10/swap/list#firstRest" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#in` | str_key | LIST_IN = "http://www.w3.org/2000/10/swap/list#in" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#iterate` | str_key | LIST_ITERATE = "http://www.w3.org/2000/10/swap/list#iterate" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#last` | str_key | LIST_LAST = "http://www.w3.org/2000/10/swap/list#last" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#length` | str_key | LIST_LENGTH = "http://www.w3.org/2000/10/swap/list#length" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#map` | str_key | LIST_MAP = "http://www.w3.org/2000/10/swap/list#map" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#member` | str_key | LIST_MEMBER = "http://www.w3.org/2000/10/swap/list#member" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#memberAt` | str_key | LIST_MEMBER_AT = "http://www.w3.org/2000/10/swap/list#memberAt" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#notMember` | str_key | LIST_NOT_MEMBER = "http://www.w3.org/2000/10/swap/list#notMember" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#remove` | str_key | LIST_REMOVE = "http://www.w3.org/2000/10/swap/list#remove" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#rest` | str_key | LIST_REST = "http://www.w3.org/2000/10/swap/list#rest" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#reverse` | str_key | LIST_REVERSE = "http://www.w3.org/2000/10/swap/list#reverse" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#sort` | str_key | LIST_SORT = "http://www.w3.org/2000/10/swap/list#sort" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#collectAllIn` | str_key | LOG_COLLECT_ALL_IN = "http://www.w3.org/2000/10/swap/log#collectAllIn" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#conclusion` | str_key | LOG_CONCLUSION = "http://www.w3.org/2000/10/swap/log#conclusion" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#conjunction` | str_key | LOG_CONJUNCTION = "http://www.w3.org/2000/10/swap/log#conjunction" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#content` | str_key | LOG_CONTENT = "http://www.w3.org/2000/10/swap/log#content" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#dtlit` | str_key | LOG_DTLIT = "http://www.w3.org/2000/10/swap/log#dtlit" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#equalTo` | str_key | LOG_EQUAL_TO = "http://www.w3.org/2000/10/swap/log#equalTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#forAllIn` | str_key | LOG_FOR_ALL_IN = "http://www.w3.org/2000/10/swap/log#forAllIn" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#impliedBy` | str_key | LOG_IMPLIED_BY = "http://www.w3.org/2000/10/swap/log#impliedBy" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#implies` | str_key | LOG_IMPLIES = "http://www.w3.org/2000/10/swap/log#implies" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#includes` | str_key | LOG_INCLUDES = "http://www.w3.org/2000/10/swap/log#includes" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#langlit` | str_key | LOG_LANGLIT = "http://www.w3.org/2000/10/swap/log#langlit" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#nameOf` | str_key | LOG_NAME_OF = "http://www.w3.org/2000/10/swap/log#nameOf" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#notEqualTo` | str_key | LOG_NOT_EQUAL_TO = "http://www.w3.org/2000/10/swap/log#notEqualTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#notIncludes` | str_key | LOG_NOT_INCLUDES = "http://www.w3.org/2000/10/swap/log#notIncludes" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#outputString` | str_key | LOG_OUTPUT_STRING = "http://www.w3.org/2000/10/swap/log#outputString" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#parsedAsN3` | str_key | LOG_PARSED_AS_N3 = "http://www.w3.org/2000/10/swap/log#parsedAsN3" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#query` | str_key | LOG_QUERY = "http://www.w3.org/2000/10/swap/log#query" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#rawType` | str_key | LOG_RAW_TYPE = "http://www.w3.org/2000/10/swap/log#rawType" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#semantics` | str_key | LOG_SEMANTICS = "http://www.w3.org/2000/10/swap/log#semantics" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#semanticsOrError` | str_key | LOG_SEMANTICS_OR_ERROR = "http://www.w3.org/2000/10/swap/log#semanticsOrError" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#skolem` | str_key | LOG_SKOLEM = "http://www.w3.org/2000/10/swap/log#skolem" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#uri` | str_key | LOG_URI = "http://www.w3.org/2000/10/swap/log#uri" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#uuid` | str_key | LOG_UUID = "http://www.w3.org/2000/10/swap/log#uuid" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#absoluteValue` | str_key | MATH_ABSOLUTE_VALUE = "http://www.w3.org/2000/10/swap/math#absoluteValue" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#acos` | str_key | MATH_ACOS = "http://www.w3.org/2000/10/swap/math#acos" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#asin` | str_key | MATH_ASIN = "http://www.w3.org/2000/10/swap/math#asin" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#atan` | str_key | MATH_ATAN = "http://www.w3.org/2000/10/swap/math#atan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#cos` | str_key | MATH_COS = "http://www.w3.org/2000/10/swap/math#cos" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#cosh` | str_key | MATH_COSH = "http://www.w3.org/2000/10/swap/math#cosh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#degrees` | str_key | MATH_DEGREES = "http://www.w3.org/2000/10/swap/math#degrees" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#difference` | str_key | MATH_DIFFERENCE = "http://www.w3.org/2000/10/swap/math#difference" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#equalTo` | str_key | MATH_EQUAL_TO = "http://www.w3.org/2000/10/swap/math#equalTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#exponentiation` | str_key | MATH_EXPONENTIATION = "http://www.w3.org/2000/10/swap/math#exponentiation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#greaterThan` | str_key | MATH_GREATER_THAN = "http://www.w3.org/2000/10/swap/math#greaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#integerQuotient` | str_key | MATH_INTEGER_QUOTIENT = "http://www.w3.org/2000/10/swap/math#integerQuotient" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#lessThan` | str_key | MATH_LESS_THAN = "http://www.w3.org/2000/10/swap/math#lessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#negation` | str_key | MATH_NEGATION = "http://www.w3.org/2000/10/swap/math#negation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notEqualTo` | str_key | MATH_NOT_EQUAL_TO = "http://www.w3.org/2000/10/swap/math#notEqualTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notGreaterThan` | str_key | MATH_NOT_GREATER_THAN = "http://www.w3.org/2000/10/swap/math#notGreaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notLessThan` | str_key | MATH_NOT_LESS_THAN = "http://www.w3.org/2000/10/swap/math#notLessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#product` | str_key | MATH_PRODUCT = "http://www.w3.org/2000/10/swap/math#product" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#quotient` | str_key | MATH_QUOTIENT = "http://www.w3.org/2000/10/swap/math#quotient" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#remainder` | str_key | MATH_REMAINDER = "http://www.w3.org/2000/10/swap/math#remainder" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#rounded` | str_key | MATH_ROUNDED = "http://www.w3.org/2000/10/swap/math#rounded" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sin` | str_key | MATH_SIN = "http://www.w3.org/2000/10/swap/math#sin" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sinh` | str_key | MATH_SINH = "http://www.w3.org/2000/10/swap/math#sinh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sum` | str_key | MATH_SUM = "http://www.w3.org/2000/10/swap/math#sum" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#tan` | str_key | MATH_TAN = "http://www.w3.org/2000/10/swap/math#tan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#tanh` | str_key | MATH_TANH = "http://www.w3.org/2000/10/swap/math#tanh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#concatenation` | str_key | STRING_CONCATENATION = "http://www.w3.org/2000/10/swap/string#concatenation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#contains` | str_key | STRING_CONTAINS = "http://www.w3.org/2000/10/swap/string#contains" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#containsIgnoringCase` | str_key | STRING_CONTAINS_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#containsIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#endsWith` | str_key | STRING_ENDS_WITH = "http://www.w3.org/2000/10/swap/string#endsWith" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#equalIgnoringCase` | str_key | STRING_EQUAL_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#equalIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#format` | str_key | STRING_FORMAT = "http://www.w3.org/2000/10/swap/string#format" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#greaterThan` | str_key | STRING_GREATER_THAN = "http://www.w3.org/2000/10/swap/string#greaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#lessThan` | str_key | STRING_LESS_THAN = "http://www.w3.org/2000/10/swap/string#lessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#matches` | str_key | STRING_MATCHES = "http://www.w3.org/2000/10/swap/string#matches" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notEqualIgnoringCase` | str_key | STRING_NOT_EQUAL_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#notEqualIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notGreaterThan` | str_key | STRING_NOT_GREATER_THAN = "http://www.w3.org/2000/10/swap/string#notGreaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notLessThan` | str_key | STRING_NOT_LESS_THAN = "http://www.w3.org/2000/10/swap/string#notLessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notMatches` | str_key | STRING_NOT_MATCHES = "http://www.w3.org/2000/10/swap/string#notMatches" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#replace` | str_key | STRING_REPLACE = "http://www.w3.org/2000/10/swap/string#replace" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#scrape` | str_key | STRING_SCRAPE = "http://www.w3.org/2000/10/swap/string#scrape" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#startsWith` | str_key | STRING_STARTS_WITH = "http://www.w3.org/2000/10/swap/string#startsWith" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#day` | str_key | TIME_DAY = "http://www.w3.org/2000/10/swap/time#day" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#hour` | str_key | TIME_HOUR = "http://www.w3.org/2000/10/swap/time#hour" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#localTime` | str_key | TIME_LOCAL_TIME = "http://www.w3.org/2000/10/swap/time#localTime" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#minute` | str_key | TIME_MINUTE = "http://www.w3.org/2000/10/swap/time#minute" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#month` | str_key | TIME_MONTH = "http://www.w3.org/2000/10/swap/time#month" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#second` | str_key | TIME_SECOND = "http://www.w3.org/2000/10/swap/time#second" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#timeZone` | str_key | TIME_TIME_ZONE = "http://www.w3.org/2000/10/swap/time#timeZone" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#year` | str_key | TIME_YEAR = "http://www.w3.org/2000/10/swap/time#year" |  |  |  |  |
-
-| `http://www.w3.org/2002/07/owl#sameAs` | str_key | OWL_SAME_AS = "http://www.w3.org/2002/07/owl#sameAs" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/datatype#datatype` | str_key | EYELING_DT_DATATYPE = "https://eyereasoner.github.io/eyeling/datatype#datatype" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/datatype#lexicalForm` | str_key | EYELING_DT_LEXICAL_FORM = "https://eyereasoner.github.io/eyeling/datatype#lexicalForm" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/vocab/sudoku#solve` | str_key | SUDOKU_SOLVE = "https://eyereasoner.github.io/eyeling/vocab/sudoku#solve" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeron/datatype#datatype` | str_key | DT_DATATYPE = "https://eyereasoner.github.io/eyeron/datatype#datatype" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeron/datatype#lexicalForm` | str_key | DT_LEXICAL_FORM = "https://eyereasoner.github.io/eyeron/datatype#lexicalForm" |  |  |  |  |
-
-| `urn:eyeron:unquote` | str_key | EYERON_UNQUOTE = "urn:eyeron:unquote" |  |  |  |  |
-
-| `Document` | struct | Document { pub prefixes: BTreeMap<String, String>, pub base_iri: Option<String>, pub facts: Vec<Triple>, pub fact_sources: BTreeMap<Triple, SourceRef>, pub rules: Vec<Rule> } |  |  |  |  |
-
-| `Literal` | struct | Literal { pub value: Name, pub datatype: Option<Name>, pub language: Option<Name> } |  |  |  |  |
-
-| `Name` | struct | Name { Arc<str> } |  |  |  |  |
-
-| `Rule` | struct | Rule { pub premise: Vec<Triple>, pub conclusion: Vec<Triple>, pub is_forward: bool, pub is_query: bool, pub is_fuse: bool, pub source: Option<SourceRef>, pub proof_var_source_names: BTreeMap<String, String> } |  |  |  |  |
-
-| `SourceRef` | struct | SourceRef { pub label: String, pub line: usize } |  |  |  |  |
-
-| `Triple` | struct | Triple { pub s: Term, pub p: Term, pub o: Term } |  |  |  |  |
-
-| `CRYPTO_SHA` | const | CRYPTO_SHA: &str |  |  |  |  |
-
-| `DT_DATATYPE` | const | DT_DATATYPE: &str |  |  |  |  |
-
-| `DT_LEXICAL_FORM` | const | DT_LEXICAL_FORM: &str |  |  |  |  |
-
-| `EYELING_DT_DATATYPE` | const | EYELING_DT_DATATYPE: &str |  |  |  |  |
-
-| `EYELING_DT_LEXICAL_FORM` | const | EYELING_DT_LEXICAL_FORM: &str |  |  |  |  |
-
-| `EYERON_UNQUOTE` | const | EYERON_UNQUOTE: &str |  |  |  |  |
-
-| `LIST_APPEND` | const | LIST_APPEND: &str |  |  |  |  |
-
-| `LIST_FIRST` | const | LIST_FIRST: &str |  |  |  |  |
-
-| `LIST_FIRST_REST` | const | LIST_FIRST_REST: &str |  |  |  |  |
-
-| `LIST_IN` | const | LIST_IN: &str |  |  |  |  |
-
-| `LIST_ITERATE` | const | LIST_ITERATE: &str |  |  |  |  |
-
-| `LIST_LAST` | const | LIST_LAST: &str |  |  |  |  |
-
-| `LIST_LENGTH` | const | LIST_LENGTH: &str |  |  |  |  |
-
-| `LIST_MAP` | const | LIST_MAP: &str |  |  |  |  |
-
-| `LIST_MEMBER` | const | LIST_MEMBER: &str |  |  |  |  |
-
-| `LIST_MEMBER_AT` | const | LIST_MEMBER_AT: &str |  |  |  |  |
-
-| `LIST_NOT_MEMBER` | const | LIST_NOT_MEMBER: &str |  |  |  |  |
-
-| `LIST_REMOVE` | const | LIST_REMOVE: &str |  |  |  |  |
-
-| `LIST_REST` | const | LIST_REST: &str |  |  |  |  |
-
-| `LIST_REVERSE` | const | LIST_REVERSE: &str |  |  |  |  |
-
-| `LIST_SORT` | const | LIST_SORT: &str |  |  |  |  |
-
-| `LOG_COLLECT_ALL_IN` | const | LOG_COLLECT_ALL_IN: &str |  |  |  |  |
-
-| `LOG_CONCLUSION` | const | LOG_CONCLUSION: &str |  |  |  |  |
-
-| `LOG_CONJUNCTION` | const | LOG_CONJUNCTION: &str |  |  |  |  |
-
-| `LOG_CONTENT` | const | LOG_CONTENT: &str |  |  |  |  |
-
-| `LOG_DTLIT` | const | LOG_DTLIT: &str |  |  |  |  |
-
-| `LOG_EQUAL_TO` | const | LOG_EQUAL_TO: &str |  |  |  |  |
-
-| `LOG_FOR_ALL_IN` | const | LOG_FOR_ALL_IN: &str |  |  |  |  |
-
-| `LOG_IMPLIED_BY` | const | LOG_IMPLIED_BY: &str |  |  |  |  |
-
-| `LOG_IMPLIES` | const | LOG_IMPLIES: &str |  |  |  |  |
-
-| `LOG_INCLUDES` | const | LOG_INCLUDES: &str |  |  |  |  |
-
-| `LOG_LANGLIT` | const | LOG_LANGLIT: &str |  |  |  |  |
-
-| `LOG_NAME_OF` | const | LOG_NAME_OF: &str |  |  |  |  |
-
-| `LOG_NOT_EQUAL_TO` | const | LOG_NOT_EQUAL_TO: &str |  |  |  |  |
-
-| `LOG_NOT_INCLUDES` | const | LOG_NOT_INCLUDES: &str |  |  |  |  |
-
-| `LOG_OUTPUT_STRING` | const | LOG_OUTPUT_STRING: &str |  |  |  |  |
-
-| `LOG_PARSED_AS_N3` | const | LOG_PARSED_AS_N3: &str |  |  |  |  |
-
-| `LOG_QUERY` | const | LOG_QUERY: &str |  |  |  |  |
-
-| `LOG_RAW_TYPE` | const | LOG_RAW_TYPE: &str |  |  |  |  |
-
-| `LOG_SEMANTICS` | const | LOG_SEMANTICS: &str |  |  |  |  |
-
-| `LOG_SEMANTICS_OR_ERROR` | const | LOG_SEMANTICS_OR_ERROR: &str |  |  |  |  |
-
-| `LOG_SKOLEM` | const | LOG_SKOLEM: &str |  |  |  |  |
-
-| `LOG_URI` | const | LOG_URI: &str |  |  |  |  |
-
-| `LOG_UUID` | const | LOG_UUID: &str |  |  |  |  |
-
-| `MATH_ABSOLUTE_VALUE` | const | MATH_ABSOLUTE_VALUE: &str |  |  |  |  |
-
-| `MATH_ACOS` | const | MATH_ACOS: &str |  |  |  |  |
-
-| `MATH_ASIN` | const | MATH_ASIN: &str |  |  |  |  |
-
-| `MATH_ATAN` | const | MATH_ATAN: &str |  |  |  |  |
-
-| `MATH_COS` | const | MATH_COS: &str |  |  |  |  |
-
-| `MATH_COSH` | const | MATH_COSH: &str |  |  |  |  |
-
-| `MATH_DEGREES` | const | MATH_DEGREES: &str |  |  |  |  |
-
-| `MATH_DIFFERENCE` | const | MATH_DIFFERENCE: &str |  |  |  |  |
-
-| `MATH_EQUAL_TO` | const | MATH_EQUAL_TO: &str |  |  |  |  |
-
-| `MATH_EXPONENTIATION` | const | MATH_EXPONENTIATION: &str |  |  |  |  |
-
-| `MATH_GREATER_THAN` | const | MATH_GREATER_THAN: &str |  |  |  |  |
-
-| `MATH_INTEGER_QUOTIENT` | const | MATH_INTEGER_QUOTIENT: &str |  |  |  |  |
-
-| `MATH_LESS_THAN` | const | MATH_LESS_THAN: &str |  |  |  |  |
-
-| `MATH_NEGATION` | const | MATH_NEGATION: &str |  |  |  |  |
-
-| `MATH_NOT_EQUAL_TO` | const | MATH_NOT_EQUAL_TO: &str |  |  |  |  |
-
-| `MATH_NOT_GREATER_THAN` | const | MATH_NOT_GREATER_THAN: &str |  |  |  |  |
-
-| `MATH_NOT_LESS_THAN` | const | MATH_NOT_LESS_THAN: &str |  |  |  |  |
-
-| `MATH_PRODUCT` | const | MATH_PRODUCT: &str |  |  |  |  |
-
-| `MATH_QUOTIENT` | const | MATH_QUOTIENT: &str |  |  |  |  |
-
-| `MATH_REMAINDER` | const | MATH_REMAINDER: &str |  |  |  |  |
-
-| `MATH_ROUNDED` | const | MATH_ROUNDED: &str |  |  |  |  |
-
-| `MATH_SIN` | const | MATH_SIN: &str |  |  |  |  |
-
-| `MATH_SINH` | const | MATH_SINH: &str |  |  |  |  |
-
-| `MATH_SUM` | const | MATH_SUM: &str |  |  |  |  |
-
-| `MATH_TAN` | const | MATH_TAN: &str |  |  |  |  |
-
-| `MATH_TANH` | const | MATH_TANH: &str |  |  |  |  |
-
-| `OWL_SAME_AS` | const | OWL_SAME_AS: &str |  |  |  |  |
-
-| `RDF_FIRST` | const | RDF_FIRST: &str |  |  |  |  |
-
-| `RDF_NIL` | const | RDF_NIL: &str |  |  |  |  |
-
-| `RDF_REST` | const | RDF_REST: &str |  |  |  |  |
-
-| `RDF_TYPE` | const | RDF_TYPE: &str |  |  |  |  |
-
-| `STRING_CONCATENATION` | const | STRING_CONCATENATION: &str |  |  |  |  |
-
-| `STRING_CONTAINS` | const | STRING_CONTAINS: &str |  |  |  |  |
-
-| `STRING_CONTAINS_IGNORING_CASE` | const | STRING_CONTAINS_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_ENDS_WITH` | const | STRING_ENDS_WITH: &str |  |  |  |  |
-
-| `STRING_EQUAL_IGNORING_CASE` | const | STRING_EQUAL_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_FORMAT` | const | STRING_FORMAT: &str |  |  |  |  |
-
-| `STRING_GREATER_THAN` | const | STRING_GREATER_THAN: &str |  |  |  |  |
-
-| `STRING_LESS_THAN` | const | STRING_LESS_THAN: &str |  |  |  |  |
-
-| `STRING_MATCHES` | const | STRING_MATCHES: &str |  |  |  |  |
-
-| `STRING_NOT_EQUAL_IGNORING_CASE` | const | STRING_NOT_EQUAL_IGNORING_CASE: &str |  |  |  |  |
-
-| `STRING_NOT_GREATER_THAN` | const | STRING_NOT_GREATER_THAN: &str |  |  |  |  |
-
-| `STRING_NOT_LESS_THAN` | const | STRING_NOT_LESS_THAN: &str |  |  |  |  |
-
-| `STRING_NOT_MATCHES` | const | STRING_NOT_MATCHES: &str |  |  |  |  |
-
-| `STRING_REPLACE` | const | STRING_REPLACE: &str |  |  |  |  |
-
-| `STRING_SCRAPE` | const | STRING_SCRAPE: &str |  |  |  |  |
-
-| `STRING_STARTS_WITH` | const | STRING_STARTS_WITH: &str |  |  |  |  |
-
-| `SUDOKU_SOLVE` | const | SUDOKU_SOLVE: &str |  |  |  |  |
-
-| `TIME_DAY` | const | TIME_DAY: &str |  |  |  |  |
-
-| `TIME_HOUR` | const | TIME_HOUR: &str |  |  |  |  |
-
-| `TIME_LOCAL_TIME` | const | TIME_LOCAL_TIME: &str |  |  |  |  |
-
-| `TIME_MINUTE` | const | TIME_MINUTE: &str |  |  |  |  |
-
-| `TIME_MONTH` | const | TIME_MONTH: &str |  |  |  |  |
-
-| `TIME_SECOND` | const | TIME_SECOND: &str |  |  |  |  |
-
-| `TIME_TIME_ZONE` | const | TIME_TIME_ZONE: &str |  |  |  |  |
-
-| `TIME_YEAR` | const | TIME_YEAR: &str |  |  |  |  |
-
-| `Term` | enum | Term { Iri(Name), Var(Name), Blank(Name), Literal(Literal), List(Vec<Term>), Formula(Vec<Triple>) } |  |  |  |  |
-
-| `as_str` | function | as_str(&self) -> &str |  |  |  |  |
-
-| `blank` | function | blank(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `default_prefixes` | function | default_prefixes() -> BTreeMap<String, String> |  |  |  |  |
-
-| `formula` | function | formula(triples: Vec<Triple>) -> Self |  |  |  |  |
-
-| `fuse` | function | fuse(premise: Vec<Triple>) -> Self |  |  |  |  |
-
-| `iri` | function | iri(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `is_ground` | function | is_ground(&self) -> bool |  |  |  |  |
-
-| `is_variable` | function | is_variable(&self) -> bool |  |  |  |  |
-
-| `list` | function | list(items: Vec<Term>) -> Self |  |  |  |  |
-
-| `literal` | function | literal(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `merge` | function | merge(&mut self, other: Document) |  |  |  |  |
-
-| `new` | function | new(s: Term, p: Term, o: Term) -> Self |  |  |  |  |
-
-| `plain` | function | plain(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `var` | function | var(value: impl Into<Name>) -> Self |  |  |  |  |
-
-| `with_fuse` | function | with_fuse(mut self, is_fuse: bool) -> Self |  |  |  |  |
-
-| `with_query` | function | with_query(mut self, is_query: bool) -> Self |  |  |  |  |
-
-| `with_source` | function | with_source(mut self, source: Option<SourceRef>) -> Self |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#first` | str_key | RDF_FIRST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#first" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#nil` | str_key | RDF_NIL = "http://www.w3.org/1999/02/22-rdf-syntax-ns#nil" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#rest` | str_key | RDF_REST = "http://www.w3.org/1999/02/22-rdf-syntax-ns#rest" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` | str_key | RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/crypto#sha` | str_key | CRYPTO_SHA = "http://www.w3.org/2000/10/swap/crypto#sha" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#append` | str_key | LIST_APPEND = "http://www.w3.org/2000/10/swap/list#append" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#first` | str_key | LIST_FIRST = "http://www.w3.org/2000/10/swap/list#first" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#firstRest` | str_key | LIST_FIRST_REST = "http://www.w3.org/2000/10/swap/list#firstRest" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#in` | str_key | LIST_IN = "http://www.w3.org/2000/10/swap/list#in" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#iterate` | str_key | LIST_ITERATE = "http://www.w3.org/2000/10/swap/list#iterate" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#last` | str_key | LIST_LAST = "http://www.w3.org/2000/10/swap/list#last" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#length` | str_key | LIST_LENGTH = "http://www.w3.org/2000/10/swap/list#length" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#map` | str_key | LIST_MAP = "http://www.w3.org/2000/10/swap/list#map" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#member` | str_key | LIST_MEMBER = "http://www.w3.org/2000/10/swap/list#member" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#memberAt` | str_key | LIST_MEMBER_AT = "http://www.w3.org/2000/10/swap/list#memberAt" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#notMember` | str_key | LIST_NOT_MEMBER = "http://www.w3.org/2000/10/swap/list#notMember" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#remove` | str_key | LIST_REMOVE = "http://www.w3.org/2000/10/swap/list#remove" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#rest` | str_key | LIST_REST = "http://www.w3.org/2000/10/swap/list#rest" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#reverse` | str_key | LIST_REVERSE = "http://www.w3.org/2000/10/swap/list#reverse" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/list#sort` | str_key | LIST_SORT = "http://www.w3.org/2000/10/swap/list#sort" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#collectAllIn` | str_key | LOG_COLLECT_ALL_IN = "http://www.w3.org/2000/10/swap/log#collectAllIn" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#conclusion` | str_key | LOG_CONCLUSION = "http://www.w3.org/2000/10/swap/log#conclusion" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#conjunction` | str_key | LOG_CONJUNCTION = "http://www.w3.org/2000/10/swap/log#conjunction" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#content` | str_key | LOG_CONTENT = "http://www.w3.org/2000/10/swap/log#content" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#dtlit` | str_key | LOG_DTLIT = "http://www.w3.org/2000/10/swap/log#dtlit" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#equalTo` | str_key | LOG_EQUAL_TO = "http://www.w3.org/2000/10/swap/log#equalTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#forAllIn` | str_key | LOG_FOR_ALL_IN = "http://www.w3.org/2000/10/swap/log#forAllIn" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#impliedBy` | str_key | LOG_IMPLIED_BY = "http://www.w3.org/2000/10/swap/log#impliedBy" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#implies` | str_key | LOG_IMPLIES = "http://www.w3.org/2000/10/swap/log#implies" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#includes` | str_key | LOG_INCLUDES = "http://www.w3.org/2000/10/swap/log#includes" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#langlit` | str_key | LOG_LANGLIT = "http://www.w3.org/2000/10/swap/log#langlit" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#nameOf` | str_key | LOG_NAME_OF = "http://www.w3.org/2000/10/swap/log#nameOf" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#notEqualTo` | str_key | LOG_NOT_EQUAL_TO = "http://www.w3.org/2000/10/swap/log#notEqualTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#notIncludes` | str_key | LOG_NOT_INCLUDES = "http://www.w3.org/2000/10/swap/log#notIncludes" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#outputString` | str_key | LOG_OUTPUT_STRING = "http://www.w3.org/2000/10/swap/log#outputString" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#parsedAsN3` | str_key | LOG_PARSED_AS_N3 = "http://www.w3.org/2000/10/swap/log#parsedAsN3" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#query` | str_key | LOG_QUERY = "http://www.w3.org/2000/10/swap/log#query" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#rawType` | str_key | LOG_RAW_TYPE = "http://www.w3.org/2000/10/swap/log#rawType" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#semantics` | str_key | LOG_SEMANTICS = "http://www.w3.org/2000/10/swap/log#semantics" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#semanticsOrError` | str_key | LOG_SEMANTICS_OR_ERROR = "http://www.w3.org/2000/10/swap/log#semanticsOrError" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#skolem` | str_key | LOG_SKOLEM = "http://www.w3.org/2000/10/swap/log#skolem" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#uri` | str_key | LOG_URI = "http://www.w3.org/2000/10/swap/log#uri" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#uuid` | str_key | LOG_UUID = "http://www.w3.org/2000/10/swap/log#uuid" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#absoluteValue` | str_key | MATH_ABSOLUTE_VALUE = "http://www.w3.org/2000/10/swap/math#absoluteValue" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#acos` | str_key | MATH_ACOS = "http://www.w3.org/2000/10/swap/math#acos" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#asin` | str_key | MATH_ASIN = "http://www.w3.org/2000/10/swap/math#asin" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#atan` | str_key | MATH_ATAN = "http://www.w3.org/2000/10/swap/math#atan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#cos` | str_key | MATH_COS = "http://www.w3.org/2000/10/swap/math#cos" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#cosh` | str_key | MATH_COSH = "http://www.w3.org/2000/10/swap/math#cosh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#degrees` | str_key | MATH_DEGREES = "http://www.w3.org/2000/10/swap/math#degrees" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#difference` | str_key | MATH_DIFFERENCE = "http://www.w3.org/2000/10/swap/math#difference" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#equalTo` | str_key | MATH_EQUAL_TO = "http://www.w3.org/2000/10/swap/math#equalTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#exponentiation` | str_key | MATH_EXPONENTIATION = "http://www.w3.org/2000/10/swap/math#exponentiation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#greaterThan` | str_key | MATH_GREATER_THAN = "http://www.w3.org/2000/10/swap/math#greaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#integerQuotient` | str_key | MATH_INTEGER_QUOTIENT = "http://www.w3.org/2000/10/swap/math#integerQuotient" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#lessThan` | str_key | MATH_LESS_THAN = "http://www.w3.org/2000/10/swap/math#lessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#negation` | str_key | MATH_NEGATION = "http://www.w3.org/2000/10/swap/math#negation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notEqualTo` | str_key | MATH_NOT_EQUAL_TO = "http://www.w3.org/2000/10/swap/math#notEqualTo" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notGreaterThan` | str_key | MATH_NOT_GREATER_THAN = "http://www.w3.org/2000/10/swap/math#notGreaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#notLessThan` | str_key | MATH_NOT_LESS_THAN = "http://www.w3.org/2000/10/swap/math#notLessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#product` | str_key | MATH_PRODUCT = "http://www.w3.org/2000/10/swap/math#product" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#quotient` | str_key | MATH_QUOTIENT = "http://www.w3.org/2000/10/swap/math#quotient" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#remainder` | str_key | MATH_REMAINDER = "http://www.w3.org/2000/10/swap/math#remainder" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#rounded` | str_key | MATH_ROUNDED = "http://www.w3.org/2000/10/swap/math#rounded" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sin` | str_key | MATH_SIN = "http://www.w3.org/2000/10/swap/math#sin" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sinh` | str_key | MATH_SINH = "http://www.w3.org/2000/10/swap/math#sinh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#sum` | str_key | MATH_SUM = "http://www.w3.org/2000/10/swap/math#sum" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#tan` | str_key | MATH_TAN = "http://www.w3.org/2000/10/swap/math#tan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/math#tanh` | str_key | MATH_TANH = "http://www.w3.org/2000/10/swap/math#tanh" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#concatenation` | str_key | STRING_CONCATENATION = "http://www.w3.org/2000/10/swap/string#concatenation" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#contains` | str_key | STRING_CONTAINS = "http://www.w3.org/2000/10/swap/string#contains" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#containsIgnoringCase` | str_key | STRING_CONTAINS_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#containsIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#endsWith` | str_key | STRING_ENDS_WITH = "http://www.w3.org/2000/10/swap/string#endsWith" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#equalIgnoringCase` | str_key | STRING_EQUAL_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#equalIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#format` | str_key | STRING_FORMAT = "http://www.w3.org/2000/10/swap/string#format" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#greaterThan` | str_key | STRING_GREATER_THAN = "http://www.w3.org/2000/10/swap/string#greaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#lessThan` | str_key | STRING_LESS_THAN = "http://www.w3.org/2000/10/swap/string#lessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#matches` | str_key | STRING_MATCHES = "http://www.w3.org/2000/10/swap/string#matches" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notEqualIgnoringCase` | str_key | STRING_NOT_EQUAL_IGNORING_CASE = "http://www.w3.org/2000/10/swap/string#notEqualIgnoringCase" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notGreaterThan` | str_key | STRING_NOT_GREATER_THAN = "http://www.w3.org/2000/10/swap/string#notGreaterThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notLessThan` | str_key | STRING_NOT_LESS_THAN = "http://www.w3.org/2000/10/swap/string#notLessThan" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#notMatches` | str_key | STRING_NOT_MATCHES = "http://www.w3.org/2000/10/swap/string#notMatches" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#replace` | str_key | STRING_REPLACE = "http://www.w3.org/2000/10/swap/string#replace" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#scrape` | str_key | STRING_SCRAPE = "http://www.w3.org/2000/10/swap/string#scrape" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/string#startsWith` | str_key | STRING_STARTS_WITH = "http://www.w3.org/2000/10/swap/string#startsWith" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#day` | str_key | TIME_DAY = "http://www.w3.org/2000/10/swap/time#day" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#hour` | str_key | TIME_HOUR = "http://www.w3.org/2000/10/swap/time#hour" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#localTime` | str_key | TIME_LOCAL_TIME = "http://www.w3.org/2000/10/swap/time#localTime" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#minute` | str_key | TIME_MINUTE = "http://www.w3.org/2000/10/swap/time#minute" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#month` | str_key | TIME_MONTH = "http://www.w3.org/2000/10/swap/time#month" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#second` | str_key | TIME_SECOND = "http://www.w3.org/2000/10/swap/time#second" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#timeZone` | str_key | TIME_TIME_ZONE = "http://www.w3.org/2000/10/swap/time#timeZone" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#year` | str_key | TIME_YEAR = "http://www.w3.org/2000/10/swap/time#year" |  |  |  |  |
-
-| `http://www.w3.org/2002/07/owl#sameAs` | str_key | OWL_SAME_AS = "http://www.w3.org/2002/07/owl#sameAs" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/datatype#datatype` | str_key | EYELING_DT_DATATYPE = "https://eyereasoner.github.io/eyeling/datatype#datatype" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/datatype#lexicalForm` | str_key | EYELING_DT_LEXICAL_FORM = "https://eyereasoner.github.io/eyeling/datatype#lexicalForm" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeling/vocab/sudoku#solve` | str_key | SUDOKU_SOLVE = "https://eyereasoner.github.io/eyeling/vocab/sudoku#solve" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeron/datatype#datatype` | str_key | DT_DATATYPE = "https://eyereasoner.github.io/eyeron/datatype#datatype" |  |  |  |  |
-
-| `https://eyereasoner.github.io/eyeron/datatype#lexicalForm` | str_key | DT_LEXICAL_FORM = "https://eyereasoner.github.io/eyeron/datatype#lexicalForm" |  |  |  |  |
-
-| `urn:eyeron:unquote` | str_key | EYERON_UNQUOTE = "urn:eyeron:unquote" |  |  |  |  |
-
-| `Document` | struct | Document { pub prefixes: BTreeMap<String, String>, pub base_iri: Option<String>, pub facts: Vec<Triple>, pub fact_sources: BTreeMap<Triple, SourceRef>, pub rules: Vec<Rule> } |  |  |  |  |
-
-| `Literal` | struct | Literal { pub value: Name, pub datatype: Option<Name>, pub language: Option<Name> } |  |  |  |  |
-
-| `Name` | struct | Name { Arc<str> } |  |  |  |  |
-
-| `Rule` | struct | Rule { pub premise: Vec<Triple>, pub conclusion: Vec<Triple>, pub is_forward: bool, pub is_query: bool, pub is_fuse: bool, pub source: Option<SourceRef>, pub proof_var_source_names: BTreeMap<String, String> } |  |  |  |  |
-
-| `SourceRef` | struct | SourceRef { pub label: String, pub line: usize } |  |  |  |  |
-
-| `Triple` | struct | Triple { pub s: Term, pub p: Term, pub o: Term } |  |  |  |  |
-
-| `at` | function | at(message: impl Into<String>, offset: usize) -> Self |  |  |  |  |
-
-| `new` | function | new(message: impl Into<String>) -> Self |  |  |  |  |
-
-| `with_source_location` | function | with_source_location(&self, source: &str, label: &str) -> String |  |  |  |  |
-
-| `EyeronError` | struct | EyeronError { pub message: String, pub offset: Option<usize> } |  |  |  |  |
-
-| `at` | function | at(message: impl Into<String>, offset: usize) -> Self |  |  |  |  |
-
-| `new` | function | new(message: impl Into<String>) -> Self |  |  |  |  |
-
-| `with_source_location` | function | with_source_location(&self, source: &str, label: &str) -> String |  |  |  |  |
-
-| `EyeronError` | struct | EyeronError { pub message: String, pub offset: Option<usize> } |  |  |  |  |
-
-| `TokenKind` | enum | TokenKind { AtPrefix, AtBase, AtVersion, Prefix, Base, Version, Iri(String), PName(String), Var(String), Blank(String), String(String), StringSingle(String), StringLong(String), StringLongSingle(String), StringLongExtraQuote(String), StringLongSingleExtraQuote(String), Lang(String), Number(String), Boolean(bool), A, Dot, Semicolon, Comma, LBrace, RBrace, LAnnotation, RAnnotation, LBracket, RBracket, LParen, RParen, LTriple, RTriple, Arrow, BackArrow, Reverse, HatHat, Equals, Eof } |  |  |  |  |
-
-| `lex` | function | lex(input: &str) -> Result<Vec<Token>> |  |  |  |  |
-
-| `Token` | struct | Token { pub kind: TokenKind, pub offset: usize } |  |  |  |  |
-
-| `TokenKind` | enum | TokenKind { AtPrefix, AtBase, AtVersion, Prefix, Base, Version, Iri(String), PName(String), Var(String), Blank(String), String(String), StringSingle(String), StringLong(String), StringLongSingle(String), StringLongExtraQuote(String), StringLongSingleExtraQuote(String), Lang(String), Number(String), Boolean(bool), A, Dot, Semicolon, Comma, LBrace, RBrace, LAnnotation, RAnnotation, LBracket, RBracket, LParen, RParen, LTriple, RTriple, Arrow, BackArrow, Reverse, HatHat, Equals, Eof } |  |  |  |  |
-
-| `lex` | function | lex(input: &str) -> Result<Vec<Token>> |  |  |  |  |
-
-| `Token` | struct | Token { pub kind: TokenKind, pub offset: usize } |  |  |  |  |
-
-| `reason` | function | reason(input: &str) -> Result<String> |  |  |  |  |
-
-| `ast::{Document, Literal, Name, Rule, SourceRef, Term, Triple}` | use | ast::{Document, Literal, Name, Rule, SourceRef, Term, Triple} |  |  |  |  |
-
-| `error::{EyeronError, Result}` | use | error::{EyeronError, Result} |  |  |  |  |
-
-| `parser::{is_rdf_message_log, parse_n3, parse_n3_with_source, parse_rdf_message_log}` | use | parser::{is_rdf_message_log, parse_n3, parse_n3_with_source, parse_rdf_message_log} |  |  |  |  |
-
-| `printing::{ document_debug, fuse_report, rdf12_json, rdf_result_to_string, result_to_string, triples_to_n3, triples_to_trig, }` | use | printing::{ document_debug, fuse_report, rdf12_json, rdf_result_to_string, result_to_string, triples_to_n3, triples_to_trig, } |  |  |  |  |
-
-| `proof_writer::proof_to_n3` | use | proof_writer::proof_to_n3 |  |  |  |  |
-
-| `rdf_compat::{parse_rdf12, RdfFormat}` | use | rdf_compat::{parse_rdf12, RdfFormat} |  |  |  |  |
-
-| `reasoner::{ reason as reason_document, CompletionStatus, FiredFuse, PreparedReasoner, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, }` | use | reasoner::{ reason as reason_document, CompletionStatus, FiredFuse, PreparedReasoner, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, } |  |  |  |  |
-
-| `reason` | function | reason(input: &str) -> Result<String> |  |  |  |  |
-
-| `ast::{Document, Literal, Name, Rule, SourceRef, Term, Triple}` | use | ast::{Document, Literal, Name, Rule, SourceRef, Term, Triple} |  |  |  |  |
-
-| `error::{EyeronError, Result}` | use | error::{EyeronError, Result} |  |  |  |  |
-
-| `parser::{is_rdf_message_log, parse_n3, parse_n3_with_source, parse_rdf_message_log}` | use | parser::{is_rdf_message_log, parse_n3, parse_n3_with_source, parse_rdf_message_log} |  |  |  |  |
-
-| `printing::{ document_debug, fuse_report, rdf12_json, rdf_result_to_string, result_to_string, triples_to_n3, triples_to_trig, }` | use | printing::{ document_debug, fuse_report, rdf12_json, rdf_result_to_string, result_to_string, triples_to_n3, triples_to_trig, } |  |  |  |  |
-
-| `proof_writer::proof_to_n3` | use | proof_writer::proof_to_n3 |  |  |  |  |
-
-| `rdf_compat::{parse_rdf12, RdfFormat}` | use | rdf_compat::{parse_rdf12, RdfFormat} |  |  |  |  |
-
-| `reasoner::{ reason as reason_document, CompletionStatus, FiredFuse, PreparedReasoner, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, }` | use | reasoner::{ reason as reason_document, CompletionStatus, FiredFuse, PreparedReasoner, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, } |  |  |  |  |
-
-| `CARGO_PKG_VERSION` | str_key | VERSION = "CARGO_PKG_VERSION" |  |  |  |  |
-
-| `CARGO_PKG_VERSION` | str_key | VERSION = "CARGO_PKG_VERSION" |  |  |  |  |
-
-| `is_rdf_message_log` | function | is_rdf_message_log(input: &str) -> bool |  |  |  |  |
-
-| `parse_n3` | function | parse_n3(input: &str, base_iri: Option<&str>) -> Result<Document> |  |  |  |  |
-
-| `parse_n3_with_source` | function | parse_n3_with_source( input: &str, base_iri: Option<&str>, source_label: Option<&str>, ) -> Result<Document> |  |  |  |  |
-
-| `parse_rdf_message_log` | function | parse_rdf_message_log(input: &str, base_iri: Option<&str>) -> Result<Document> |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString` | str_key | RDF_DIR_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies` | str_key | RDF_REIFIES = "http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies" |  |  |  |  |
-
-| `is_rdf_message_log` | function | is_rdf_message_log(input: &str) -> bool |  |  |  |  |
-
-| `parse_n3` | function | parse_n3(input: &str, base_iri: Option<&str>) -> Result<Document> |  |  |  |  |
-
-| `parse_n3_with_source` | function | parse_n3_with_source( input: &str, base_iri: Option<&str>, source_label: Option<&str>, ) -> Result<Document> |  |  |  |  |
-
-| `parse_rdf_message_log` | function | parse_rdf_message_log(input: &str, base_iri: Option<&str>) -> Result<Document> |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString` | str_key | RDF_DIR_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies` | str_key | RDF_REIFIES = "http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies" |  |  |  |  |
-
-| `document_debug` | function | document_debug(doc: &Document) -> String |  |  |  |  |
-
-| `fuse_report` | function | fuse_report(prefixes: &BTreeMap<String, String>, fuse: &FiredFuse) -> String |  |  |  |  |
-
-| `rdf12_json` | function | rdf12_json(doc: &Document) -> String |  |  |  |  |
-
-| `rdf_result_to_string` | function | rdf_result_to_string(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `result_to_string` | function | result_to_string(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `term_to_n3_object` | function | term_to_n3_object(term: &Term, prefixes: &BTreeMap<String, String>) -> String |  |  |  |  |
-
-| `term_to_n3_predicate` | function | term_to_n3_predicate(term: &Term, prefixes: &BTreeMap<String, String>) -> String |  |  |  |  |
-
-| `triple_to_n3` | function | triple_to_n3(prefixes: &BTreeMap<String, String>, t: &Triple) -> String |  |  |  |  |
-
-| `triples_to_n3` | function | triples_to_n3(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `triples_to_trig` | function | triples_to_trig(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `document_debug` | function | document_debug(doc: &Document) -> String |  |  |  |  |
-
-| `fuse_report` | function | fuse_report(prefixes: &BTreeMap<String, String>, fuse: &FiredFuse) -> String |  |  |  |  |
-
-| `rdf12_json` | function | rdf12_json(doc: &Document) -> String |  |  |  |  |
-
-| `rdf_result_to_string` | function | rdf_result_to_string(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `result_to_string` | function | result_to_string(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `term_to_n3_object` | function | term_to_n3_object(term: &Term, prefixes: &BTreeMap<String, String>) -> String |  |  |  |  |
-
-| `term_to_n3_predicate` | function | term_to_n3_predicate(term: &Term, prefixes: &BTreeMap<String, String>) -> String |  |  |  |  |
-
-| `triple_to_n3` | function | triple_to_n3(prefixes: &BTreeMap<String, String>, t: &Triple) -> String |  |  |  |  |
-
-| `triples_to_n3` | function | triples_to_n3(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `triples_to_trig` | function | triples_to_trig(prefixes: &BTreeMap<String, String>, triples: &[Triple]) -> String |  |  |  |  |
-
-| `Checked` | enum | Checked { Verified, Trusted(&'static str) } |  |  |  |  |
-
-| `Kind` | enum | Kind { Rule, Fact, Builtin, Absent, Collected, Unproven } |  |  |  |  |
-
-| `Resolution` | enum | Resolution { Step(usize), Given, Unresolved(String) } |  |  |  |  |
-
-| `check` | function | check(document: &dyn Document) -> Report |  |  |  |  |
-
-| `label` | function | label(self) -> &'static str |  |  |  |  |
-
-| `valid` | function | valid(&self) -> bool |  |  |  |  |
-
-| `verdict` | function | verdict(&self) -> String |  |  |  |  |
-
-| `Failure` | struct | Failure { pub condition: &'static str, pub conclusion: String, pub detail: String } |  |  |  |  |
-
-| `Obligation` | struct | Obligation { pub kind: &'static str, pub conclusion: String } |  |  |  |  |
-
-| `Report` | struct | Report { pub steps: usize, pub verified: usize, pub obligations: Vec<Obligation>, pub failures: Vec<Failure>, pub counts: BTreeMap<&'static str, usize> } |  |  |  |  |
-
-| `Document` | trait |  |  |  |  |  |
-
-| `Checked` | enum | Checked { Verified, Trusted(&'static str) } |  |  |  |  |
-
-| `Kind` | enum | Kind { Rule, Fact, Builtin, Absent, Collected, Unproven } |  |  |  |  |
-
-| `Resolution` | enum | Resolution { Step(usize), Given, Unresolved(String) } |  |  |  |  |
-
-| `check` | function | check(document: &dyn Document) -> Report |  |  |  |  |
-
-| `label` | function | label(self) -> &'static str |  |  |  |  |
-
-| `valid` | function | valid(&self) -> bool |  |  |  |  |
-
-| `verdict` | function | verdict(&self) -> String |  |  |  |  |
-
-| `Failure` | struct | Failure { pub condition: &'static str, pub conclusion: String, pub detail: String } |  |  |  |  |
-
-| `Obligation` | struct | Obligation { pub kind: &'static str, pub conclusion: String } |  |  |  |  |
-
-| `Report` | struct | Report { pub steps: usize, pub verified: usize, pub obligations: Vec<Obligation>, pub failures: Vec<Failure>, pub counts: BTreeMap<&'static str, usize> } |  |  |  |  |
-
-| `Document` | trait |  |  |  |  |  |
-
-| `check_proof` | function | check_proof(source: &str, proof: &str, label: &str) -> Result<Report> |  |  |  |  |
-
-| `check_proof_document` | function | check_proof_document(source: &crate::ast::Document, proof: &str) -> Result<Report> |  |  |  |  |
-
-| `read_document` | function | read_document(document: &crate::ast::Document, proof: &str) -> Result<Self> |  |  |  |  |
-
-| `@prefix : <http://example.org/> .` | str_key | SOURCE = "@prefix : <http://example.org/> ." |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#localTime` | str_key | IMPURE_BUILTINS = "http://www.w3.org/2000/10/swap/time#localTime" |  |  |  |  |
-
-| `https://eyereasoner.github.io/pe#` | str_key | PE = "https://eyereasoner.github.io/pe#" |  |  |  |  |
-
-| `N3Proof` | struct | N3Proof { rules: Vec<crate::ast::Rule>, given: BTreeSet<Triple>, rule_statements: Vec<Triple>, general: Vec<Triple>, steps: Vec<Step>, claims: Vec<Triple>, index: BTreeMap<Triple, usize> } |  |  |  |  |
-
-| `check_proof` | function | check_proof(source: &str, proof: &str, label: &str) -> Result<Report> |  |  |  |  |
-
-| `check_proof_document` | function | check_proof_document(source: &crate::ast::Document, proof: &str) -> Result<Report> |  |  |  |  |
-
-| `read_document` | function | read_document(document: &crate::ast::Document, proof: &str) -> Result<Self> |  |  |  |  |
-
-| `@prefix : <http://example.org/> .` | str_key | SOURCE = "@prefix : <http://example.org/> ." |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/time#localTime` | str_key | IMPURE_BUILTINS = "http://www.w3.org/2000/10/swap/time#localTime" |  |  |  |  |
-
-| `https://eyereasoner.github.io/pe#` | str_key | PE = "https://eyereasoner.github.io/pe#" |  |  |  |  |
-
-| `N3Proof` | struct | N3Proof { rules: Vec<crate::ast::Rule>, given: BTreeSet<Triple>, rule_statements: Vec<Triple>, general: Vec<Triple>, steps: Vec<Step>, claims: Vec<Triple>, index: BTreeMap<Triple, usize> } |  |  |  |  |
-
-| `proof_to_n3` | function | proof_to_n3(prefixes: &BTreeMap<String, String>, result: &ReasonerResult) -> String |  |  |  |  |
-
-| `rule_statement` | function | rule_statement(rule: &Rule) -> Triple |  |  |  |  |
-
-| `https://eyereasoner.github.io/pe#` | str_key | PE_NS = "https://eyereasoner.github.io/pe#" |  |  |  |  |
-
-| `proof_to_n3` | function | proof_to_n3(prefixes: &BTreeMap<String, String>, result: &ReasonerResult) -> String |  |  |  |  |
-
-| `rule_statement` | function | rule_statement(rule: &Rule) -> Triple |  |  |  |  |
-
-| `https://eyereasoner.github.io/pe#` | str_key | PE_NS = "https://eyereasoner.github.io/pe#" |  |  |  |  |
-
-| `RdfFormat` | enum | RdfFormat { Turtle, NTriples, NQuads, Trig } |  |  |  |  |
-
-| `parse` | function | parse(value: &str) -> Option<Self> |  |  |  |  |
-
-| `parse_rdf12` | function | parse_rdf12(input: &str, base_iri: Option<&str>, format: RdfFormat) -> Result<Document> |  |  |  |  |
-
-| `RdfFormat` | enum | RdfFormat { Turtle, NTriples, NQuads, Trig } |  |  |  |  |
-
-| `parse` | function | parse(value: &str) -> Option<Self> |  |  |  |  |
-
-| `parse_rdf12` | function | parse_rdf12(input: &str, base_iri: Option<&str>, format: RdfFormat) -> Result<Document> |  |  |  |  |
-
-| `BackwardStep` | enum | BackwardStep { Rule(DerivedFact), Fact { fact: Triple }, Builtin { fact: Triple, builtin: Term }, Unproven { fact: Triple, reason: String } } |  |  |  |  |
-
-| `CompletionStatus` | enum | CompletionStatus { Complete, Incomplete } |  |  |  |  |
-
-| `ProofNode` | enum | ProofNode { Rule { df: DerivedFact, children: Vec<ProofNode>, }, Fact { fact: Triple, source: Option<SourceRef>, }, Builtin { fact: Triple, builtin: Term, }, Unproven { fact: Triple, reason: String, } } |  |  |  |  |
-
-| `ReasonerError` | enum | ReasonerError { UnsupportedBuiltin { builtin: String, premise: Triple, detail: String, } } |  |  |  |  |
-
-| `ReasonerLimit` | enum | ReasonerLimit { Iterations, MatchSteps, BackwardDepth, BackwardSolutionsPerGoal, TermSize, TermDepth, ClosureSize, ClosureFacts } |  |  |  |  |
-
-| `builtin_reads_outside_its_triple` | function | builtin_reads_outside_its_triple(predicate: &Term) -> bool |  |  |  |  |
-
-| `explain_backward` | function | explain_backward( goal: &Triple, facts: &[Triple], given: &BTreeSet<Triple>, rules: &[Rule], max_depth: usize, emit: &mut dyn FnMut(BackwardStep), ) -> bool |  |  |  |  |
-
-| `find_backward_proof_for_goal` | function | find_backward_proof_for_goal( goal: &Triple, facts: &[Triple], rules: &[Rule], max_depth: usize, ) -> Option<ProofNode> |  |  |  |  |
-
-| `incomplete_summary` | function | incomplete_summary(&self) -> Option<String> |  |  |  |  |
-
-| `is_complete` | function | is_complete(&self) -> bool |  |  |  |  |
-
-| `new` | function | new(program: Document) -> Self |  |  |  |  |
-
-| `program` | function | program(&self) -> &Document |  |  |  |  |
-
-| `reason` | function | reason(&self, data: &Document, options: &ReasonerOptions) -> ReasonerResult |  |  |  |  |
-
-| `verify_builtin_triple` | function | verify_builtin_triple(goal: &Triple) -> bool |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#List` | str_key | RDF_LIST_IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#List" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING_IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Formula` | str_key | LOG_FORMULA_IRI = "http://www.w3.org/2000/10/swap/log#Formula" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Literal` | str_key | LOG_LITERAL_IRI = "http://www.w3.org/2000/10/swap/log#Literal" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Other` | str_key | LOG_OTHER_IRI = "http://www.w3.org/2000/10/swap/log#Other" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#date` | str_key | XSD_DATE = "http://www.w3.org/2001/XMLSchema#date" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#dateTime` | str_key | XSD_DATE_TIME = "http://www.w3.org/2001/XMLSchema#dateTime" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#duration` | str_key | XSD_DURATION = "http://www.w3.org/2001/XMLSchema#duration" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#string` | str_key | XSD_STRING_IRI = "http://www.w3.org/2001/XMLSchema#string" |  |  |  |  |
-
-| `DerivedFact` | struct | DerivedFact { pub fact: Triple, pub rule: Arc<Rule>, pub premises: Vec<Triple>, pub bindings: Vec<(Name, Term)> } |  |  |  |  |
-
-| `FiredFuse` | struct | FiredFuse { pub rule: Rule, pub instance: Vec<Triple> } |  |  |  |  |
-
-| `PreparedReasoner` | struct | PreparedReasoner { program: Document, query_rules: Vec<Rule>, active_rules: Vec<Rule>, agenda_index: AgendaIndex } |  |  |  |  |
-
-| `ReasonerOptions` | struct | ReasonerOptions { pub max_iterations: usize, pub max_match_steps: usize, pub max_backward_depth: usize, pub max_backward_solutions_per_goal: usize, pub max_term_bytes: usize, pub max_total_bytes: usize, pub max_closure_facts: usize, pub max_total_steps: usize, pub trace: bool, pub proof: bool, pub include_explicit: bool } |  |  |  |  |
-
-| `ReasonerResult` | struct | ReasonerResult { pub status: CompletionStatus, pub limits_reached: Vec<ReasonerLimit>, pub errors: Vec<ReasonerError>, pub statistics: ReasonerStatistics, pub explicit: Vec<Triple>, pub explicit_sources: BTreeMap<Triple, SourceRef>, pub derived: Vec<Triple>, pub closure: Vec<Triple>, pub proofs: Vec<DerivedFact>, pub rules: Vec<Rule>, pub fuse: Option<FiredFuse> } |  |  |  |  |
-
-| `ReasonerStatistics` | struct | ReasonerStatistics { pub iterations: usize, pub match_steps: usize } |  |  |  |  |
-
-| `BackwardStep` | enum | BackwardStep { Rule(DerivedFact), Fact { fact: Triple }, Builtin { fact: Triple, builtin: Term }, Unproven { fact: Triple, reason: String } } |  |  |  |  |
-
-| `CompletionStatus` | enum | CompletionStatus { Complete, Incomplete } |  |  |  |  |
-
-| `ProofNode` | enum | ProofNode { Rule { df: DerivedFact, children: Vec<ProofNode>, }, Fact { fact: Triple, source: Option<SourceRef>, }, Builtin { fact: Triple, builtin: Term, }, Unproven { fact: Triple, reason: String, } } |  |  |  |  |
-
-| `ReasonerError` | enum | ReasonerError { UnsupportedBuiltin { builtin: String, premise: Triple, detail: String, } } |  |  |  |  |
-
-| `ReasonerLimit` | enum | ReasonerLimit { Iterations, MatchSteps, BackwardDepth, BackwardSolutionsPerGoal, TermSize, TermDepth, ClosureSize, ClosureFacts } |  |  |  |  |
-
-| `builtin_reads_outside_its_triple` | function | builtin_reads_outside_its_triple(predicate: &Term) -> bool |  |  |  |  |
-
-| `explain_backward` | function | explain_backward( goal: &Triple, facts: &[Triple], given: &BTreeSet<Triple>, rules: &[Rule], max_depth: usize, emit: &mut dyn FnMut(BackwardStep), ) -> bool |  |  |  |  |
-
-| `find_backward_proof_for_goal` | function | find_backward_proof_for_goal( goal: &Triple, facts: &[Triple], rules: &[Rule], max_depth: usize, ) -> Option<ProofNode> |  |  |  |  |
-
-| `incomplete_summary` | function | incomplete_summary(&self) -> Option<String> |  |  |  |  |
-
-| `is_complete` | function | is_complete(&self) -> bool |  |  |  |  |
-
-| `new` | function | new(program: Document) -> Self |  |  |  |  |
-
-| `program` | function | program(&self) -> &Document |  |  |  |  |
-
-| `reason` | function | reason(&self, data: &Document, options: &ReasonerOptions) -> ReasonerResult |  |  |  |  |
-
-| `verify_builtin_triple` | function | verify_builtin_triple(goal: &Triple) -> bool |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#List` | str_key | RDF_LIST_IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#List" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING_IRI = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Formula` | str_key | LOG_FORMULA_IRI = "http://www.w3.org/2000/10/swap/log#Formula" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Literal` | str_key | LOG_LITERAL_IRI = "http://www.w3.org/2000/10/swap/log#Literal" |  |  |  |  |
-
-| `http://www.w3.org/2000/10/swap/log#Other` | str_key | LOG_OTHER_IRI = "http://www.w3.org/2000/10/swap/log#Other" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#date` | str_key | XSD_DATE = "http://www.w3.org/2001/XMLSchema#date" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#dateTime` | str_key | XSD_DATE_TIME = "http://www.w3.org/2001/XMLSchema#dateTime" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#duration` | str_key | XSD_DURATION = "http://www.w3.org/2001/XMLSchema#duration" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#string` | str_key | XSD_STRING_IRI = "http://www.w3.org/2001/XMLSchema#string" |  |  |  |  |
-
-| `DerivedFact` | struct | DerivedFact { pub fact: Triple, pub rule: Arc<Rule>, pub premises: Vec<Triple>, pub bindings: Vec<(Name, Term)> } |  |  |  |  |
-
-| `FiredFuse` | struct | FiredFuse { pub rule: Rule, pub instance: Vec<Triple> } |  |  |  |  |
-
-| `PreparedReasoner` | struct | PreparedReasoner { program: Document, query_rules: Vec<Rule>, active_rules: Vec<Rule>, agenda_index: AgendaIndex } |  |  |  |  |
-
-| `ReasonerOptions` | struct | ReasonerOptions { pub max_iterations: usize, pub max_match_steps: usize, pub max_backward_depth: usize, pub max_backward_solutions_per_goal: usize, pub max_term_bytes: usize, pub max_total_bytes: usize, pub max_closure_facts: usize, pub max_total_steps: usize, pub trace: bool, pub proof: bool, pub include_explicit: bool } |  |  |  |  |
-
-| `ReasonerResult` | struct | ReasonerResult { pub status: CompletionStatus, pub limits_reached: Vec<ReasonerLimit>, pub errors: Vec<ReasonerError>, pub statistics: ReasonerStatistics, pub explicit: Vec<Triple>, pub explicit_sources: BTreeMap<Triple, SourceRef>, pub derived: Vec<Triple>, pub closure: Vec<Triple>, pub proofs: Vec<DerivedFact>, pub rules: Vec<Rule>, pub fuse: Option<FiredFuse> } |  |  |  |  |
-
-| `ReasonerStatistics` | struct | ReasonerStatistics { pub iterations: usize, pub match_steps: usize } |  |  |  |  |
-
-| `solve_sudoku_string` | function | solve_sudoku_string(puzzle: &str) -> Result<String, String> |  |  |  |  |
-
-| `solve_sudoku_string` | function | solve_sudoku_string(puzzle: &str) -> Result<String, String> |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#` | str_key | RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML` | str_key | RDF_HTML = "http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#JSON` | str_key | RDF_JSON = "http://www.w3.org/1999/02/22-rdf-syntax-ns#JSON" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#Property` | str_key | RDF_PROPERTY = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#Proposition` | str_key | RDF_PROPOSITION = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Proposition" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#TripleTerm` | str_key | RDF_TRIPLE_TERM = "http://www.w3.org/1999/02/22-rdf-syntax-ns#TripleTerm" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral` | str_key | RDF_XML_LITERAL = "http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString` | str_key | RDF_DIR_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies` | str_key | RDF_REIFIES = "http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#` | str_key | RDFS = "http://www.w3.org/2000/01/rdf-schema#" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Class` | str_key | RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty` | str_key | RDFS_CONTAINER_MEMBERSHIP_PROPERTY = "http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Datatype` | str_key | RDFS_DATATYPE = "http://www.w3.org/2000/01/rdf-schema#Datatype" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Literal` | str_key | RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Proposition` | str_key | RDFS_PROPOSITION = "http://www.w3.org/2000/01/rdf-schema#Proposition" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Resource` | str_key | RDFS_RESOURCE = "http://www.w3.org/2000/01/rdf-schema#Resource" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#domain` | str_key | RDFS_DOMAIN = "http://www.w3.org/2000/01/rdf-schema#domain" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#member` | str_key | RDFS_MEMBER = "http://www.w3.org/2000/01/rdf-schema#member" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#range` | str_key | RDFS_RANGE = "http://www.w3.org/2000/01/rdf-schema#range" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#subClassOf` | str_key | RDFS_SUBCLASS_OF = "http://www.w3.org/2000/01/rdf-schema#subClassOf" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#subPropertyOf` | str_key | RDFS_SUBPROPERTY_OF = "http://www.w3.org/2000/01/rdf-schema#subPropertyOf" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#boolean` | str_key | XSD_BOOLEAN = "http://www.w3.org/2001/XMLSchema#boolean" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#decimal` | str_key | XSD_DECIMAL = "http://www.w3.org/2001/XMLSchema#decimal" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#double` | str_key | XSD_DOUBLE = "http://www.w3.org/2001/XMLSchema#double" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#float` | str_key | XSD_FLOAT = "http://www.w3.org/2001/XMLSchema#float" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#int` | str_key | XSD_INT = "http://www.w3.org/2001/XMLSchema#int" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#integer` | str_key | XSD_INTEGER = "http://www.w3.org/2001/XMLSchema#integer" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#string` | str_key | XSD_STRING = "http://www.w3.org/2001/XMLSchema#string" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#` | str_key | MF = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action` | str_key | MF_ACTION = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entailmentRegime` | str_key | MF_ENTAILMENT_REGIME = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entailmentRegime" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entries` | str_key | MF_ENTRIES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entries" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#include` | str_key | MF_INCLUDE = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#include" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name` | str_key | MF_NAME = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#recognizedDatatypes` | str_key | MF_RECOGNIZED_DATATYPES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#recognizedDatatypes" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result` | str_key | MF_RESULT = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#unrecognizedDatatypes` | str_key | MF_UNRECOGNIZED_DATATYPES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#unrecognizedDatatypes" |  |  |  |  |
-
-| `http://www.w3.org/ns/rdftest#` | str_key | RDFT = "http://www.w3.org/ns/rdftest#" |  |  |  |  |
-
-| `https://w3c.github.io/rdf-tests/rdf/rdf11/rdf-n-triples/manifest.ttl` | str_key | DEFAULT_MANIFESTS = "https://w3c.github.io/rdf-tests/rdf/rdf11/rdf-n-triples/manifest.ttl" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#` | str_key | RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML` | str_key | RDF_HTML = "http://www.w3.org/1999/02/22-rdf-syntax-ns#HTML" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#JSON` | str_key | RDF_JSON = "http://www.w3.org/1999/02/22-rdf-syntax-ns#JSON" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#Property` | str_key | RDF_PROPERTY = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#Proposition` | str_key | RDF_PROPOSITION = "http://www.w3.org/1999/02/22-rdf-syntax-ns#Proposition" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#TripleTerm` | str_key | RDF_TRIPLE_TERM = "http://www.w3.org/1999/02/22-rdf-syntax-ns#TripleTerm" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral` | str_key | RDF_XML_LITERAL = "http://www.w3.org/1999/02/22-rdf-syntax-ns#XMLLiteral" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString` | str_key | RDF_DIR_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#dirLangString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString` | str_key | RDF_LANG_STRING = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString" |  |  |  |  |
-
-| `http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies` | str_key | RDF_REIFIES = "http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#` | str_key | RDFS = "http://www.w3.org/2000/01/rdf-schema#" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Class` | str_key | RDFS_CLASS = "http://www.w3.org/2000/01/rdf-schema#Class" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty` | str_key | RDFS_CONTAINER_MEMBERSHIP_PROPERTY = "http://www.w3.org/2000/01/rdf-schema#ContainerMembershipProperty" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Datatype` | str_key | RDFS_DATATYPE = "http://www.w3.org/2000/01/rdf-schema#Datatype" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Literal` | str_key | RDFS_LITERAL = "http://www.w3.org/2000/01/rdf-schema#Literal" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Proposition` | str_key | RDFS_PROPOSITION = "http://www.w3.org/2000/01/rdf-schema#Proposition" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#Resource` | str_key | RDFS_RESOURCE = "http://www.w3.org/2000/01/rdf-schema#Resource" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#domain` | str_key | RDFS_DOMAIN = "http://www.w3.org/2000/01/rdf-schema#domain" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#member` | str_key | RDFS_MEMBER = "http://www.w3.org/2000/01/rdf-schema#member" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#range` | str_key | RDFS_RANGE = "http://www.w3.org/2000/01/rdf-schema#range" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#subClassOf` | str_key | RDFS_SUBCLASS_OF = "http://www.w3.org/2000/01/rdf-schema#subClassOf" |  |  |  |  |
-
-| `http://www.w3.org/2000/01/rdf-schema#subPropertyOf` | str_key | RDFS_SUBPROPERTY_OF = "http://www.w3.org/2000/01/rdf-schema#subPropertyOf" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#boolean` | str_key | XSD_BOOLEAN = "http://www.w3.org/2001/XMLSchema#boolean" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#decimal` | str_key | XSD_DECIMAL = "http://www.w3.org/2001/XMLSchema#decimal" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#double` | str_key | XSD_DOUBLE = "http://www.w3.org/2001/XMLSchema#double" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#float` | str_key | XSD_FLOAT = "http://www.w3.org/2001/XMLSchema#float" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#int` | str_key | XSD_INT = "http://www.w3.org/2001/XMLSchema#int" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#integer` | str_key | XSD_INTEGER = "http://www.w3.org/2001/XMLSchema#integer" |  |  |  |  |
-
-| `http://www.w3.org/2001/XMLSchema#string` | str_key | XSD_STRING = "http://www.w3.org/2001/XMLSchema#string" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#` | str_key | MF = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action` | str_key | MF_ACTION = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#action" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entailmentRegime` | str_key | MF_ENTAILMENT_REGIME = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entailmentRegime" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entries` | str_key | MF_ENTRIES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#entries" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#include` | str_key | MF_INCLUDE = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#include" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name` | str_key | MF_NAME = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#name" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#recognizedDatatypes` | str_key | MF_RECOGNIZED_DATATYPES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#recognizedDatatypes" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result` | str_key | MF_RESULT = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#result" |  |  |  |  |
-
-| `http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#unrecognizedDatatypes` | str_key | MF_UNRECOGNIZED_DATATYPES = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#unrecognizedDatatypes" |  |  |  |  |
-
-| `http://www.w3.org/ns/rdftest#` | str_key | RDFT = "http://www.w3.org/ns/rdftest#" |  |  |  |  |
-
-| `https://w3c.github.io/rdf-tests/rdf/rdf11/rdf-n-triples/manifest.ttl` | str_key | DEFAULT_MANIFESTS = "https://w3c.github.io/rdf-tests/rdf/rdf11/rdf-n-triples/manifest.ttl" |  |  |  |  |
-
-| `new` | function | new(program: &str, proof: bool) -> std::result::Result<EyeronSession, JsValue> |  |  |  |  |
-
-| `program_facts` | function | program_facts(&self) -> usize |  |  |  |  |
-
-| `program_rules` | function | program_rules(&self) -> usize |  |  |  |  |
-
-| `reason` | function | reason(input: &str) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `reason_report` | function | reason_report(&self, data: &str, rdf: bool, rdf_format: &str) -> String |  |  |  |  |
-
-| `reason_with_data` | function | reason_with_data( program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `reason_with_data_report` | function | reason_with_data_report( program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> String |  |  |  |  |
-
-| `reason_with_options` | function | reason_with_options( input: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `version` | function | version() -> String |  |  |  |  |
-
-| `EyeronSession` | struct | EyeronSession { prepared: PreparedReasoner, proof: bool } |  |  |  |  |
-
-| `new` | function | new(program: &str, proof: bool) -> std::result::Result<EyeronSession, JsValue> |  |  |  |  |
-
-| `program_facts` | function | program_facts(&self) -> usize |  |  |  |  |
-
-| `program_rules` | function | program_rules(&self) -> usize |  |  |  |  |
-
-| `reason` | function | reason(input: &str) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `reason_report` | function | reason_report(&self, data: &str, rdf: bool, rdf_format: &str) -> String |  |  |  |  |
-
-| `reason_with_data` | function | reason_with_data( program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `reason_with_data_report` | function | reason_with_data_report( program: &str, data: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> String |  |  |  |  |
-
-| `reason_with_options` | function | reason_with_options( input: &str, proof: bool, rdf: bool, rdf_format: &str, ) -> std::result::Result<String, JsValue> |  |  |  |  |
-
-| `version` | function | version() -> String |  |  |  |  |
-
-| `EyeronSession` | struct | EyeronSession { prepared: PreparedReasoner, proof: bool } |  |  |  |  |
+| `thread_affinity=unavailable_stable_rust_macos (core_affinity crate not added)` | str_key | ISOLATION_DISCLOSURE = "thread_affinity=unavailable_stable_rust_macos (core_affinity crate not added)" |  |  |  |  |
 
 | `p` | str_key | NAMES = "p" |  |  |  |  |
 
 | `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
 
-| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+| `3.0.1` | str_key | PURRDF = "3.0.1" |  |  |  |  |
 
-| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+| `purrdf-n3/3.0.1` | str_key | N3_ENGINE = "purrdf-n3/3.0.1" |  |  |  |  |
 
 | `t` | str_key | SUBJ = "t" |  |  |  |  |
 
@@ -4771,15 +3323,17 @@
 
 | `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
 
-| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+| `3.0.1` | str_key | PURRDF = "3.0.1" |  |  |  |  |
 
-| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+| `purrdf-n3/3.0.1` | str_key | N3_ENGINE = "purrdf-n3/3.0.1" |  |  |  |  |
+
+| `0123456789abcdef0123456789abcdef01234567` | str_key | SUBJECT = "0123456789abcdef0123456789abcdef01234567" |  |  |  |  |
 
 | `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
 
-| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+| `3.0.1` | str_key | PURRDF = "3.0.1" |  |  |  |  |
 
-| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+| `purrdf-n3/3.0.1` | str_key | N3_ENGINE = "purrdf-n3/3.0.1" |  |  |  |  |
 
 | `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
 
@@ -4787,13 +3341,15 @@
 
 | `t` | env_key | var("t") |  |  |  |  |
 
-| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
+| `3.0.1` | str_key | PURRDF = "3.0.1" |  |  |  |  |
 
-| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+| `CARGO_PKG_VERSION` | str_key | GL_VERSION = "CARGO_PKG_VERSION" |  |  |  |  |
 
 | `event_calculus-paper-narrative` | str_key | SCENARIOS = "event_calculus-paper-narrative" |  |  |  |  |
 
 | `event_calculus_vectors` | str_key | GENERATOR = "event_calculus_vectors" |  |  |  |  |
+
+| `purrdf-n3/3.0.1` | str_key | N3_ENGINE = "purrdf-n3/3.0.1" |  |  |  |  |
 
 | `urn:ec:clipped` | str_key | P_CLIPPED = "urn:ec:clipped" |  |  |  |  |
 
@@ -4821,13 +3377,11 @@
 
 | `GL_VECDIR` | env_key | std::env::var_os("GL_VECDIR") |  |  |  |  |
 
-| `0.7.8` | str_key | EYERON = "0.7.8" |  |  |  |  |
-
-| `2.0.2` | str_key | PURRDF = "2.0.2" |  |  |  |  |
+| `3.0.1` | str_key | PURRDF = "3.0.1" |  |  |  |  |
 
 | `plan_replay_oracle_gen` | str_key | GENERATOR = "plan_replay_oracle_gen" |  |  |  |  |
 
-| `extract_select_statement` | function | extract_select_statement(&self, query_node: &String) -> Result<SelectStatement, AstError> |  |  |  |  |
+| `purrdf-n3/3.0.1` | str_key | N3_ENGINE = "purrdf-n3/3.0.1" |  |  |  |  |
 
 | `SQL_EXTENSIONS` | const | SQL_EXTENSIONS: &[(&str, &str, &str, i64)] |  |  |  |  |
 
@@ -4867,9 +3421,15 @@
 
 | `missing_buffer_response` | function | missing_buffer_response() -> Vec<u8> |  |  |  |  |
 
+| `unknown_buffer_response` | function | unknown_buffer_response() -> Vec<u8> |  |  |  |  |
+
+| `Fail` | struct | Fail { pub(in crate::abi) refusal: Refusal, pub(in crate::abi) details: Option<Value> } |  |  |  |  |
+
+| `ops::plan_from_json` | use | ops::plan_from_json |  |  |  |  |
+
 | `plan_from_json` | function | plan_from_json(plan: &Value) -> Result<crate::plan::Plan, String> |  |  |  |  |
 
-| `Fail` | struct | Fail { refusal: Refusal, details: Option<Value> } |  |  |  |  |
+| `governance::plan_from_json` | use | governance::plan_from_json |  |  |  |  |
 
 | `EXPORTS` | const | EXPORTS: &[Export] |  |  |  |  |
 
@@ -4885,7 +3445,11 @@
 
 | `Export` | struct | Export { pub name: &'static str, pub params: &'static [&'static str], pub result: &'static str, pub summary: &'static str } |  |  |  |  |
 
+| `GLAW_RECEIPT_V2` | const | GLAW_RECEIPT_V2: &[u8; 15] |  |  |  |  |
+
 | `AttestError` | enum | AttestError { BadSignature, UnknownKey, Malformed(String) } |  |  |  |  |
+
+| `canon_arrow_empty_v1` | function | canon_arrow_empty_v1() -> [u8; 32] |  |  |  |  |
 
 | `from_bytes` | function | from_bytes(bytes: &[u8; 32]) -> Result<Self, AttestError> |  |  |  |  |
 
@@ -4909,6 +3473,8 @@
 
 | `key_id` | function | key_id(&self) -> String |  |  |  |  |
 
+| `lease_digest` | function | lease_digest(payload: &[u8]) -> String |  |  |  |  |
+
 | `lease_payload` | function | lease_payload(l: &Lease) -> String |  |  |  |  |
 
 | `len` | function | len(&self) -> usize |  |  |  |  |
@@ -4916,6 +3482,10 @@
 | `new` | function | new() -> Self |  |  |  |  |
 
 | `receipt_payload` | function | receipt_payload(f: &ReceiptFields<'_>) -> String |  |  |  |  |
+
+| `receipt_v1` | function | receipt_v1( h_query: &[u8; 32], h_pre: &[u8; 32], h_post: &[u8; 32], h_triples: &[u8; 32], epoch: u64, ) -> [u8; 32] |  |  |  |  |
+
+| `receipt_v2` | function | receipt_v2( h_query: &[u8; 32], h_pre: &[u8; 32], h_post: &[u8; 32], h_triples: &[u8; 32], h_columnar: &[u8; 32], epoch: u64, ) -> [u8; 32] |  |  |  |  |
 
 | `sign_bytes` | function | sign_bytes(key: &SigningKey, payload: &[u8]) -> Attestation |  |  |  |  |
 
@@ -4935,6 +3505,8 @@
 
 | `verifying_key` | function | verifying_key(&self) -> VerifyingKey |  |  |  |  |
 
+| `GLAW_RECEIPT_V2` | str_key | GLAW_RECEIPT_V2 = "GLAW_RECEIPT_V2" |  |  |  |  |
+
 | `Attestation` | struct | Attestation { pub payload_blake3: String, pub key_id: String, pub signature: String } |  |  |  |  |
 
 | `ReceiptFields` | struct | ReceiptFields { pub parent: &'a str, pub child: &'a str, pub step: &'a str, pub authority: &'a str, pub revision: &'a str, pub added: u64, pub lease_id: Option<&'a str>, pub plan_blake3: Option<&'a str>, pub subject_blake3: Option<&'a str> } |  |  |  |  |
@@ -4945,21 +3517,195 @@
 
 | `VerifyingKey` | struct | VerifyingKey { DalekVerifying } |  |  |  |  |
 
+| `WASM4PM_FIXTURES` | env_key | std::env::var("WASM4PM_FIXTURES") |  |  |  |  |
+
 | `https://graphlaw.dev/dl#` | str_key | DL = "https://graphlaw.dev/dl#" |  |  |  |  |
 
+| `graphlaw-attest — sign or verify an arbitrary file with Ed25519 attestations.
+
+Usage:
+  graphlaw-attest sign   --key-seed-hex <hex> --in <file> [--out <attestation.json>]
+  graphlaw-attest verify --in <file> --attestation <json> --trusted-key <hex> [...]
+  graphlaw-attest pubkey --key-seed-hex <hex>
+
+Commands:
+  sign    Sign the file; writes (or prints) the canonical attestation JSON
+  verify  Re-read the file and attestation; prints `VERIFIED` or `REFUSED: <error>`
+  pubkey  Print the Ed25519 public key derived from the 32-byte seed
+
+Flags:
+  --key-seed-hex <hex>  Signing seed, 64 hex chars (32 bytes)
+  --in <file>           Payload file to sign or verify
+  --out <file>          Where `sign` writes the attestation (default: stdout)
+  --attestation <file>  Attestation JSON for `verify`
+  --trusted-key <hex>   Ed25519 public key, 64 hex chars (32 bytes); repeatable
+
+Exit codes: 0 ok, 1 refused (signature/verification failure), 2 usage or I/O error.` | str_key | HELP = "graphlaw-attest — sign or verify an arbitrary file with Ed25519 attestations.
+
+Usage:
+  graphlaw-attest sign   --key-seed-hex <hex> --in <file> [--out <attestation.json>]
+  graphlaw-attest verify --in <file> --attestation <json> --trusted-key <hex> [...]
+  graphlaw-attest pubkey --key-seed-hex <hex>
+
+Commands:
+  sign    Sign the file; writes (or prints) the canonical attestation JSON
+  verify  Re-read the file and attestation; prints `VERIFIED` or `REFUSED: <error>`
+  pubkey  Print the Ed25519 public key derived from the 32-byte seed
+
+Flags:
+  --key-seed-hex <hex>  Signing seed, 64 hex chars (32 bytes)
+  --in <file>           Payload file to sign or verify
+  --out <file>          Where `sign` writes the attestation (default: stdout)
+  --attestation <file>  Attestation JSON for `verify`
+  --trusted-key <hex>   Ed25519 public key, 64 hex chars (32 bytes); repeatable
+
+Exit codes: 0 ok, 1 refused (signature/verification failure), 2 usage or I/O error." |  |  |  |  |
+
+| `# receipt-surface: blake3 of the canonical graphlaw.receipt-surface/1 document` | str_key | ARTIFACTS_TRAILING_COMMENTS = "# receipt-surface: blake3 of the canonical graphlaw.receipt-surface/1 document" |  |  |  |  |
+
+| `# wasm row: never re-pinned by graphlaw-registry; re-pinned by the wasm rebuild flow.` | str_key | WASM_ROW_NOTE = "# wasm row: never re-pinned by graphlaw-registry; re-pinned by the wasm rebuild flow." |  |  |  |  |
+
+| `ARTIFACTS.blake3` | str_key | ARTIFACTS_FILE = "ARTIFACTS.blake3" |  |  |  |  |
+
+| `graphlaw-registry — emit or check the capability registry files.
+
+Usage:
+  graphlaw-registry --write | --check | --print-json | --print-ttl | --print-digests
+
+Modes (exactly one per invocation):
+  --write          Write registry/capability-registry.json and .ttl under the crate
+                   root and re-pin the ARTIFACTS.blake3 rows this bin owns
+                   (`registry`, `surface`, `receipt-surface`); the `wasm` row is
+                   never touched here — it is re-pinned by the wasm rebuild flow
+  --check          Compare the committed files against live output; exit 1 with a
+                   first-difference summary on drift
+  --print-json     Print the capability registry JSON to stdout
+  --print-ttl      Print the capability registry Turtle to stdout
+  --print-digests  Print the live surface/registry BLAKE3 digests
+
+Exit codes: 0 ok, 1 drift (`--check`), 2 usage or I/O error.` | str_key | HELP = "graphlaw-registry — emit or check the capability registry files.
+
+Usage:
+  graphlaw-registry --write | --check | --print-json | --print-ttl | --print-digests
+
+Modes (exactly one per invocation):
+  --write          Write registry/capability-registry.json and .ttl under the crate
+                   root and re-pin the ARTIFACTS.blake3 rows this bin owns
+                   (`registry`, `surface`, `receipt-surface`); the `wasm` row is
+                   never touched here — it is re-pinned by the wasm rebuild flow
+  --check          Compare the committed files against live output; exit 1 with a
+                   first-difference summary on drift
+  --print-json     Print the capability registry JSON to stdout
+  --print-ttl      Print the capability registry Turtle to stdout
+  --print-digests  Print the live surface/registry BLAKE3 digests
+
+Exit codes: 0 ok, 1 drift (`--check`), 2 usage or I/O error." |  |  |  |  |
+
 | `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `graphlaw-verify — offline third-party replay + attestation check of an admitted plan.
+
+Usage:
+  graphlaw-verify --start <state.nq|.nt|.ttl|.trig> --plan <plan.json> --receipts <dir>
+                  [--subject <key>] --trusted-key <hex> [--trusted-key <hex>...]
+
+Flags:
+  --start <path>        Start state (dialect chosen by extension; default N-Quads)
+  --plan <path>         Plan JSON to replay via Plan::admit
+  --receipts <dir>      Receipt store root; defaults subject discovery to its only
+                        subdirectory unless --subject is given
+  --subject <key>       Subject key within the receipt store
+  --trusted-key <hex>   Ed25519 public key, 64 hex chars (32 bytes); repeatable
+
+Output: `ADMITTED` or `REFUSED: <code>: <detail>` on stdout.
+Exit codes: 0 admitted, 1 refused, 2 usage or I/O error.` | str_key | HELP = "graphlaw-verify — offline third-party replay + attestation check of an admitted plan.
+
+Usage:
+  graphlaw-verify --start <state.nq|.nt|.ttl|.trig> --plan <plan.json> --receipts <dir>
+                  [--subject <key>] --trusted-key <hex> [--trusted-key <hex>...]
+
+Flags:
+  --start <path>        Start state (dialect chosen by extension; default N-Quads)
+  --plan <path>         Plan JSON to replay via Plan::admit
+  --receipts <dir>      Receipt store root; defaults subject discovery to its only
+                        subdirectory unless --subject is given
+  --subject <key>       Subject key within the receipt store
+  --trusted-key <hex>   Ed25519 public key, 64 hex chars (32 bytes); repeatable
+
+Output: `ADMITTED` or `REFUSED: <code>: <detail>` on stdout.
+Exit codes: 0 admitted, 1 refused, 2 usage or I/O error." |  |  |  |  |
 
 | `https://chatmangpt.com/sa2a#` | str_key | V2 = "https://chatmangpt.com/sa2a#" |  |  |  |  |
 
 | `https://sa2a.dev/ontology#` | str_key | V1 = "https://sa2a.dev/ontology#" |  |  |  |  |
 
+| `--in-ttl` | str_key | VALUE_FLAGS = "--in-ttl" |  |  |  |  |
+
+| `smon-broaden-topic — disclosed counterfactual post-processor over an already-emitted smon: graph.
+Prints a full audit of every triple it changes.
+
+Usage:
+  smon-broaden-topic --in-ttl IN.ttl --out-ttl OUT.ttl [--canonical-topic T]
+
+Flags:
+  --in-ttl <path>         Input Turtle graph (required)
+  --out-ttl <path>        Output Turtle graph (required)
+  --canonical-topic <t>   Topic to collapse GroundingQuestion topics to
+                          (default: e2e-capability-grounding)
+
+Exit codes: 0 ok, 1 usage, I/O or parse error.` | str_key | HELP = "smon-broaden-topic — disclosed counterfactual post-processor over an already-emitted smon: graph.
+Prints a full audit of every triple it changes.
+
+Usage:
+  smon-broaden-topic --in-ttl IN.ttl --out-ttl OUT.ttl [--canonical-topic T]
+
+Flags:
+  --in-ttl <path>         Input Turtle graph (required)
+  --out-ttl <path>        Output Turtle graph (required)
+  --canonical-topic <t>   Topic to collapse GroundingQuestion topics to
+                          (default: e2e-capability-grounding)
+
+Exit codes: 0 ok, 1 usage, I/O or parse error." |  |  |  |  |
+
+| `--assistant-only` | str_key | SWITCHES = "--assistant-only" |  |  |  |  |
+
+| `--transcript` | str_key | VALUE_FLAGS = "--transcript" |  |  |  |  |
+
+| `smon-transcript-to-turtle — emit smon: Turtle facts from a Claude Code session transcript (.jsonl).
+
+Usage:
+  smon-transcript-to-turtle --transcript T.jsonl --out OUT.ttl
+      [--session-id ID] [--base IRI] [--assistant-only] [--topic-filter S]
+
+Flags:
+  --transcript <path>  Session transcript in JSONL format (required)
+  --out <path>         Turtle output file (required)
+  --session-id <id>    Session id (default: transcript file stem)
+  --base <iri>         Base IRI for emitted subjects
+                       (default: .../sessions/<session-id>)
+  --assistant-only     Switch: keep only assistant turns
+  --topic-filter <s>   Also print turns whose grounding topic contains <s>
+
+Exit codes: 0 ok, 1 usage, I/O or parse error.` | str_key | HELP = "smon-transcript-to-turtle — emit smon: Turtle facts from a Claude Code session transcript (.jsonl).
+
+Usage:
+  smon-transcript-to-turtle --transcript T.jsonl --out OUT.ttl
+      [--session-id ID] [--base IRI] [--assistant-only] [--topic-filter S]
+
+Flags:
+  --transcript <path>  Session transcript in JSONL format (required)
+  --out <path>         Turtle output file (required)
+  --session-id <id>    Session id (default: transcript file stem)
+  --base <iri>         Base IRI for emitted subjects
+                       (default: .../sessions/<session-id>)
+  --assistant-only     Switch: keep only assistant turns
+  --topic-filter <s>   Also print turns whose grounding topic contains <s>
+
+Exit codes: 0 ok, 1 usage, I/O or parse error." |  |  |  |  |
+
 | `Dialect` | enum | Dialect { Turtle, TriG, NTriples, NQuads, RdfXml, JsonLd, YamlLd, TriX, HexTuples, N3, ShExC, ShExJ, Sparql, SqlRdf } |  |  |  |  |
 
-| `Engine` | enum | Engine { PurRdf, Eyeron, FrozenDuckdb } |  |  |  |  |
-
-| `ReasonClass` | enum | ReasonClass { Syntax, UndefinedPrefix, BadIri, FormulaInRdfLayer, NotSemanticContent, AmbiguousDialect, RemoteContext, Limit { name: String, observed: u64, max: u64, } } |  |  |  |  |
-
-| `RefusalKind` | enum | RefusalKind { NotSemanticContent, Ambiguous, EngineRejected, Unsupported, ResourceLimit, TierMismatch, DuckDb } |  |  |  |  |
+| `Engine` | enum | Engine { PurRdf, FrozenDuckdb } |  |  |  |  |
 
 | `admit_bytes` | function | admit_bytes( bytes: &[u8], hint: Option<&str>, base: Option<&str>, ) -> Result<LawState, Refusal> |  |  |  |  |
 
@@ -4973,35 +3719,81 @@
 
 | `media_type` | function | media_type(self) -> Option<&'static str> |  |  |  |  |
 
-| `new` | function | new( dialect: Dialect, reason: ReasonClass, message: impl Into<String>, ) -> Self |  |  |  |  |
+| `new` | function | new(dialect: Dialect, reason: ReasonClass, message: impl Into<String>) -> Self |  |  |  |  |
 
 | `parse_rdf` | function | parse_rdf( bytes: &[u8], dialect: Dialect, base: Option<&str>, ) -> Result<Arc<purrdf::RdfDataset>, Refusal> |  |  |  |  |
 
 | `parse_rdf_typed` | function | parse_rdf_typed( bytes: &[u8], dialect: Dialect, base: Option<&str>, ) -> Result<Arc<purrdf::RdfDataset>, Box<ParseRefusal>> |  |  |  |  |
 
-| `sniff` | function | sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> |  |  |  |  |
-
 | `ParseRefusal` | struct | ParseRefusal { pub dialect: Dialect, pub engine: Engine, pub reason: ReasonClass, pub line: Option<u32>, pub col: Option<u32>, pub byte_offset: Option<usize>, pub snippet: Option<String>, pub message: String } |  |  |  |  |
 
-| `Refusal` | struct | Refusal { pub kind: RefusalKind, pub dialect: Option<Dialect>, pub engine: Option<Engine>, pub message: String } |  |  |  |  |
+| `refusal::{ReasonClass, Refusal, RefusalKind, RefusalMessage}` | use | refusal::{ReasonClass, Refusal, RefusalKind, RefusalMessage} |  |  |  |  |
 
-| `EvaluatorError` | enum | EvaluatorError { DuckDb(frozen_duckdb::DuckDBError), ConversionError { column: String, row: usize, details: String, }, ReceiptError(String) } |  |  |  |  |
+| `sniff::sniff` | use | sniff::sniff |  |  |  |  |
 
-| `admitted_statement_hash` | function | admitted_statement_hash( canonical_graph: &[u8], params: &[SqlLiteral], ) -> [u8; 32] |  |  |  |  |
+| `ReasonClass` | enum | ReasonClass { Syntax, UndefinedPrefix, BadIri, FormulaInRdfLayer, NotSemanticContent, AmbiguousDialect, RemoteContext, Limit { name: String, observed: u64, max: u64, } } |  |  |  |  |
+
+| `RefusalKind` | enum | RefusalKind { NotSemanticContent, Ambiguous, EngineRejected, Unsupported, ResourceLimit, TierMismatch, DuckDb, BareSql, Fuse } |  |  |  |  |
+
+| `RefusalMessage` | enum | RefusalMessage { Static(&'static str), Dynamic(String) } |  |  |  |  |
+
+| `as_str` | function | as_str(&self) -> &str |  |  |  |  |
+
+| `Refusal` | struct | Refusal { pub kind: RefusalKind, pub dialect: Option<Dialect>, pub engine: Option<Engine>, pub message: RefusalMessage } |  |  |  |  |
+
+| `sniff` | function | sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> |  |  |  |  |
+
+| `http://graphlaw.org/sql#` | str_key | SQL_IRI = "http://graphlaw.org/sql#" |  |  |  |  |
+
+| `sql:` | str_key | SQL = "sql:" |  |  |  |  |
+
+| `DEFAULT_ROW_ENVELOPE` | const | DEFAULT_ROW_ENVELOPE: usize |  |  |  |  |
+
+| `PARAM_BYTES_INLINE` | const | PARAM_BYTES_INLINE: usize |  |  |  |  |
+
+| `ROW_ENVELOPE_LIMIT` | const | ROW_ENVELOPE_LIMIT: &str |  |  |  |  |
+
+| `EvaluatorError` | enum | EvaluatorError { DuckDb(frozen_duckdb::DuckDBError), ConversionError { column: String, row: usize, details: String, }, ReceiptError(String), NoCanonicalGraph(String), BatchMemberFailed { index: usize, source: Box<EvaluatorError>, partial: BatchReceipt, }, RowEnvelopeExceeded { limit: &'static str, observed: usize, max: usize, } } |  |  |  |  |
+
+| `ParamBytes` | enum | ParamBytes { Inline { buf: [u8; PARAM_BYTES_INLINE], len: usize, }, Digest([u8; 32]) } |  |  |  |  |
+
+| `admitted_statement_hash` | function | admitted_statement_hash(canonical_graph: &[u8], params: &[SqlLiteral]) -> [u8; 32] |  |  |  |  |
 
 | `canonical_ast_graph_bytes` | function | canonical_ast_graph_bytes(turtle: &str) -> Result<Vec<u8>, EvaluatorError> |  |  |  |  |
 
+| `coarse_elapsed_ns` | function | coarse_elapsed_ns(start_ns: u64) -> u64 |  |  |  |  |
+
+| `coarse_now_ns` | function | coarse_now_ns() -> u64 |  |  |  |  |
+
+| `encode` | function | encode(params: &[SqlLiteral]) -> ParamBytes |  |  |  |  |
+
 | `eval_admitted_ast` | function | eval_admitted_ast( &self, ast_turtle: &str, query_iri: &str, compiled: &CompiledQuery, subject_iri_prefix: &str, predicate_iri_prefix: &str, ) -> Result<ExecutionReceipt, EvaluatorError> |  |  |  |  |
+
+| `eval_ast_document` | function | eval_ast_document( &self, query_iri: &str, document: &crate::sql_ast::CompiledDocument, subject_iri_prefix: &str, predicate_iri_prefix: &str, atomic: bool, ) -> Result<BatchReceipt, EvaluatorError> |  |  |  |  |
+
+| `eval_ast_document_bounded` | function | eval_ast_document_bounded( &self, query_iri: &str, document: &crate::sql_ast::CompiledDocument, subject_iri_prefix: &str, predicate_iri_prefix: &str, atomic: bool, max_rows: usize, ) -> Result<BatchReceipt, EvaluatorError> |  |  |  |  |
 
 | `eval_ast_query` | function | eval_ast_query( &self, query_iri: &str, compiled: &CompiledQuery, subject_iri_prefix: &str, predicate_iri_prefix: &str, ) -> Result<ExecutionReceipt, EvaluatorError> |  |  |  |  |
 
+| `eval_ast_query_bounded` | function | eval_ast_query_bounded( &self, query_iri: &str, compiled: &CompiledQuery, subject_iri_prefix: &str, predicate_iri_prefix: &str, max_rows: usize, ) -> Result<ExecutionReceipt, EvaluatorError> |  |  |  |  |
+
 | `explain_ast_query` | function | explain_ast_query(&self, compiled: &CompiledQuery) -> Result<String, EvaluatorError> |  |  |  |  |
+
+| `fold` | function | fold(&self, hasher: &mut blake3::Hasher) |  |  |  |  |
+
+| `fold_params_anchored` | function | fold_params_anchored(h_ast: &[u8; 32], params: &[SqlLiteral]) -> [u8; 32] |  |  |  |  |
 
 | `from_connection` | function | from_connection(conn: frozen_duckdb::Connection) -> Self |  |  |  |  |
 
 | `from_connection_with_cache` | function | from_connection_with_cache( conn: frozen_duckdb::Connection, cache: std::sync::Arc<crate::query_cache::QueryCache>, ) -> Self |  |  |  |  |
 
+| `h_columnar_canon` | function | h_columnar_canon(triples: &[RdfTriple]) -> [u8; 32] |  |  |  |  |
+
+| `h_triples_serterm` | function | h_triples_serterm(triples: &[RdfTriple]) -> [u8; 32] |  |  |  |  |
+
 | `hash_param_buffer` | function | hash_param_buffer(hasher: &mut blake3::Hasher, params: &[SqlLiteral]) |  |  |  |  |
+
+| `is_inline` | function | is_inline(&self) -> bool |  |  |  |  |
 
 | `open_in_memory` | function | open_in_memory() -> Result<Self, EvaluatorError> |  |  |  |  |
 
@@ -5009,15 +3801,41 @@
 
 | `open_in_memory_with_cache` | function | open_in_memory_with_cache( cache: std::sync::Arc<crate::query_cache::QueryCache>, ) -> Result<Self, EvaluatorError> |  |  |  |  |
 
+| `prepared_statement_cache_hits` | function | prepared_statement_cache_hits(&self) -> u64 |  |  |  |  |
+
+| `prepared_statements` | function | prepared_statements(&self) -> usize |  |  |  |  |
+
 | `raw_connection` | function | raw_connection(&self) -> &frozen_duckdb::Connection |  |  |  |  |
+
+| `receipt_v2_state_sentinel` | function | receipt_v2_state_sentinel() -> &'static [u8; 32] |  |  |  |  |
+
+| `register_csv_view` | function | register_csv_view( &self, view_name: &str, glob_pattern: &str, ) -> Result<(), EvaluatorError> |  |  |  |  |
 
 | `register_parquet_view` | function | register_parquet_view( &self, view_name: &str, glob_pattern: &str, hive_partitioning: bool, ) -> Result<(), EvaluatorError> |  |  |  |  |
 
+| `register_purrdf_parquet_views` | function | register_purrdf_parquet_views( &self, directory: &std::path::Path, ) -> Result<(), EvaluatorError> |  |  |  |  |
+
 | `shared_cache` | function | shared_cache(&self) -> std::sync::Arc<crate::query_cache::QueryCache> |  |  |  |  |
 
-| `ExecutionReceipt` | struct | ExecutionReceipt { pub query_iri: String, pub query_hash: [u8; 32], pub sql_statement: String, pub rows_emitted: usize, pub execution_ms: f64, pub result_triples: Vec<RdfTriple>, pub cached: bool, pub consult_ms: f64 } |  |  |  |  |
+| `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/` | str_key | TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" |  |  |  |  |
 
-| `GraphLawDuckDB` | struct | GraphLawDuckDB { conn: frozen_duckdb::Connection, cache: std::sync::Arc<crate::query_cache::QueryCache> } |  |  |  |  |
+| `duckdb_result_rows` | str_key | ROW_ENVELOPE_LIMIT = "duckdb_result_rows" |  |  |  |  |
+
+| `seq_atomic_abort` | str_key | TABLE = "seq_atomic_abort" |  |  |  |  |
+
+| `seq_atomic_ok` | str_key | TABLE = "seq_atomic_ok" |  |  |  |  |
+
+| `seq_court_events` | str_key | TABLE = "seq_court_events" |  |  |  |  |
+
+| `seq_court_partial` | str_key | TABLE = "seq_court_partial" |  |  |  |  |
+
+| `seq_inverted` | str_key | TABLE = "seq_inverted" |  |  |  |  |
+
+| `BatchReceipt` | struct | BatchReceipt { pub query_iri: String, pub doc_hash: [u8; 32], pub members: Vec<ExecutionReceipt>, pub rows_emitted: Vec<usize>, pub failed_at: Option<usize>, pub status: String, pub state_delta: u64 } |  |  |  |  |
+
+| `ExecutionReceipt` | struct | ExecutionReceipt { pub query_iri: String, pub query_hash: [u8; 32], pub sql_statement: String, pub rows_emitted: usize, pub execution_ms: f64, pub result_triples: Vec<RdfTriple>, pub cached: bool, pub consult_ms: f64, pub artifact_digest_hex: Option<String>, pub artifact_bytes: Option<u64>, pub artifact_warning: Option<String>, pub columnar_digest_hex: Option<String>, pub receipt_v2_hex: Option<String> } |  |  |  |  |
+
+| `GraphLawDuckDB` | struct | GraphLawDuckDB { conn: frozen_duckdb::Connection, cache: std::sync::Arc<crate::query_cache::QueryCache>, stmt_cache: StmtCacheSeam } |  |  |  |  |
 
 | `RdfTriple` | struct | RdfTriple { pub subject: String, pub predicate: String, pub object: TermValue } |  |  |  |  |
 
@@ -5029,13 +3847,69 @@
 
 | `MAX_CHUNK_ROWS` | const | MAX_CHUNK_ROWS: usize |  |  |  |  |
 
+| `MAX_SESSIONS` | const | MAX_SESSIONS: usize |  |  |  |  |
+
+| `GRAPHLAW_ATTACH_ROOTS` | env_key | std::env::var("GRAPHLAW_ATTACH_ROOTS") |  |  |  |  |
+
 | `dispatch` | function | dispatch(v: &Value) -> Result<Value, Fail> |  |  |  |  |
+
+| `leading_sql_token` | function | leading_sql_token(sql: &str) -> Option<String> |  |  |  |  |
 
 | `32MiB` | str_key | DUCKDB_MEMORY_LIMIT = "32MiB" |  |  |  |  |
 
+| `FLAGS_MASK` | const | FLAGS_MASK: u16 |  |  |  |  |
+
+| `FLAG_BIG_ENDIAN` | const | FLAG_BIG_ENDIAN: u16 |  |  |  |  |
+
+| `FLAG_HAS_NULLS` | const | FLAG_HAS_NULLS: u16 |  |  |  |  |
+
+| `FLAG_STRICT_PROJECTION_ORDER` | const | FLAG_STRICT_PROJECTION_ORDER: u16 |  |  |  |  |
+
+| `MAGIC` | const | MAGIC: [u8; 8] |  |  |  |  |
+
+| `PAYLOAD_OFFSET` | const | PAYLOAD_OFFSET: u32 |  |  |  |  |
+
+| `SCHEMA_VERSION` | const | SCHEMA_VERSION: u16 |  |  |  |  |
+
+| `SIZE` | const | SIZE: usize |  |  |  |  |
+
+| `ArrowEgressHeaderError` | enum | ArrowEgressHeaderError { BadMagic, BadSchemaVersion(u16), BadFlags(u16), BadPayloadOffset(u32), BadTotalLen { payload_byte_len: u64, total_byte_len: u64, }, ReservedNotZero } |  |  |  |  |
+
+| `CANON_ARROW_EMPTY_V1` | function | CANON_ARROW_EMPTY_V1() -> &'static [u8; 32] |  |  |  |  |
+
+| `canon_arrow_empty_v1` | function | canon_arrow_empty_v1() -> &'static [u8; 32] |  |  |  |  |
+
+| `from_bytes` | function | from_bytes(bytes: &[u8; Self::SIZE]) -> Result<Self, ArrowEgressHeaderError> |  |  |  |  |
+
+| `to_bytes` | function | to_bytes(&self) -> [u8; Self::SIZE] |  |  |  |  |
+
+| `GLAWARRW` | str_key | MAGIC = "GLAWARRW" |  |  |  |  |
+
+| `ArrowEgressHeader` | struct | ArrowEgressHeader { pub magic: [u8; 8], pub schema_version: u16, pub flags: u16, pub batch_count: u32, pub payload_offset: u32, pub payload_byte_len: u64, pub total_byte_len: u64, pub triples_digest: [u8; 32], pub columnar_digest: [u8; 32], pub reserved: [u8; 24] } |  |  |  |  |
+
+| `CanonArrowCell` | enum | CanonArrowCell { Null, Bool(bool), I8(i8), I16(i16), I32(i32), I64(i64), U8(u8), U16(u16), U32(u32), U64(u64), F32(f32), F64(f64), Dec128(i128), Str(String), Bytes(Vec<u8>), Date32(i32), Time64(CanonArrowTimeUnit, i64), Timestamp(CanonArrowTimeUnit, i64), Interval { months: i32, days: i32, nanos: i64, } } |  |  |  |  |
+
+| `CanonArrowCollectorError` | enum | CanonArrowCollectorError { ColumnIndexOutOfRange { column: usize, columns: usize, }, CellTypeMismatch { column: usize, declared: CanonArrowType, cell: &'static str, }, RaggedRows { lengths: Vec<usize>, }, Overflow { what: &'static str, } } |  |  |  |  |
+
+| `CanonArrowTimeUnit` | enum | CanonArrowTimeUnit { Second, Millisecond, Microsecond, Nanosecond } |  |  |  |  |
+
+| `CanonArrowType` | enum | CanonArrowType { Null, Bool, Int8, Int16, Int32, Int64, UInt8, UInt16, UInt32, UInt64, Float32, Float64, Decimal128 { precision: u8, scale: i8, }, Utf8, Binary, Date32, Time64(CanonArrowTimeUnit), Timestamp(CanonArrowTimeUnit, Option<String>), IntervalMonthDayNano } |  |  |  |  |
+
+| `columns` | function | columns(&self) -> usize |  |  |  |  |
+
+| `new` | function | new(schema: Vec<CanonArrowField>) -> Self |  |  |  |  |
+
+| `push` | function | push(&mut self, column: usize, cell: CanonArrowCell) -> Result<(), CanonArrowCollectorError> |  |  |  |  |
+
+| `schema` | function | schema(&self) -> &[CanonArrowField] |  |  |  |  |
+
+| `CanonArrowCollector` | struct | CanonArrowCollector { schema: Vec<CanonArrowField>, columns: Vec<ColumnBuilder>, payload: Vec<u8>, hasher: blake3::Hasher, batches: u32, any_nulls: bool } |  |  |  |  |
+
+| `CanonArrowField` | struct | CanonArrowField { pub name: String, pub ty: CanonArrowType } |  |  |  |  |
+
 | `RING_CAPACITY` | const | RING_CAPACITY: usize |  |  |  |  |
 
-| `PushOutcome` | enum | PushOutcome { Buffered, DroppedNewest } |  |  |  |  |
+| `PushOutcome` | enum | PushOutcome { Buffered, DroppedNewest, RefusedTornPad } |  |  |  |  |
 
 | `RingError` | enum | RingError { Io(String), BrokenChain { detail: String, }, Malformed { line: usize, }, TornSlot { line: usize, }, SequenceGap { detail: String, }, AlreadyInitialized } |  |  |  |  |
 
@@ -5049,9 +3923,15 @@
 
 | `init_global` | function | init_global(dir: impl AsRef<Path>) -> Result<(), RingError> |  |  |  |  |
 
+| `init_global_with_ledger` | function | init_global_with_ledger( dir: impl AsRef<Path>, ledger_dir: impl AsRef<Path>, ) -> Result<(), RingError> |  |  |  |  |
+
 | `init_with_ledger` | function | init_with_ledger( dir: impl AsRef<Path>, ledger_dir: impl AsRef<Path>, ) -> Result<Arc<Self>, RingError> |  |  |  |  |
 
+| `init_with_ledger_restart` | function | init_with_ledger_restart( dir: impl AsRef<Path>, ledger_dir: impl AsRef<Path>, producer_attempted: u64, ) -> Result<Arc<Self>, RingError> |  |  |  |  |
+
 | `last_ledger_error` | function | last_ledger_error(&self) -> Option<String> |  |  |  |  |
+
+| `last_write_error` | function | last_write_error(&self) -> Option<RingError> |  |  |  |  |
 
 | `ledger_dir` | function | ledger_dir(&self) -> Option<&Path> |  |  |  |  |
 
@@ -5069,15 +3949,19 @@
 
 | `set_drainer_paused` | function | set_drainer_paused(&self, paused: bool) |  |  |  |  |
 
+| `torn_via` | function | torn_via(&self, f: impl FnOnce(&mut [u8; 3], &mut [u8; 8])) -> Self |  |  |  |  |
+
 | `verify` | function | verify(dir: impl AsRef<Path>) -> Result<(usize, usize, u64), RingError> |  |  |  |  |
+
+| `with_torn_pad` | function | with_torn_pad(&self, f: impl FnOnce(&[u8; 3], &[u8; 8]) -> R) -> R |  |  |  |  |
 
 | `0000000000000000000000000000000000000000000000000000000000000000` | str_key | GENESIS = "0000000000000000000000000000000000000000000000000000000000000000" |  |  |  |  |
 
 | `DroppedEvidence` | struct | DroppedEvidence { pub dropped_count: u64, pub refused_h_query: [u8; 32], pub refused_at_ms: u64 } |  |  |  |  |
 
-| `EvidenceRing` | struct | EvidenceRing { dir: PathBuf, ledger_dir: Option<PathBuf>, producer: Mutex<Option<Producer<EvidenceSlot>>>, consumer: Mutex<Option<Consumer<EvidenceSlot>>>, seq_counter: Arc<AtomicU64>, dropped: AtomicU64, paused_flag: Arc<AtomicBool>, shutdown_flag: Arc<AtomicBool>, ledger_error: Arc<Mutex<Option<String>>>, drainer: Mutex<Option<std::thread::JoinHandle<()>>> } |  |  |  |  |
+| `EvidenceRing` | struct | EvidenceRing { dir: PathBuf, ledger_dir: Option<PathBuf>, producer: Mutex<Option<Producer<EvidenceSlot>>>, consumer: Mutex<Option<Consumer<EvidenceSlot>>>, seq_counter: Arc<AtomicU64>, dropped: AtomicU64, paused_flag: Arc<AtomicBool>, shutdown_flag: Arc<AtomicBool>, ledger_error: Arc<Mutex<Option<String>>>, write_error: Arc<Mutex<Option<String>>>, drainer: Mutex<Option<std::thread::JoinHandle<()>>> } |  |  |  |  |
 
-| `RingDescriptor` | struct | RingDescriptor { pub h_query: [u8; 32], pub rows_emitted: u64, pub execution_ms: u32, pub cached: u8, pub pad1: [u8; 3], pub timestamp_ms: u64, pub pad2: [u8; 8] } |  |  |  |  |
+| `RingDescriptor` | struct | RingDescriptor { pub h_query: [u8; 32], pub rows_emitted: u64, pub execution_ms: u32, pub cached: u8, pad1: [u8; 3], pub timestamp_ms: u64, pad2: [u8; 8] } |  |  |  |  |
 
 | `HANDLER_SPARQL_CONSTRUCT` | const | HANDLER_SPARQL_CONSTRUCT: &str |  |  |  |  |
 
@@ -5115,15 +3999,25 @@
 
 | `DEFAULT_MAX_SKEW_SECS` | const | DEFAULT_MAX_SKEW_SECS: u64 |  |  |  |  |
 
+| `N3_MAX_BACKWARD_DEPTH` | const | N3_MAX_BACKWARD_DEPTH: usize |  |  |  |  |
+
+| `N3_MAX_BACKWARD_SOLUTIONS_PER_GOAL` | const | N3_MAX_BACKWARD_SOLUTIONS_PER_GOAL: usize |  |  |  |  |
+
 | `N3_MAX_DERIVED_FACTS` | const | N3_MAX_DERIVED_FACTS: usize |  |  |  |  |
 
 | `N3_MAX_ITERATIONS` | const | N3_MAX_ITERATIONS: usize |  |  |  |  |
 
+| `N3_MAX_MATCH_STEPS` | const | N3_MAX_MATCH_STEPS: usize |  |  |  |  |
+
 | `N3_MAX_TERM_BYTES` | const | N3_MAX_TERM_BYTES: usize |  |  |  |  |
+
+| `N3_MAX_TERM_DEPTH` | const | N3_MAX_TERM_DEPTH: usize |  |  |  |  |
 
 | `N3_MAX_TOTAL_BYTES` | const | N3_MAX_TOTAL_BYTES: usize |  |  |  |  |
 
 | `N3_MAX_TOTAL_STEPS` | const | N3_MAX_TOTAL_STEPS: usize |  |  |  |  |
+
+| `REFUSAL_UNKNOWN_STEP_CAPABILITY` | const | REFUSAL_UNKNOWN_STEP_CAPABILITY: &str |  |  |  |  |
 
 | `Ceiling` | enum | Ceiling { Observe, Select, Construct } |  |  |  |  |
 
@@ -5131,13 +4025,15 @@
 
 | `LeaseReason` | enum | LeaseReason { Expired, OutOfScope, Ceiling, BadSignature, UntrustedKey, ClockSkew } |  |  |  |  |
 
-| `N3Error` | enum | N3Error { Limit { limit: &'static str, observed: usize, max: usize, summary: String, }, Refused(Refusal) } |  |  |  |  |
+| `N3Error` | enum | N3Error { Limit { limit: &'static str, observed: usize, max: usize, summary: String, }, Refused(Refusal), Fuse { report: String, } } |  |  |  |  |
 
 | `ReceiptReason` | enum | ReceiptReason { Unattested, BadSignature, UntrustedKey } |  |  |  |  |
 
-| `Step` | enum | Step { AdmitShacl { shapes_ttl: &'a str, }, DeriveN3 { rules: &'a str, ruleset: &'a crate::tier::RuleSet, }, Hooks { pack: &'a crate::hooks::HookPack, }, Plan { plan: &'a crate::plan::Plan, }, RequireReceipt { step: &'a str, }, RequireSignedReceipt { step: &'a str, trusted: &'a crate::attest::TrustedKeys, }, EntailRdfs, EntailOwlRl } |  |  |  |  |
+| `Step` | enum | Step { AdmitShacl { shapes_ttl: &'a str, }, DeriveN3 { rules: &'a str, ruleset: &'a crate::tier::RuleSet, }, Hooks { pack: &'a crate::hooks::HookPack, }, Plan { plan: &'a crate::plan::Plan, }, RequireReceipt { step: &'a str, }, RequireSignedReceipt { step: &'a str, trusted: &'a crate::attest::TrustedKeys, }, EntailRdfs, EntailOwlRl, AdmitSql, TestCapabilityProbe(&'static str) } |  |  |  |  |
 
 | `as_str` | function | as_str(self) -> &'static str |  |  |  |  |
+
+| `authority_for_capability` | function | authority_for_capability(capability: &str) -> Result<BackendAuthority, LawError> |  |  |  |  |
 
 | `authorize` | function | authorize( &self, step: &str, required: Ceiling, trusted: &crate::attest::TrustedKeys, clock: &dyn Clock, max_skew_secs: u64, ) -> Result<(), LawError> |  |  |  |  |
 
@@ -5165,6 +4061,8 @@
 
 | `with_subject` | function | with_subject(mut self, subject_blake3: impl Into<String>) -> Self |  |  |  |  |
 
+| `UNKNOWN-STEP-CAPABILITY` | str_key | REFUSAL_UNKNOWN_STEP_CAPABILITY = "UNKNOWN-STEP-CAPABILITY" |  |  |  |  |
+
 | `FixedClock` | struct | FixedClock { pub u64 } |  |  |  |  |
 
 | `LawState` | struct | LawState { dataset: Arc<purrdf::RdfDataset>, id: String } |  |  |  |  |
@@ -5181,6 +4079,8 @@
 
 | `Clock` | trait |  |  |  |  |  |
 
+| `ReasonerLimitCensus` | trait |  |  |  |  |  |
+
 | `BACKEND_AUTHORITIES` | const | BACKEND_AUTHORITIES: &[BackendAuthority] |  |  |  |  |
 
 | `LEGACY_FALLBACK_ENABLED` | const | LEGACY_FALLBACK_ENABLED: bool |  |  |  |  |
@@ -5188,10 +4088,6 @@
 | `RDF 1.2 / codecs / storage IR` | str_key | BACKEND_AUTHORITIES = "RDF 1.2 / codecs / storage IR" |  |  |  |  |
 
 | `BackendAuthority` | struct | BackendAuthority { pub capability: &'static str, pub authority: &'static str, pub revision: &'static str } |  |  |  |  |
-
-| `eyeron` | use | eyeron |  |  |  |  |
-
-| `eyeron::{ CompletionStatus, EyeronError, PreparedReasoner, RdfFormat, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, Result, parse_n3, parse_rdf12, proof_to_n3, reason, reason_document, result_to_string, triples_to_n3, triples_to_trig, }` | use | eyeron::{ CompletionStatus, EyeronError, PreparedReasoner, RdfFormat, ReasonerError, ReasonerLimit, ReasonerOptions, ReasonerResult, ReasonerStatistics, Result, parse_n3, parse_rdf12, proof_to_n3, reason, reason_document, result_to_string, triples_to_n3, triples_to_trig, } |  |  |  |  |
 
 | `law::LawState` | use | law::LawState |  |  |  |  |
 
@@ -5203,13 +4099,27 @@
 
 | `purrdf::events::*` | use | purrdf::events::* |  |  |  |  |
 
+| `purrdf::geo::*` | use | purrdf::geo::* |  |  |  |  |
+
+| `purrdf::gts::*` | use | purrdf::gts::* |  |  |  |  |
+
+| `purrdf::n3::*` | use | purrdf::n3::* |  |  |  |  |
+
+| `purrdf::retrieval::*` | use | purrdf::retrieval::* |  |  |  |  |
+
 | `purrdf::shapes::*` | use | purrdf::shapes::* |  |  |  |  |
 
 | `purrdf::shex::*` | use | purrdf::shex::* |  |  |  |  |
 
 | `purrdf::sparql::*` | use | purrdf::sparql::* |  |  |  |  |
 
-| `purrdf::{ CanonHash, RdfDataset, RdfDatasetBuilder, RdfDiagnostic, RdfLiteral, SerializeGraph, SparqlEngine, SparqlRequest, SparqlResult, TermId, TermValue, canonicalize, parse_dataset, parse_dataset_with, serialize_dataset, try_canonicalize, }` | use | purrdf::{ CanonHash, RdfDataset, RdfDatasetBuilder, RdfDiagnostic, RdfLiteral, SerializeGraph, SparqlEngine, SparqlRequest, SparqlResult, TermId, TermValue, canonicalize, parse_dataset, parse_dataset_with, serialize_dataset, try_canonicalize, } |  |  |  |  |
+| `purrdf::text::*` | use | purrdf::text::* |  |  |  |  |
+
+| `purrdf::validate::*` | use | purrdf::validate::* |  |  |  |  |
+
+| `purrdf::{ CanonHash, RdfDataset, RdfDatasetBuilder, RdfDiagnostic, RdfLiteral, SerializeGraph, SparqlEngine, SparqlRequest, SparqlResult, TermId, TermValue, parse_dataset, parse_dataset_with, serialize_dataset, try_canonicalize, }` | use | purrdf::{ CanonHash, RdfDataset, RdfDatasetBuilder, RdfDiagnostic, RdfLiteral, SerializeGraph, SparqlEngine, SparqlRequest, SparqlResult, TermId, TermValue, parse_dataset, parse_dataset_with, serialize_dataset, try_canonicalize, } |  |  |  |  |
+
+| `purrdf_columnar` | use | purrdf_columnar |  |  |  |  |
 
 | `receipt_chain::{ReceiptRecord, validator::ReceiptValidator}` | use | receipt_chain::{ReceiptRecord, validator::ReceiptValidator} |  |  |  |  |
 
@@ -5287,6 +4197,18 @@
 
 | `json::admit` | use | json::admit |  |  |  |  |
 
+| `ProofLeaseError` | enum | ProofLeaseError { LeaseDigestMismatch { lease_digest: String, source_digest: String, }, Parse(String) } |  |  |  |  |
+
+| `lease_digest_source` | function | lease_digest_source(source: &str) -> String |  |  |  |  |
+
+| `verify_leased_proof` | function | verify_leased_proof( lease_digest: &str, source: &str, proof: &str, label: &str, ) -> Result<Report, ProofLeaseError> |  |  |  |  |
+
+| `@prefix : <http://example.org/> .
+:Socrates a :Human .
+` | str_key | SOURCE = "@prefix : <http://example.org/> .
+:Socrates a :Human .
+" |  |  |  |  |
+
 | `Standing` | enum | Standing { Unqualified, Observed, Attacked, Qualified, Refused, Unknown } |  |  |  |  |
 
 | `compose_courts` | function | compose_courts(parent: &Value, child: &Value) -> Result<BTreeSet<String>, String> |  |  |  |  |
@@ -5301,7 +4223,7 @@
 
 | `bump` | function | bump(&self) -> u64 |  |  |  |  |
 
-| `consult` | function | consult(&self, h_query: [u8; 32], grounding: Option<&[u8]>) -> Option<(ExecutionReceipt, u64)> |  |  |  |  |
+| `consult` | function | consult( &self, h_query: [u8; 32], grounding: Option<&[u8]>, ) -> Option<(ExecutionReceipt, u64)> |  |  |  |  |
 
 | `epoch` | function | epoch(&self) -> u64 |  |  |  |  |
 
@@ -5315,9 +4237,15 @@
 
 | `store` | function | store(&self, entry: CacheEntry) |  |  |  |  |
 
+| `with_entries` | function | with_entries(&self, f: impl FnOnce(&mut HashMap<[u8; 32], CacheEntry>) -> R) -> R |  |  |  |  |
+
 | `CacheEntry` | struct | CacheEntry { pub h_query: [u8; 32], pub receipt: ExecutionReceipt, pub grounding: Vec<u8>, pub epoch: u64, pub stored_at: u64 } |  |  |  |  |
 
 | `QueryCache` | struct | QueryCache { entries: Mutex<HashMap<[u8; 32], CacheEntry>>, epoch: AtomicU64 } |  |  |  |  |
+
+| `batch::*` | use | batch::* |  |  |  |  |
+
+| `storage::*` | use | storage::* |  |  |  |  |
 
 | `FLUSH_AGE_MS` | const | FLUSH_AGE_MS: u64 |  |  |  |  |
 
@@ -5327,15 +4255,27 @@
 
 | `LedgerError` | enum | LedgerError { Io(String), DigestMismatch { file: String, expected: String, actual: String, }, Malformed { file: String, }, BrokenChain { detail: String, }, Fork { parent: String, }, DoubleGenesis { digest: String, }, MissingAgg { batch: String, }, AggMismatch { batch: String, }, ChainIndex { detail: String, } } |  |  |  |  |
 
+| `content_digest` | function | content_digest(bytes: &[u8]) -> String |  |  |  |  |
+
+| `fold_batch` | function | fold_batch(batch: &str, records: &[Descriptor]) -> BatchAgg |  |  |  |  |
+
+| `0000000000000000000000000000000000000000000000000000000000000000` | str_key | GENESIS = "0000000000000000000000000000000000000000000000000000000000000000" |  |  |  |  |
+
+| `Aggregate` | struct | Aggregate { pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool, pub complete: bool, pub batches: usize } |  |  |  |  |
+
+| `BatchAgg` | struct | BatchAgg { pub batch: String, pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool } |  |  |  |  |
+
+| `ChainState` | struct | ChainState { pub head: String, pub tail: String, pub batches: u64, pub next_seq: u64, pub aggs: BTreeMap<String, String> } |  |  |  |  |
+
+| `Descriptor` | struct | Descriptor { pub h_query: [u8; 32], pub rows_emitted: u32, pub flags: u8, pub ts_unix_ms: u64, pub epoch: u64 } |  |  |  |  |
+
+| `accounted_descriptors` | function | accounted_descriptors(dir: impl AsRef<Path>) -> Result<u64, LedgerError> |  |  |  |  |
+
 | `aggregate` | function | aggregate(&self, from_ms: u64, to_ms: u64) -> Result<Aggregate, LedgerError> |  |  |  |  |
 
 | `chain_state` | function | chain_state(&self) -> ChainState |  |  |  |  |
 
-| `content_digest` | function | content_digest(bytes: &[u8]) -> String |  |  |  |  |
-
 | `flush` | function | flush(&mut self) -> Result<(), LedgerError> |  |  |  |  |
-
-| `fold_batch` | function | fold_batch(batch: &str, records: &[Descriptor]) -> BatchAgg |  |  |  |  |
 
 | `gaps` | function | gaps(&self) -> Result<Vec<(u64, u64)>, LedgerError> |  |  |  |  |
 
@@ -5353,17 +4293,7 @@
 
 | `verify` | function | verify(&self) -> Result<ChainState, LedgerError> |  |  |  |  |
 
-| `0000000000000000000000000000000000000000000000000000000000000000` | str_key | GENESIS = "0000000000000000000000000000000000000000000000000000000000000000" |  |  |  |  |
-
-| `Aggregate` | struct | Aggregate { pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool, pub complete: bool, pub batches: usize } |  |  |  |  |
-
-| `BatchAgg` | struct | BatchAgg { pub batch: String, pub rows_emitted_sum: BTreeMap<u64, u64>, pub saturated: bool } |  |  |  |  |
-
-| `ChainState` | struct | ChainState { pub head: String, pub tail: String, pub batches: u64, pub next_seq: u64 } |  |  |  |  |
-
-| `Descriptor` | struct | Descriptor { pub h_query: [u8; 32], pub rows_emitted: u32, pub flags: u8, pub ts_unix_ms: u64, pub epoch: u64 } |  |  |  |  |
-
-| `QueryLedger` | struct | QueryLedger { dir: PathBuf, parent: String, next_seq: u64, batches: u64, head: String, tail: String, buf: Vec<Descriptor>, buf_first_seq: u64, buf_opened_ms: u64, pub last_flush_error: Option<LedgerError> } |  |  |  |  |
+| `QueryLedger` | struct | QueryLedger { dir: PathBuf, parent: String, next_seq: u64, batches: u64, head: String, tail: String, buf: Vec<Descriptor>, buf_first_seq: u64, buf_opened_ms: u64, aggs: BTreeMap<String, String>, pub last_flush_error: Option<LedgerError> } |  |  |  |  |
 
 | `record` | function | record(state: &LawState, receipt: &Receipt) -> Result<LawState, LawError> |  |  |  |  |
 
@@ -5375,173 +4305,63 @@
 
 | `urn:graphlaw:` | str_key | NS = "urn:graphlaw:" |  |  |  |  |
 
-| `ADMITTED` | const | ADMITTED: Self |  |  |  |  |
-
-| `AUTHORIZATION_DENIED` | const | AUTHORIZATION_DENIED: Self |  |  |  |  |
-
-| `CHAIN_RULE_BASE` | const | CHAIN_RULE_BASE: &str |  |  |  |  |
-
-| `CHAIN_RULE_V2_FOLD` | const | CHAIN_RULE_V2_FOLD: &str |  |  |  |  |
-
-| `CONFORMANCE_GATE_FAILED` | const | CONFORMANCE_GATE_FAILED: Self |  |  |  |  |
-
-| `DEFAULT_RECEIPTS_DIR` | const | DEFAULT_RECEIPTS_DIR: &str |  |  |  |  |
-
-| `GENESIS_CHAIN_HASH` | const | GENESIS_CHAIN_HASH: [u8; 32] |  |  |  |  |
-
-| `LEDGER_FILE_NAME` | const | LEDGER_FILE_NAME: &str |  |  |  |  |
-
 | `MIGRATION_LAW_1_TO_2` | const | MIGRATION_LAW_1_TO_2: &str |  |  |  |  |
-
-| `OBJECT_LIFECYCLE_VIOLATION` | const | OBJECT_LIFECYCLE_VIOLATION: Self |  |  |  |  |
-
-| `PRECONDITION_FAILED` | const | PRECONDITION_FAILED: Self |  |  |  |  |
-
-| `RECEIPT_RECORD_VERSION` | const | RECEIPT_RECORD_VERSION: u32 |  |  |  |  |
-
-| `RESOURCE_EXHAUSTED` | const | RESOURCE_EXHAUSTED: Self |  |  |  |  |
 
 | `SCHEMA_V1` | const | SCHEMA_V1: &str |  |  |  |  |
 
 | `SCHEMA_V2` | const | SCHEMA_V2: &str |  |  |  |  |
 
-| `SLA_BREACH` | const | SLA_BREACH: Self |  |  |  |  |
-
-| `WATCHDOG_DRAINED` | const | WATCHDOG_DRAINED: Self |  |  |  |  |
-
 | `AdmissionDecision` | enum | AdmissionDecision { Admitted, Quarantined, Refused } |  |  |  |  |
 
 | `AdmissionLedger` | enum | AdmissionLedger { LegacyUnrecorded, Recorded(Vec<AdmissionItem>) } |  |  |  |  |
-
-| `Andon` | enum | Andon { Green, Halted { unmet: Vec<Obligation>, refusals: Vec<RefusalScenario>, at: u64, }, Overridden { by: String, reason: String, at: u64, } } |  |  |  |  |
 
 | `AndonLevel` | enum | AndonLevel { Red, Yellow, Green } |  |  |  |  |
 
 | `CeilingLevel` | enum | CeilingLevel { Red, LegacyObserved, Yellow, Green } |  |  |  |  |
 
-| `ChainRule` | enum | ChainRule { Base, V2Fold } |  |  |  |  |
-
-| `ChainStanding` | enum | ChainStanding { FullyBound, LegacyV2Unbound } |  |  |  |  |
-
-| `ChainVerification` | enum | ChainVerification { Verified(ChainStanding), Mismatch { rule: ChainRule, recomputed: [u8; 32], } } |  |  |  |  |
-
 | `CheckOutcome` | enum | CheckOutcome { Pass, Fail(String), Skip(String) } |  |  |  |  |
 
-| `CoreError` | enum | CoreError { SerializationFailed(String), HexDecodeFailed(String), ReceiptChainRuleInvalid(String), Io(String), ReceiptSchemaPayloadMismatch(String), UnrecognizedReceiptSchema(String), CeilingExceedsMeet { requested: crate::receipt_chain::epoch::CeilingLevel, allowed: crate::receipt_chain::epoch::CeilingLevel, }, PromotionRefused { reason: String, } } |  |  |  |  |
-
 | `EquivalenceStatus` | enum | EquivalenceStatus { Unknown, Equivalent, Divergent(String) } |  |  |  |  |
-
-| `Obligation` | enum | Obligation { Precondition { predicate_id: String, params_hash: [u8; 32], }, BlockingConstraint { reason: String, }, EvidenceRequired { evidence_type: String, } } |  |  |  |  |
 
 | `ObligationCount` | enum | ObligationCount { Unknown, Tracked { required: u32, discharged: u32, } } |  |  |  |  |
 
 | `ObservedOutcome` | enum | ObservedOutcome { Pass, Fail, Unknown } |  |  |  |  |
 
-| `RefusalCategory` | enum | RefusalCategory { Identity, Capacity, Topology, Temporal, Lifecycle, Authorization, Prerequisites, Reserved } |  |  |  |  |
-
-| `RefusalScenario` | enum | RefusalScenario { BlockingConstraint { reason: String, }, MissingEvidence { evidence_type: String, }, UnsatisfiedPrecondition { predicate_id: String, }, WatchdogDrained, PreconditionFailed, SlaBreach, AuthorizationDenied, ResourceExhausted, ObjectLifecycleViolation, ConformanceGateFailed } |  |  |  |  |
-
 | `admission_item` | function | admission_item(mut self, item: AdmissionItem) -> Self |  |  |  |  |
 
 | `all_unknown` | function | all_unknown() -> Self |  |  |  |  |
 
-| `append` | function | append(&self, record: &ReceiptRecord) -> Result<(), CoreError> |  |  |  |  |
-
-| `as_str` | function | as_str(self) -> &'static str |  |  |  |  |
-
 | `build` | function | build(self) -> Result<ReceiptEpochV2, CoreError> |  |  |  |  |
-
-| `build_admission_frame` | function | build_admission_frame( payload_hash: &[u8; 32], prev_chain_hash: &[u8; 32], meta: &ReceiptMeta, ts_ns: u64, ) -> OcelCausalFrame |  |  |  |  |
-
-| `category` | function | category(&self) -> RefusalCategory |  |  |  |  |
-
-| `chain` | function | chain(&mut self, frame: &OcelCausalFrame) |  |  |  |  |
-
-| `chain_from_frame` | function | chain_from_frame(prev_chain_hash: &[u8; 32], frame: &OcelCausalFrame) -> [u8; 32] |  |  |  |  |
-
-| `chain_hash` | function | chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
-
-| `compose` | function | compose(self, other: Self) -> Self |  |  |  |  |
-
-| `compose_denials` | function | compose_denials( scenarios: impl IntoIterator<Item = &'a RefusalScenario>, ) -> DenialPolarity |  |  |  |  |
 
 | `compute_ceiling` | function | compute_ceiling(prev: CeilingLevel, components: &ComponentLevels) -> CeilingLevel |  |  |  |  |
 
 | `compute_obligation_count` | function | compute_obligation_count(ledger: &AdmissionLedger) -> ObligationCount |  |  |  |  |
 
-| `declared_chain_rule` | function | declared_chain_rule(&self) -> Result<Option<ChainRule>, CoreError> |  |  |  |  |
-
-| `denial_lane` | function | denial_lane(scenario: &RefusalScenario) -> DenialPolarity |  |  |  |  |
-
 | `derive_andon` | function | derive_andon(ledger: &AdmissionLedger) -> AndonLevel |  |  |  |  |
 
 | `equivalence` | function | equivalence(mut self, map: EquivalenceMap) -> Self |  |  |  |  |
 
-| `first_declared` | function | first_declared(&self) -> Option<usize> |  |  |  |  |
-
-| `genesis` | function | genesis(run_id: [u8; 32]) -> Self |  |  |  |  |
-
-| `is_admitted` | function | is_admitted(self) -> bool |  |  |  |  |
-
 | `is_pass` | function | is_pass(&self) -> bool |  |  |  |  |
-
-| `last_chain_hash` | function | last_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
 
 | `legacy_bounded` | function | legacy_bounded() -> Self |  |  |  |  |
 
 | `level` | function | level(&self) -> AndonLevel |  |  |  |  |
 
-| `load_all` | function | load_all(&self) -> Result<Vec<ReceiptRecord>, CoreError> |  |  |  |  |
-
-| `name` | function | name(&self) -> &'static str |  |  |  |  |
-
 | `new` | function | new(prev_ceiling: CeilingLevel, components: ComponentLevels) -> Self |  |  |  |  |
 
-| `observe` | function | observe( &mut self, idx: usize, record: &ReceiptRecord, standing: ChainStanding, ) -> Result<(), CoreError> |  |  |  |  |
-
-| `observe_declared` | function | observe_declared( &mut self, idx: usize, declared: bool, standing: ChainStanding, ) -> Result<(), CoreError> |  |  |  |  |
-
-| `open` | function | open(dir: impl AsRef<Path>) -> Result<Self, CoreError> |  |  |  |  |
-
-| `open_default` | function | open_default() -> Result<Self, CoreError> |  |  |  |  |
-
-| `parse` | function | parse(s: &str) -> Result<Self, CoreError> |  |  |  |  |
-
-| `path` | function | path(&self) -> &Path |  |  |  |  |
-
-| `payload_hash` | function | payload_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
-
-| `prev_chain_hash` | function | prev_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
-
 | `read_receipt_epoch` | function | read_receipt_epoch(record: &super::ReceiptRecord) -> Result<ReceiptEpochV2, CoreError> |  |  |  |  |
-
-| `recompute_chain_hash` | function | recompute_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
-
-| `recompute_chain_hash_lawful` | function | recompute_chain_hash_lawful(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
-
-| `recompute_chain_hash_under` | function | recompute_chain_hash_under(&self, rule: ChainRule) -> Result<[u8; 32], CoreError> |  |  |  |  |
 
 | `recoverable` | function | recoverable(prev: CeilingLevel) -> CeilingLevel |  |  |  |  |
 
 | `remaining` | function | remaining(&self) -> Option<u32> |  |  |  |  |
 
-| `scenario_for_denial_lane` | function | scenario_for_denial_lane(lane: DenialPolarity) -> Option<RefusalScenario> |  |  |  |  |
-
 | `supported` | function | supported(components: &ComponentLevels) -> CeilingLevel |  |  |  |  |
-
-| `to_fired_mask` | function | to_fired_mask(self) -> u64 |  |  |  |  |
-
-| `to_hash_bytes` | function | to_hash_bytes(&self) -> [u8; 99] |  |  |  |  |
 
 | `uniform` | function | uniform(level: AndonLevel) -> Self |  |  |  |  |
 
 | `validate` | function | validate(records: &[ReceiptRecord], clock: &dyn Clock) -> Verdict |  |  |  |  |
 
 | `validate_promotion` | function | validate_promotion( current_ceiling: CeilingLevel, actuator_identity: &str, witness: &PromotionWitness, ) -> Result<CeilingLevel, CoreError> |  |  |  |  |
-
-| `verify_chain` | function | verify_chain(&self) -> Result<ChainVerification, CoreError> |  |  |  |  |
-
-| `verify_chain_against` | function | verify_chain_against(&self, stored: [u8; 32]) -> Result<ChainVerification, CoreError> |  |  |  |  |
 
 | `with_explicit_ceiling` | function | with_explicit_ceiling(mut self, level: CeilingLevel) -> Self |  |  |  |  |
 
@@ -5555,21 +4375,9 @@
 
 | `ggen-receipt/v2` | str_key | SCHEMA_V2 = "ggen-receipt/v2" |  |  |  |  |
 
-| `graphlaw-chain/base` | str_key | CHAIN_RULE_BASE = "graphlaw-chain/base" |  |  |  |  |
-
-| `graphlaw-chain/v2-fold` | str_key | CHAIN_RULE_V2_FOLD = "graphlaw-chain/v2-fold" |  |  |  |  |
-
-| `receipts` | str_key | DEFAULT_RECEIPTS_DIR = "receipts" |  |  |  |  |
-
-| `receipts.jsonl` | str_key | LEDGER_FILE_NAME = "receipts.jsonl" |  |  |  |  |
-
 | `AdmissionItem` | struct | AdmissionItem { pub evidence_id: String, pub observed_outcome: ObservedOutcome, pub decision: AdmissionDecision, pub reason: String, pub obligations_discharged: Vec<String>, pub obligations_created: Vec<String>, pub generation: u64 } |  |  |  |  |
 
-| `ChainRuleMonotonicity` | struct | ChainRuleMonotonicity { first_declared: Option<usize> } |  |  |  |  |
-
 | `ComponentLevels` | struct | ComponentLevels { pub lint: AndonLevel, pub test: AndonLevel, pub fmt: AndonLevel, pub gate: AndonLevel } |  |  |  |  |
-
-| `DenialPolarity` | struct | DenialPolarity { pub u64 } |  |  |  |  |
 
 | `EquivalenceMap` | struct | EquivalenceMap { pub source: EquivalenceStatus, pub compiled_binary: EquivalenceStatus, pub docs: EquivalenceStatus, pub tests: EquivalenceStatus, pub receipts: EquivalenceStatus, pub evidence: EquivalenceStatus, pub gates: EquivalenceStatus, pub config: EquivalenceStatus } |  |  |  |  |
 
@@ -5577,25 +4385,13 @@
 
 | `MigrationReceipt` | struct | MigrationReceipt { pub migration_law: String, pub from_schema: String, pub to_schema: String, pub final_v1_chain_hash_hex: String, pub first_v2_chain_hash_hex: String, pub carries_forward: Vec<String>, pub becomes_unknown: Vec<String>, pub resulting_ceiling: CeilingLevel } |  |  |  |  |
 
-| `OcelCausalFrame` | struct | OcelCausalFrame { pub instruction_id: u64, pub fired_mask: u64, pub denial: DenialPolarity, pub obj_refs: [PackedObjRef; 8], pub ts_ns: u64, pub activity_idx: u16, pub node_kind: u8, pub pad: [u8; 5], pub prior_hash: [u8; 32] } |  |  |  |  |
-
-| `OcelCausalReceipt` | struct | OcelCausalReceipt { pub chain_hash: [u8; 32], pub frame_count: u64, pub run_id: [u8; 32], pub replay_ptr: u64 } |  |  |  |  |
-
-| `PackedObjRef` | struct | PackedObjRef { pub u32 } |  |  |  |  |
-
 | `PromotionWitness` | struct | PromotionWitness { pub from_ceiling: CeilingLevel, pub to_ceiling: CeilingLevel, pub evidence_receipts: Vec<String>, pub closed_obligations: Vec<String>, pub verifier_identity: String, pub authorization_basis: String } |  |  |  |  |
 
 | `ReceiptEpochV2` | struct | ReceiptEpochV2 { pub admission: AdmissionLedger, pub standing_ceiling: CeilingLevel, pub equivalence: EquivalenceMap, pub obligation_count: ObligationCount, pub andon: AndonLevel, pub promotion_eligible: bool, pub generation: u64 } |  |  |  |  |
 
 | `ReceiptEpochV2Builder` | struct | ReceiptEpochV2Builder { prev_ceiling: CeilingLevel, components: ComponentLevels, admission: Vec<AdmissionItem>, equivalence: EquivalenceMap, explicit_ceiling: Option<CeilingLevel>, promoted: bool, generation: u64 } |  |  |  |  |
 
-| `ReceiptMeta` | struct | ReceiptMeta { pub instruction_id: u64, pub activity_idx: u16, pub node_kind: u8, pub ts_ns: Option<u64>, pub denial: DenialPolarity, pub andon: Andon, pub object_ids: Vec<String>, pub obligation_count: u32 } |  |  |  |  |
-
-| `ReceiptRecord` | struct | ReceiptRecord { pub version: u32, pub instruction_id: u64, pub activity_idx: u16, pub activity: Option<String>, pub node_kind: u8, pub ts_ns: u64, pub duration_ms: Option<u64>, pub origin: Option<String>, pub payload_hash_hex: String, pub prev_chain_hash_hex: String, pub chain_hash_hex: String, pub andon: Andon, pub obligation_count: u32, pub object_ids: Vec<String>, pub signature_hex: Option<String>, pub schema: String, pub v2: Option<epoch::ReceiptEpochV2>, pub chain_rule: Option<String> } |  |  |  |  |
-
 | `ReceiptRecordV1Legacy` | struct | ReceiptRecordV1Legacy { pub version: u32, pub instruction_id: u64, pub activity_idx: u16, pub activity: Option<String>, pub node_kind: u8, pub ts_ns: u64, pub duration_ms: Option<u64>, pub payload_hash_hex: String, pub prev_chain_hash_hex: String, pub chain_hash_hex: String, pub andon: super::Andon, pub obligation_count: u32, pub object_ids: Vec<String>, pub signature_hex: Option<String> } |  |  |  |  |
-
-| `ReceiptStore` | struct | ReceiptStore { path: PathBuf } |  |  |  |  |
 
 | `ReceiptValidator` | struct |  |  |  |  |  |
 
@@ -5606,6 +4402,144 @@
 | `Verdict` | struct | Verdict { pub ok: bool, pub stages: Vec<StageResult>, pub records_checked: usize } |  |  |  |  |
 
 | `Clock` | trait |  |  |  |  |  |
+
+| `record::*` | use | record::* |  |  |  |  |
+
+| `ADMITTED` | const | ADMITTED: Self |  |  |  |  |
+
+| `AUTHORIZATION_DENIED` | const | AUTHORIZATION_DENIED: Self |  |  |  |  |
+
+| `CONFORMANCE_GATE_FAILED` | const | CONFORMANCE_GATE_FAILED: Self |  |  |  |  |
+
+| `OBJECT_LIFECYCLE_VIOLATION` | const | OBJECT_LIFECYCLE_VIOLATION: Self |  |  |  |  |
+
+| `PRECONDITION_FAILED` | const | PRECONDITION_FAILED: Self |  |  |  |  |
+
+| `RESOURCE_EXHAUSTED` | const | RESOURCE_EXHAUSTED: Self |  |  |  |  |
+
+| `SLA_BREACH` | const | SLA_BREACH: Self |  |  |  |  |
+
+| `WATCHDOG_DRAINED` | const | WATCHDOG_DRAINED: Self |  |  |  |  |
+
+| `chain` | function | chain(&mut self, frame: &OcelCausalFrame) |  |  |  |  |
+
+| `compose` | function | compose(self, other: Self) -> Self |  |  |  |  |
+
+| `genesis` | function | genesis(run_id: [u8; 32]) -> Self |  |  |  |  |
+
+| `is_admitted` | function | is_admitted(self) -> bool |  |  |  |  |
+
+| `to_fired_mask` | function | to_fired_mask(self) -> u64 |  |  |  |  |
+
+| `to_hash_bytes` | function | to_hash_bytes(&self) -> [u8; 99] |  |  |  |  |
+
+| `DenialPolarity` | struct | DenialPolarity { pub u64 } |  |  |  |  |
+
+| `OcelCausalFrame` | struct | OcelCausalFrame { pub instruction_id: u64, pub fired_mask: u64, pub denial: DenialPolarity, pub obj_refs: [PackedObjRef; 8], pub ts_ns: u64, pub activity_idx: u16, pub node_kind: u8, pub pad: [u8; 5], pub prior_hash: [u8; 32] } |  |  |  |  |
+
+| `OcelCausalReceipt` | struct | OcelCausalReceipt { pub chain_hash: [u8; 32], pub frame_count: u64, pub run_id: [u8; 32], pub replay_ptr: u64 } |  |  |  |  |
+
+| `PackedObjRef` | struct | PackedObjRef { pub u32 } |  |  |  |  |
+
+| `CHAIN_RULE_BASE` | const | CHAIN_RULE_BASE: &str |  |  |  |  |
+
+| `CHAIN_RULE_V2_FOLD` | const | CHAIN_RULE_V2_FOLD: &str |  |  |  |  |
+
+| `RECEIPT_RECORD_VERSION` | const | RECEIPT_RECORD_VERSION: u32 |  |  |  |  |
+
+| `Andon` | enum | Andon { Green, Halted { unmet: Vec<Obligation>, refusals: Vec<RefusalScenario>, at: u64, }, Overridden { by: String, reason: String, at: u64, } } |  |  |  |  |
+
+| `ChainRule` | enum | ChainRule { Base, V2Fold } |  |  |  |  |
+
+| `ChainStanding` | enum | ChainStanding { FullyBound, LegacyV2Unbound } |  |  |  |  |
+
+| `ChainVerification` | enum | ChainVerification { Verified(ChainStanding), Mismatch { rule: ChainRule, recomputed: [u8; 32], } } |  |  |  |  |
+
+| `CoreError` | enum | CoreError { SerializationFailed(String), HexDecodeFailed(String), ReceiptChainRuleInvalid(String), Io(String), ReceiptSchemaPayloadMismatch(String), UnrecognizedReceiptSchema(String), CeilingExceedsMeet { requested: crate::receipt_chain::epoch::CeilingLevel, allowed: crate::receipt_chain::epoch::CeilingLevel, }, PromotionRefused { reason: String, } } |  |  |  |  |
+
+| `Obligation` | enum | Obligation { Precondition { predicate_id: String, params_hash: [u8; 32], }, BlockingConstraint { reason: String, }, EvidenceRequired { evidence_type: String, } } |  |  |  |  |
+
+| `RefusalCategory` | enum | RefusalCategory { Identity, Capacity, Topology, Temporal, Lifecycle, Authorization, Prerequisites, Reserved } |  |  |  |  |
+
+| `RefusalScenario` | enum | RefusalScenario { BlockingConstraint { reason: String, }, MissingEvidence { evidence_type: String, }, UnsatisfiedPrecondition { predicate_id: String, }, WatchdogDrained, PreconditionFailed, SlaBreach, AuthorizationDenied, ResourceExhausted, ObjectLifecycleViolation, ConformanceGateFailed } |  |  |  |  |
+
+| `as_str` | function | as_str(self) -> &'static str |  |  |  |  |
+
+| `build_admission_frame` | function | build_admission_frame( payload_hash: &[u8; 32], prev_chain_hash: &[u8; 32], meta: &ReceiptMeta, ts_ns: u64, ) -> OcelCausalFrame |  |  |  |  |
+
+| `category` | function | category(&self) -> RefusalCategory |  |  |  |  |
+
+| `chain_from_frame` | function | chain_from_frame(prev_chain_hash: &[u8; 32], frame: &OcelCausalFrame) -> [u8; 32] |  |  |  |  |
+
+| `chain_hash` | function | chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `compose_denials` | function | compose_denials( scenarios: impl IntoIterator<Item = &'a RefusalScenario>, ) -> DenialPolarity |  |  |  |  |
+
+| `declared_chain_rule` | function | declared_chain_rule(&self) -> Result<Option<ChainRule>, CoreError> |  |  |  |  |
+
+| `denial_lane` | function | denial_lane(scenario: &RefusalScenario) -> DenialPolarity |  |  |  |  |
+
+| `first_declared` | function | first_declared(&self) -> Option<usize> |  |  |  |  |
+
+| `name` | function | name(&self) -> &'static str |  |  |  |  |
+
+| `new` | function | new() -> Self |  |  |  |  |
+
+| `observe` | function | observe( &mut self, idx: usize, record: &ReceiptRecord, standing: ChainStanding, ) -> Result<(), CoreError> |  |  |  |  |
+
+| `observe_declared` | function | observe_declared( &mut self, idx: usize, declared: bool, standing: ChainStanding, ) -> Result<(), CoreError> |  |  |  |  |
+
+| `parse` | function | parse(s: &str) -> Result<Self, CoreError> |  |  |  |  |
+
+| `payload_hash` | function | payload_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `prev_chain_hash` | function | prev_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `recompute_chain_hash` | function | recompute_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `recompute_chain_hash_lawful` | function | recompute_chain_hash_lawful(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `recompute_chain_hash_under` | function | recompute_chain_hash_under(&self, rule: ChainRule) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `scenario_for_denial_lane` | function | scenario_for_denial_lane(lane: DenialPolarity) -> Option<RefusalScenario> |  |  |  |  |
+
+| `verify_chain` | function | verify_chain(&self) -> Result<ChainVerification, CoreError> |  |  |  |  |
+
+| `verify_chain_against` | function | verify_chain_against(&self, stored: [u8; 32]) -> Result<ChainVerification, CoreError> |  |  |  |  |
+
+| `graphlaw-chain/base` | str_key | CHAIN_RULE_BASE = "graphlaw-chain/base" |  |  |  |  |
+
+| `graphlaw-chain/v2-fold` | str_key | CHAIN_RULE_V2_FOLD = "graphlaw-chain/v2-fold" |  |  |  |  |
+
+| `ChainRuleMonotonicity` | struct | ChainRuleMonotonicity { first_declared: Option<usize> } |  |  |  |  |
+
+| `ReceiptMeta` | struct | ReceiptMeta { pub instruction_id: u64, pub activity_idx: u16, pub node_kind: u8, pub ts_ns: Option<u64>, pub denial: DenialPolarity, pub andon: Andon, pub object_ids: Vec<String>, pub obligation_count: u32 } |  |  |  |  |
+
+| `ReceiptRecord` | struct | ReceiptRecord { pub version: u32, pub instruction_id: u64, pub activity_idx: u16, pub activity: Option<String>, pub node_kind: u8, pub ts_ns: u64, pub duration_ms: Option<u64>, pub origin: Option<String>, pub payload_hash_hex: String, pub prev_chain_hash_hex: String, pub chain_hash_hex: String, pub andon: Andon, pub obligation_count: u32, pub object_ids: Vec<String>, pub signature_hex: Option<String>, pub schema: String, pub v2: Option<epoch::ReceiptEpochV2>, pub chain_rule: Option<String> } |  |  |  |  |
+
+| `DEFAULT_RECEIPTS_DIR` | const | DEFAULT_RECEIPTS_DIR: &str |  |  |  |  |
+
+| `GENESIS_CHAIN_HASH` | const | GENESIS_CHAIN_HASH: [u8; 32] |  |  |  |  |
+
+| `LEDGER_FILE_NAME` | const | LEDGER_FILE_NAME: &str |  |  |  |  |
+
+| `append` | function | append(&self, record: &ReceiptRecord) -> Result<(), CoreError> |  |  |  |  |
+
+| `last_chain_hash` | function | last_chain_hash(&self) -> Result<[u8; 32], CoreError> |  |  |  |  |
+
+| `load_all` | function | load_all(&self) -> Result<Vec<ReceiptRecord>, CoreError> |  |  |  |  |
+
+| `open` | function | open(dir: impl AsRef<Path>) -> Result<Self, CoreError> |  |  |  |  |
+
+| `open_default` | function | open_default() -> Result<Self, CoreError> |  |  |  |  |
+
+| `path` | function | path(&self) -> &Path |  |  |  |  |
+
+| `receipts` | str_key | DEFAULT_RECEIPTS_DIR = "receipts" |  |  |  |  |
+
+| `receipts.jsonl` | str_key | LEDGER_FILE_NAME = "receipts.jsonl" |  |  |  |  |
+
+| `ReceiptStore` | struct | ReceiptStore { path: PathBuf } |  |  |  |  |
 
 | `StoreError` | enum | StoreError { Io(String), InvalidSubject(String), Malformed { file: String, }, DigestMismatch { file: String, expected: String, actual: String, }, Unattested { file: String, }, Attestation { file: String, error: AttestError, }, BrokenChain { detail: String, } } |  |  |  |  |
 
@@ -5624,6 +4558,12 @@
 | `verify_attested` | function | verify_attested( &self, subject_sha: &str, trusted: &TrustedKeys, ) -> Result<Vec<Receipt>, StoreError> |  |  |  |  |
 
 | `ReceiptStore` | struct | ReceiptStore { dir: PathBuf } |  |  |  |  |
+
+| `definitions::*` | use | definitions::* |  |  |  |  |
+
+| `emit_json::*` | use | emit_json::* |  |  |  |  |
+
+| `emit_ttl::*` | use | emit_ttl::* |  |  |  |  |
 
 | `ENGINES` | const | ENGINES: &[&str] |  |  |  |  |
 
@@ -5659,29 +4599,13 @@
 
 | `FieldDefault` | enum | FieldDefault { None, Str(&'static str), Int(i64), Bool(bool) } |  |  |  |  |
 
-| `canonical` | function | canonical(v: &Value) -> String |  |  |  |  |
-
 | `op_names` | function | op_names() -> Vec<&'static str> |  |  |  |  |
 
 | `other_dialect_names` | function | other_dialect_names() -> Vec<&'static str> |  |  |  |  |
 
 | `rdf_dialect_names` | function | rdf_dialect_names() -> Vec<&'static str> |  |  |  |  |
 
-| `receipt_surface_blake3` | function | receipt_surface_blake3() -> String |  |  |  |  |
-
-| `registry_blake3` | function | registry_blake3() -> String |  |  |  |  |
-
-| `registry_json_pretty` | function | registry_json_pretty() -> String |  |  |  |  |
-
-| `registry_turtle` | function | registry_turtle() -> String |  |  |  |  |
-
-| `registry_value` | function | registry_value() -> Value |  |  |  |  |
-
-| `surface_blake3` | function | surface_blake3() -> String |  |  |  |  |
-
 | `EngineRejected` | str_key | KINDS_ENGINE = "EngineRejected" |  |  |  |  |
-
-| `Lease` | str_key | MODELS = "Lease" |  |  |  |  |
 
 | `MissingEntry` | str_key | POLICY_REFUSAL_KINDS = "MissingEntry" |  |  |  |  |
 
@@ -5709,8 +4633,6 @@
 
 | `https://graphlaw.dev/registry#` | str_key | REGISTRY_BASE = "https://graphlaw.dev/registry#" |  |  |  |  |
 
-| `max_request_bytes` | str_key | LIMIT_META = "max_request_bytes" |  |  |  |  |
-
 | `n3` | str_key | OTHER_DIALECTS = "n3" |  |  |  |  |
 
 | `observe` | str_key | LEASE_CEILINGS = "observe" |  |  |  |  |
@@ -5718,8 +4640,6 @@
 | `shacl` | str_key | LAW_STEPS = "shacl" |  |  |  |  |
 
 | `simple` | str_key | REGIMES = "simple" |  |  |  |  |
-
-| `src/duckdb_eval.rs` | str_key | FILES = "src/duckdb_eval.rs" |  |  |  |  |
 
 | `turtle` | str_key | RDF_DIALECTS = "turtle" |  |  |  |  |
 
@@ -5737,6 +4657,26 @@
 
 | `Variant` | struct | Variant { pub tag: Option<&'static str>, pub tag_field: Option<&'static str>, pub fields: &'static [Field] } |  |  |  |  |
 
+| `canonical` | function | canonical(v: &Value) -> String |  |  |  |  |
+
+| `receipt_surface_blake3` | function | receipt_surface_blake3() -> String |  |  |  |  |
+
+| `registry_blake3` | function | registry_blake3() -> String |  |  |  |  |
+
+| `registry_json_pretty` | function | registry_json_pretty() -> String |  |  |  |  |
+
+| `registry_value` | function | registry_value() -> Value |  |  |  |  |
+
+| `surface_blake3` | function | surface_blake3() -> String |  |  |  |  |
+
+| `Lease` | str_key | MODELS = "Lease" |  |  |  |  |
+
+| `max_request_bytes` | str_key | LIMIT_META = "max_request_bytes" |  |  |  |  |
+
+| `src/duckdb_eval.rs` | str_key | FILES = "src/duckdb_eval.rs" |  |  |  |  |
+
+| `registry_turtle` | function | registry_turtle() -> String |  |  |  |  |
+
 | `BuiltinError` | enum | BuiltinError { Eval(EvaluatorError), InvalidArguments { expected: String, got: String }, AstError(String) } |  |  |  |  |
 
 | `builtin_eval_sql` | function | builtin_eval_sql( args: &[&str], output_vars: &[&str], ctx: &BuiltinContext, reader: &R, ) -> Result<BuiltinResult, BuiltinError> |  |  |  |  |
@@ -5745,9 +4685,25 @@
 
 | `BuiltinResult` | struct | BuiltinResult { pub bindings: Vec<(String, TermValue)>, pub derived_triples: Vec<RdfTriple>, pub query_hash: [u8; 32], pub rows_emitted: usize } |  |  |  |  |
 
+| `MAX_SHACL_DEGREE` | const | MAX_SHACL_DEGREE: usize |  |  |  |  |
+
+| `MAX_SHACL_QUADS` | const | MAX_SHACL_QUADS: usize |  |  |  |  |
+
+| `MAX_SHACL_SHAPES_BYTES` | const | MAX_SHACL_SHAPES_BYTES: usize |  |  |  |  |
+
 | `MAX_SHACL_VALIDATION_DEPTH` | const | MAX_SHACL_VALIDATION_DEPTH: usize |  |  |  |  |
 
+| `ShaclLimitExceeded` | enum | ShaclLimitExceeded { Bytes { observed: usize, }, Quads { observed: usize, }, Degree { observed: usize, }, Depth { observed: usize, } } |  |  |  |  |
+
+| `cap` | function | cap(&self) -> usize |  |  |  |  |
+
 | `check_shape_depth` | function | check_shape_depth(shapes_ttl: &str) -> Result<(), DepthExceeded> |  |  |  |  |
+
+| `check_shape_limits` | function | check_shape_limits(shapes_ttl: &str) -> Result<(), ShaclLimitExceeded> |  |  |  |  |
+
+| `limit_name` | function | limit_name(&self) -> &'static str |  |  |  |  |
+
+| `observed` | function | observed(&self) -> usize |  |  |  |  |
 
 | `and` | str_key | SHAPE_LIST_PREDICATES = "and" |  |  |  |  |
 
@@ -5811,53 +4767,89 @@
 
 | `Turn` | struct | Turn { pub seq: usize, pub role: &'static str, pub text: String, pub kind: &'static str, pub evidence: Vec<String>, pub topic: String } |  |  |  |  |
 
-| `REFUSAL_01_MALFORMED_AST` | const | REFUSAL_01_MALFORMED_AST: &str |  |  |  |  |
+| `CompositeKind` | enum | CompositeKind { Struct, List, Index, Slice } |  |  |  |  |
 
-| `REFUSAL_02_UNIMPLEMENTED` | const | REFUSAL_02_UNIMPLEMENTED: &str |  |  |  |  |
+| `compile_turtle` | function | compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> |  |  |  |  |
 
-| `REFUSAL_03_SCOPE_INTEGRITY` | const | REFUSAL_03_SCOPE_INTEGRITY: &str |  |  |  |  |
+| `compile_turtle_document` | function | compile_turtle_document(turtle: &str) -> Result<CompiledDocument, AstError> |  |  |  |  |
 
-| `AggregateFunction` | enum | AggregateFunction { Count, Sum, Avg, Min, Max } |  |  |  |  |
+| `validate_ast_shacl` | function | validate_ast_shacl(turtle_dataset: &str, shapes_ttl: &str) -> Result<(), AstError> |  |  |  |  |
 
-| `AstError` | enum | AstError { InvalidIdentifier(String), MissingProperty(String, String), RecursionLimitExceeded(usize), MalformedList, UnsupportedTerm(String), MalformedNode(String), ShaclViolation(String) } |  |  |  |  |
+| ` ;` | str_key | WHERE = " ;" |  |  |  |  |
+
+| `@prefix sql: <http://graphlaw.org/sql#> .` | str_key | SELECT_HEAD = "@prefix sql: <http://graphlaw.org/sql#> ." |  |  |  |  |
+
+| `[ sql:windowFunction [ sql:functionName ` | str_key | ROW_NUMBER_WINDOW = "[ sql:windowFunction [ sql:functionName " |  |  |  |  |
+
+| `http://graphlaw.org/sql#` | str_key | SQL_NS = "http://graphlaw.org/sql#" |  |  |  |  |
+
+| `http://graphlaw.org/sql#Columns` | str_key | COLUMNS = "http://graphlaw.org/sql#Columns" |  |  |  |  |
+
+| `http://graphlaw.org/sql#Star` | str_key | STAR = "http://graphlaw.org/sql#Star" |  |  |  |  |
+
+| `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` | str_key | RDF_TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" |  |  |  |  |
+
+| `http://www.w3.org/2001/XMLSchema#boolean` | str_key | XSD_BOOLEAN = "http://www.w3.org/2001/XMLSchema#boolean" |  |  |  |  |
+
+| `statementIndex` | str_key | KNOWN_SQL_PREDICATES = "statementIndex" |  |  |  |  |
+
+| `sum` | str_key | AGGREGATES = "sum" |  |  |  |  |
+
+| `RdfAstGraphReader` | trait |  |  |  |  |  |
+
+| `ast::*` | use | ast::* |  |  |  |  |
+
+| `refusals::*` | use | refusals::* |  |  |  |  |
+
+| `refusals::refusal_arm` | use | refusals::refusal_arm |  |  |  |  |
+
+| `serializer::*` | use | serializer::* |  |  |  |  |
+
+| `AggregateFunction` | enum | AggregateFunction { Count, Sum, Avg, Min, Max, RowNumber } |  |  |  |  |
+
+| `FrameBound` | enum | FrameBound { UnboundedPreceding, Preceding(u64), CurrentRow, Following(u64), UnboundedFollowing } |  |  |  |  |
+
+| `FrameUnit` | enum | FrameUnit { Rows, Range } |  |  |  |  |
 
 | `JoinType` | enum | JoinType { Inner, LeftOuter } |  |  |  |  |
 
-| `Operator` | enum | Operator { Equals, NotEquals, GreaterThan, GreaterThanOrEq, LessThan, LessThanOrEq, And, Or, Like, ILike, Add, Subtract, Multiply, Divide, Modulo } |  |  |  |  |
+| `Operator` | enum | Operator { Equals, NotEquals, GreaterThan, GreaterThanOrEq, LessThan, LessThanOrEq, And, Or, Like, ILike, Add, Subtract, Multiply, Divide, Modulo, JsonExtract, JsonExtractText } |  |  |  |  |
 
 | `Scope` | enum | Scope { View, Process } |  |  |  |  |
 
-| `ScopePos` | enum | ScopePos { SelectList, OrderBy, Having, Predicate, GroupBy, AggregateArgument, PredicateAggregateArgument } |  |  |  |  |
+| `ScopePos` | enum | ScopePos { SelectList, OrderBy, Having, Predicate, GroupBy, AggregateArgument, PredicateAggregateArgument, Qualify } |  |  |  |  |
 
-| `SqlExpr` | enum | SqlExpr { ColumnRef { column: String, table_alias: Option<String>, }, Literal(SqlLiteral), Binary { op: Operator, left: Box<SqlExpr>, right: Box<SqlExpr>, }, FunctionCall { function: AggregateFunction, argument: Box<SqlExpr>, }, Alias { expr: Box<SqlExpr>, alias: String, } } |  |  |  |  |
+| `SqlExpr` | enum | SqlExpr { ColumnRef { column: String, table_alias: Option<String>, }, Literal(SqlLiteral), Binary { op: Operator, left: Box<SqlExpr>, right: Box<SqlExpr>, }, FunctionCall { function: AggregateFunction, argument: Box<SqlExpr>, }, WindowFn { function: Box<SqlExpr>, partition_by: Vec<SqlExpr>, order_by: Vec<OrderTerm>, frame: Option<FrameSpec>, }, Alias { expr: Box<SqlExpr>, alias: String, }, StructLiteral { fields: Vec<(String, SqlExpr)>, }, ListLiteral { items: Vec<SqlExpr> }, IndexAccess { base: Box<SqlExpr>, index: Box<SqlExpr>, }, SliceAccess { base: Box<SqlExpr>, start: Box<SqlExpr>, end: Option<Box<SqlExpr>>, } } |  |  |  |  |
 
 | `SqlLiteral` | enum | SqlLiteral { String(String), Integer(i64), Float(f64), Boolean(bool), Null } |  |  |  |  |
 
 | `as_sql` | function | as_sql(&self) -> &'static str |  |  |  |  |
 
-| `compile` | function | compile(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
-
 | `compile_merge` | function | compile_merge(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
-
-| `compile_turtle` | function | compile_turtle(turtle: &str) -> Result<CompiledQuery, AstError> |  |  |  |  |
 
 | `from_iri` | function | from_iri(iri: &str) -> Result<Self, AstError> |  |  |  |  |
 
 | `from_token` | function | from_token(token: &str) -> Result<Self, AstError> |  |  |  |  |
 
-| `validate_ast_shacl` | function | validate_ast_shacl( turtle_dataset: &str, shapes_ttl: &str, ) -> Result<(), AstError> |  |  |  |  |
+| `parse_token` | function | parse_token(token: &str) -> Result<Self, AstError> |  |  |  |  |
+
+| `seal_bytes` | function | seal_bytes(&self) -> [u8; 32] |  |  |  |  |
+
+| `validate_composite` | function | validate_composite(&self) -> Result<(), AstError> |  |  |  |  |
 
 | `validate_identifier` | function | validate_identifier(ident: &str) -> Result<&str, AstError> |  |  |  |  |
 
 | `validate_qualified_identifier` | function | validate_qualified_identifier(ident: &str) -> Result<(), AstError> |  |  |  |  |
 
-| `[REFUSAL-01] MalformedAstRefusal:` | str_key | REFUSAL_01_MALFORMED_AST = "[REFUSAL-01] MalformedAstRefusal:" |  |  |  |  |
+| `verify_seal` | function | verify_seal(&self) -> bool |  |  |  |  |
 
-| `[REFUSAL-02] UnimplementedStatementRefusal:` | str_key | REFUSAL_02_UNIMPLEMENTED = "[REFUSAL-02] UnimplementedStatementRefusal:" |  |  |  |  |
+| `CompiledDocument` | struct | CompiledDocument { pub statements: Vec<CompiledQuery>, pub doc_hash: [u8; 32], pub atomic: bool } |  |  |  |  |
 
-| `[REFUSAL-03] ScopeIntegrityRefusal:` | str_key | REFUSAL_03_SCOPE_INTEGRITY = "[REFUSAL-03] ScopeIntegrityRefusal:" |  |  |  |  |
+| `CompiledQuery` | struct | CompiledQuery { pub sql: String, pub params: Vec<SqlLiteral>, pub ast_graph_turtle: Option<String>, pub canon_graph_bytes: Option<Vec<u8>>, pub receipt_state: Option<[u8; 32]>, pub cacheable: bool, pub(super) admission_seal: [u8; 32] } |  |  |  |  |
 
-| `CompiledQuery` | struct | CompiledQuery { pub sql: String, pub params: Vec<SqlLiteral>, pub ast_graph_turtle: Option<String>, pub canon_graph_bytes: Option<Vec<u8>>, pub receipt_state: Option<blake3::Hasher>, pub cacheable: bool } |  |  |  |  |
+| `Cte` | struct | Cte { pub name: String, pub columns: Vec<String>, pub query: Box<SelectStatement>, pub recursive: bool } |  |  |  |  |
+
+| `FrameSpec` | struct | FrameSpec { pub unit: FrameUnit, pub start: FrameBound, pub end: Option<FrameBound> } |  |  |  |  |
 
 | `JoinClause` | struct | JoinClause { pub join_type: JoinType, pub table: TableRef, pub condition: SqlExpr } |  |  |  |  |
 
@@ -5865,11 +4857,217 @@
 
 | `OrderTerm` | struct | OrderTerm { pub expr: SqlExpr, pub descending: bool } |  |  |  |  |
 
-| `SelectStatement` | struct | SelectStatement { pub from: TableRef, pub joins: Vec<JoinClause>, pub select_list: Vec<SqlExpr>, pub where_clause: Option<SqlExpr>, pub group_by: Vec<SqlExpr>, pub having: Option<SqlExpr>, pub order_by: Vec<OrderTerm>, pub limit: Option<usize>, pub offset: Option<usize> } |  |  |  |  |
-
 | `TableRef` | struct | TableRef { pub name: String, pub alias: Option<String>, pub schema: Option<String> } |  |  |  |  |
 
-| `RdfAstGraphReader` | trait |  |  |  |  |  |
+| `AGG_IN_POSITION` | const | AGG_IN_POSITION: u16 |  |  |  |  |
+
+| `AGG_IN_PREDICATE` | const | AGG_IN_PREDICATE: u16 |  |  |  |  |
+
+| `ALIASED_AGG_ARG` | const | ALIASED_AGG_ARG: u16 |  |  |  |  |
+
+| `ALIAS_IN_AGG_ARG` | const | ALIAS_IN_AGG_ARG: u16 |  |  |  |  |
+
+| `ATOMIC_LITERAL` | const | ATOMIC_LITERAL: u16 |  |  |  |  |
+
+| `CANONICALIZATION` | const | CANONICALIZATION: u16 |  |  |  |  |
+
+| `COLUMNS_LAMBDA` | const | COLUMNS_LAMBDA: u16 |  |  |  |  |
+
+| `COLUMNS_PATTERN` | const | COLUMNS_PATTERN: u16 |  |  |  |  |
+
+| `COMPOSITE_DEPTH` | const | COMPOSITE_DEPTH: u16 |  |  |  |  |
+
+| `COMPOSITE_MEMBER` | const | COMPOSITE_MEMBER: u16 |  |  |  |  |
+
+| `CTE_NO_QUERY` | const | CTE_NO_QUERY: u16 |  |  |  |  |
+
+| `DIRECTION_IRI` | const | DIRECTION_IRI: u16 |  |  |  |  |
+
+| `DIRECTION_LEX` | const | DIRECTION_LEX: u16 |  |  |  |  |
+
+| `DISCRIMINATORS` | const | DISCRIMINATORS: u16 |  |  |  |  |
+
+| `DUAL_FROM` | const | DUAL_FROM: u16 |  |  |  |  |
+
+| `DUAL_HAVING` | const | DUAL_HAVING: u16 |  |  |  |  |
+
+| `DUAL_LEFT_OPERAND` | const | DUAL_LEFT_OPERAND: u16 |  |  |  |  |
+
+| `DUAL_OPERATOR_FORMS` | const | DUAL_OPERATOR_FORMS: u16 |  |  |  |  |
+
+| `DUAL_RIGHT_OPERAND` | const | DUAL_RIGHT_OPERAND: u16 |  |  |  |  |
+
+| `DUAL_SELECT` | const | DUAL_SELECT: u16 |  |  |  |  |
+
+| `DUAL_WHERE` | const | DUAL_WHERE: u16 |  |  |  |  |
+
+| `DUP_CLAUSE_PREDICATE` | const | DUP_CLAUSE_PREDICATE: u16 |  |  |  |  |
+
+| `EMPTY_FROM` | const | EMPTY_FROM: u16 |  |  |  |  |
+
+| `EMPTY_PROJECTION` | const | EMPTY_PROJECTION: u16 |  |  |  |  |
+
+| `EXPRESSION_WRAPPER` | const | EXPRESSION_WRAPPER: u16 |  |  |  |  |
+
+| `FRAME_BOUND` | const | FRAME_BOUND: u16 |  |  |  |  |
+
+| `FRAME_UNIT` | const | FRAME_UNIT: u16 |  |  |  |  |
+
+| `INDEX_BAD_DTYPE` | const | INDEX_BAD_DTYPE: u16 |  |  |  |  |
+
+| `INDEX_DUP` | const | INDEX_DUP: u16 |  |  |  |  |
+
+| `INDEX_MISSING` | const | INDEX_MISSING: u16 |  |  |  |  |
+
+| `INDEX_NEGATIVE` | const | INDEX_NEGATIVE: u16 |  |  |  |  |
+
+| `INDEX_NOT_INT` | const | INDEX_NOT_INT: u16 |  |  |  |  |
+
+| `INDEX_SEQUENCE_DISORDER` | const | INDEX_SEQUENCE_DISORDER: u16 |  |  |  |  |
+
+| `JOIN_TYPE_IRI` | const | JOIN_TYPE_IRI: u16 |  |  |  |  |
+
+| `LEGACY_MESSAGE` | const | LEGACY_MESSAGE: u16 |  |  |  |  |
+
+| `LIMIT_DUP` | const | LIMIT_DUP: u16 |  |  |  |  |
+
+| `LIMIT_MALFORMED` | const | LIMIT_MALFORMED: u16 |  |  |  |  |
+
+| `LIMIT_NOT_INT` | const | LIMIT_NOT_INT: u16 |  |  |  |  |
+
+| `MERGE_ON_NO_TARGET_COLUMN` | const | MERGE_ON_NO_TARGET_COLUMN: u16 |  |  |  |  |
+
+| `MIXED_DOCUMENT_ROOTS` | const | MIXED_DOCUMENT_ROOTS: u16 |  |  |  |  |
+
+| `NO_FROM` | const | NO_FROM: u16 |  |  |  |  |
+
+| `NO_PROJECTION` | const | NO_PROJECTION: u16 |  |  |  |  |
+
+| `NO_SQL_TEMPLATE` | const | NO_SQL_TEMPLATE: u16 |  |  |  |  |
+
+| `OFFSET_DUP` | const | OFFSET_DUP: u16 |  |  |  |  |
+
+| `OFFSET_MALFORMED` | const | OFFSET_MALFORMED: u16 |  |  |  |  |
+
+| `OFFSET_NOT_INT` | const | OFFSET_NOT_INT: u16 |  |  |  |  |
+
+| `OPERATOR_TOKEN` | const | OPERATOR_TOKEN: u16 |  |  |  |  |
+
+| `PARSE_DATASET` | const | PARSE_DATASET: u16 |  |  |  |  |
+
+| `PARSE_SHAPES` | const | PARSE_SHAPES: u16 |  |  |  |  |
+
+| `PROCESS_SCOPE_IN_SELECT` | const | PROCESS_SCOPE_IN_SELECT: u16 |  |  |  |  |
+
+| `QUALIFY_EXPR` | const | QUALIFY_EXPR: u16 |  |  |  |  |
+
+| `REFUSAL_01_MALFORMED_AST` | const | REFUSAL_01_MALFORMED_AST: &str |  |  |  |  |
+
+| `REFUSAL_02_UNIMPLEMENTED` | const | REFUSAL_02_UNIMPLEMENTED: &str |  |  |  |  |
+
+| `REFUSAL_03_SCOPE_INTEGRITY` | const | REFUSAL_03_SCOPE_INTEGRITY: &str |  |  |  |  |
+
+| `REFUSAL_05_UNBOUNDED_MUTATION` | const | REFUSAL_05_UNBOUNDED_MUTATION: &str |  |  |  |  |
+
+| `REFUSAL_IDENT_BYTES` | const | REFUSAL_IDENT_BYTES: usize |  |  |  |  |
+
+| `SCOPE_CARDINALITY` | const | SCOPE_CARDINALITY: u16 |  |  |  |  |
+
+| `SCOPE_INDIVIDUAL` | const | SCOPE_INDIVIDUAL: u16 |  |  |  |  |
+
+| `SCOPE_IN_PRED_AGG_ARG` | const | SCOPE_IN_PRED_AGG_ARG: u16 |  |  |  |  |
+
+| `SCOPE_ON_TABLE_REF` | const | SCOPE_ON_TABLE_REF: u16 |  |  |  |  |
+
+| `SCOPE_WRONG_NODE` | const | SCOPE_WRONG_NODE: u16 |  |  |  |  |
+
+| `SEQUENCE_EMPTY` | const | SEQUENCE_EMPTY: u16 |  |  |  |  |
+
+| `SET_OP_BY_NAME_KIND` | const | SET_OP_BY_NAME_KIND: u16 |  |  |  |  |
+
+| `SET_OP_FLAG_LEX` | const | SET_OP_FLAG_LEX: u16 |  |  |  |  |
+
+| `SET_OP_KIND_TOKEN` | const | SET_OP_KIND_TOKEN: u16 |  |  |  |  |
+
+| `SET_OP_NO_RIGHT` | const | SET_OP_NO_RIGHT: u16 |  |  |  |  |
+
+| `SHACL_DEPTH` | const | SHACL_DEPTH: u16 |  |  |  |  |
+
+| `SHACL_ENGINE` | const | SHACL_ENGINE: u16 |  |  |  |  |
+
+| `SHACL_VIOLATIONS` | const | SHACL_VIOLATIONS: u16 |  |  |  |  |
+
+| `SQL_ALIAS_IN_AGG_ARG` | const | SQL_ALIAS_IN_AGG_ARG: u16 |  |  |  |  |
+
+| `STAR_MODIFIER_POSITION` | const | STAR_MODIFIER_POSITION: u16 |  |  |  |  |
+
+| `UNBOUNDED_MUTATION` | const | UNBOUNDED_MUTATION: u16 |  |  |  |  |
+
+| `UNIMPLEMENTED_STATEMENT` | const | UNIMPLEMENTED_STATEMENT: u16 |  |  |  |  |
+
+| `UNKNOWN_STATEMENT_PREDICATE` | const | UNKNOWN_STATEMENT_PREDICATE: u16 |  |  |  |  |
+
+| `UNSUPPORTED_GENERIC` | const | UNSUPPORTED_GENERIC: u16 |  |  |  |  |
+
+| `VIEW_SCOPE_IN_PREDICATE` | const | VIEW_SCOPE_IN_PREDICATE: u16 |  |  |  |  |
+
+| `WINDOW_FN_POSITION` | const | WINDOW_FN_POSITION: u16 |  |  |  |  |
+
+| `RefusalCode` | enum | RefusalCode { MalformedAst = 1, UnimplementedStatement = 2, ScopeIntegrity = 3, Capability = 4, InvalidIdentifier = 16, MissingProperty = 17, RecursionLimitExceeded = 18, MalformedList = 19, UnsupportedTerm = 20, MalformedNode = 21, LiteralNotInt = 36, LiteralNotFloat = 37, UnboundedMutation = 5 } |  |  |  |  |
+
+| `InvalidIdentifier` | function | InvalidIdentifier(a: String) -> Self |  |  |  |  |
+
+| `MalformedNode` | function | MalformedNode(a: String) -> Self |  |  |  |  |
+
+| `MissingProperty` | function | MissingProperty(a: String, b: String) -> Self |  |  |  |  |
+
+| `RecursionLimitExceeded` | function | RecursionLimitExceeded(n: usize) -> Self |  |  |  |  |
+
+| `ShaclViolation` | function | ShaclViolation(msg: String) -> Self |  |  |  |  |
+
+| `UnsupportedTerm` | function | UnsupportedTerm(a: String) -> Self |  |  |  |  |
+
+| `as_str_lossy` | function | as_str_lossy(&self) -> std::borrow::Cow<'_, str> |  |  |  |  |
+
+| `by_marker` | function | by_marker(name: &str) -> Option<u16> |  |  |  |  |
+
+| `marker` | function | marker(self) -> Option<&'static str> |  |  |  |  |
+
+| `pack` | function | pack(v: impl fmt::Display) -> Self |  |  |  |  |
+
+| `packed2` | function | packed2(a: impl fmt::Display, b: impl fmt::Display) -> Self |  |  |  |  |
+
+| `push` | function | push(&mut self, v: impl fmt::Display) |  |  |  |  |
+
+| `[REFUSAL-01] MalformedAstRefusal:` | str_key | REFUSAL_01_MALFORMED_AST = "[REFUSAL-01] MalformedAstRefusal:" |  |  |  |  |
+
+| `[REFUSAL-02] UnimplementedStatementRefusal:` | str_key | REFUSAL_02_UNIMPLEMENTED = "[REFUSAL-02] UnimplementedStatementRefusal:" |  |  |  |  |
+
+| `[REFUSAL-03] ScopeIntegrityRefusal:` | str_key | REFUSAL_03_SCOPE_INTEGRITY = "[REFUSAL-03] ScopeIntegrityRefusal:" |  |  |  |  |
+
+| `[REFUSAL-05] UnboundedMutationRefusal:` | str_key | REFUSAL_05_UNBOUNDED_MUTATION = "[REFUSAL-05] UnboundedMutationRefusal:" |  |  |  |  |
+
+| `AstError` | struct | AstError { pub code: RefusalCode, pub ctx: RefusalContext } |  |  |  |  |
+
+| `PackedIdent` | struct | PackedIdent { len: u8, bytes: [u8; REFUSAL_IDENT_BYTES] } |  |  |  |  |
+
+| `RefusalContext` | struct | RefusalContext { pub shape_id: u16, pub predicate_idx: u16, pub num: u32, pub aux_num: u32, pub ident: PackedIdent, pub aux_ident: PackedIdent } |  |  |  |  |
+
+| `SelectItem` | enum | SelectItem { Expr(SqlExpr), Star { exclude: Vec<String>, replace: Vec<(SqlExpr, String)>, }, Columns(String) } |  |  |  |  |
+
+| `SetOpKind` | enum | SetOpKind { Union, Intersect, Except } |  |  |  |  |
+
+| `as_sql` | function | as_sql(&self) -> &'static str |  |  |  |  |
+
+| `compile` | function | compile(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
+
+| `compile_set_operation` | function | compile_set_operation(&self) -> Result<CompiledQuery, AstError> |  |  |  |  |
+
+| `from_token` | function | from_token(token: &str) -> Result<Self, AstError> |  |  |  |  |
+
+| `SelectStatement` | struct | SelectStatement { pub ctes: Vec<Cte>, pub from: TableRef, pub joins: Vec<JoinClause>, pub select_list: Vec<SelectItem>, pub where_clause: Option<SqlExpr>, pub group_by: Vec<SqlExpr>, pub having: Option<SqlExpr>, pub order_by: Vec<OrderTerm>, pub limit: Option<usize>, pub offset: Option<usize>, pub qualify: Option<SqlExpr> } |  |  |  |  |
+
+| `SetOperationStatement` | struct | SetOperationStatement { pub left: SelectStatement, pub kind: SetOpKind, pub all: bool, pub by_name: bool, pub right: SelectStatement } |  |  |  |  |
 
 | `REFUSAL_04_CAPABILITY_REFUSAL` | const | REFUSAL_04_CAPABILITY_REFUSAL: &str |  |  |  |  |
 
@@ -5879,7 +5077,7 @@
 
 | `admit_bytes_tiered` | function | admit_bytes_tiered( bytes: &[u8], hint: Option<&str>, base: Option<&str>, decl: Option<DialectDecl>, ) -> Result<Admitted, Refusal> |  |  |  |  |
 
-| `admit_declared` | function | admit_declared(bytes: &[u8], decl: DialectDecl, base: Option<&str>) -> Result<Admitted, Refusal> |  |  |  |  |
+| `admit_declared` | function | admit_declared( bytes: &[u8], decl: DialectDecl, base: Option<&str>, ) -> Result<Admitted, Refusal> |  |  |  |  |
 
 | `rule_count` | function | rule_count(&self) -> usize |  |  |  |  |
 
@@ -5891,9 +5089,21 @@
 
 | `DialectDecl` | struct | DialectDecl { pub tier: Tier, pub dialect: Dialect } |  |  |  |  |
 
-| `RuleSet` | struct | RuleSet { pub document: eyeron::Document } |  |  |  |  |
+| `RuleSet` | struct | RuleSet { pub document: n3::Document } |  |  |  |  |
 
 | `0807060504030201887766554433221100ff0000000000000100000002000000030000000400000005000000060000000700000008000000bebafecaefbeaddeefbe2aa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5` | str_key | GOLDEN_FRAME_HASH_HEX = "0807060504030201887766554433221100ff0000000000000100000002000000030000000400000005000000060000000700000008000000bebafecaefbeaddeefbe2aa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5" |  |  |  |  |
+
+| `/etc/passwd` | str_key | ATTACK_PATH = "/etc/passwd" |  |  |  |  |
+
+| `attach path outside GRAPHLAW_ATTACH_ROOTS allowlist` | str_key | STABLE_REFUSAL = "attach path outside GRAPHLAW_ATTACH_ROOTS allowlist" |  |  |  |  |
+
+| `SUB-A` | str_key | SUBSIDIARIES = "SUB-A" |  |  |  |  |
+
+| `bcbs-01` | str_key | SESSION = "bcbs-01" |  |  |  |  |
+
+| `bcbs-02` | str_key | SESSION = "bcbs-02" |  |  |  |  |
+
+| `bcbs-03` | str_key | SESSION = "bcbs-03" |  |  |  |  |
 
 | `<http://example.org/alice> <http://example.org/knows> <http://example.org/bob> .` | str_key | PURE_NT = "<http://example.org/alice> <http://example.org/knows> <http://example.org/bob> ." |  |  |  |  |
 
@@ -5911,25 +5121,137 @@
 
 | `[ a sql:BinaryExpression ; sql:operator ` | str_key | AGGREGATE_WHERE = "[ a sql:BinaryExpression ; sql:operator " |  |  |  |  |
 
-| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+| `http://example.org/crs/planar` | str_key | CRS_PLANAR = "http://example.org/crs/planar" |  |  |  |  |
+
+| `http://example.org/geo#` | str_key | GEO = "http://example.org/geo#" |  |  |  |  |
+
+| `http://example.org/geof/` | str_key | GEOF = "http://example.org/geof/" |  |  |  |  |
+
+| `http://example.org/sf#` | str_key | SF = "http://example.org/sf#" |  |  |  |  |
+
+| `http://example.org/unit/metre` | str_key | METRE = "http://example.org/unit/metre" |  |  |  |  |
+
+| `CALIBRATION_FLOOR` | const | CALIBRATION_FLOOR: u64 |  |  |  |  |
+
+| `CALIBRATION_SEED` | const | CALIBRATION_SEED: u64 |  |  |  |  |
+
+| `EPOCH_DISARMED_TICKS` | const | EPOCH_DISARMED_TICKS: u64 |  |  |  |  |
+
+| `UNBOUNDED_FUEL` | const | UNBOUNDED_FUEL: u64 |  |  |  |  |
+
+| `WALL_BYTES` | const | WALL_BYTES: u64 |  |  |  |  |
+
+| `WATCHDOG_INTERVAL` | const | WATCHDOG_INTERVAL: Duration |  |  |  |  |
+
+| `EnclosureError` | enum | EnclosureError { Fuel { budget: u64 }, Epoch { ticks: u64 }, Trap(String), Fatal(String) } |  |  |  |  |
+
+| `FuelPolicy` | enum | FuelPolicy { Unbounded, PerOp(BTreeMap<String, u64>) } |  |  |  |  |
 
 | `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `alloc_raw` | function | alloc_raw(&mut self, len: u32) -> Option<u32> |  |  |  |  |
+
+| `artifact_path` | function | artifact_path() -> PathBuf |  |  |  |  |
+
+| `budget` | function | budget(&self) -> Option<u64> |  |  |  |  |
+
+| `budget_for` | function | budget_for(&self, op: &str) -> Option<u64> |  |  |  |  |
+
+| `calibrate` | function | calibrate(&mut self, control: &Value) -> (u64, u64) |  |  |  |  |
+
+| `call_raw` | function | call_raw(&mut self, ptr: u32, len: u32) -> (u32, u32) |  |  |  |  |
+
+| `exec` | function | exec(&mut self, req: &Value) -> Value |  |  |  |  |
+
+| `exec_seeded` | function | exec_seeded(&mut self, req: &Value, fuel_seed: u64) -> (Value, u64) |  |  |  |  |
+
+| `exec_seeded_bytes` | function | exec_seeded_bytes(&mut self, req: &Value, fuel_seed: u64) -> (Vec<u8>, u64) |  |  |  |  |
+
+| `free_raw` | function | free_raw(&mut self, ptr: u32, len: u32) |  |  |  |  |
+
+| `grow_memory` | function | grow_memory(&mut self, delta_pages: u64) -> Result<u64, wasmtime::Error> |  |  |  |  |
+
+| `limit_name` | function | limit_name(&self) -> Option<&'static str> |  |  |  |  |
+
+| `memory_max_pages` | function | memory_max_pages(&mut self) -> Option<u64> |  |  |  |  |
+
+| `memory_pages` | function | memory_pages(&mut self) -> u64 |  |  |  |  |
+
+| `new` | function | new() -> Self |  |  |  |  |
+
+| `next_pow2_ceil` | function | next_pow2_ceil(x: u64) -> u64 |  |  |  |  |
+
+| `peak_wall_bytes` | function | peak_wall_bytes(&self) -> u64 |  |  |  |  |
+
+| `peek_out` | function | peek_out(&mut self, ptr: u32, len: u32) -> Vec<u8> |  |  |  |  |
+
+| `probe` | function | probe(&mut self, req: &Value) -> Result<Value, EnclosureError> |  |  |  |  |
+
+| `read_out` | function | read_out(&mut self, ptr: u32, len: u32) -> Vec<u8> |  |  |  |  |
+
+| `request_envelope` | function | request_envelope(&mut self, req: &Value) -> Vec<u8> |  |  |  |  |
+
+| `request_envelope_leaking` | function | request_envelope_leaking(&mut self, req: &Value) -> Vec<u8> |  |  |  |  |
+
+| `set_epoch_ticks_per_request` | function | set_epoch_ticks_per_request(&mut self, ticks: u64) |  |  |  |  |
+
+| `synthesized_envelope` | function | synthesized_envelope(e: &EnclosureError) -> Vec<u8> |  |  |  |  |
+
+| `write_body` | function | write_body(&mut self, ptr: u32, body: &[u8]) |  |  |  |  |
+
+| `EnclosureHost` | struct | EnclosureHost { store: Store<EncState>, memory: Memory, alloc_fn: TypedFunc<u32, u32>, free_fn: TypedFunc<(u32, u32), ()>, call_fn: TypedFunc<(u32, u32), u64>, policy: FuelPolicy, epoch_ticks: u64, _watchdog: Watchdog } |  |  |  |  |
+
+| `WallLimiter` | struct | WallLimiter { pub peak: u64 } |  |  |  |  |
+
+| `ENGINE_LOCK` | const | ENGINE_LOCK: Mutex<()> |  |  |  |  |
+
+| `HostError` | enum | HostError { Trap(String), Fatal(String) } |  |  |  |  |
+
+| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+
+| `CARGO_TARGET_DIR` | env_key | std::env::var_os("CARGO_TARGET_DIR") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `close_session` | function | close_session(h: &mut Host, name: &str) |  |  |  |  |
+
+| `engine_lock` | function | engine_lock() -> std::sync::MutexGuard<'static, ()> |  |  |  |  |
+
+| `exec` | function | exec(&mut self, req: &Value) -> Value |  |  |  |  |
+
+| `fail_classify` | function | fail_classify(stage: &str, e: wasmtime::Error) -> HostError |  |  |  |  |
+
+| `host_or_skip` | function | host_or_skip(test_name: &str, preopen_tmp: bool) -> Option<Host> |  |  |  |  |
 
 | `native` | function | native(req: &Value) -> Value |  |  |  |  |
 
 | `native_bytes` | function | native_bytes(req: &Value) -> Vec<u8> |  |  |  |  |
 
+| `new` | function | new(bytes: &[u8], preopen_tmp: bool) -> Result<Self, HostError> |  |  |  |  |
+
 | `ok` | function | ok(req: &Value) -> Value |  |  |  |  |
+
+| `open_session` | function | open_session(h: &mut Host, name: &str) |  |  |  |  |
 
 | `read` | function | read(path: &str) -> String |  |  |  |  |
 
 | `refused` | function | refused(req: &Value) -> Value |  |  |  |  |
+
+| `request` | function | request(&mut self, req: &Value) -> Result<Value, HostError> |  |  |  |  |
+
+| `request_bytes` | function | request_bytes(&mut self, body: &[u8]) -> Result<Vec<u8>, HostError> |  |  |  |  |
+
+| `stream_all` | function | stream_all(&mut self, session: &str, cursor: &str) -> String |  |  |  |  |
+
+| `try_host` | function | try_host(preopen_tmp: bool) -> Result<Host, String> |  |  |  |  |
 
 | `wasm` | function | wasm(req: &Value) -> Value |  |  |  |  |
 
 | `wasm_bytes` | function | wasm_bytes(req: &Value) -> Vec<u8> |  |  |  |  |
 
 | `wasm_path` | function | wasm_path() -> PathBuf |  |  |  |  |
+
+| `Host` | struct | Host { store: Store<WasiP1Ctx>, memory: Memory, alloc: TypedFunc<u32, u32>, free: TypedFunc<(u32, u32), ()>, call: TypedFunc<(u32, u32), u64> } |  |  |  |  |
 
 | `CARGO_BIN_EXE_{name}` | env_key | std::env::var("CARGO_BIN_EXE_{name}") |  |  |  |  |
 
@@ -5939,21 +5261,47 @@
 
 | `ontologies` | str_key | ROOTS = "ontologies" |  |  |  |  |
 
+| `248cd97b412685441df24bf44b52461a001f8ee8c70bd0a2c8a16e41b151a324` | str_key | GOLDEN_H_TRIPLES_SERTERM = "248cd97b412685441df24bf44b52461a001f8ee8c70bd0a2c8a16e41b151a324" |  |  |  |  |
+
+| `4d51ca3c8cf5bc73780cb8cd3bed526293fa6b3fe34c5ad10cf3f8e8d14e8ff4` | str_key | GOLDEN_H_COLUMNAR_CANON = "4d51ca3c8cf5bc73780cb8cd3bed526293fa6b3fe34c5ad10cf3f8e8d14e8ff4" |  |  |  |  |
+
+| `CREATE TABLE revenue (region TEXT, v BIGINT);` | str_key | P04_SEED_SQL = "CREATE TABLE revenue (region TEXT, v BIGINT);" |  |  |  |  |
+
+| `GLAW_P04_PROBE_CHILD` | str_key | ENV_CHILD = "GLAW_P04_PROBE_CHILD" |  |  |  |  |
+
+| `P04_PROBE_BEGIN` | str_key | PROBE_BEGIN = "P04_PROBE_BEGIN" |  |  |  |  |
+
+| `P04_PROBE_END` | str_key | PROBE_END = "P04_PROBE_END" |  |  |  |  |
+
+| `http://www.w3.org/2001/XMLSchema#integer` | str_key | XSD_INT = "http://www.w3.org/2001/XMLSchema#integer" |  |  |  |  |
+
+| `urn:p04:obj:00` | str_key | OBJ_IDS = "urn:p04:obj:00" |  |  |  |  |
+
 | `https://example.org/` | str_key | NS = "https://example.org/" |  |  |  |  |
 
-| `.github/workflows/release.yml` | str_key | WORKFLOW = ".github/workflows/release.yml" |  |  |  |  |
+| `/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw` | str_key | OUT_DIR = "/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw" |  |  |  |  |
 
-| `README.md` | str_key | README = "README.md" |  |  |  |  |
+| `a-paper-baader-el` | str_key | PINS = "a-paper-baader-el" |  |  |  |  |
 
-| `cargo cicd publish run` | str_key | LOCAL_ONLY_MARKER = "cargo cicd publish run" |  |  |  |  |
-
-| `cargo publish -p graphlaw` | str_key | PUBLISH_STEP = "cargo publish -p graphlaw" |  |  |  |  |
-
-| `/Users/sac/frozen-duckdb/target/wasm-build/duckdb/src/parser/peg/grammar/statements/common.gram` | str_key | GRAM = "/Users/sac/frozen-duckdb/target/wasm-build/duckdb/src/parser/peg/grammar/statements/common.gram" |  |  |  |  |
+| `graphlaw_rev` | str_key | REV_LINE = "graphlaw_rev" |  |  |  |  |
 
 | `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB` | str_key | EXPR_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt9+KeDkWJa7SiBb7AMdXAPV2qpRunztoC2c7DtRmN9+Lq2YQm4rMQmmAQcwyxTxcK8vwPKOiE4mLMwmQMvTty9tL+buREfvg5KJ+FY3Bv05cZYsf7VuYgUDcw41zSEE5W1thh5PiafcrMn7CPF0jN0oFfVvAHB/fAM0yaZGPKs3WYqnHAHa6v/cVMeiWZ/lQORCBqqL2hii1fEiuIqw6AOEoZVsN0/lqm7GfnD899zrzLOPRuP4YFg46drL1UyNdg+4TquJ2OV9kR4CAfdGRexqHFWLmoxkTfnUxJ4yL+gkV57K1H+smEdKrDhDX68pEFM/34E2eVKZoRU/0paxDZQIDAQAB" |  |  |  |  |
 
 | `core_functions` | str_key | CERTIFIED = "core_functions" |  |  |  |  |
+
+| `dvp-01` | str_key | SESSION = "dvp-01" |  |  |  |  |
+
+| `dvp-02` | str_key | SESSION = "dvp-02" |  |  |  |  |
+
+| `dvp-03` | str_key | SESSION = "dvp-03" |  |  |  |  |
+
+| `GRAPHLAW_RUN_EH` | env_key | std::env::var_os("GRAPHLAW_RUN_EH") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `target/debug/graphlaw-run-eh` | str_key | DEFAULT_BIN = "target/debug/graphlaw-run-eh" |  |  |  |  |
+
+| `target/wasm32-wasip1/wasm/graphlaw_wasm.wasm` | str_key | DEFAULT_ARTIFACT = "target/wasm32-wasip1/wasm/graphlaw_wasm.wasm" |  |  |  |  |
 
 | `COLDCHAIN_CSV_DIR` | env_key | std::env::var("COLDCHAIN_CSV_DIR") |  |  |  |  |
 
@@ -5967,15 +5315,17 @@
 
 | `SELECT o.object_id, MAX(e.temp_celsius) AS max_temp, SUM(e.duration_seconds) AS duration FROM ocel_events AS e JOIN ocel_event_object_rel AS r ON e.event_id = r.event_id JOIN ocel_objects AS o ON r.object_id = o.object_id WHERE e.temp_celsius > -20.0 AND r.qualifier = 'contains_product' AND o.object_type = 'bio:BiologicBatch' GROUP BY o.object_id` | str_key | CANONICAL_QUERY = "SELECT o.object_id, MAX(e.temp_celsius) AS max_temp, SUM(e.duration_seconds) AS duration FROM ocel_events AS e JOIN ocel_event_object_rel AS r ON e.event_id = r.event_id JOIN ocel_objects AS o ON r.object_id = o.object_id WHERE e.temp_celsius > -20.0 AND r.qualifier = 'contains_product' AND o.object_type = 'bio:BiologicBatch' GROUP BY o.object_id" |  |  |  |  |
 
-| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `@prefix sql: <http://graphlaw.org/sql#> .` | str_key | AGG_TURTLE = "@prefix sql: <http://graphlaw.org/sql#> ." |  |  |  |  |
 
 | `05ea1aa096f45968aacb2c996d2b541e4b9fdef24f006e0204e1fa88d33f68a5` | str_key | INSA_KAT_HEAD_HEX = "05ea1aa096f45968aacb2c996d2b541e4b9fdef24f006e0204e1fa88d33f68a5" |  |  |  |  |
 
 | `95163f2a6b24bebdfd19bf77cc60553640b8c9f5f5c54bc415c3b0da77e77598` | str_key | GRAPHLAW_HEAD_HEX = "95163f2a6b24bebdfd19bf77cc60553640b8c9f5f5c54bc415c3b0da77e77598" |  |  |  |  |
 
-| `INSA_LAW_PACK_ONTOLOGY` | env_key | std::env::var("INSA_LAW_PACK_ONTOLOGY") |  |  |  |  |
+| `INSA_LAW_PACK` | env_key | std::env::var("INSA_LAW_PACK") |  |  |  |  |
 
-| `/Users/sac/ggen-marketplace/packs/insa-law-pack/ontology.ttl` | str_key | ONTOLOGY_PATH = "/Users/sac/ggen-marketplace/packs/insa-law-pack/ontology.ttl" |  |  |  |  |
+| `INSA_LAW_PACK_ONTOLOGY` | env_key | std::env::var("INSA_LAW_PACK_ONTOLOGY") |  |  |  |  |
 
 | `19d9ec90cb861e8b1e320ef01e5e0d8a54022b19357f2b4856f379417dcc79d7` | str_key | ONTOLOGY_BLAKE3 = "19d9ec90cb861e8b1e320ef01e5e0d8a54022b19357f2b4856f379417dcc79d7" |  |  |  |  |
 
@@ -5989,9 +5339,109 @@
 
 | `observe` | str_key | CEILING_NAMES = "observe" |  |  |  |  |
 
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `NotSemanticContent` | str_key | REFUSAL_KINDS = "NotSemanticContent" |  |  |  |  |
+
+| `P19-WASM-IDENTITY-SKIP` | str_key | MARKER = "P19-WASM-IDENTITY-SKIP" |  |  |  |  |
+
+| `urn:n:a` | str_key | COPY_FOOTPRINT_OVERHEAD = "urn:n:a" |  |  |  |  |
+
+| `/Users/sac/purrdf/corpora/n3` | str_key | CORPUS = "/Users/sac/purrdf/corpora/n3" |  |  |  |  |
+
+| `literals-collections-conforming` | str_key | KNOWN_DIVERGENCES = "literals-collections-conforming" |  |  |  |  |
+
+| `http://example.org/n3-fuse/` | str_key | NS = "http://example.org/n3-fuse/" |  |  |  |  |
+
+| `http://example.org/n3-halt/` | str_key | NS = "http://example.org/n3-halt/" |  |  |  |  |
+
+| `http://example.org/iso/` | str_key | NS = "http://example.org/iso/" |  |  |  |  |
+
+| `http://www.w3.org/2000/10/swap/log#implies` | str_key | LOG_IMPLIES = "http://www.w3.org/2000/10/swap/log#implies" |  |  |  |  |
+
+| `n3_iterations` | str_key | NAMES = "n3_iterations" |  |  |  |  |
+
+| `@prefix : <http://example.org/lease-court/> .
+
+:tweety :is :chick .
+:chick :is :bird .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+` | str_key | ORIGINAL_SOURCE = "@prefix : <http://example.org/lease-court/> .
+
+:tweety :is :chick .
+:chick :is :bird .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+" |  |  |  |  |
+
+| `@prefix : <http://example.org/lease-court/> .
+
+:tweety :is :chick .
+:chick :is :finch .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+` | str_key | TAMPERED_SOURCE = "@prefix : <http://example.org/lease-court/> .
+
+:tweety :is :chick .
+:chick :is :finch .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+" |  |  |  |  |
+
+| `n3_proof_lease_court.n3` | str_key | LABEL = "n3_proof_lease_court.n3" |  |  |  |  |
+
+| `:daffy :is :animal` | str_key | CLAIM_TAMPERED = ":daffy :is :animal" |  |  |  |  |
+
+| `:tweety :is :animal` | str_key | CLAIM = ":tweety :is :animal" |  |  |  |  |
+
+| `@prefix : <http://example.org/proof-court/> .
+
+:tweety :is :chick .
+:chick :is :bird .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+` | str_key | CHAIN_SOURCE = "@prefix : <http://example.org/proof-court/> .
+
+:tweety :is :chick .
+:chick :is :bird .
+:bird :is :animal .
+{ ?s :is ?m . ?m :is ?a . } => { ?s :is ?a . } .
+" |  |  |  |  |
+
+| `@prefix : <http://example.org/proof-court/> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+
+:t :trigger true .
+:a :holds { :u :p _:q } .
+{ :t :trigger true . :a :holds ?F . ?F log:skolem ?S } => { :t :out ?S } .
+` | str_key | SKOLEM_SOURCE = "@prefix : <http://example.org/proof-court/> .
+@prefix log: <http://www.w3.org/2000/10/swap/log#> .
+
+:t :trigger true .
+:a :holds { :u :p _:q } .
+{ :t :trigger true . :a :holds ?F . ?F log:skolem ?S } => { :t :out ?S } .
+" |  |  |  |  |
+
+| `http://example.org/proof-court/` | str_key | NS = "http://example.org/proof-court/" |  |  |  |  |
+
+| `https://eyereasoner.github.io/.well-known/genid/` | str_key | SKOLEM_NS = "https://eyereasoner.github.io/.well-known/genid/" |  |  |  |  |
+
+| `n3_proof_pipeline_court.n3` | str_key | LABEL = "n3_proof_pipeline_court.n3" |  |  |  |  |
+
+| `http://example.org/q/` | str_key | NS = "http://example.org/q/" |  |  |  |  |
+
+| `https://eyereasoner.github.io/.well-known/genid/` | str_key | GENID = "https://eyereasoner.github.io/.well-known/genid/" |  |  |  |  |
+
+| `@prefix : <urn:n:> .` | str_key | GOOD_RULES = "@prefix : <urn:n:> ." |  |  |  |  |
+
 | `mock` | str_key | BANNED = "mock" |  |  |  |  |
 
 | `tests/no_mock_markers.rs` | str_key | ALLOWLIST = "tests/no_mock_markers.rs" |  |  |  |  |
+
+| `tests/set_operations_court.rs` | str_key | ORACLE_ALLOWLIST = "tests/set_operations_court.rs" |  |  |  |  |
+
+| `tests/wasm_env_isolation_court.rs` | str_key | UNWRAP_ALLOWLIST = "tests/wasm_env_isolation_court.rs" |  |  |  |  |
 
 | `https://example.org/` | str_key | NS = "https://example.org/" |  |  |  |  |
 
@@ -6013,6 +5463,34 @@
 
 | `b3dbbc7c945a7883a75933dfc12699af393dac5fe711009bb5f4d694a2ac399b` | str_key | ONTOLOGY_BLAKE3 = "b3dbbc7c945a7883a75933dfc12699af393dac5fe711009bb5f4d694a2ac399b" |  |  |  |  |
 
+| `PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/> ` | str_key | PFX = "PREFIX cdt: <http://w3id.org/awslabs/neptune/SPARQL-CDTs/> " |  |  |  |  |
+
+| `http://example.org/crs/planar` | str_key | CRS = "http://example.org/crs/planar" |  |  |  |  |
+
+| `http://example.org/geo#` | str_key | GEO = "http://example.org/geo#" |  |  |  |  |
+
+| `http://example.org/geof/` | str_key | GEOF = "http://example.org/geof/" |  |  |  |  |
+
+| `http://example.org/sf#` | str_key | SF = "http://example.org/sf#" |  |  |  |  |
+
+| `http://example.org/unit/metre` | str_key | METRE = "http://example.org/unit/metre" |  |  |  |  |
+
+| `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` | str_key | TYPE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" |  |  |  |  |
+
+| `http://www.w3.org/2000/01/rdf-schema#subClassOf` | str_key | SUBCLASS = "http://www.w3.org/2000/01/rdf-schema#subClassOf" |  |  |  |  |
+
+| `http://www.w3.org/2001/XMLSchema#double` | str_key | XSD_DOUBLE = "http://www.w3.org/2001/XMLSchema#double" |  |  |  |  |
+
+| `https://example.org/` | str_key | EX = "https://example.org/" |  |  |  |  |
+
+| `https://example.org/Animal` | str_key | ANIMAL = "https://example.org/Animal" |  |  |  |  |
+
+| `https://example.org/Cat` | str_key | CAT = "https://example.org/Cat" |  |  |  |  |
+
+| `https://example.org/knows` | str_key | KNOWS = "https://example.org/knows" |  |  |  |  |
+
+| `https://example.org/tom` | str_key | TOM = "https://example.org/tom" |  |  |  |  |
+
 | `d52282d8c48e9021ff6f78e413d8a79dbffbc6b28e28db9a9d855f5810bb3185` | str_key | FIXTURE_BLAKE3 = "d52282d8c48e9021ff6f78e413d8a79dbffbc6b28e28db9a9d855f5810bb3185" |  |  |  |  |
 
 | `tests/fixtures/fm_chain_009.json` | str_key | FIXTURE_PATH = "tests/fixtures/fm_chain_009.json" |  |  |  |  |
@@ -6021,9 +5499,43 @@
 
 | `derive:rdfs` | str_key | GATE = "derive:rdfs" |  |  |  |  |
 
+| `CARGO_MANIFEST_DIR` | str_key | ROOT = "CARGO_MANIFEST_DIR" |  |  |  |  |
+
+| `abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/-` | str_key | PATH_CLASS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/-" |  |  |  |  |
+
+| `receipts` | str_key | RECEIPTS_REL = "receipts" |  |  |  |  |
+
+| `receipts/logs/` | str_key | LOG_PREFIX = "receipts/logs/" |  |  |  |  |
+
 | `0123456789abcdef0123456789abcdef01234567` | str_key | SUBJECT = "0123456789abcdef0123456789abcdef01234567" |  |  |  |  |
 
-| `/Users/sac/ggen-marketplace/packs/refusal-vocabulary-pack` | str_key | SIBLING_ROOT = "/Users/sac/ggen-marketplace/packs/refusal-vocabulary-pack" |  |  |  |  |
+| `0bca2e430b2d2b856ae5b262031b0cadd1dd6ee40230ecb75d7ba3b0baf86662` | str_key | H_PRE = "0bca2e430b2d2b856ae5b262031b0cadd1dd6ee40230ecb75d7ba3b0baf86662" |  |  |  |  |
+
+| `0ce59900a950fd16a9546ae14eed62b0b4ea63102b80812c00157a56c7a1d669` | str_key | H_TRIPLES = "0ce59900a950fd16a9546ae14eed62b0b4ea63102b80812c00157a56c7a1d669" |  |  |  |  |
+
+| `48fc721fbbc172e0925fa27af1671de225ba927134802998b10a1568a188652b` | str_key | SETTLED_V1_INPUTS = "48fc721fbbc172e0925fa27af1671de225ba927134802998b10a1568a188652b" |  |  |  |  |
+
+| `61054d964e2ecadcaac7d82d06fc1bd5f732a7595824376792a3f0970aae96c1` | str_key | V2_GOLDEN = "61054d964e2ecadcaac7d82d06fc1bd5f732a7595824376792a3f0970aae96c1" |  |  |  |  |
+
+| `63bff90dee1c16beb2881e11664a1e8c0b6942abe39ba5726d9ce1f9708a8ffe` | str_key | SETTLED_V1_GOLDEN = "63bff90dee1c16beb2881e11664a1e8c0b6942abe39ba5726d9ce1f9708a8ffe" |  |  |  |  |
+
+| `7a364272788ab0a7a56b8444e9f6f76b1f0f7d90d3e5725e3496a78e732d92fd` | str_key | H_QUERY = "7a364272788ab0a7a56b8444e9f6f76b1f0f7d90d3e5725e3496a78e732d92fd" |  |  |  |  |
+
+| `9d79bfadd4c208bad3a87982bdd8f9d05991011f16b96de3cf1c5c33cf7c58df` | str_key | H_COLUMNAR = "9d79bfadd4c208bad3a87982bdd8f9d05991011f16b96de3cf1c5c33cf7c58df" |  |  |  |  |
+
+| `b208929e36eafbe6511114fe40910c486b265eff351b4e7edc47f86476db6539` | str_key | H_POST = "b208929e36eafbe6511114fe40910c486b265eff351b4e7edc47f86476db6539" |  |  |  |  |
+
+| `db2da6fc6ec068a661a7028f220524ea6fad4b3cbf7f72df336dd99fd44f7b0c` | str_key | EMPTY_GOLDEN = "db2da6fc6ec068a661a7028f220524ea6fad4b3cbf7f72df336dd99fd44f7b0c" |  |  |  |  |
+
+| `f641cf9578e7ddf23bfbb9df055c15b79fe920b9d98910ca22be069deb20f774` | str_key | V1_GOLDEN = "f641cf9578e7ddf23bfbb9df055c15b79fe920b9d98910ca22be069deb20f774" |  |  |  |  |
+
+| `7ac44b45bd8c91a1ee1a1035ba43494bd08054231a4ea6dcb9175d8cdfc04593` | str_key | SENTINEL_PIN = "7ac44b45bd8c91a1ee1a1035ba43494bd08054231a4ea6dcb9175d8cdfc04593" |  |  |  |  |
+
+| `d53d18c23212ea7b6300594bb89bce60218f6eff2b9d628b8cc42d3e79bbd5ab` | str_key | EMPTY_TRIPLES_PIN = "d53d18c23212ea7b6300594bb89bce60218f6eff2b9d628b8cc42d3e79bbd5ab" |  |  |  |  |
+
+| `db2da6fc6ec068a661a7028f220524ea6fad4b3cbf7f72df336dd99fd44f7b0c` | str_key | EMPTY_COLUMNAR_PIN = "db2da6fc6ec068a661a7028f220524ea6fad4b3cbf7f72df336dd99fd44f7b0c" |  |  |  |  |
+
+| `REFUSAL_VOCAB_PACK` | env_key | std::env::var("REFUSAL_VOCAB_PACK") |  |  |  |  |
 
 | `malformed_frame` | str_key | VALVE_EXPECTED = "malformed_frame" |  |  |  |  |
 
@@ -6051,13 +5563,43 @@
 
 | `max_request_bytes` | str_key | EXPECTED = "max_request_bytes" |  |  |  |  |
 
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `rehy-01` | str_key | SESSION = "rehy-01" |  |  |  |  |
+
+| `rehy-02` | str_key | SESSION = "rehy-02" |  |  |  |  |
+
+| `rehy-03` | str_key | SESSION = "rehy-03" |  |  |  |  |
+
 | `CARGO_BIN_EXE_sa2a-run14-verify` | str_key | BIN = "CARGO_BIN_EXE_sa2a-run14-verify" |  |  |  |  |
 
+| `../ontologies/sql-ast.ttl` | str_key | CANONICAL_SHAPES = "../ontologies/sql-ast.ttl" |  |  |  |  |
+
+| `@prefix sh: <http://www.w3.org/ns/shacl#> .` | str_key | PREFIX = "@prefix sh: <http://www.w3.org/ns/shacl#> ." |  |  |  |  |
+
+| `@prefix sql: <http://graphlaw.org/sql#> .` | str_key | AST_DOC = "@prefix sql: <http://graphlaw.org/sql#> ." |  |  |  |  |
+
+| `urn:s/` | str_key | SUBJECT = "urn:s/" |  |  |  |  |
+
+| `urn:v/` | str_key | VOCAB = "urn:v/" |  |  |  |  |
+
 | `CONFORMANCE_REPORT` | env_key | std::env::var("CONFORMANCE_REPORT") |  |  |  |  |
+
+| `../docs/reference/sql-rdf-rec.md` | str_key | REC = "../docs/reference/sql-rdf-rec.md" |  |  |  |  |
 
 | `../docs/refusals.md` | str_key | REFUSALS_MD = "../docs/refusals.md" |  |  |  |  |
 
 | `../ontologies/sql-ast.ttl` | str_key | SQL_AST_TTL = "../ontologies/sql-ast.ttl" |  |  |  |  |
+
+| `../src/sql_ast/refusals.rs` | str_key | REFUSALS_RS = "../src/sql_ast/refusals.rs" |  |  |  |  |
+
+| `@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .` | str_key | B = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> ." |  |  |  |  |
+
+| `@prefix sql: <http://graphlaw.org/sql#> .` | str_key | A = "@prefix sql: <http://graphlaw.org/sql#> ." |  |  |  |  |
+
+| `ALIASED_AGG_ARG` | str_key | PINNED_GAPS = "ALIASED_AGG_ARG" |  |  |  |  |
+
+| `OPERATOR_TOKEN` | str_key | REGISTERED_ARMS = "OPERATOR_TOKEN" |  |  |  |  |
 
 | `core_functions` | str_key | CERTIFIED_EXTENSION_RESULTS = "core_functions" |  |  |  |  |
 
@@ -6067,6 +5609,8 @@
 
 | `tests/fixtures/strata_gate_differential` | str_key | FIXTURE_ROOT = "tests/fixtures/strata_gate_differential" |  |  |  |  |
 
+| `docs/jira/v26.10.22/mega/tc-mega-fibo-01` | str_key | MEGA = "docs/jira/v26.10.22/mega/tc-mega-fibo-01" |  |  |  |  |
+
 | `cd3cde66a2a9a3440240e8ff005ca7258dfd995744f36b061102db522e33f30e` | str_key | PIN_BLAKE3 = "cd3cde66a2a9a3440240e8ff005ca7258dfd995744f36b061102db522e33f30e" |  |  |  |  |
 
 | `https://strata.chatman.ai/ontology#` | str_key | ST = "https://strata.chatman.ai/ontology#" |  |  |  |  |
@@ -6074,6 +5618,18 @@
 | `tests/fixtures/strata-temprun-ontology.ttl` | str_key | PINNED = "tests/fixtures/strata-temprun-ontology.ttl" |  |  |  |  |
 
 | `@prefix : <https://e/> .` | str_key | N3_RULES = "@prefix : <https://e/> ." |  |  |  |  |
+
+| `http://example.org/ubo#` | str_key | NS = "http://example.org/ubo#" |  |  |  |  |
+
+| `http://graphlaw.org/sql#` | str_key | SQL = "http://graphlaw.org/sql#" |  |  |  |  |
+
+| `http://www.w3.org/2001/XMLSchema#` | str_key | XSD = "http://www.w3.org/2001/XMLSchema#" |  |  |  |  |
+
+| `ubo-01` | str_key | SESSION = "ubo-01" |  |  |  |  |
+
+| `ubo-02` | str_key | SESSION = "ubo-02" |  |  |  |  |
+
+| `ubo-03` | str_key | SESSION = "ubo-03" |  |  |  |  |
 
 | `0123456789abcdef0123456789abcdef01234567` | str_key | SUBJECT = "0123456789abcdef0123456789abcdef01234567" |  |  |  |  |
 
@@ -6109,19 +5665,79 @@
 
 | `BATCH-R1` | str_key | COLD1_RELEASED = "BATCH-R1" |  |  |  |  |
 
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e` | str_key | LEGACY_DIGEST = "f149433c6e1a84ec95e961ac92b16b65b28e15d6fd8546beb1779d3b54a02e7e" |  |  |  |  |
+
+| `fibo_accounts` | str_key | FIBO_TABLE = "fibo_accounts" |  |  |  |  |
+
+| `lifecycle-a` | str_key | SESSION = "lifecycle-a" |  |  |  |  |
+
+| `lifecycle-b` | str_key | SESSION = "lifecycle-b" |  |  |  |  |
+
 | `SELECT batch_id, SUM(cost) AS total_cost FROM telemetry WHERE (latency > $1) GROUP BY batch_id` | str_key | AGG_SQL = "SELECT batch_id, SUM(cost) AS total_cost FROM telemetry WHERE (latency > $1) GROUP BY batch_id" |  |  |  |  |
+
+| `abi-court` | str_key | SESSION = "abi-court" |  |  |  |  |
 
 | `batch_id,cost,latency` | str_key | TELEMETRY_HEADER = "batch_id,cost,latency" |  |  |  |  |
 
 | `https://example.org/data` | str_key | SUBJECT = "https://example.org/data" |  |  |  |  |
 
+| `https://example.org/queries` | str_key | Q_PREFIX = "https://example.org/queries" |  |  |  |  |
+
 | `https://example.org/queries/q1` | str_key | Q1 = "https://example.org/queries/q1" |  |  |  |  |
 
 | `https://example.org/vocab` | str_key | VOCAB = "https://example.org/vocab" |  |  |  |  |
 
+| `CARGO_TARGET_DIR` | env_key | std::env::var_os("CARGO_TARGET_DIR") |  |  |  |  |
+
+| `GRAPHLAW_RUN_EH` | env_key | std::env::var_os("GRAPHLAW_RUN_EH") |  |  |  |  |
+
+| `capabilities` | str_key | OPS = "capabilities" |  |  |  |  |
+
+| `debug/graphlaw-run-eh` | str_key | EH_BIN_REL = "debug/graphlaw-run-eh" |  |  |  |  |
+
 | `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
 
+| `CARGO_TARGET_DIR` | env_key | std::env::var_os("CARGO_TARGET_DIR") |  |  |  |  |
+
+| `GRAPHLAW_RUN_EH` | env_key | std::env::var_os("GRAPHLAW_RUN_EH") |  |  |  |  |
+
 | `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/` | str_key | ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/" |  |  |  |  |
+
+| `SECRET_TEST_TOKEN` | str_key | TOKEN_NAME = "SECRET_TEST_TOKEN" |  |  |  |  |
+
+| `gl-env-court-canary-6f19e2ac` | str_key | TOKEN_VALUE = "gl-env-court-canary-6f19e2ac" |  |  |  |  |
+
+| `GRAPHLAW_DIAG_NO_EH` | env_key | std::env::var("GRAPHLAW_DIAG_NO_EH") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `FD_ALLOCATE` | str_key | RIGHTS = "FD_ALLOCATE" |  |  |  |  |
+
+| `fibo-08` | str_key | SESSION = "fibo-08" |  |  |  |  |
+
+| `http://example.org/fibo#stmt1` | str_key | FIBO_SUBJECT = "http://example.org/fibo#stmt1" |  |  |  |  |
+
+| `GRAPHLAW_DIAG_NO_EH` | env_key | std::env::var("GRAPHLAW_DIAG_NO_EH") |  |  |  |  |
+
+| `GRAPHLAW_WASM` | env_key | std::env::var_os("GRAPHLAW_WASM") |  |  |  |  |
+
+| `FD_ALLOCATE` | str_key | RIGHTS = "FD_ALLOCATE" |  |  |  |  |
+
+| `fibo-01` | str_key | SESSION = "fibo-01" |  |  |  |  |
+
+| `fibo-02` | str_key | SESSION = "fibo-02" |  |  |  |  |
+
+| `fibo-03` | str_key | SESSION = "fibo-03" |  |  |  |  |
+
+| `http://example.org/fibo#stmt1` | str_key | FIBO_SUBJECT = "http://example.org/fibo#stmt1" |  |  |  |  |
+
+| `CARGO` | env_key | std::env::var("CARGO") |  |  |  |  |
+
+| `CARGO_TARGET_DIR` | env_key | std::env::var_os("CARGO_TARGET_DIR") |  |  |  |  |
 
 | `@prefix ex: <https://e/> . ex:s ex:p ex:o .` | str_key | SAMPLE = "@prefix ex: <https://e/> . ex:s ex:p ex:o ." |  |  |  |  |
 
@@ -6139,6 +5755,16 @@
 
 | `GRAPHLAW_WASM` | env_key | std::env::var("GRAPHLAW_WASM") |  |  |  |  |
 
+| `Ambiguous` | str_key | UNWITNESSED_KINDS = "Ambiguous" |  |  |  |  |
+
+| `NotSemanticContent` | str_key | REFUSAL_KINDS = "NotSemanticContent" |  |  |  |  |
+
+| `RDF 1.2 / codecs / storage IR` | str_key | CAPABILITY_OPS = "RDF 1.2 / codecs / storage IR" |  |  |  |  |
+
+| `ResourceLimit` | str_key | REFUSAL_CODES = "ResourceLimit" |  |  |  |  |
+
+| `https://graphlaw.dev/wire-court#` | str_key | NS = "https://graphlaw.dev/wire-court#" |  |  |  |  |
+
 | `ABI_VERSION` | const | ABI_VERSION: u32 |  |  |  |  |
 
 | `CRATE_NAME` | const | CRATE_NAME: &str |  |  |  |  |
@@ -6210,6 +5836,30 @@
 | `gl_call` | function | gl_call(ptr: *mut u8, len: u32) -> u64 |  |  |  |  |
 
 | `gl_free` | function | gl_free(ptr: *mut u8, len: u32) |  |  |  |  |
+
+| `__cxa_atexit` | function | __cxa_atexit( _func: unsafe extern "C" fn(*mut c_void), _arg: *mut c_void, _dso: *mut c_void, ) -> i32 |  |  |  |  |
+
+| `__cxa_finalize` | function | __cxa_finalize(_d: *mut c_void) |  |  |  |  |
+
+| `__funcs_on_exit` | function | __funcs_on_exit() |  |  |  |  |
+
+| `atexit` | function | atexit(_func: unsafe extern "C" fn()) -> i32 |  |  |  |  |
+
+| `graphlaw_wasm_register_static_extensions` | function | graphlaw_wasm_register_static_extensions() -> i32 |  |  |  |  |
+
+| `C` | str_key | REGISTER = "C" |  |  |  |  |
+
+| `__cxa_atexit` | function | __cxa_atexit( _func: unsafe extern "C" fn(*mut c_void), _arg: *mut c_void, _dso: *mut c_void, ) -> i32 |  |  |  |  |
+
+| `__cxa_finalize` | function | __cxa_finalize(_d: *mut c_void) |  |  |  |  |
+
+| `__funcs_on_exit` | function | __funcs_on_exit() |  |  |  |  |
+
+| `atexit` | function | atexit(_func: unsafe extern "C" fn()) -> i32 |  |  |  |  |
+
+| `graphlaw_wasm_register_static_extensions` | function | graphlaw_wasm_register_static_extensions() -> i32 |  |  |  |  |
+
+| `C` | str_key | REGISTER = "C" |  |  |  |  |
 
 
 <!-- ============================================================= -->

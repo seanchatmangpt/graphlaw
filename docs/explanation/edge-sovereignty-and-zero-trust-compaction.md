@@ -10,14 +10,21 @@ GraphLaw with embedded `frozen-duckdb` introduces a sovereign third paradigm: **
 
 ---
 
-## 1. Zero-Trust Semantic Compaction (1,000:1 to 10,000:1)
+## 1. Zero-Trust Semantic Compaction
 
 Rather than transmitting every raw reading across the network, GraphLaw compresses event streams **semantically and cryptographically**:
 
-* **Local Ingestion Layer**: Millions of raw readings (temperatures, vibrations, network telemetry, OCEL v2 logs) are appended to high-throughput, columnar in-memory buffers or local Parquet partitions managed by `frozen-duckdb`. Microsecond append times ensure no CPU thread starvation.
+* **Local Ingestion Layer**: Raw readings (temperatures, vibrations, network
+  telemetry, OCEL v2 logs) are appended to high-throughput, columnar in-memory
+  buffers or local Parquet partitions managed by `frozen-duckdb`. Throughput is
+  workload-dependent; no fixed append-latency or row-count figure is asserted.
 * **Declarative Reduction**: At defined window boundaries, GraphLaw evaluates declarative SQL-in-RDF ASTs over the local partition. Zone maps and dictionary encoding allow instantaneous columnar aggregations without full decompression.
 * **Cryptographic Emission**: Instead of streaming multi-megabyte log files, GraphLaw materializes a compact set of RDF state transitions sealed with a **BLAKE3 execution receipt**.
-* **Bandwidth Multiplier**: A 500,000-event telemetry burst reduces to ~1 KB of signed RDF triples—achieving compaction ratios exceeding **10,000:1** while retaining complete mathematical auditability.
+* **Bandwidth Multiplier**: Event bursts reduce to signed RDF triples whose size and
+  compaction ratio are workload-dependent; no fixed ratio is asserted. The
+  court-witnessed reduction is `tests/sieve_court.rs`: a 10^6-row in-engine GROUP BY
+  lands inside the evaluator's default 64-row result envelope, and result sets over
+  the envelope refuse as a typed `ResourceLimit` (`duckdb_result_rows`).
 
 ---
 

@@ -115,7 +115,7 @@ error, never a trap.
 | plan_actions | `MAX_PLAN_ACTIONS` | 1,000 | each action replayed + re-canonicalized |
 | atoms_per_field | `MAX_ATOMS_PER_FIELD` | 10,000 | N-Triples lines per pre/add/del/goal field |
 | policy_entries | `MAX_POLICY_ENTRIES` | 100,000 | FOND policy entries |
-| n3_iterations | `law::N3_MAX_ITERATIONS` | 4,000 | Eyeron max_iterations cap (its default is 1,000,000) |
+| n3_iterations | `law::N3_MAX_ITERATIONS` | 4,000 | purrdf-n3 max_iterations cap (its default is 1,000,000) |
 
 All consts are `pub` in `graphlaw::abi` / `graphlaw::law`; caps are checked before
 parsing or heavy work.

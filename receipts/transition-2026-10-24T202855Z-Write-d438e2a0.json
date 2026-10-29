@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "d438e2a0d3623eac9e5528b8efc2e46e38b95deaf9d183a37b6f4cf113b2d1d5",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T202855Z-Write-d438e2a0.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/bat-templates/r1-dialect-census.md",
+  "timestamp_utc": "2026-10-24T202855Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

@@ -5,11 +5,9 @@ name: Release
 #   1. build and test the WASI module and the whole workspace,
 #   2. tag vX.Y.Z and create the GitHub release with graphlaw.wasm, the capability
 #      registry (capability-registry.json/.ttl) and op-examples.json, each with a .blake3,
-#   3. publish: intentionally absent. crates.io publishing is local-only
-#      (operator decision 2026-10-10): `cargo publish -p graphlaw-eyeron &&
-#      cargo publish -p graphlaw` from a logged-in machine; CI never holds
-#      registry credentials. (graphlaw depends on graphlaw-eyeron, so eyeron
-#      is published first.)
+#   3. publish: none. graphlaw does not publish to crates.io — its purrdf
+#      dependency is the rev-pinned seanchatmangpt/purrdf fork, so the crate
+#      cannot publish; distribution is the repository and these release assets.
 # A run with nothing to release exits in seconds. All steps are idempotent.
 # To release: merge a change that bumps the version. Nothing else is required.
 # HOLD: while the repository variable RELEASE_HOLD is `true`, every step below
@@ -29,10 +27,10 @@ permissions:
   contents: write
 
 jobs:
-  # NOT locally reproducible end to end: it tags/releases via GH_TOKEN and
-  # queries crates.io index state. The build/test portion is reproducible
-  # locally (cargo build + cargo test + cargo package, see CLAUDE.md ladder).
-  # A green run with work=no is normal (nothing to release), not a skipped gate.
+  # NOT locally reproducible end to end: it tags/releases via GH_TOKEN. The
+  # build/test portion is reproducible locally (cargo build + cargo test, see
+  # CLAUDE.md ladder). A green run with work=no is normal (nothing to release),
+  # not a skipped gate.
   release:
     name: release if unreleased (tag + GitHub release with blake3 sidecars)
     runs-on: ubuntu-latest
@@ -46,7 +44,7 @@ jobs:
           ref: main
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
-          toolchain: 1.96.0
+          toolchain: 1.98.0
           targets: wasm32-wasip1
       # WASI setup: same staged-SDK + duckdb wasm32-archive recipe as ci.yml,
       # extracted into one composite action — the wasm link refuses to build
@@ -58,26 +56,17 @@ jobs:
           set -euo pipefail
           meta=$(cargo metadata --no-deps --format-version 1)
           ver() { echo "$meta" | python3 -c "import json,sys; print(next(p['version'] for p in json.load(sys.stdin)['packages'] if p['name']=='$1'))"; }
-          on_registry() { # crate version
-            local n=$1 v=$2 p
-            if [ ${#n} -le 3 ]; then p="${#n}/$n"; else p="${n:0:2}/${n:2:2}/$n"; fi
-            local idx; idx=$(curl -fsS "https://index.crates.io/$p" 2>/dev/null || true)
-            if grep -q "\"vers\":\"$v\"" <<<"$idx"; then echo yes; else echo no; fi
-          }
-          g=$(ver graphlaw); e=$(ver graphlaw-eyeron)
+          g=$(ver graphlaw)
           tags=$(git ls-remote --tags origin "refs/tags/v$g" || true)
           tag=$([ -n "$tags" ] && echo yes || echo no)
-          ep=$(on_registry graphlaw-eyeron "$e")
-          gp=$(on_registry graphlaw "$g")
           work=no
           if [ "${RELEASE_HOLD:-}" = true ]; then
-            echo "RELEASE_HOLD is true: skipping tag and publish"
-            tag=yes; ep=yes; gp=yes
+            echo "RELEASE_HOLD is true: skipping tag"
+            tag=yes
           fi
-          if [ "$tag" = no ] || [ "$ep" = no ] || [ "$gp" = no ]; then work=yes; fi
+          if [ "$tag" = no ]; then work=yes; fi
           {
-            echo "graphlaw=$g"; echo "tag_exists=$tag"
-            echo "eyeron_published=$ep"; echo "graphlaw_published=$gp"; echo "work=$work"
+            echo "graphlaw=$g"; echo "tag_exists=$tag"; echo "work=$work"
           } >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
 
@@ -97,7 +86,6 @@ jobs:
           set -euo pipefail
           cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
           GRAPHLAW_WASM="$PWD/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm" cargo test --locked --all-targets --all-features
-          cargo package -p graphlaw-eyeron -p graphlaw
 
       - name: Tag and create the GitHub release
         if: steps.plan.outputs.work == 'yes'
@@ -121,8 +109,8 @@ jobs:
             dist/op-examples.json dist/op-examples.json.blake3 \
             --target "$(git rev-parse HEAD)" --generate-notes --title "graphlaw $v"
 
-      - name: Publish (refused in CI)
-        if: steps.plan.outputs.eyeron_published == 'no' || steps.plan.outputs.graphlaw_published == 'no'
+      - name: No crates.io publication (policy witness)
         run: |
-          echo "Publishing is local-only: run 'cargo publish -p graphlaw-eyeron && cargo publish -p graphlaw' from a logged-in machine."
-          echo "CI tags and ships release artifacts only. Skipping crates.io publish."
+          echo "graphlaw does not publish to crates.io: its purrdf dependency is the"
+          echo "rev-pinned seanchatmangpt/purrdf fork. Distribution is this repository"
+          echo "and the GitHub release assets."

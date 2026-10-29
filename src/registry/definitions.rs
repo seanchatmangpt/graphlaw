@@ -140,7 +140,7 @@ pub struct DialectRow {
 }
 
 /// Engines that own dialects.
-pub const ENGINES: &[&str] = &["PurRdf", "Eyeron", "FrozenDuckdb"];
+pub const ENGINES: &[&str] = &["PurRdf", "FrozenDuckdb"];
 /// Refusal kinds.
 pub const REFUSAL_KINDS: &[&str] = &[
     "NotSemanticContent",
@@ -346,7 +346,7 @@ pub const OPS: &[Op] = &[
         ],
         responses: &[one(&[
             req("dialect", "string", "Sniffed dialect (Rust variant name)."),
-            req("engine", "string", "Owning engine (PurRdf or Eyeron)."),
+            req("engine", "string", "Owning engine (PurRdf or FrozenDuckdb)."),
         ])],
         refusal_kinds: KINDS_SNIFF,
         refusal_codes: CODES_LIMIT,
@@ -517,7 +517,7 @@ pub const OPS: &[Op] = &[
         responses: &[one(&[req(
             "derived",
             "any",
-            "Reasoner output; shape is owned by Eyeron.",
+            "Reasoner output; shape is owned by purrdf::n3.",
         )])],
         refusal_kinds: KINDS_ENGINE,
         refusal_codes: CODES_LIMIT,

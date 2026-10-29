@@ -1,5 +1,15 @@
 # design-sniff-fixes
 
+**Status: Implemented** (synced 2026-10-24, v26.10.24 register lane).
+Implementation landed in `6da1d33` — `src/dialect/sniff.rs` (literal-strip
+in `route_sql_rdf`, IRI-aware `#` in `skeleton`, escape-aware `line_terms`,
+SNIFF-01 `BareSql` refusal, `HEAD_BUDGET: usize = 8192` at
+`src/dialect/sniff.rs:25`), `tests/sniff_court.rs` on disk, SNIFF-01
+registered append-only at `docs/refusals.md:220`. Residual: the
+native-vs-wasm sniff differential (battery L4,
+`tests/op_differential.rs:181`) carries as G8 in
+`docs/jira/v26.10.24/ROADMAP-v26.10.24.md`.
+
 Design spec for the sniff-layer fixes (G8 root-cause class behind the
 `corpus_conformance` failures). One file changes: `src/dialect/sniff.rs`, plus a
 new court file `tests/sniff_court.rs`. No manifest edits; no generated artifacts.

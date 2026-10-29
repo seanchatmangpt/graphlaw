@@ -117,15 +117,18 @@ WASI_SDK_PATH="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1" \
   cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 ```
 
-The DuckDB-linked artifact is 58,124,612 B (~58 MB class). The current pin
-is `58a44095…d2280a` (58,124,612 B), verified live on all four pin surfaces
+The DuckDB-linked artifact is 60,895,924 B (~61 MB class). The current pin
+is `0858a760…a5ddd2f1` (60,895,924 B), verified live on all four pin surfaces
 (`priv/graphlaw.wasm.blake3`, the `registry/ARTIFACTS.blake3` wasm row,
 `js/npm/src/generated/artifact-meta.ts`, and a live `b3sum` of
-`priv/graphlaw.wasm`; final-tree-audit check 2,
-`docs/jira/v26.10.23/final-tree-audit.md`). Historical pins (prior
-generations, superseded): the EH-closure settle pin `fa155830…`
-(57,781,384 B), the tag-section-0 pin `f149433c…` (7,104,147 B), and the
-DuckDB-linked lane link witness `9d299ed8…` (45,162,366 B, 2026-10-22).
+`priv/graphlaw.wasm`; four-surface re-verification 2026-10-26, X2 lane re-pin).
+Historical pins (prior generations, superseded): the 26.10.26 L2-WASM
+re-mint `430da572…` (60,893,336 B, superseded same-day at the migrated
+sql_ast surface), the 26.10.23 four-surface settle pin `58a44095…d2280a`
+(58,124,612 B; final-tree-audit check 2,
+`docs/jira/v26.10.23/final-tree-audit.md`), the EH-closure settle pin
+`fa155830…` (57,781,384 B), the tag-section-0 pin `f149433c…` (7,104,147 B),
+and the DuckDB-linked lane link witness `9d299ed8…` (45,162,366 B, 2026-10-22).
 The smalt
 sandbox's 64 MiB linear-memory wall
 (`/Users/sac/smalt/docs/jira/v26.10.21/WASM-SANDBOX-SPEC.md`) is the
@@ -162,17 +165,16 @@ after `cargo clean -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`,
 same target dir and machine, produced identical bytes. Not verified across
 separate target dirs or machines.
 
-### Pin currency (on-disk pins, header `pin-source=26.10.22`)
+### Pin currency (on-disk pins, wasm row minted 2026-10-26)
 
-The on-disk pins read `58a44095…d2280a` (58,124,612 B), the shipped
-new-EH DuckDB-linked mint carried by tag `v26.10.22` (`registry/ARTIFACTS.blake3`
+The on-disk pins read `0858a760…a5ddd2f1` (60,895,924 B), the shipped
+new-EH DuckDB-linked mint from the 2026-10-26 X2 re-pin (`registry/ARTIFACTS.blake3`
 wasm row; matches `priv/graphlaw.wasm` live;
-`js/npm/src/generated/artifact-meta.ts`; verified across all four surfaces,
-`docs/jira/v26.10.23/final-tree-audit.md` check 2). This
+`js/npm/src/generated/artifact-meta.ts`; four surfaces verified 2026-10-26). This
 section is refreshed by the re-pin procedure in the upgrade checklist,
 never hand-written from a guess. Historical pins (prior generations,
 each superseded): the EH-closure settle pin
-`fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`
+`fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107` # historical — interim pin superseded by 58a44095…d2280a
 (57,781,384 B); the pre-26.10.22 workspace pin
 `74ec3c8d6cdb3db1ff1869ac8b2454c2cf94d08f2a211b0b7d2af2c36b08a7a5`
 (7,098,370 B);
@@ -194,8 +196,8 @@ counts WASI imports (any hit exits 1), and loud-skips (exit 3) when no wasm
 runtime tooling is on PATH — never a silent pass.
 
 The clock is the one WASI syscall that would otherwise trap: under
-`wasm32-unknown-unknown`, `graphlaw-eyeron`'s `current_unix_time`
-(`crates/graphlaw-eyeron/src/reasoner.rs`) calls JS `Date.now()` through a
+`wasm32-unknown-unknown`, purrdf-n3's `current_unix_time`
+(purrdf fork crates/n3 `src/reasoner.rs`) calls JS `Date.now()` through a
 wasm-bindgen extern (`__wbg_now` host glue) instead of `SystemTime::now()`,
 which panics there. All other `graphlaw` law/lease paths are clockless by
 construction — callers pass `now_unix` explicitly.

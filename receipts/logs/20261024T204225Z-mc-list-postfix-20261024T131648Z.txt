@@ -1,0 +1,204 @@
+src/abi.rs:48:48: replace * with +
+src/abi.rs:48:48: replace * with /
+src/abi.rs:48:41: replace * with +
+src/abi.rs:48:41: replace * with /
+src/abi.rs:73:58: replace * with +
+src/abi.rs:73:58: replace * with /
+src/abi.rs:73:51: replace * with +
+src/abi.rs:73:51: replace * with /
+src/abi.rs:84:9: replace <impl From<Refusal> for Fail>::from -> Self with Default::default()
+src/abi.rs:94:5: replace fail_with_details -> Fail with Default::default()
+src/abi.rs:103:5: replace limit -> Fail with Default::default()
+src/abi.rs:117:5: replace check_limit -> Res<()> with Res::new()
+src/abi.rs:117:5: replace check_limit -> Res<()> with Res::from_iter([()])
+src/abi.rs:117:5: replace check_limit -> Res<()> with Res::new(())
+src/abi.rs:117:5: replace check_limit -> Res<()> with Res::from(())
+src/abi.rs:117:17: replace > with == in check_limit
+src/abi.rs:117:17: replace > with < in check_limit
+src/abi.rs:117:17: replace > with >= in check_limit
+src/abi.rs:125:5: replace json_depth -> usize with 0
+src/abi.rs:125:5: replace json_depth -> usize with 1
+src/abi.rs:130:25: replace == with != in json_depth
+src/abi.rs:132:25: replace == with != in json_depth
+src/abi.rs:138:13: delete match arm b'"' in json_depth
+src/abi.rs:139:13: delete match arm b'[' | b'{' in json_depth
+src/abi.rs:143:13: delete match arm b']' | b'}' in json_depth
+src/abi.rs:140:23: replace += with -= in json_depth
+src/abi.rs:140:23: replace += with *= in json_depth
+src/abi.rs:152:5: replace limit_response -> Vec<u8> with vec![]
+src/abi.rs:152:5: replace limit_response -> Vec<u8> with vec![0]
+src/abi.rs:152:5: replace limit_response -> Vec<u8> with vec![1]
+src/abi.rs:157:5: replace missing_buffer_response -> Vec<u8> with vec![]
+src/abi.rs:157:5: replace missing_buffer_response -> Vec<u8> with vec![0]
+src/abi.rs:157:5: replace missing_buffer_response -> Vec<u8> with vec![1]
+src/abi.rs:167:5: replace unknown_buffer_response -> Vec<u8> with vec![]
+src/abi.rs:167:5: replace unknown_buffer_response -> Vec<u8> with vec![0]
+src/abi.rs:167:5: replace unknown_buffer_response -> Vec<u8> with vec![1]
+src/abi.rs:173:5: replace bad_refusal -> Refusal with Default::default()
+src/abi.rs:182:5: replace bad -> Fail with Default::default()
+src/abi.rs:187:5: replace call -> Vec<u8> with vec![]
+src/abi.rs:187:5: replace call -> Vec<u8> with vec![0]
+src/abi.rs:187:5: replace call -> Vec<u8> with vec![1]
+src/abi.rs:198:5: replace respond -> Vec<u8> with vec![]
+src/abi.rs:198:5: replace respond -> Vec<u8> with vec![0]
+src/abi.rs:198:5: replace respond -> Vec<u8> with vec![1]
+src/abi.rs:214:5: replace refusal_json -> Value with Default::default()
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::new()
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::from_iter([""])
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::new("")
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::from("")
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::from_iter(["xyzzy"])
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::new("xyzzy")
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::from("xyzzy")
+src/abi.rs:234:5: replace opt_str -> Option<&'a str> with None
+src/abi.rs:234:5: replace opt_str -> Option<&'a str> with Some("")
+src/abi.rs:234:5: replace opt_str -> Option<&'a str> with Some("xyzzy")
+src/abi.rs:239:5: replace dialect_by_name -> Result<Dialect, Refusal> with Ok(Default::default())
+src/abi.rs:259:5: replace spec_dialect -> Res<Dialect> with Res::new()
+src/abi.rs:259:5: replace spec_dialect -> Res<Dialect> with Res::from_iter([Default::default()])
+src/abi.rs:259:5: replace spec_dialect -> Res<Dialect> with Res::new(Default::default())
+src/abi.rs:259:5: replace spec_dialect -> Res<Dialect> with Res::from(Default::default())
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::new()
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::from_iter([Box::leak(Box::new(Default::default()))])
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::new(Box::leak(Box::new(Default::default())))
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::from(Box::leak(Box::new(Default::default())))
+src/abi.rs:271:9: delete match arm Some(Value::String(_)) in spec_of
+src/abi.rs:270:20: replace match guard s.is_object() with true in spec_of
+src/abi.rs:270:20: replace match guard s.is_object() with false in spec_of
+src/abi.rs:279:5: replace state_of -> Res<LawState> with Res::new()
+src/abi.rs:279:5: replace state_of -> Res<LawState> with Res::from_iter([Default::default()])
+src/abi.rs:279:5: replace state_of -> Res<LawState> with Res::new(Default::default())
+src/abi.rs:279:5: replace state_of -> Res<LawState> with Res::from(Default::default())
+src/abi.rs:288:5: replace state_field -> Res<LawState> with Res::new()
+src/abi.rs:288:5: replace state_field -> Res<LawState> with Res::from_iter([Default::default()])
+src/abi.rs:288:5: replace state_field -> Res<LawState> with Res::new(Default::default())
+src/abi.rs:288:5: replace state_field -> Res<LawState> with Res::from(Default::default())
+src/abi.rs:292:5: replace term_json -> Value with Default::default()
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::new()
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::from_iter([String::new()])
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::new(String::new())
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::from(String::new())
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::from_iter(["xyzzy".into()])
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::new("xyzzy".into())
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::from("xyzzy".into())
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::new()
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::from_iter([Default::default()])
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::new(Default::default())
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::from(Default::default())
+src/abi.rs:340:5: replace call_json -> Value with Default::default()
+src/registry/definitions.rs:56:9: replace Field::nullable -> Self with Default::default()
+src/registry/definitions.rs:61:9: replace Field::with_enum -> Self with Default::default()
+src/registry/definitions.rs:66:9: replace Field::with_default -> Self with Default::default()
+src/registry/definitions.rs:72:5: replace req -> Field with Default::default()
+src/registry/definitions.rs:76:5: replace opt -> Field with Default::default()
+src/registry/definitions.rs:288:5: replace one -> Variant with Default::default()
+src/registry/definitions.rs:880:5: replace op_names -> Vec<&'static str> with vec![]
+src/registry/definitions.rs:880:5: replace op_names -> Vec<&'static str> with vec![""]
+src/registry/definitions.rs:880:5: replace op_names -> Vec<&'static str> with vec!["xyzzy"]
+src/registry/definitions.rs:885:5: replace rdf_dialect_names -> Vec<&'static str> with vec![]
+src/registry/definitions.rs:885:5: replace rdf_dialect_names -> Vec<&'static str> with vec![""]
+src/registry/definitions.rs:885:5: replace rdf_dialect_names -> Vec<&'static str> with vec!["xyzzy"]
+src/registry/definitions.rs:890:5: replace other_dialect_names -> Vec<&'static str> with vec![]
+src/registry/definitions.rs:890:5: replace other_dialect_names -> Vec<&'static str> with vec![""]
+src/registry/definitions.rs:890:5: replace other_dialect_names -> Vec<&'static str> with vec!["xyzzy"]
+src/registry/emit_json.rs:15:5: replace json_string_array -> Value with Default::default()
+src/registry/emit_json.rs:19:5: replace field_json -> Value with Default::default()
+src/registry/emit_json.rs:37:5: replace fields_json -> Value with Default::default()
+src/registry/emit_json.rs:41:43: replace + with - in fields_json
+src/registry/emit_json.rs:41:43: replace + with * in fields_json
+src/registry/emit_json.rs:47:5: replace dialects_json -> Value with Default::default()
+src/registry/emit_json.rs:62:5: replace surface_document -> Value with Default::default()
+src/registry/emit_json.rs:74:5: replace receipt_surface_document -> Value with Default::default()
+src/registry/emit_json.rs:114:5: replace blake3_of -> String with String::new()
+src/registry/emit_json.rs:114:5: replace blake3_of -> String with "xyzzy".into()
+src/registry/emit_json.rs:125:5: replace base_document -> Value with Default::default()
+src/registry/emit_json.rs:296:5: replace limit_meta_json -> Value with Default::default()
+src/registry/emit_json.rs:578:5: replace models_json -> Value with Default::default()
+src/registry/emit_json.rs:600:5: replace model_enums_json -> Value with Default::default()
+src/registry/emit_json.rs:619:5: replace document -> &'static Value with Box::leak(Box::new(Default::default()))
+src/registry/emit_json.rs:632:5: replace surface_blake3 -> String with String::new()
+src/registry/emit_json.rs:632:5: replace surface_blake3 -> String with "xyzzy".into()
+src/registry/emit_json.rs:640:5: replace receipt_surface_blake3 -> String with String::new()
+src/registry/emit_json.rs:640:5: replace receipt_surface_blake3 -> String with "xyzzy".into()
+src/registry/emit_json.rs:645:5: replace registry_blake3 -> String with String::new()
+src/registry/emit_json.rs:645:5: replace registry_blake3 -> String with "xyzzy".into()
+src/registry/emit_json.rs:654:5: replace registry_value -> Value with Default::default()
+src/registry/emit_json.rs:658:5: replace escape_json with ()
+src/registry/emit_json.rs:668:18: replace match guard (c as u32) < 0x20 with true in escape_json
+src/registry/emit_json.rs:668:18: replace match guard (c as u32) < 0x20 with false in escape_json
+src/registry/emit_json.rs:668:29: replace < with == in escape_json
+src/registry/emit_json.rs:668:29: replace < with > in escape_json
+src/registry/emit_json.rs:668:29: replace < with <= in escape_json
+src/registry/emit_json.rs:678:5: replace sorted_entries -> BTreeMap<&str, &Value> with BTreeMap::new()
+src/registry/emit_json.rs:678:5: replace sorted_entries -> BTreeMap<&str, &Value> with BTreeMap::from_iter([("", Box::leak(Box::new(Default::default())))])
+src/registry/emit_json.rs:678:5: replace sorted_entries -> BTreeMap<&str, &Value> with BTreeMap::from_iter([("xyzzy", Box::leak(Box::new(Default::default())))])
+src/registry/emit_json.rs:682:5: replace write_json with ()
+src/registry/emit_json.rs:694:22: replace > with == in write_json
+src/registry/emit_json.rs:694:22: replace > with < in write_json
+src/registry/emit_json.rs:694:22: replace > with >= in write_json
+src/registry/emit_json.rs:699:52: replace + with - in write_json
+src/registry/emit_json.rs:699:52: replace + with * in write_json
+src/registry/emit_json.rs:701:51: replace + with - in write_json
+src/registry/emit_json.rs:701:51: replace + with * in write_json
+src/registry/emit_json.rs:716:22: replace > with == in write_json
+src/registry/emit_json.rs:716:22: replace > with < in write_json
+src/registry/emit_json.rs:716:22: replace > with >= in write_json
+src/registry/emit_json.rs:721:52: replace + with - in write_json
+src/registry/emit_json.rs:721:52: replace + with * in write_json
+src/registry/emit_json.rs:728:51: replace + with - in write_json
+src/registry/emit_json.rs:728:51: replace + with * in write_json
+src/registry/emit_json.rs:742:5: replace canonical -> String with String::new()
+src/registry/emit_json.rs:742:5: replace canonical -> String with "xyzzy".into()
+src/registry/emit_json.rs:750:5: replace registry_json_pretty -> String with String::new()
+src/registry/emit_json.rs:750:5: replace registry_json_pretty -> String with "xyzzy".into()
+src/registry/emit_ttl.rs:13:5: replace node -> String with String::new()
+src/registry/emit_ttl.rs:13:5: replace node -> String with "xyzzy".into()
+src/registry/emit_ttl.rs:17:5: replace lit -> String with String::new()
+src/registry/emit_ttl.rs:17:5: replace lit -> String with "xyzzy".into()
+src/registry/emit_ttl.rs:26:18: replace match guard (c as u32) < 0x20 with true in lit
+src/registry/emit_ttl.rs:26:18: replace match guard (c as u32) < 0x20 with false in lit
+src/registry/emit_ttl.rs:26:29: replace < with == in lit
+src/registry/emit_ttl.rs:26:29: replace < with > in lit
+src/registry/emit_ttl.rs:26:29: replace < with <= in lit
+src/registry/emit_ttl.rs:37:5: replace text_of -> String with String::new()
+src/registry/emit_ttl.rs:37:5: replace text_of -> String with "xyzzy".into()
+src/registry/emit_ttl.rs:44:5: replace int_of -> String with String::new()
+src/registry/emit_ttl.rs:44:5: replace int_of -> String with "xyzzy".into()
+src/registry/emit_ttl.rs:48:5: replace bool_of -> String with String::new()
+src/registry/emit_ttl.rs:48:5: replace bool_of -> String with "xyzzy".into()
+src/registry/emit_ttl.rs:55:5: replace items -> &'a[Value] with Vec::leak(Vec::new())
+src/registry/emit_ttl.rs:55:5: replace items -> &'a[Value] with Vec::leak(vec![Default::default()])
+src/registry/emit_ttl.rs:62:9: replace Graph::add with ()
+src/registry/emit_ttl.rs:67:9: replace Graph::typed with ()
+src/registry/emit_ttl.rs:71:9: replace Graph::fields with ()
+src/registry/emit_ttl.rs:83:58: delete ! in Graph::fields
+src/registry/emit_ttl.rs:90:53: replace + with - in Graph::fields
+src/registry/emit_ttl.rs:90:53: replace + with * in Graph::fields
+src/registry/emit_ttl.rs:98:5: replace graph -> Graph with Default::default()
+src/registry/emit_ttl.rs:125:43: replace + with - in graph
+src/registry/emit_ttl.rs:125:43: replace + with * in graph
+src/registry/emit_ttl.rs:165:51: replace + with - in graph
+src/registry/emit_ttl.rs:165:51: replace + with * in graph
+src/registry/emit_ttl.rs:231:45: replace + with - in graph
+src/registry/emit_ttl.rs:231:45: replace + with * in graph
+src/registry/emit_ttl.rs:295:44: replace + with - in graph
+src/registry/emit_ttl.rs:295:44: replace + with * in graph
+src/registry/emit_ttl.rs:305:5: replace registry_turtle -> String with String::new()
+src/registry/emit_ttl.rs:305:5: replace registry_turtle -> String with "xyzzy".into()
+src/registry/emit_ttl.rs:314:13: replace < with == in registry_turtle
+src/registry/emit_ttl.rs:314:13: replace < with > in registry_turtle
+src/registry/emit_ttl.rs:314:13: replace < with <= in registry_turtle
+src/registry/emit_ttl.rs:319:23: replace + with - in registry_turtle
+src/registry/emit_ttl.rs:319:23: replace + with * in registry_turtle
+src/registry/emit_ttl.rs:320:35: replace && with || in registry_turtle
+src/registry/emit_ttl.rs:320:17: replace < with == in registry_turtle
+src/registry/emit_ttl.rs:320:17: replace < with > in registry_turtle
+src/registry/emit_ttl.rs:320:17: replace < with <= in registry_turtle
+src/registry/emit_ttl.rs:320:54: replace == with != in registry_turtle
+src/registry/emit_ttl.rs:321:15: replace += with -= in registry_turtle
+src/registry/emit_ttl.rs:321:15: replace += with *= in registry_turtle
+src/registry/emit_ttl.rs:327:32: replace == with != in registry_turtle
+src/registry/emit_ttl.rs:327:28: replace + with - in registry_turtle
+src/registry/emit_ttl.rs:327:28: replace + with * in registry_turtle
+src/registry/emit_ttl.rs:327:37: replace - with + in registry_turtle
+src/registry/emit_ttl.rs:327:37: replace - with / in registry_turtle

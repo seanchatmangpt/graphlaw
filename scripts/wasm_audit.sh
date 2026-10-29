@@ -52,7 +52,7 @@ fi
 # artifacts were the 7.1 MB engine-free class; the DuckDB-linked artifact is
 # the M4 witness class (~45 MB). A tag-count-0 artifact at that size class
 # means the engine did not link. ---
-MAX_BYTES=67108864
+MAX_BYTES=83886080
 
 if [[ ! -f "$SUBJECT" ]]; then
     echo "[MISSING] wasm artifact not found: $SUBJECT" >&2

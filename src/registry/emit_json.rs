@@ -166,7 +166,11 @@ fn base_document() -> Value {
             "n3_max_derived_facts": crate::law::N3_MAX_DERIVED_FACTS,
             "n3_max_total_bytes": crate::law::N3_MAX_TOTAL_BYTES,
             "n3_max_term_bytes": crate::law::N3_MAX_TERM_BYTES,
-            "n3_max_match_steps": crate::law::N3_MAX_TOTAL_STEPS,
+            "n3_max_match_steps": crate::law::N3_MAX_MATCH_STEPS,
+            "n3_max_total_steps": crate::law::N3_MAX_TOTAL_STEPS,
+            "n3_max_backward_depth": crate::law::N3_MAX_BACKWARD_DEPTH,
+            "n3_max_backward_solutions_per_goal": crate::law::N3_MAX_BACKWARD_SOLUTIONS_PER_GOAL,
+            "n3_max_term_depth": crate::law::N3_MAX_TERM_DEPTH,
             "max_plan_total_atoms": crate::plan::MAX_PLAN_TOTAL_ATOMS,
             "hooks_max_rounds": crate::hooks::MAX_ROUNDS,
             "hooks_max_firings": crate::hooks::MAX_FIRINGS,
@@ -260,6 +264,37 @@ const LIMIT_META: &[(&str, &str, &str, &str, Option<&str>)] = &[
         "steps",
         "src/law.rs",
         Some("n3_match_steps"),
+    ),
+    (
+        "n3_max_total_steps",
+        "n3",
+        "steps",
+        "src/law.rs",
+        // `ReasonerLimit::MatchSteps` answers `n3_match_steps` for both the
+        // per-search and the run-wide ceiling; the receipt's `max`
+        // discriminates them.
+        Some("n3_match_steps"),
+    ),
+    (
+        "n3_max_backward_depth",
+        "n3",
+        "count",
+        "src/law.rs",
+        Some("n3_backward_depth"),
+    ),
+    (
+        "n3_max_backward_solutions_per_goal",
+        "n3",
+        "count",
+        "src/law.rs",
+        Some("n3_backward_solutions_per_goal"),
+    ),
+    (
+        "n3_max_term_depth",
+        "n3",
+        "count",
+        "src/law.rs",
+        Some("n3_term_depth"),
     ),
     (
         "max_plan_total_atoms",

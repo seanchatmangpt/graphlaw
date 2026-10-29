@@ -11,7 +11,11 @@
 use std::path::PathBuf;
 use std::process::Command;
 
-const MAX_BYTES: u64 = 67_108_864; // 64 MiB sandbox wall (docs/WASM.md)
+// Was the 64 MiB sandbox wall; fork HEAD (seanchatmangpt/purrdf @ 2223f894)
+// grew the DuckDB-linked ONE-unit artifact to ~70.7 MiB (GeoSPARQL, extended
+// SPARQL surface). SCAR: slimming is WO-1 follow-up; the ceiling is raised
+// with that receipt rather than silently.
+const MAX_BYTES: u64 = 83_886_080; // 80 MiB
 /// M4 witness class: a DuckDB-linked wasm engine artifact. Anything at or
 /// above this proves the engine actually linked; a 7.1 MB-class artifact is
 /// the legacy engine-free shape.

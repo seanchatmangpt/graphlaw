@@ -10,8 +10,8 @@ using the authoritative surfaces re-exported by `graphlaw`.
 
 | Removed GraphLaw implementation | Replacement |
 | --- | --- |
-| `parser/*`, N3 pest grammar | `graphlaw::n3` (Eyeron) |
-| `reasoner/*`, `builtins/*`, `backwardchaining` | `graphlaw::n3` (Eyeron) |
+| `parser/*`, N3 pest grammar | `graphlaw::n3` (purrdf::n3) |
+| `reasoner/*`, `builtins/*`, `backwardchaining` | `graphlaw::n3` (purrdf::n3) |
 | `datalog`, `aggregation`, rule indexing/fixpoint code | `graphlaw::datalog` (PurRDF) |
 | `tripleindex`, encoder/decoder storage machinery | `graphlaw::rdf` (PurRDF) |
 | `sparql/*`, `queryengine` | `graphlaw::sparql` (PurRDF) |

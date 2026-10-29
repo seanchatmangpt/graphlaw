@@ -70,6 +70,24 @@ pub fn hex_encode(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
+/// The BLAKE3 hex digest a proof lease is computed over (WP P01): the
+/// content identity of the exact source bytes a caller leases against.
+/// [`crate::proof_lease::verify_leased_proof`] binds `check_proof` to this
+/// digest, so a proof is only ever checked against the bytes the lease
+/// covers.
+///
+/// ```
+/// use graphlaw::attest::lease_digest;
+///
+/// let digest = lease_digest(b"law bytes");
+/// assert_eq!(digest.len(), 64);
+/// assert_eq!(digest, lease_digest(b"law bytes"));
+/// assert_ne!(digest, lease_digest(b"other bytes"));
+/// ```
+pub fn lease_digest(payload: &[u8]) -> String {
+    blake3_hex(payload)
+}
+
 /// Hex decoding (either case); `None` on odd length or a non-hex digit.
 ///
 /// ```

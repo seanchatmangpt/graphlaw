@@ -718,7 +718,7 @@ mod ring_courts {
 /// condition for the feature-gated courts in `mod ring_courts`. When the gate
 /// is closed this emits a typed SKIP reason on stderr — the skip is witnessed,
 /// never silent, and matches the repo's loud-skip shape (println/eprintln +
-/// pass, cf. tests/wasi_patch_guard.rs, tests/w3c_manifest.rs). A panic here
+/// pass, cf. tests/w3c_manifest.rs). A panic here
 /// would turn the skip into a permanent red failure of every default
 /// (feature-OFF) run, which is a malformed skip, not a loud one.
 #[cfg(not(all(feature = "evidentiary-ring", not(target_arch = "wasm32"))))]

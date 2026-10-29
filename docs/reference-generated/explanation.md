@@ -2,15 +2,15 @@
 
 ## Summary
 
-graphlaw is a crate with 118 modules and 1459 public items on its code surface.
+graphlaw is a crate with 152 modules and 1212 public items on its code surface.
 
 ## Verified snippet
 
 <!-- Snippet slot: code facts only, copied from the code surface. -->
 
 ```rust
-// crates/graphlaw-eyeron/src/ast.rs :: as_str
-as_str(&self) -> &str
+// GraphlawEx :: admit
+admit/2
 ```
 
 ## Commentary

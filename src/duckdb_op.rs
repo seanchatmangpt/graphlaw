@@ -7,22 +7,38 @@
 //! Wire (JSON over the standard ABI):
 //! - `exec`: `{"op":"duckdb","mode":"exec","views":[{name,glob,hive}],
 //!   "query_ast":"<IRI>","ast":{"turtle","dialect"?},"subject_prefix",
-//!   "vocab_prefix","params":[...]?,"chunk_rows"?}` — `ast.turtle` is the
-//!   Turtle AST document, compiled via `compile_turtle` (SQLRDF-17: no raw
-//!   SQL text admission; legacy `ast.text` is a typed refusal; wire `params`
-//!   must one-for-one match the AST-carried literal parameters). Every
-//!   statement class compile_turtle admits executes (CTQ-2: SELECT, INSERT,
-//!   UPDATE, DELETE, CREATE, COPY, ATTACH, MERGE, ...); raw SQL text remains
-//!   a typed SQLRDF-17 refusal and Connect/Disconnect remain REFUSAL-02 at
-//!   compile time. ATTACH additionally passes the SQLRDF-22 G6 path
-//!   allowlist: env `GRAPHLAW_ATTACH_ROOTS` (colon-separated absolute
-//!   roots); env unset/empty refuses every ATTACH (fail-closed default).
+//!   "vocab_prefix","params":[...]?,"chunk_rows"?,"max_rows"?}` —
+//!   `ast.turtle` is the Turtle AST document, compiled via `compile_turtle`
+//!   (SQLRDF-17: no raw SQL text admission; legacy `ast.text` is a typed
+//!   refusal; wire `params` must one-for-one match the AST-carried literal
+//!   parameters). Every statement class compile_turtle admits executes
+//!   (CTQ-2: SELECT, INSERT, UPDATE, DELETE, CREATE, COPY, ATTACH, MERGE,
+//!   ...); raw SQL text remains a typed SQLRDF-17 refusal and
+//!   Connect/Disconnect remain REFUSAL-02 at compile time. ATTACH
+//!   additionally passes the SQLRDF-22 G6 path allowlist: env
+//!   `GRAPHLAW_ATTACH_ROOTS` (colon-separated absolute roots); env
+//!   unset/empty refuses every ATTACH (fail-closed default).
 //!   → `{"ok":true,"receipt","query_hash","rows_emitted","cursor","more":bool}`.
+//!   WP P08 (the sieve becomes law): exec `max_rows` is the RESULT-ROW
+//!   ENVELOPE the eval runs under (absent → `DEFAULT_ROW_ENVELOPE` = 64; `0`
+//!   refused; no upper cap — the caller owns its envelope). A result set
+//!   over the envelope is a typed `ResourceLimit` refusal with
+//!   `limit: "duckdb_result_rows"` and the exact `observed`/`max`, fired
+//!   mid-materialization strictly before any receipt. On `document:true`
+//!   the same envelope applies per member and rides the existing
+//!   `BatchMemberFailed` envelope, which then carries
+//!   `limit`/`observed`/`max` fields. This exec `max_rows` is DISTINCT from
+//!   the stream-mode `max_rows`, which is only a PAGE SIZE over an
+//!   already-sieved cursor (default `MAX_CHUNK_ROWS`, capped at
+//!   `MAX_CHUNK_ROWS`, `duckdb_chunk_rows` ResourceLimit above the cap) and
+//!   never re-sieves.
 //!   Without `"session"`, exec opens a fresh in-memory connection per call, so
 //!   a DDL/DML effect is per-call ephemeral — admission and receipt minting
 //!   are the contract, not durable mutation.
-//! - `stream`: `{"op":"duckdb","mode":"stream","cursor","max_rows"}` →
-//!   `{"ok":true,"nquads","rows","cursor"|null,"more":bool}`
+//! - `stream`: `{"op":"duckdb","mode":"stream","cursor","max_rows"?}` →
+//!   `{"ok":true,"nquads","rows","cursor"|null,"more":bool}` — `max_rows`
+//!   here is a page size (see the exec note above), not the result-row
+//!   envelope.
 //! - `open`: `{"op":"duckdb","mode":"open","session":"<name>"}` →
 //!   `{"ok":true,"session":"<name>"}` — opens one named in-memory connection
 //!   (same GAP-2 pragmas: memory_limit 32 MiB, threads=1), registered in a
@@ -53,7 +69,9 @@ use serde_json::{Value, json};
 
 use crate::abi::{Fail, check_limit, fail_with_details, limit, str_field, term_json};
 use crate::dialect::{Refusal, RefusalKind};
-use crate::duckdb_eval::{GraphLawDuckDB, RdfTriple};
+use crate::duckdb_eval::{
+    DEFAULT_ROW_ENVELOPE, GraphLawDuckDB, RdfTriple, ROW_ENVELOPE_LIMIT,
+};
 use crate::sql_ast::SqlLiteral;
 
 /// DuckDB memory limit enforced on every connection (GAP-2: half the 64 MiB
@@ -120,6 +138,42 @@ fn duckdb_fail(message: impl std::fmt::Display) -> Fail {
 /// Typed ResourceLimit refusal carrying a duckdb limit name.
 fn duckdb_limit(name: &str, observed: usize, max: usize) -> Fail {
     limit(name, observed, max)
+}
+
+/// WP P08: reads the exec-mode `max_rows` wire field — the RESULT-ROW
+/// ENVELOPE (the sieve) this exec call evaluates under, distinct from the
+/// stream-mode `max_rows` which is only a PAGE SIZE over an already-sieved
+/// cursor. Absent (or null) → [`DEFAULT_ROW_ENVELOPE`]. Present → must be an
+/// unsigned integer; `0` is refused (an envelope of zero rows is not a
+/// lawful eval; use a non-SELECT statement class instead). There is no upper
+/// cap: the caller owns its envelope.
+fn max_rows_of(v: &Value) -> Result<usize, Fail> {
+    match v.get("max_rows") {
+        None | Some(Value::Null) => Ok(DEFAULT_ROW_ENVELOPE),
+        Some(n) => {
+            let n = n
+                .as_u64()
+                .ok_or_else(|| duckdb_fail("`max_rows` must be an unsigned integer"))?
+                as usize;
+            if n == 0 {
+                return Err(duckdb_fail("`max_rows` must be at least 1"));
+            }
+            Ok(n)
+        }
+    }
+}
+
+/// WP P08: maps an [`EvaluatorError`] to the op-surface refusal. The sieve
+/// breach is a typed ResourceLimit (`limit: "duckdb_result_rows"` with the
+/// exact `observed`/`max`), never a generic `DuckDb` envelope; every other
+/// evaluator failure keeps the existing `DuckDb` mapping byte-identical.
+fn map_eval_error(err: crate::duckdb_eval::EvaluatorError) -> Fail {
+    match err {
+        crate::duckdb_eval::EvaluatorError::RowEnvelopeExceeded { observed, max, .. } => {
+            duckdb_limit(ROW_ENVELOPE_LIMIT, observed, max)
+        }
+        other => duckdb_fail(other),
+    }
 }
 
 /// Open a pragma-enforced embedded connection (GAP-2: caller cannot override).
@@ -530,6 +584,10 @@ fn exec(v: &Value) -> Result<Value, Fail> {
 }
 
 fn exec_on(v: &Value, db: &GraphLawDuckDB) -> Result<Value, Fail> {
+    if let Some(purrdf_dir) = v.get("purrdf_parquet_dir").and_then(Value::as_str) {
+        let p = std::path::Path::new(purrdf_dir);
+        db.register_purrdf_parquet_views(p).map_err(duckdb_fail)?;
+    }
     if let Some(views) = v.get("views") {
         let arr = views
             .as_array()
@@ -616,8 +674,14 @@ fn exec_on(v: &Value, db: &GraphLawDuckDB) -> Result<Value, Fail> {
         check_limit("duckdb_chunk_rows", n, MAX_CHUNK_ROWS)?;
     }
     let receipt = db
-        .eval_ast_query(query_ast, &compiled, subject_prefix, vocab_prefix)
-        .map_err(duckdb_fail)?;
+        .eval_ast_query_bounded(
+            query_ast,
+            &compiled,
+            subject_prefix,
+            vocab_prefix,
+            max_rows_of(v)?,
+        )
+        .map_err(map_eval_error)?;
     let mut rows: Vec<Vec<RdfTriple>> = Vec::new();
     for t in receipt.result_triples {
         match rows.last_mut() {
@@ -688,12 +752,14 @@ fn exec_document_on(v: &Value, db: &GraphLawDuckDB, turtle: &str) -> Result<Valu
             .as_bool()
             .ok_or_else(|| duckdb_fail("`atomic` must be a boolean when present"))?,
     };
-    match db.eval_ast_document(
+    let max_rows = max_rows_of(v)?;
+    match db.eval_ast_document_bounded(
         query_iri,
         &document,
         subject_prefix,
         vocab_prefix,
         wire_atomic || document.atomic,
+        max_rows,
     ) {
         Ok(receipt) => {
             let members = serde_json::to_value(&receipt.members)
@@ -715,6 +781,29 @@ fn exec_document_on(v: &Value, db: &GraphLawDuckDB, turtle: &str) -> Result<Valu
         }) => {
             let partial_receipt = serde_json::to_value(&partial)
                 .map_err(|e| duckdb_fail(format!("receipt serialization: {e}")))?;
+            // WP P08: when the failing member breached the sieve, the
+            // BatchMemberFailed envelope carries the limit fields too
+            // (`limit`/`observed`/`max`) so a decoder sees WHY member
+            // `index` failed without unwrapping `source`. The envelope
+            // shape itself is unchanged (BatchMemberFailed stays
+            // BatchMemberFailed).
+            let sieve = match &*source {
+                crate::duckdb_eval::EvaluatorError::RowEnvelopeExceeded {
+                    observed, max, ..
+                } => Some((observed, max)),
+                _ => None,
+            };
+            let mut details = json!({
+                "code": "BatchMemberFailed",
+                "member": index,
+                "message": format!("member {index} failed: {source}"),
+                "partial_receipt": partial_receipt,
+            });
+            if let Some((&observed, &max)) = sieve {
+                details["limit"] = json!(ROW_ENVELOPE_LIMIT);
+                details["observed"] = json!(observed);
+                details["max"] = json!(max);
+            }
             Err(fail_with_details(
                 Refusal {
                     kind: RefusalKind::DuckDb,
@@ -725,15 +814,10 @@ fn exec_document_on(v: &Value, db: &GraphLawDuckDB, turtle: &str) -> Result<Valu
                     )
                     .into(),
                 },
-                json!({
-                    "code": "BatchMemberFailed",
-                    "member": index,
-                    "message": format!("member {index} failed: {source}"),
-                    "partial_receipt": partial_receipt,
-                }),
+                details,
             ))
         }
-        Err(other) => Err(duckdb_fail(other)),
+        Err(other) => Err(map_eval_error(other)),
     }
 }
 

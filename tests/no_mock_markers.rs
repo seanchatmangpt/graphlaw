@@ -128,6 +128,11 @@ fn asserts_on(line: &str, name: &str) -> bool {
 /// assert-on-your-own-model oracles.
 const ORACLE_ALLOWLIST: &[(&str, &str, &str)] = &[
     (
+        "tests/set_operations_court.rs",
+        "column_values",
+        "read-back helper over the REAL ExecutionReceipt.result_triples (frozen-duckdb          rows), sorted; the expectation values live in the courts, not in this helper —          proximity heuristic misfire, dual-anchored asserts at each use site.",
+    ),
+    (
         "tests/abi_manifest_court.rs",
         "expected_hash_bytes",
         "dual-anchored: assert_eq against expected_hash_bytes AND against the pinned \
@@ -237,6 +242,21 @@ const ORACLE_ALLOWLIST: &[(&str, &str, &str)] = &[
 /// justification). A hit is sanctioned only when the same file's line contains
 /// the snippet literally — widening a snippet is an allowlist edit, reviewed.
 const UNWRAP_ALLOWLIST: &[(&str, &str, &str)] = &[
+    (
+        "tests/wasm_env_isolation_court.rs",
+        ".copied().unwrap_or(0),",
+        "chunk-slot probe on received wasm response bytes: absent slot -> 0 is the          compared value; already-parsed envelope, data-shape not a laundered failure.",
+    ),
+    (
+        "tests/attach_bypass_court.rs",
+        ".as_str().unwrap_or(\"\");",
+        "serde_json field probe on an already-parsed refusal envelope; feeds          contains-assert directly (sanctioned class per header).",
+    ),
+    (
+        "tests/receipt_integrity_court.rs",
+        ".filter(|p| p.extension().map(|x| x == \"md\").unwrap_or(false))",
+        "receipt-extension probe: no extension -> false is the CORRECT classification;          builds the scanned-receipt set.",
+    ),
     // serde_json Value field probes on already-parsed envelopes: the document
     // parsed successfully; a missing optional string field is data-shape, not
     // a laundered failure. In every case the extracted value feeds a
@@ -320,11 +340,6 @@ const UNWRAP_ALLOWLIST: &[(&str, &str, &str)] = &[
         "tests/pn64_abi_conformance.rs",
         "unwrap_or(",
         "comment-stripped line probe for a diagnostic label.",
-    ),
-    (
-        "tests/docs_release_claims.rs",
-        ".unwrap_or(rest.len())",
-        "README section-slice end default on an Option from find(), not a Result; absence means the whole tail, asserted by callers.",
     ),
     // Genuine environment/numeric defaults where None is a lawful value.
     (

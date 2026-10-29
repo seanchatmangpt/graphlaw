@@ -1,0 +1,25 @@
+[package]
+name = "wasmex"
+version = "0.15.1"
+authors = ["Philipp Tessenow <philipp@tessenow.org>"]
+description = "Elixir extension to run WebAssembly binaries through wasmtime"
+readme = "README.md"
+repository = "https://github.com/tessi/wasmex"
+keywords = ["elixir", "extension", "webassembly", "wasmtime"]
+categories = ["wasm"]
+edition = "2021"
+
+[lib]
+name = "wasmex"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+
+[dependencies]
+rand = "0.10.2"
+rustler = { version = "0.38.0", features = ["big_integer", "serde"] }
+tokio = { version = "1.53.1", features = ["full"] }
+wasmtime = "47.0.2"
+wasmtime-wasi = "47.0.2"
+wasmtime-wasi-http = "47.0.2"
+wat = "1.254.0"
+wit-parser = "0.255.0"

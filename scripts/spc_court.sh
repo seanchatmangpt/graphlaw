@@ -15,11 +15,13 @@
 #
 # Computes μ/σ/Cpk from the real measured sample against USL=250ns (the
 # TC-HOT-01 BUDGET_NS, sql-rdf Rec. section 1.4 receipt hash budget) and
-# exits 1 when Cpk < 1.33 or p99 > USL. Writes the histogram/quantile
+# exits 1 on the composite verdict (spc-red-remediation-design §3/A1):
+# Cpk >= 1.33 over the windowed per-op series AND tail fraction <=
+# SPC_TAIL_FRAC_MAX AND max sample <= SPC_TAIL_MAX_MULT × USL. Writes the
 # summary to receipts/spc-<YYYY-MM-DD>.json.
 #
 # Env: CARGO_TARGET_DIR (default target-dflss12), SPC_MODE (SMOKE|FULL),
-#      SPC_INJECT_OUTLIER, SPC_USL_NS (default 250), SPC_CPK_MIN (default 1.33).
+#      SPC_INJECT_OUTLIER, SPC_USL_NS (default 250), SPC_CPK_MIN (default 1.33), SPC_TAIL_FRAC_MAX (default 1e-4), SPC_TAIL_MAX_MULT (default 10).
 # Chicago: real frozen bench binary, real hashes, real measurements; no mocks,
 # no sleeps (the fault injection is a busy-spin, never a timer wait).
 set -euo pipefail
@@ -32,6 +34,8 @@ USL_NS="${SPC_USL_NS:-250}"
 CPK_MIN="${SPC_CPK_MIN:-1.33}"
 MODE="${SPC_MODE:-SMOKE}"
 INJECT="${SPC_INJECT_OUTLIER:-0}"
+TAIL_FRAC_MAX="${SPC_TAIL_FRAC_MAX:-1e-4}"
+TAIL_MAX_MULT="${SPC_TAIL_MAX_MULT:-10}"
 mkdir -p receipts
 
 # L57 mktemp robustness (L50 finding): a polluted TMPDIR (stale spc-court.*
@@ -58,7 +62,7 @@ ENV_ARGS=()
 [ "$MODE" = FULL ] && ENV_ARGS+=("TC_HOT_FULL=1")
 [ "$INJECT" = 1 ] && ENV_ARGS+=("TC_HOT_INJECT_OUTLIER_NS=2000")
 
-echo "spc_court: run mode=$MODE inject=$INJECT usl=${USL_NS}ns cpk_min=$CPK_MIN" >&2
+echo "spc_court: run mode=$MODE inject=$INJECT usl=${USL_NS}ns cpk_min=$CPK_MIN tail_frac_max=$TAIL_FRAC_MAX tail_max_mult=$TAIL_MAX_MULT" >&2
 BENCH_RC=0
 env ${ENV_ARGS[@]+"${ENV_ARGS[@]}"} TC_HOT_SPC_EXPORT="$TMP_JSON" "$BENCH" >&2 || BENCH_RC=$?
 # The bench's own internal budget gate is a separate court; the SPC court owns
@@ -70,13 +74,24 @@ env ${ENV_ARGS[@]+"${ENV_ARGS[@]}"} TC_HOT_SPC_EXPORT="$TMP_JSON" "$BENCH" >&2 |
 
 # μ/σ/Cpk + verdict from the real sample; emit the receipt JSON.
 set +e
-RECEIPT="$(python3 - "$TMP_JSON" "$USL_NS" "$CPK_MIN" "$MODE" "$INJECT" <<'PY'
+RECEIPT="$(python3 - "$TMP_JSON" "$USL_NS" "$CPK_MIN" "$MODE" "$INJECT" "$TAIL_FRAC_MAX" "$TAIL_MAX_MULT" <<'PY'
 import json, sys, datetime
 
 path, usl, cpk_min, mode, inject = sys.argv[1], float(sys.argv[2]), float(sys.argv[3]), sys.argv[4], sys.argv[5] == "1"
+tail_frac_max = float(sys.argv[6])
+tail_max_mult = float(sys.argv[7])
 s = json.load(open(path))
 mean, sd, p99 = s["mean_ns"], s["stddev_ns"], s["p99_ns"]
 samples = s.get("samples_ns", [])
+if not samples:
+    # FAIL-CLOSED: with no window series there is no statistic to compute and
+    # no data-backed verdict to emit. Refuse as an infrastructure error (rc 2)
+    # rather than mint a PASS/FAIL from nothing.
+    print("spc_court: empty sample series in SPC export", file=sys.stderr)
+    sys.exit(2)
+tail_max_budget_ns = tail_max_mult * usl
+tail_fraction = sum(1 for x in samples if x > usl) / len(samples)
+max_sample = max(samples)
 # Shewhart control-chart rules (Western Electric 1+2 minimum) over the real
 # per-sample clone-path series. Detection only: rule flags are assignable-cause
 # evidence; the overall verdict stays owned by Cpk + p99 against the USL.
@@ -102,9 +117,12 @@ if samples and sd > 0:
             longest_run, longest_run_dir = run, ("up" if run_dir > 0 else "down")
     rule2 = longest_run >= 8
 rules_flagged = rule1 or rule2
-# One-sided Cpk against the upper spec limit (latency budget).
+# One-sided Cpk against the upper spec limit (latency budget), computed over
+# the WINDOWED per-op series (statistic_basis below): this IS cpk_batch per
+# spc-red-remediation-design §3/A1. p99 <= USL is dropped as redundant — it
+# is strictly implied by tail_fraction <= 1e-4 (A1.4).
 cpk = (usl - mean) / (3 * sd) if sd > 0 else float("-inf")
-passed = cpk >= cpk_min and p99 <= usl
+passed = cpk >= cpk_min and tail_fraction <= tail_frac_max and max_sample <= tail_max_budget_ns
 out = {
     "receipt": "spc",
     "date": datetime.date.today().isoformat(),
@@ -117,10 +135,20 @@ out = {
     "mean_ns": round(mean, 3),
     "stddev_ns": round(sd, 3),
     "cpk": round(cpk, 4) if sd > 0 else None,
+    "cpk_batch": round(cpk, 4) if sd > 0 else None,
+    "statistic_basis": "amortized per-op, windowed",
     "p50_ns": s["p50_ns"], "p95_ns": s["p95_ns"], "p99_ns": p99,
     "p999_ns": s["p999_ns"], "max_ns": s["max_ns"],
     "iterations": s["iterations"],
     "samples": len(samples),
+    "tail_gate": {
+        "tail_fraction": round(tail_fraction, 6),
+        "tail_frac_max": tail_frac_max,
+        "max_sample_ns": max_sample,
+        "tail_max_budget_ns": tail_max_budget_ns,
+    },
+    "load": "quiet",
+    "load_provenance": "self-reported",
     "shewhart": {
         "rule1_beyond_3sigma": {
             "flagged": rule1,
@@ -137,8 +165,9 @@ out = {
     },
     "verdict": "PASS" if passed else "FAIL",
     "reasons": [r for r, bad in [
-        (f"cpk {cpk:.4f} < {cpk_min}", cpk < cpk_min),
-        (f"p99 {p99}ns > {usl}ns", p99 > usl),
+        (f"cpk_batch {cpk:.4f} < {cpk_min}", cpk < cpk_min),
+        (f"tail_fraction {tail_fraction:.6f} > {tail_frac_max}", tail_fraction > tail_frac_max),
+        (f"max_sample {max_sample}ns > tail budget {tail_max_budget_ns}ns", max_sample > tail_max_budget_ns),
     ] if bad] or None,
 }
 print(json.dumps(out, indent=2))

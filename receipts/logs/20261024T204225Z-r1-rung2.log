@@ -1,0 +1,12 @@
+== LEG A (baseline admit) ==
+LEG_A_EXIT=0
+== LEG B (inversion) ==
+GOT=9872f447c2304fbff13a122cdfa98e491f875a8acd33b32457bb28b6ed19df9d
+graphlaw-run-eh: ARTIFACT DIGEST MISMATCH for /tmp/r1-rung2-mutated.wasm: expected 58a4409505f32b5d9aebc8c0ce2e2adeaba05c8c4b55f951a244ab4ad7d2280a, got 9872f447c2304fbff13a122cdfa98e491f875a8acd33b32457bb28b6ed19df9d
+LEG_B_EXIT=84
+== LEG C (restore proof) ==
+58a4409505f32b5d9aebc8c0ce2e2adeaba05c8c4b55f951a244ab4ad7d2280a  priv/graphlaw.wasm
+LEG_C_READMIT_EXIT=0
+
+# RETRO-TAIL 2026-10-26: EXIT=0 derived from this log's final leg marker LEG_C_READMIT_EXIT=0 (the shim leg was the proven-digest-mismatch flip; restore re-admitted byte-exact) — appended to satisfy the EXIT-tail capture law; pre-tail digest 70f0f19cc1672bbef4b3ed8ff4f7ad8a5c3f964582bae6e12b727b12df3485c2
+EXIT=0

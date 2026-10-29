@@ -33,8 +33,10 @@ fn law_err(e: LawError) -> Fail {
                 match parse_limit_message(r.message.as_str()) {
                     Some((name, observed, max)) => json!({"code": "ResourceLimit", "limit": name,
                            "observed": observed, "max": max}),
-                    None => json!({"code": "ResourceLimit", "limit": "n3_iterations",
-                           "max": crate::law::N3_MAX_ITERATIONS}),
+                    // A ResourceLimit refusal whose message no longer parses
+                    // carries no honest counter: emit the code alone rather
+                    // than fabricate an `n3_iterations` row the run never hit.
+                    None => json!({"code": "ResourceLimit"}),
                 }
             } else {
                 json!({"code": "Refused", "kind": format!("{:?}", r.kind)})

@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "4fe2499573e7dafc735be36161ad2fd9ecb45cb61e34923506aa3c7ea6e584f8",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-25T174701Z-Write-4fe24995.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/reconcile_partition.py",
+  "timestamp_utc": "2026-10-25T174701Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

@@ -151,7 +151,7 @@ separate so native release builds and tests are unaffected. The `wasm32-wasip1`
 module imports only `wasi_snapshot_preview1` (clock, random, stdio) — no
 JavaScript glue; the lib facade also builds clean under
 `wasm32-unknown-unknown` with **zero WASI imports** (clock routed through a
-wasm-bindgen `Date.now()` extern in `graphlaw-eyeron`; verified by
+wasm-bindgen `Date.now()` extern in purrdf-n3 (purrdf fork, rev-pinned); verified by
 `scripts/wasm_unknown_unknown_smoke.sh`, and the import set asserted at
 runtime by `tests/wasm_abi.rs:56-64`). The host-side
 integration test `tests/wasm_abi.rs` builds the module (into
@@ -166,7 +166,7 @@ DuckDB-linked artifact, and `graphlaw-run-eh` hosts it under wasmtime 48.
 The shipped artifact is pinned by digest and size:
 
 - The current pin is the new-EH DuckDB-linked artifact:
-  `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`
+  `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107` # historical — interim pin superseded by 58a44095…d2280a
   (BLAKE3, verified with `b3sum priv/graphlaw.wasm`), 57,781,384 bytes,
   Tag(13) section count 1, wasm_audit PASS — re-pinned 2026-10-23 in
   `registry/ARTIFACTS.blake3` (`wasm` row) and `priv/graphlaw.wasm.blake3`

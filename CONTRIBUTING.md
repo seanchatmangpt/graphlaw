@@ -12,14 +12,14 @@ canonical checkout with disjoint file-ownership lanes (no worktrees/clones; buil
 cargo fmt --check
 cargo check --all-targets --all-features
 cargo run --locked --features abi --bin graphlaw-registry -- --check
-cargo clippy --all-targets --features pack-tools,abi,wasi-patched-deps -- -D warnings
+cargo clippy --all-targets --features pack-tools,abi -- -D warnings
 cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 #   ^ requires the canonical relink env (WASI_SDK_PATH at the frozen-duckdb cache
 #     SDK + wrap-shim RUSTFLAGS) — full command: docs/WASM.md
 GRAPHLAW_WASM=$PWD/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm \
-    cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps
-cargo package -p graphlaw-eyeron -p graphlaw
-RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features pack-tools,abi,wasi-patched-deps
+    cargo test --locked --all-targets --features pack-tools,abi
+cargo package -p graphlaw
+RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features pack-tools,abi
 cargo check --lib --target wasm32-unknown-unknown
 ```
 
@@ -61,13 +61,13 @@ full command in `docs/WASM.md`) produces
 `priv/graphlaw.wasm.blake3` for any version bump). `tests/wasm_abi.rs` runs it in a real wasm runtime
 when `GRAPHLAW_WASM` points at it. The `graphlaw` lib facade must also compile
 for `wasm32-unknown-unknown` (no WASI imports allowed in the facade); the
-artifact itself is WASI-only. Building `graphlaw` for WASI outside this workspace is a
-compile error by design (the clock fix lives in `vendor/`).
+artifact itself is WASI-only. Building `graphlaw` for WASI works directly from the
+pinned sources: the WASI clock gate lives in the purrdf fork at the rev pinned in
+`Cargo.toml`.
 
 ## WASM and dialect court suites
 
-CI's `wasm-court` job (`.github/workflows/ci.yml`) runs, besides `wasm_abi`
-and `wasi_patch_guard`, these landed suites — each loud-skips with a counted
+CI's `wasm-court` job (`.github/workflows/ci.yml`) runs, besides `wasm_abi`, these landed suites — each loud-skips with a counted
 `[SKIP]` line if its subject is absent, never a silent pass:
 
 ```sh

@@ -2,7 +2,7 @@
 //!
 //! HONESTY SCOPE: this probe does NOT witness any "4.5B virtual triples"
 //! claim. It witnesses the per-rule / per-fact marginal RSS during a real
-//! forward-chained deductive closure (graphlaw-eyeron N3/Datalog). The 4.5B
+//! forward-chained deductive closure (purrdf::n3 N3/Datalog). The 4.5B
 //! projection in the receipt is LINEAR EXTRAPOLATION ONLY, disclosed as such.
 //!
 //! Ladder A: rules 100 -> 1,000 -> 10,000 at a fixed 1,000 facts with only
@@ -21,7 +21,7 @@
 //! Run: CARGO_TARGET_DIR=target-lane-wo3 cargo run --example rss_expansion_probe
 //! Exit 0 = every rung Complete; exit 1 = any rung incomplete or RSS failure.
 
-use eyeron::{PreparedReasoner, ReasonerOptions, parse_n3};
+use graphlaw::n3::{PreparedReasoner, ReasonerOptions, parse_n3};
 use std::process::Command;
 
 fn rss_kb() -> Result<u64, String> {

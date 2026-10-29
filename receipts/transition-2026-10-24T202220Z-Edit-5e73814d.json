@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "5e73814d25ee4f003f07b48c872e59f58663372a7fece740fef52f07e26480b7",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T202220Z-Edit-5e73814d.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/.cargo/mutants-court-dispatch.toml",
+  "timestamp_utc": "2026-10-24T202220Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

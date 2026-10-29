@@ -15,6 +15,7 @@
 use std::sync::Arc;
 
 use crate::dialect::{Dialect, Refusal, RefusalKind, parse_rdf, sniff};
+use purrdf::n3;
 
 /// Stable conformance code (sql-rdf Recommendation §5, `docs/reference/sql-rdf-rec.md`):
 /// `CapabilityRefusal`. Stable wire discriminator; the register is `docs/refusals.md`.
@@ -44,7 +45,7 @@ pub const REFUSAL_04_CAPABILITY_REFUSAL: &str = "REFUSAL-04";
 pub enum Tier {
     /// The document denotes an RDF dataset (any media-type dialect).
     Rdf,
-    /// The document denotes N3 logic: rules (and facts) owned by Eyeron.
+    /// The document denotes N3 logic: rules (and facts) owned by purrdf::n3.
     N3Logic,
     /// The document denotes a SQL-in-RDF query owned by frozen-duckdb.
     Relational,
@@ -90,14 +91,14 @@ pub struct DialectDecl {
     pub dialect: Dialect,
 }
 
-/// An N3 document validated by Eyeron's parse entry point.
+/// An N3 document validated by purrdf-n3's parse entry point.
 ///
 /// The rules are counted but never run against a dataset here: the N3 tier
 /// admits a rule set, not a state.
 #[derive(Debug, Clone)]
 pub struct RuleSet {
-    /// The parsed N3 document (facts, rules, prefixes) as Eyeron sees it.
-    pub document: eyeron::Document,
+    /// The parsed N3 document (facts, rules, prefixes) as purrdf-n3 sees it.
+    pub document: n3::Document,
 }
 
 impl RuleSet {
@@ -142,13 +143,13 @@ fn admit_sql_rdf(bytes: &[u8]) -> Result<crate::sql_ast::CompiledQuery, Refusal>
         .map_err(|e| Refusal::engine(Dialect::SqlRdf, e.to_string()))
 }
 
-/// Validate `bytes` as an N3 logic document via Eyeron's parse entry point.
+/// Validate `bytes` as an N3 logic document via purrdf-n3's parse entry point.
 ///
 /// No dataset is built; the result is a [`RuleSet`] for rule consumers.
 pub fn validate_n3_rules(bytes: &[u8], base: Option<&str>) -> Result<RuleSet, Refusal> {
     let text = std::str::from_utf8(bytes)
         .map_err(|e| Refusal::engine(Dialect::N3, format!("input is not UTF-8: {e}")))?;
-    let document = eyeron::parse_n3(text, base).map_err(|e| Refusal::engine(Dialect::N3, e))?;
+    let document = n3::parse_n3(text, base).map_err(|e| Refusal::engine(Dialect::N3, e))?;
     Ok(RuleSet { document })
 }
 
@@ -178,7 +179,7 @@ fn parse_rdf_tier_checked(
 /// Admit `bytes` under a caller-supplied [`DialectDecl`]: no sniffing, tier
 /// dispatch only.
 ///
-/// `Tier::Rdf` parses into a dataset; `Tier::N3Logic` validates via Eyeron and
+/// `Tier::Rdf` parses into a dataset; `Tier::N3Logic` validates via purrdf-n3 and
 /// returns a [`RuleSet`]. A declaration whose `dialect` disagrees with its
 /// `tier` is refused as `TierMismatch`.
 pub fn admit_declared(

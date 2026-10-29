@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "fbc32927b9cceee515cb8712e18aa4a157ced67821c86bf6901b9bc1b313b4ba",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T203930Z-Write-fbc32927.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/.github/actions/wasi-duckdb/wasi_compat34.h",
+  "timestamp_utc": "2026-10-24T203930Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

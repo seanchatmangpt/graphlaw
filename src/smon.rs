@@ -289,46 +289,49 @@ pub fn build_dataset(
         format!("{base}#")
     };
     let mut b = RdfDatasetBuilder::new();
-    let ty = b.intern_iri(RDF_TYPE);
-    let is_part_of = b.intern_iri(&format!("{DCTERMS}isPartOf"));
-    let subject = b.intern_iri(&format!("{DCTERMS}subject"));
-    let description = b.intern_iri(&format!("{DCTERMS}description"));
-    let identifier = b.intern_iri(&format!("{DCTERMS}identifier"));
-    let seq_idx = b.intern_iri(&smon("sequenceIndex"));
-    let turn_kind = b.intern_iri(&smon("turnKind"));
-    let follows = b.intern_iri(&smon("immediatelyFollows"));
-    let turn_class = b.intern_iri(&smon("Turn"));
+    let ty = iiri(&mut b, RDF_TYPE)?;
+    let is_part_of = iiri(&mut b, &format!("{DCTERMS}isPartOf"))?;
+    let subject = iiri(&mut b, &format!("{DCTERMS}subject"))?;
+    let description = iiri(&mut b, &format!("{DCTERMS}description"))?;
+    let identifier = iiri(&mut b, &format!("{DCTERMS}identifier"))?;
+    let seq_idx = iiri(&mut b, &smon("sequenceIndex"))?;
+    let turn_kind = iiri(&mut b, &smon("turnKind"))?;
+    let follows = iiri(&mut b, &smon("immediatelyFollows"))?;
+    let turn_class = iiri(&mut b, &smon("Turn"))?;
 
-    let session = b.intern_iri(&format!("{ns}session"));
-    let session_class = b.intern_iri(&format!("{DFL}Session"));
-    b.push_quad(session, ty, session_class, None);
-    let id_lit = b.intern_literal(RdfLiteral::simple(session_id));
-    b.push_quad(session, identifier, id_lit, None);
-    let desc = b.intern_literal(RdfLiteral::simple(
-        "Real Claude Code session transcript, captured by smon-transcript-to-turtle.",
-    ));
-    b.push_quad(session, description, desc, None);
+    let session = iiri(&mut b, &format!("{ns}session"))?;
+    let session_class = iiri(&mut b, &format!("{DFL}Session"))?;
+    pq(&mut b, session, ty, session_class, None)?;
+    let id_lit = ilit(&mut b, RdfLiteral::simple(session_id))?;
+    pq(&mut b, session, identifier, id_lit, None)?;
+    let desc = ilit(
+        &mut b,
+        RdfLiteral::simple(
+            "Real Claude Code session transcript, captured by smon-transcript-to-turtle.",
+        ),
+    )?;
+    pq(&mut b, session, description, desc, None)?;
 
     let mut prior_grounding = None;
     for t in turns {
-        let turn = b.intern_iri(&format!("{ns}turn-{}", t.seq));
-        b.push_quad(turn, ty, turn_class, None);
-        b.push_quad(turn, is_part_of, session, None);
-        let topic = b.intern_literal(RdfLiteral::simple(t.topic.clone()));
-        b.push_quad(turn, subject, topic, None);
-        let seq = b.intern_literal(RdfLiteral::typed(t.seq.to_string(), XSD_INTEGER));
-        b.push_quad(turn, seq_idx, seq, None);
-        let kind = b.intern_iri(&smon(t.kind));
-        b.push_quad(turn, turn_kind, kind, None);
+        let turn = iiri(&mut b, &format!("{ns}turn-{}", t.seq))?;
+        pq(&mut b, turn, ty, turn_class, None)?;
+        pq(&mut b, turn, is_part_of, session, None)?;
+        let topic = ilit(&mut b, RdfLiteral::simple(t.topic.clone()))?;
+        pq(&mut b, turn, subject, topic, None)?;
+        let seq = ilit(&mut b, RdfLiteral::typed(t.seq.to_string(), XSD_INTEGER))?;
+        pq(&mut b, turn, seq_idx, seq, None)?;
+        let kind = iiri(&mut b, &smon(t.kind))?;
+        pq(&mut b, turn, turn_kind, kind, None)?;
         let mut quote = t.text.trim().replace('\n', " ");
         if quote.chars().count() > 220 {
             quote = quote.chars().take(220).collect::<String>() + "...";
         }
-        let d = b.intern_literal(RdfLiteral::simple(format!("[{}] {quote}", t.role)));
-        b.push_quad(turn, description, d, None);
+        let d = ilit(&mut b, RdfLiteral::simple(format!("[{}] {quote}", t.role)))?;
+        pq(&mut b, turn, description, d, None)?;
         // Only a turn directly after a GroundingQuestion carries immediatelyFollows.
         if let Some(prev) = prior_grounding {
-            b.push_quad(turn, follows, prev, None);
+            pq(&mut b, turn, follows, prev, None)?;
         }
         prior_grounding = (t.kind == "GroundingQuestion").then_some(turn);
     }
@@ -365,6 +368,32 @@ pub struct Broadened {
     pub rewrite1: usize,
     /// Number of second-pass rewrites.
     pub rewrite2: usize,
+}
+
+/// Intern an IRI, mapping the storage error into a tool error.
+fn iiri(b: &mut RdfDatasetBuilder, iri: &str) -> Result<purrdf::TermId, ToolError> {
+    b.intern_iri(iri).map_err(|e| format!("{e:?}"))
+}
+
+/// Intern a literal, mapping the storage error into a tool error.
+fn ilit(b: &mut RdfDatasetBuilder, lit: RdfLiteral) -> Result<purrdf::TermId, ToolError> {
+    b.intern_literal(lit).map_err(|e| format!("{e:?}"))
+}
+
+/// Intern an owned term, mapping the storage error into a tool error.
+fn iot(b: &mut RdfDatasetBuilder, term: &purrdf::RdfTerm) -> Result<purrdf::TermId, ToolError> {
+    b.intern_owned_term(term).map_err(|e| format!("{e:?}"))
+}
+
+/// Push a quad, mapping the storage error into a tool error.
+fn pq(
+    b: &mut RdfDatasetBuilder,
+    s: purrdf::TermId,
+    p: purrdf::TermId,
+    o: purrdf::TermId,
+    g: Option<purrdf::TermId>,
+) -> Result<(), ToolError> {
+    b.push_quad(s, p, o, g).map_err(|e| format!("{e:?}"))
 }
 
 fn iri_of(ds: &RdfDataset, id: purrdf::TermId) -> Option<String> {
@@ -456,24 +485,27 @@ pub fn broaden(
             }
         }
         let (s, p, o) = (
-            b.intern_owned_term(&ds.to_owned_term(q.s)),
-            b.intern_owned_term(&ds.to_owned_term(q.p)),
-            b.intern_owned_term(&ds.to_owned_term(q.o)),
+            iot(&mut b, &ds.to_owned_term(q.s))?,
+            iot(&mut b, &ds.to_owned_term(q.p))?,
+            iot(&mut b, &ds.to_owned_term(q.o))?,
         );
-        let g = q.g.map(|g| b.intern_owned_term(&ds.to_owned_term(g)));
-        b.push_quad(s, p, o, g);
+        let g = q
+            .g
+            .map(|g| iot(&mut b, &ds.to_owned_term(g)))
+            .transpose()?;
+        pq(&mut b, s, p, o, g)?;
     }
-    let kind_p = b.intern_iri(&p_kind);
-    let subj_p = b.intern_iri(&p_subject);
-    let survey = b.intern_iri(&smon("SurveyResponse"));
+    let kind_p = iiri(&mut b, &p_kind)?;
+    let subj_p = iiri(&mut b, &p_subject)?;
+    let survey = iiri(&mut b, &smon("SurveyResponse"))?;
     for turn in drop_kind.keys() {
-        let t = b.intern_iri(turn);
-        b.push_quad(t, kind_p, survey, None);
+        let t = iiri(&mut b, turn)?;
+        pq(&mut b, t, kind_p, survey, None)?;
     }
-    let canonical = b.intern_literal(RdfLiteral::simple(canonical_topic));
+    let canonical = ilit(&mut b, RdfLiteral::simple(canonical_topic))?;
     for turn in regrounded.keys() {
-        let t = b.intern_iri(turn);
-        b.push_quad(t, subj_p, canonical, None);
+        let t = iiri(&mut b, turn)?;
+        pq(&mut b, t, subj_p, canonical, None)?;
     }
     Ok((b.freeze().map_err(|e| format!("{e:?}"))?, report))
 }

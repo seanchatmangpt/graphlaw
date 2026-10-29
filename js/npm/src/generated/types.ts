@@ -1,5 +1,5 @@
 // GENERATED from registry/capability-registry.json
-// registry_blake3: blake3:80ef3ebf957e2d6eac6950d9a08362ad6d339ffde7a235b27f5d748c746f23c7
+// registry_blake3: blake3:865d5d4f633b2657a3c1f93f8834f94693ef6ffbfa429285f38844c7cdfa62e1
 // Do not edit by hand; run `npm run gen` to regenerate.
 
 import type { DataSpec, Term } from '../types.js';
@@ -186,7 +186,7 @@ export const REFUSAL_KIND_VALUES = ["NotSemanticContent", "Ambiguous", "EngineRe
 export type RefusalCode = "Refused" | "ResourceLimit" | "PlanRefused" | "ReceiptRequired" | "ReceiptRefused" | "LeaseRefused" | "NotAdmitted" | "DuckDb" | "UnverifiedLeaseRefused" | "PolicyRefused";
 
 /** Backend engines. */
-export type Engine = "PurRdf" | "Eyeron" | "FrozenDuckdb";
+export type Engine = "PurRdf" | "FrozenDuckdb";
 
 /** Dialect wire names accepted in requests. */
 export type DialectName = "turtle" | "trig" | "ntriples" | "nquads" | "rdfxml" | "jsonld" | "yamlld" | "trix" | "hextuples" | "n3" | "sparql" | "sql" | "shexc" | "shexj";
@@ -237,7 +237,7 @@ export interface SniffRequest {
 export interface SniffResponse {
   /** Sniffed dialect (Rust variant name). */
   dialect?: string;
-  /** Owning engine (PurRdf or Eyeron). */
+  /** Owning engine (PurRdf or FrozenDuckdb). */
   engine?: string;
 }
 
@@ -393,7 +393,7 @@ export interface N3Request {
 
 /** Success response for n3. */
 export interface N3Response {
-  /** Reasoner output; shape is owned by Eyeron. */
+  /** Reasoner output; shape is owned by purrdf::n3. */
   derived?: unknown;
 }
 

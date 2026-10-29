@@ -286,8 +286,8 @@ fn check(scene: &Scene) -> Value {
         "engine": "graphlaw::abi op=datalog (PurRDF least fixpoint)",
         "provenance": {
             "graphlaw_rev": rev,
-            "purrdf": "2.0.2",
-            "eyeron": "0.7.9",
+            "purrdf": "3.0.1",
+            "n3_engine": "purrdf-n3/3.0.1",
             "generator": "naive_physics_vectors",
             "stratified": true,
             "paper": "Hayes 1979 (Naive Physics Manifesto); Hayes 1985 (Naive physics I: ontology for liquids)",

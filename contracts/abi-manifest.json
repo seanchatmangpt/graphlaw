@@ -86,7 +86,7 @@
     "size_bytes": 128,
     "struct": "OcelCausalFrame"
   },
-  "graphlaw_version": "26.10.22",
+  "graphlaw_version": "26.10.28",
   "limits": {
     "default_max_skew_secs": 60,
     "max_atoms_per_field": 10000,
@@ -99,12 +99,12 @@
     "max_policy_entries": 100000,
     "max_request_bytes": 16777216,
     "n3_max_derived_facts": 500000,
-    "n3_max_iterations": 4000,
+    "n3_max_iterations": 4000000,
     "n3_max_term_bytes": 65536,
     "n3_max_total_bytes": 268435456,
     "n3_max_total_steps": 50000000
   },
-  "manifest_blake3": "blake3:1115373c3f4e930ebd5947de146cb772f26a6b0a949a9638cdbb7132fe9fe933",
+  "manifest_blake3": "blake3:236fc9be21d372c798a9ddd871177a8d0674db09891d6e01560c1be367279df9",
   "notes": "op `duckdb` (op-15) dispatches inside the module on every target; the gates that compiled that dispatch arm out of wasm32 are removed. It is unadvertised from `capabilities.ops` (and stays off the hashed 14-op table) by digest-stability choice, so `registry_blake3` does not move until an explicit digest bump — not because the op is host-only. The wasm `capabilities.authorities` list now includes `frozen-duckdb` (as the host list already did). Absence from `capabilities.ops` is not a SQL refusal and is not REFUSAL-04. SQL-in-RDF admits inside the module through `compile_turtle`. Bounds enforced in src/duckdb_op.rs: DuckDB memory_limit=32MiB and threads=1 compile-time pragmas (GAP-2), chunk rows <= 10000 and chunk bytes <= 16 MiB typed ResourceLimit refusals (GAP-4), MAX_OUTSTANDING_ALLOC_BYTES is 16 MiB for the wasm32 target via split-config (GAP-1)",
   "ops": [
     {

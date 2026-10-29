@@ -1,6 +1,6 @@
 # API stability
 
-GraphLaw's workspace version is 26.10.22 (latest released); the capability-registry
+GraphLaw's workspace version is 26.10.28 (latest released); the capability-registry
 schema `graphlaw.capability-registry/1` and `ABI_VERSION = 1` were frozen at v26.9.29 and
 remain additive-only. This page states what downstream crates and JSON-ABI hosts may
 rely on, how deprecations work, and how the minimum supported Rust version moves.
@@ -27,7 +27,7 @@ rely on, how deprecations work, and how the minimum supported Rust version moves
   `PlanRefused`, `ReceiptRequired`, `LeaseRefused`) and the stable `as_str()` names of
   `LeaseReason` and `ReceiptReason` never change meaning. New codes may be added; hosts must treat
   an unknown code as a refusal.
-- **Re-exports** `graphlaw::purrdf`, `graphlaw::eyeron`, and `graphlaw::duckdb_eval` (with
+- **Re-exports** `graphlaw::purrdf`, `graphlaw::n3`, and `graphlaw::duckdb_eval` (with
   `frozen_duckdb`) are escape hatches; their API is that of the pinned upstream version
   (`purrdf =2.0.2`, `frozen-duckdb 2.0.2`).
 
@@ -91,7 +91,7 @@ crate versions move on independent axes:
   `pin-source=<older>` than the crate version, the release is blocked until
   a rebuild produces a fresh digest at the released source state. The current
   pin digest is
-  `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`
+  `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107` # historical — interim pin superseded by 58a44095…d2280a
   (57,781,384 B, tag section count 1, re-pinned 2026-10-23); the legacy
   `f149433c…` (7,104,147 B, tag section count 0) is historical. See
   [WASM.md](WASM.md).

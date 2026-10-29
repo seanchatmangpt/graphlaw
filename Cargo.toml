@@ -1,20 +1,20 @@
 [package]
 name = "graphlaw"
-version = "26.10.22"
+version = "26.10.28"
 edition = "2024"
-rust-version = "1.96"
+rust-version = "1.98"
 authors = ["Sean Chatman"]
 license = "MIT"
-description = "GraphLaw: library-backed RDF law-state composition over PurRDF and Eyeron"
+description = "GraphLaw: library-backed RDF law-state composition over PurRDF"
 readme = "README.md"
-include = ["/src/**", "/build.rs", "/Cargo.toml", "/README.md", "/LICENSE.md", "/MIGRATION.md", "/CHANGELOG.md", "/SECURITY.md", "/CONTRIBUTING.md", "/docs/**", "/examples/**", "/ontologies/**", "/ggen/**"]
+include = ["/src/**", "/Cargo.toml", "/README.md", "/LICENSE.md", "/MIGRATION.md", "/CHANGELOG.md", "/SECURITY.md", "/CONTRIBUTING.md", "/docs/**", "/examples/**", "/ontologies/**", "/ggen/**"]
 repository = "https://github.com/seanchatmangpt/graphlaw"
 keywords = ["rdf", "n3", "datalog", "shacl", "shex"]
 categories = ["data-structures", "parser-implementations"]
 
 [workspace]
-members = [".", "wasm", "crates/graphlaw-eyeron"]
-exclude = ["vendor/purrdf-sparql-eval", "courts/castle-diff"]
+members = [".", "wasm"]
+exclude = ["courts/castle-diff"]
 
 # Size-optimised profile for the WebAssembly module (`--profile wasm`); kept
 # separate so native release builds and tests are unaffected.
@@ -43,14 +43,21 @@ name = "graphlaw"
 path = "src/lib.rs"
 
 [dependencies]
-purrdf = "=2.0.2"
-# SECURITY (supply-chain note): sha2 0.10.9 remains in the tree ONLY as a
-# transitive dep of the purrdf family (purrdf-core 2.0.2 declares sha2 = "0.10")
-# and ed25519-dalek 2.2.0 (sha2 = "0.10", exact-pinned per GOALS.md invariant 3).
+# The purrdf family comes from ONE source: the rev-pinned fork. The WASI clock
+# gate and the P01 proof-checker hardening live at this rev (branch
+# graphlaw-carried). No crates.io fallback: a git-only dependency is the supply
+# chain, enforced by deny.toml [sources] and CI's fork-provenance step.
+purrdf = { git = "https://github.com/seanchatmangpt/purrdf", rev = "2223f8945e19eb9aed750fe038b0fa833bd17c83" }
+purrdf-columnar = { git = "https://github.com/seanchatmangpt/purrdf", rev = "2223f8945e19eb9aed750fe038b0fa833bd17c83" }
+# SECURITY (supply-chain note): sha2 0.10.9 remains in the tree via
+# wasmtime-environ/cranelift-codegen (dev-dep family) and ed25519-dalek 2.2.0
+# (sha2 = "0.10", exact-pinned per GOALS.md invariant 3); the purrdf family
+# (git-sourced above) moved to sha2 0.11 at purrdf-core 3.0.1 (purrdf dropped
+# ed25519-dalek at 3.0.0 in favor of first-party purrdf-ed25519).
 # graphlaw itself hashes exclusively with BLAKE3; it does not depend on sha2
-# directly, and the transitive pins cannot be [patch]ed without forking upstream.
-# Revisit if purrdf or ed25519-dalek publishes sha2-0.11-compatible releases.
-# Verified via: cargo tree -i sha2@0.10.9   (purrdf-core/ed25519-dalek roots)
+# directly, and the transitive sha2 pins come in via wasmtime/ed25519-dalek.
+# Revisit if wasmtime or ed25519-dalek publishes sha2-0.11-compatible releases.
+# Verified via: cargo tree -i sha2@0.10.9
 # Ed25519 receipt/lease attestations (BSD-3-Clause). Exact pin per GOALS.md invariant 3;
 # already resolved in Cargo.lock via purrdf. No RNG: keys come from caller-supplied seeds.
 ed25519-dalek = { version = "=2.2.0", default-features = false, features = ["std"] }
@@ -65,7 +72,6 @@ hex = "0.4"
 serde = { version = "1", features = ["derive"] }
 regex = { version = "1", optional = true }
 serde_json = "1"
-eyeron = { package = "graphlaw-eyeron", version = "0.7.9", path = "crates/graphlaw-eyeron" }
 rtrb = { version = "0.3", optional = true }
 # frozen-duckdb links into the ONE unit on every target, wasm32 included: the
 # wasm static archive is built with -fwasm-exceptions -mllvm
@@ -89,9 +95,6 @@ pack-tools = ["dep:regex"]
 # (serde_json is now a required dependency for the receipt-chain family, so the
 # former `dep:serde_json` toggles are no-ops kept for feature compatibility.)
 abi = []
-# Asserts that the build applied the vendored WASI clock patch (see
-# vendor/README.md). Only the repo workspace (crates.io ignores [patch]) sets it.
-wasi-patched-deps = []
 # Wasmtime-based EH host for the DuckDB-linked artifact (bin graphlaw-run-eh).
 runner-eh = ["dep:wasmtime", "dep:wasmtime-wasi"]
 
@@ -139,6 +142,12 @@ name = "workload_amortization"
 harness = false
 
 [[bench]]
+# SB-50MS — statutory boundary benchmark (EU AI Act Art. 12/14/15 gates:
+# receipt issuance, fail-closed SHACL boundary, bounded N3 derivation).
+name = "statutory_boundary_50ms"
+harness = false
+
+[[bench]]
 name = "sql_rdf_egress"
 harness = false
 
@@ -150,10 +159,26 @@ harness = false
 name = "tc_hot_01"
 harness = false
 
-# docs.rs cannot take all-features: wasi-patched-deps makes the root build.rs
-# panic (WASI_PATCH_BUILD_REFUSED without vendor/, and crates.io builds ignore
-# [patch]); frozen-duckdb-sys has a DOCS_RS branch that skips native builds, so
-# the native toolchain docs.rs uses is fine — the feature set is what needs pinning.
+[[bench]]
+name = "purrdf_columnar_engine"
+harness = false
+
+[[bench]]
+# P07 - SHACL boundary-cliff bench (depth/degree/bytes sweeps over the real
+# admission boundary; caps picked from ITS measured cliffs, not guessed).
+name = "shacl_boundary_cliff"
+harness = false
+
+[[bench]]
+# P08 - sieve cliff bench (result-row envelope vs raw substrate: reduce
+# cold/warm-stmt/warm-cache + refuse + raw control over N in {1e4..1e6}).
+name = "sieve_cliff"
+harness = false
+
+# docs.rs feature pin: frozen-duckdb-sys has a DOCS_RS branch that skips native
+# builds, so the native toolchain docs.rs uses is fine — the feature set is what
+# needs pinning. (graphlaw does not publish to crates.io; this table is kept for
+# a future docs host. The purrdf fork is git-pinned above.)
 [package.metadata.docs.rs]
 features = ["abi", "evidentiary-ring", "pack-tools"]
 
@@ -177,13 +202,6 @@ wasmtime = { version = "48", features = ["runtime"] }
 wasmtime-wasi = "48"
 serde_json = "1"
 hdrhistogram = "7"
-
-# Carried patch (see vendor/README.md): gives WASI the std clock/RNG path instead
-# of the browser-only `js_sys` calls, which panic on any wasm32 target that is
-# not wasm32-unknown-unknown. Patches are ignored by `cargo publish`; the
-# repo-built WASI module is the artifact that carries it.
-[patch.crates-io]
-purrdf-sparql-eval = { path = "vendor/purrdf-sparql-eval" }
 
 # Line tables are enough for backtraces; full debuginfo made each of the many
 # integration-test binaries huge (tens of GB across the suite).

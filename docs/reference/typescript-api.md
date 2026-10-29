@@ -133,7 +133,7 @@ Closed unions:
   PolicyRefused`
 - `PolicyRefusalKind` — `MissingEntry | InventedOutcome | BadMass | DeadEnd |
   Malformed`
-- `Engine` — `PurRdf | Eyeron`
+- `Engine` — `PurRdf | FrozenDuckdb`
 - `DialectName` — request-side wire names: `turtle | trig | ntriples |
   nquads | rdfxml | jsonld | yamlld | trix | hextuples | n3 | sparql | shexc |
   shexj`

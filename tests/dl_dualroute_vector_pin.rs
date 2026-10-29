@@ -8,7 +8,7 @@
 //! `graphlaw_rev` field, and asserts a BLAKE3 digest pin per vector.
 //!
 //! Serialization fields covered by the pin (the `emit_vector` format string):
-//! `vector_id`, `breed`, `provenance.{graphlaw_version, purrdf, eyeron,
+//! `vector_id`, `breed`, `provenance.{graphlaw_version, purrdf, n3_engine,
 //! generator, stratified}`, `breed_input.{intent, facts, rules, goals,
 //! candidates, cases, state}`, `expected.{derived_facts_sorted, verdicts,
 //! notes}`. ANY field addition/removal/rename or any value-format change
@@ -25,22 +25,24 @@ use std::path::PathBuf;
 use std::process::Command;
 
 /// (slug, pinned BLAKE3 of the rev-normalized emitted vector bytes).
+/// Re-pin 2026-10-26: engine fix wave re-emit (P01/P02 landed) changed the
+/// emitted vector bytes; digests recomputed from the re-emitted fixtures.
 const PINS: &[(&str, &str)] = &[
     (
         "a-paper-baader-el",
-        "fb7f2781f25fb82951cf98055b3e469e5f8ece1a49e67e5c4b7aa258542f61de",
+        "b0831fc636e00669ff802fd9ae0b5998f5d8adf20b4f379032491c52ad8760f3",
     ),
     (
         "b-chain3-conj",
-        "13e99303c35548d809bc2fb7c05f81f2b8866d91c4ec240f6bdbd118bab90093",
+        "73871aac3c243968fbdc0b877c8f7416ba74d02eb8572e16c29744f4f7c55c38",
     ),
     (
         "c-exists-pair",
-        "5cdb06402530732800ea9c9b9295f8dc0995fa6646cbbe40799d647e642d5ca2",
+        "ae2c1c772f405cfe33f32a1644d45d6139372e3edb8bc67300f8454715171454",
     ),
     (
         "d-exists-conj-interlock",
-        "93cf4d71252f1f720df7218021e98dd37fb322e6847d825ebfc2bc2d4bc7e28c",
+        "21fd20682d7baf64a0d23d86be458837c33fdc618cc1fc7f4050888a4cf21964",
     ),
 ];
 

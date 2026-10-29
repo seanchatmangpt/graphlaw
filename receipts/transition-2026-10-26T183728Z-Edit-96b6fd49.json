@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "96b6fd4941da7bf287b21001d8420ac425c8badcc4d0e726a8d5a4ca8b12dd98",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-26T183728Z-Edit-96b6fd49.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/explanation/edge-sovereignty-and-zero-trust-compaction.md",
+  "timestamp_utc": "2026-10-26T183728Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

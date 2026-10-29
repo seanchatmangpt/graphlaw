@@ -12,7 +12,7 @@
 //!    other steps have run and reported).
 //! 4. EMISSION: the ORACLE table is emitted as N3/Datalog facts to
 //!    examples/allen_comp_table.n3 (`:r1 :comp_<r2> ( ... ) .`), parsed back with
-//!    eyeron, and the operative table for the case runs is rebuilt FROM the parsed facts.
+//!    curated `graphlaw::n3`, and the operative table for the case runs is rebuilt FROM the parsed facts.
 //! 5. CASES: path-consistency as transitive refinement to fixpoint over the fact-loaded
 //!    table: `M[k][j] := M[k][j] INTERSECT (M[k][i] o M[i][j])`, queue-based like the
 //!    breed. Vectors emitted as `derived:{i}:{j}` facts with `|`-joined masks.
@@ -29,7 +29,7 @@
 //! harness's fixpoint loop over the emitted Datalog facts; the rule shape is documented
 //! in the emitted file header.
 
-use eyeron::{Document, Term};
+use graphlaw::n3::{Document, Term};
 use std::collections::VecDeque;
 use std::fs;
 
@@ -401,9 +401,9 @@ fn main() {
     fs::write("examples/allen_comp_table.n3", &n3).expect("write facts file");
     println!("emitted examples/allen_comp_table.n3 (169 comp facts)");
 
-    // ---- 3. Reparse with eyeron and rebuild the table FROM the parsed facts
+    // ---- 3. Reparse with graphlaw::n3 and rebuild the table FROM the parsed facts
     let text = fs::read_to_string("examples/allen_comp_table.n3").expect("read facts file");
-    let doc: Document = eyeron::parse_n3(&text, None).expect("emitted facts must be valid N3");
+    let doc: Document = graphlaw::n3::parse_n3(&text, None).expect("emitted facts must be valid N3");
     let mut loaded: [[u16; 13]; 13] = [[0u16; 13]; 13];
     let mut count = 0usize;
     for t in &doc.facts {

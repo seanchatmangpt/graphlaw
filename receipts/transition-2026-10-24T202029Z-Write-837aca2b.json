@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "837aca2b314d2173e019dc3f6ecf60e00fd4fdec73147d9cc566660fa4873f79",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T202029Z-Write-837aca2b.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/.cargo/mutants-court-builders.toml",
+  "timestamp_utc": "2026-10-24T202029Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

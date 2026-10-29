@@ -45,8 +45,8 @@ use graphlaw::datalog::seminaive;
 use graphlaw::datalog::store::RelationStore;
 use serde_json::json;
 
-const PURRDF: &str = "2.0.2";
-const EYERON: &str = "0.7.9";
+const PURRDF: &str = "3.0.1";
+const N3_ENGINE: &str = "purrdf-n3/3.0.1";
 const SUBJ: &str = "t";
 const TRUE_OBJ: &str = "true";
 
@@ -182,7 +182,7 @@ fn emit_asp(case: &AspCase, rev: &str, dir: &std::path::Path) {
         "provenance": {
             "graphlaw_rev": rev,
             "purrdf": PURRDF,
-            "eyeron": EYERON,
+            "n3_engine": N3_ENGINE,
             "generator": "asp_tableaux_vector_gen (purrdf-datalog stratified least model; \
                           stratifiability enforced via graphlaw::datalog::plan::stratify)",
             "stratified": true,
@@ -396,7 +396,7 @@ fn emit_tableaux(case: &TableauxCase, rev: &str, dir: &std::path::Path) {
         "provenance": {
             "graphlaw_rev": rev,
             "purrdf": PURRDF,
-            "eyeron": EYERON,
+            "n3_engine": N3_ENGINE,
             "generator": "asp_tableaux_vector_gen (brute-force valuation enumeration over all \
                           atoms; independent of both graphlaw and wasm4pm formula machinery)",
             "stratified": false,

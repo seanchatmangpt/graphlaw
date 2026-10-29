@@ -296,7 +296,7 @@ fn n3_reasons() {
     let refused = call(json!({"op": "n3", "text": "{ ?x a } =>"}));
     assert_eq!(
         (refused["ok"].clone(), refused["error"]["engine"].clone()),
-        (json!(false), json!("Eyeron"))
+        (json!(false), json!("PurRdf"))
     );
 }
 
@@ -350,7 +350,7 @@ fn law_pipeline_runs_end_to_end_in_wasm() {
             {"step": "shacl", "shapes": read("innovation/candidate.shacl.ttl")}]}));
     let receipts = r["receipts"].as_array().unwrap();
     assert_eq!(receipts.len(), 2);
-    assert_eq!(receipts[0]["authority"], "eyeron");
+    assert_eq!(receipts[0]["authority"], "purrdf::n3");
     assert_eq!(receipts[1]["authority"], "purrdf::shapes");
     let ids = r["states"].as_array().unwrap();
     assert_ne!(ids[0], ids[1]);

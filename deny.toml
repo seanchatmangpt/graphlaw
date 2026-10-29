@@ -40,10 +40,11 @@ allow = [
     "MIT",
     "MIT-0",
     # purrdf 3.x family (RUST-8 lane L7: keep a purrdf 3.x migration unblocked).
-    # NOTE: the workspace crates (graphlaw, graphlaw-eyeron) are plain "MIT"
-    # (commit pending), so no [[licenses.clarify]] stanza is needed — the
-    # workspace license text (LICENSE.md) and the vendored eyeron license both
-    # read as MIT to cargo-deny's SPDX parser.
+    # NOTE: the workspace crate (graphlaw) is "MIT" (LICENSE.md), so no
+    # [[licenses.clarify]] stanza is needed for it; the purrdf family,
+    # git-sourced from https://github.com/seanchatmangpt/purrdf (rev-pinned),
+    # carries its own "MIT OR Apache-2.0 OR MulanPSL-2.0" expression — the
+    # MulanPSL-2.0 allow entry below exists for exactly that expression.
     "MulanPSL-2.0",
     "Unicode-3.0",
     "Unlicense",
@@ -60,4 +61,7 @@ highlight = "all"
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+# The pinned purrdf fork is the one lawful git source: the WASI clock gate and
+# the P01 proof-checker hardening live at its rev (see [dependencies] in
+# Cargo.toml and tests/wasi_patch_guard.rs).
+allow-git = ["https://github.com/seanchatmangpt/purrdf"]

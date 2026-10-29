@@ -7,7 +7,7 @@ conformance to any external receipt schema.
 | portfolio R field | GraphLaw field |
 |---|---|
 | identity | `parent`, `child` (state ids), `subject_blake3` (external subject digest), `query_hash` (DuckDB AST execution) |
-| authority | `authority`, `revision` (upstream engine: PurRDF, Eyeron, frozen-duckdb), `lease_id`, attestation `key_id` |
+| authority | `authority`, `revision` (upstream engine: PurRDF, purrdf::n3, frozen-duckdb), `lease_id`, attestation `key_id` |
 | consequence | `step`, `added`, `rows_emitted` |
 | replay | `plan_blake3`, query hash, and `graphlaw-verify` replay from the start state |
 | standing | not stored — derived by the verifier (`ADMITTED`/`REFUSED`) from the receipts |

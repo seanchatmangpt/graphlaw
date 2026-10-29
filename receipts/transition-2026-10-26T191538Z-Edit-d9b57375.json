@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "d9b5737597a133e968c978e79a1cdb9a40076d223e6a6171b12a65054fa631f0",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-26T191538Z-Edit-d9b57375.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/tests/n3_budget_cliff_court.rs",
+  "timestamp_utc": "2026-10-26T191538Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

@@ -122,7 +122,7 @@ The closure took four coordinated pieces (witnessed in
 
 The canonical re-pin followed only after qualification:
 `priv/graphlaw.wasm` blake3
-`fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`,
+`fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`, # historical — interim pin superseded by 58a44095…d2280a
 57,781,384 B, Tag(13)×1, wasm_audit PASS, lifecycle courts 3/3 GREEN.
 
 ## Why wasmi still cannot host, and the pin court posture

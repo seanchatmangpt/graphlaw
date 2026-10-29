@@ -6,7 +6,7 @@
 //!
 //! * Route A (DATALOG): per-axiom N3 rules over `dl#sub` / `dl#edge_<r>` —
 //!   CR1 transitivity rule, CR2 per-conj-axiom rule, CR3 exists_rhs -> edge
-//!   rules, CR4 exists_lhs rules. Run to fixpoint by Eyeron `Step::DeriveN3`.
+//!   rules, CR4 exists_lhs rules. Run to fixpoint by purrdf::n3 `Step::DeriveN3`.
 //! * Route B (OWL-RL): `dl:subclass` -> `rdfs:subClassOf`, exists ->
 //!   `owl:someValuesFrom` restrictions, conj -> `owl:intersectionOf`. Run by
 //!   the purrdf OWL-RL chase via `Step::EntailOwlRl`. OWL-RL classifies at
@@ -26,6 +26,7 @@ use graphlaw::sparql::NativeSparqlEngine;
 use graphlaw::tier::validate_n3_rules;
 use std::collections::BTreeSet;
 use std::fmt::Write as _;
+use purrdf::n3;
 
 const DL: &str = "https://graphlaw.dev/dl#";
 
@@ -398,9 +399,9 @@ fn emit_vector(case: &Case, _parsed: &Parsed, verdicts: &[bool]) -> Result<Strin
   "provenance": {{
     "graphlaw_rev": "{rev}",
     "graphlaw_version": "{version}",
-    "purrdf": "2.0.2",
-    "eyeron": "0.7.9",
-    "generator": "graphlaw src/bin/dl_dualroute.rs (dual-route: Eyeron N3 DATALOG CR1-CR4 + purrdf OWL-RL; agreement required before emission)",
+    "purrdf": "3.0.1",
+    "n3_engine": "purrdf-n3/3.0.1",
+    "generator": "graphlaw src/bin/dl_dualroute.rs (dual-route: purrdf::n3 DATALOG CR1-CR4 + purrdf OWL-RL; agreement required before emission)",
     "stratified": false
   }},
   "breed_input": {{
@@ -419,7 +420,7 @@ fn emit_vector(case: &Case, _parsed: &Parsed, verdicts: &[bool]) -> Result<Strin
       {derived_json}
     ],
     "verdicts": {{ {verdicts_json} }},
-    "notes": "{notes} — dual-route agreed (Eyeron DATALOG fixpoint == purrdf OWL-RL closure) on {n} goals before emission."
+    "notes": "{notes} — dual-route agreed (purrdf::n3 DATALOG fixpoint == purrdf OWL-RL closure) on {n} goals before emission."
   }}
 }}
 "#,

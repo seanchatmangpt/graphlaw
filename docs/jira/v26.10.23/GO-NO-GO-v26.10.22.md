@@ -316,3 +316,89 @@ The operator picks the posture; the lane files evidence, never the decision.
 - `/Users/sac/graphlaw/docs/reference/wasm-gap-register.md` (03:20 flip log)
 - `/Users/sac/graphlaw/receipts/2026-10-24-fuel-calibration.md`
 - `/Users/sac/graphlaw/docs/jira/v26.10.23/ADR-wasmi-retirement.md`
+
+---
+## A.2 Battery-ledger addendum (v6, 2026-10-24)
+
+Battery-receipts execution lane; APPEND ONLY (v3 grounds, v4 terminal state,
+v5 §A/§A.1/§B/§C/§D bodies untouched; no cargo, no git transitions by this
+lane). Every number below is spliced or recomputed from the four b3sum-digested
+battery logs at
+`receipts/2026-10-24-battery-full.md` (b3sum
+`7fa6e1489e6a4a5da358fd471189d3c2a442650ba2141e5d5289e15a11fccbaf`).
+Headline: **G3 goes REMAINING → SPLIT on the G4 precedent.**
+
+### G3 SPLIT
+
+| Half | Scope | State | Evidence (b3sum-digested logs, 2026-10-24) |
+|---|---|---|---|
+| DISCHARGED | L1 sqlrdf (8 targets) | **DISCHARGED** | 102 passed / 0 failed (`/tmp/bat-L1.log` b3sum `7dec1d1f…29b3`), incl. the sql-rdf statement-kind census **36/0** (`sql_rdf_dialect` — the honest census; "69/0" is witnessed nowhere in the logs) |
+| DISCHARGED | L2 chicago (5 targets) | **DISCHARGED** | 154/0 (`/tmp/bat-L2.log` b3sum `5d533716…2029`) |
+| DISCHARGED | L3 meta (15 targets) | **DISCHARGED** | 114/0 (`/tmp/bat-L3.log` b3sum `5f69751d…192d`), incl. `receipt_v2_court` 6/0, `receipt_v2_emission_court` 8/0, `trust_attest` 12/0 (Ed25519 attestation surface; Sigma_PQC §1.4 second formula stays UNMET and is quoted, not instantiated) |
+| DISCHARGED | dvp gating leg | **DISCHARGED** | `dvp_settlement_court` **4/0** (v5 G3's condition "dvp court must stay 4/0" holds; battery9's 2/2 RED closed on the shipped pin `58a44095…` — `receipts/2026-10-24-battery-banking.md`) |
+| REMAINING | op_differential | **CLASSIFIED-RED** | 15 passed / 1 failed — `sniff_dialect_agrees_with_parse_dialect_for_every_serialization` panicked at `tests/op_differential.rs:181:9`: native sniffs ntriples (`{"dialect":"NTriples",…}`) vs wasm sniffs Turtle on the same bytes — G8-class sniff differential, **fresh witness for `docs/jira/v26.10.23/design-sniff-fixes.md`**; the sniffer is not runtime-deterministic on identical input today |
+| REMAINING | 4 fail-fast-unexecuted courts | **SKIP-UNEXECUTED** | `op_examples`, `op_forward_compat`, `rehypothecation_gate_court`, `ubo_sanctions_court` — compiled in-leg (10 test targets, `target-battery-finance` build dir), never executed behind the `op_differential` failure. Count note: the dispatch said "5 fail-fast-unexecuted"; the log + build dir give **4 unexecuted**, and op_differential itself RED makes **5 courts without a green verdict** — both recorded so the ledger does not drift |
+| REMAINING | L5/L6 legs | **NOT RUN** | No logs, no receipts; their receipts flip the remaining legs |
+
+Capture-masking disclosure: the battery driver's shell wrapper echoed success
+unconditionally, so every leg's observed shell exit code is 0 regardless of
+cargo's outcome — the captured logs at the digests above are the evidence of
+record, not the leg exit codes.
+
+### G2 restated
+
+**REMAINING (unchanged), owner: coordinator, solo window** — with the config
+precondition: `abi_response_builders_court` is missing from the mutation
+kill suite (E07 lands the fix); the G2 sweep must run on a tree with that fix
+committed. The battery legs did not run that court; no battery receipt moves
+G2.
+
+### frame_bound currency note
+
+The v5 §A G1 row cites `wasm_frame_bound_court` **8/0**. The court on disk
+carries **4** `#[test]` functions today — the 8/0 figure is
+historical-at-write-time (pre wasmi-retirement split, `1e8ec32`), not
+re-witnessed by this battery. Cite 4/0-current basis until a fresh receipt
+witnesses it on the current HEAD.
+
+### Falsifiers (a)–(d)
+
+- (a) A green rerun of `cargo test --locked --test op_differential`
+  (16 passed; 0 failed, sniff-parity) on the shipped pin flips the
+  op_differential row CLASSIFIED-RED → DISCHARGED; a rerun failing on a
+  different test extends the classification instead.
+- (b) L5/L6 leg receipts with embedded `test result:` lines flip the
+  remaining legs from NOT RUN.
+- (c) Any court in the spliced tables returning a non-`ok` line on a rerun of
+  the recorded HEAD + pin `58a44095…` falsifies that row's PASS.
+- (d) A sniff fix landing WITHOUT (a) green is not a fix; the
+  design-sniff-fixes.md list shrinks only via `tests/sniff_court.rs` + the
+  differential going green.
+
+### §C receipt fields (this addendum)
+
+- **Identity**: append-only read of the 2026-10-24 battery over HEAD
+  `966cec3` → `a00770b4998a55ed4ee397e3e2a1f5a880c51db0` (moving tree,
+  disclosed), logs captured 11:15–11:35 local on the shipped artifact
+  identity `58a44095…` (58,124,612 B).
+- **Authority**: write lease = `receipts/2026-10-24-battery-*.md` (5 files,
+  this lane) + these ledger appends; no git mutations; no chain sync (the
+  coordinator runs it at integration).
+- **Consequence**: this append + 5 durable receipts + pointer rows in
+  `docs/jira/v26.10.22/RECEIPTS.md` and `RECEIPTS-INDEX.md`; zero code edits;
+  no register status hand-edited anywhere.
+- **Replay**: `b3sum /tmp/bat-L1.log /tmp/bat-L2.log /tmp/bat-L3.log
+  /tmp/bat-L4.log` must reproduce the digests in
+  `receipts/2026-10-24-battery-full.md`; reruns named in that receipt's §C.
+- **Standing**: posture P unchanged; G3 SPLIT as recorded; the operator
+  decision block (§B) is not moved by this addendum.
+
+Receipts of record (this lane, 5): `receipts/2026-10-24-battery-dialect-census.md`
+(b3sum `91cee82a…a444c`), `receipts/2026-10-24-battery-receipt-v2.md`
+(b3sum `7ce1dfc7…685f`), `receipts/2026-10-24-battery-trust-attest.md`
+(b3sum `dfdb8091…67fc`), `receipts/2026-10-24-battery-banking.md`
+(b3sum `99cce2e4…c59d`), `receipts/2026-10-24-battery-full.md`
+(b3sum `7fa6e148…cbaf`). Two sibling battery receipts
+(`battery-pytest-oracle`, `battery-wasm-eh`) appeared on disk mid-lane under
+the same `battery-*` prefix; they are another lane's writes and are recorded
+here as observed-on-disk only, no claims made.

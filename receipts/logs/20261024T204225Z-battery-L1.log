@@ -1,0 +1,735 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /Users/sac/graphlaw/wasm/Cargo.toml
+workspace: /Users/sac/graphlaw/Cargo.toml
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/breed_oracle_gen.rs` found to be present in multiple build targets:
+  * `bin` target `breed_oracle_gen`
+  * `example` target `breed_oracle_gen`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/bayes_pop_vectors.rs` found to be present in multiple build targets:
+  * `bin` target `bayes_pop_vectors`
+  * `example` target `bayes_pop_vectors`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/event_calculus_vectors.rs` found to be present in multiple build targets:
+  * `bin` target `event_calculus_vectors`
+  * `example` target `event_calculus_vectors`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/naive_physics_vectors.rs` found to be present in multiple build targets:
+  * `bin` target `naive_physics_vectors`
+  * `example` target `naive_physics_vectors`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/plan_replay_oracle_gen.rs` found to be present in multiple build targets:
+  * `bin` target `plan_replay_oracle_gen`
+  * `example` target `plan_replay_oracle_gen`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/asp_tableaux_vector_gen.rs` found to be present in multiple build targets:
+  * `bin` target `asp_tableaux_vector_gen`
+  * `example` target `asp_tableaux_vector_gen`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/allen_datalog.rs` found to be present in multiple build targets:
+  * `bin` target `allen_datalog`
+  * `example` target `allen_datalog`
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling cfg-if v1.0.5
+   Compiling serde v1.0.229
+   Compiling libc v0.2.189
+   Compiling syn v3.0.6
+   Compiling syn v2.0.119
+   Compiling serde_core v1.0.229
+   Compiling memchr v2.8.3
+   Compiling foldhash v0.2.0
+   Compiling version_check v0.9.5
+   Compiling bitflags v2.13.2
+   Compiling equivalent v1.0.2
+   Compiling libm v0.2.16
+   Compiling once_cell v1.21.4
+   Compiling serde_derive v1.0.229
+   Compiling generic-array v0.14.7
+   Compiling itoa v1.0.18
+   Compiling jobserver v0.1.35
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.14
+   Compiling cc v1.5.1
+   Compiling typenum v1.20.1
+   Compiling crypto-common v0.1.7
+   Compiling hashbrown v0.17.1
+   Compiling cpufeatures v0.2.17
+   Compiling bytes v1.12.1
+   Compiling anyhow v1.0.104
+   Compiling block-buffer v0.10.4
+   Compiling core-foundation-sys v0.8.7
+   Compiling digest v0.10.7
+   Compiling smallvec v1.16.2
+   Compiling autocfg v1.5.1
+   Compiling zerocopy v0.8.59
+   Compiling allocator-api2 v0.2.21
+   Compiling num-traits v0.2.19
+   Compiling zerocopy-derive v0.8.59
+   Compiling indexmap v2.14.2
+   Compiling log v0.4.34
+   Compiling sha2 v0.10.9
+   Compiling ryu v1.0.23
+   Compiling fnv v1.0.7
+   Compiling pin-project-lite v0.2.17
+   Compiling synstructure v0.14.0
+   Compiling getrandom v0.3.4
+   Compiling ahash v0.8.12
+   Compiling zeroize v1.9.0
+   Compiling fastrand v2.5.0
+   Compiling zerofrom-derive v0.1.8
+   Compiling heck v0.5.0
+   Compiling yoke-derive v0.8.4
+   Compiling zerofrom v0.1.8
+   Compiling stable_deref_trait v1.2.1
+   Compiling rustversion v1.0.23
+   Compiling semver v1.0.28
+   Compiling futures-core v0.3.34
+   Compiling crossbeam-utils v0.8.23
+   Compiling yoke v0.8.3
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling crc32fast v1.5.2
+   Compiling zerovec v0.11.8
+   Compiling futures-sink v0.3.34
+   Compiling hashbrown v0.16.1
+   Compiling aho-corasick v1.1.5
+   Compiling crossbeam-epoch v0.9.21
+   Compiling regex-syntax v0.8.11
+   Compiling regex-automata v0.4.18
+   Compiling rayon-core v1.13.0
+   Compiling zmij v1.0.23
+   Compiling futures-task v0.3.34
+   Compiling rustix v1.1.5
+   Compiling futures-io v0.3.34
+   Compiling slab v0.4.12
+   Compiling pkg-config v0.3.34
+   Compiling crossbeam-deque v0.8.8
+   Compiling zstd-sys v2.1.2+zstd.1.5.7
+   Compiling regex v1.13.1
+   Compiling tinystr v0.8.4
+   Compiling errno v0.3.14
+   Compiling litemap v0.8.3
+   Compiling adler2 v2.0.1
+   Compiling foldhash v0.1.5
+   Compiling writeable v0.6.4
+   Compiling serde_json v1.0.151
+   Compiling hashbrown v0.15.5
+   Compiling icu_locale_core v2.3.0
+   Compiling potential_utf v0.1.6
+   Compiling zerotrie v0.2.5
+   Compiling half v2.7.1
+   Compiling tracing-attributes v0.1.31
+   Compiling utf8_iter v1.0.4
+   Compiling icu_normalizer_data v2.3.0
+   Compiling icu_collections v2.3.0
+   Compiling icu_provider v2.3.1
+   Compiling hybrid-array v0.4.15
+   Compiling purrdf-iri v2.0.2
+   Compiling either v1.18.0
+   Compiling icu_properties_data v2.3.0
+   Compiling purrdf-xsd v2.0.2
+   Compiling purrdf-cdt v2.0.2
+   Compiling num-integer v0.1.47
+   Compiling csv-core v0.1.13
+   Compiling purrdf-events v2.0.2
+   Compiling httparse v1.10.1
+   Compiling csv v1.4.0
+   Compiling percent-encoding v2.3.2
+   Compiling oxilangtag v0.1.6
+   Compiling icu_properties v2.3.0
+   Compiling purrdf-core v2.0.2
+   Compiling rayon v1.12.0
+   Compiling crypto-common v0.2.2
+   Compiling http v0.2.12
+   Compiling native-tls v0.2.18
+   Compiling deranged v0.5.8
+   Compiling time-core v0.1.9
+   Compiling powerfmt v0.2.0
+   Compiling subtle v2.6.1
+   Compiling num-conv v0.2.2
+   Compiling encoding_rs v0.8.42
+   Compiling getrandom v0.4.3
+   Compiling cmov v0.5.4
+   Compiling ctutils v0.4.5
+   Compiling form_urlencoded v1.2.2
+   Compiling num-bigint v0.4.8
+   Compiling block-buffer v0.12.1
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling simdutf8 v0.1.5
+   Compiling multiversion_no_op v1.0.0
+   Compiling const-oid v0.10.2
+   Compiling system-configuration-sys v0.5.0
+   Compiling rand_core v0.10.1
+   Compiling arrayvec v0.7.8
+   Compiling try-lock v0.2.5
+   Compiling scopeguard v1.2.0
+   Compiling want v0.3.2
+   Compiling digest v0.11.3
+   Compiling tokio v1.54.1
+   Compiling num-rational v0.4.2
+   Compiling http-body v0.4.6
+   Compiling num-iter v0.1.46
+   Compiling num-complex v0.4.6
+   Compiling blake3 v1.8.7
+   Compiling httpdate v1.0.3
+   Compiling tower-service v0.3.3
+   Compiling num v0.4.3
+   Compiling futures-channel v0.3.34
+   Compiling sha1 v0.10.7
+   Compiling security-framework-sys v2.17.0
+   Compiling core-foundation v0.10.1
+   Compiling tracing-core v0.1.36
+   Compiling cpufeatures v0.3.1
+   Compiling simd-adler32 v0.3.10
+   Compiling constant_time_eq v0.4.2
+   Compiling unicode-width v0.2.2
+   Compiling miniz_oxide v0.9.1
+   Compiling tracing v0.1.44
+   Compiling security-framework v3.7.0
+   Compiling futures-util v0.3.34
+   Compiling arrow-buffer v56.2.1
+   Compiling tokio-util v0.7.20
+   Compiling tempfile v3.27.0
+   Compiling icu_normalizer v2.3.0
+   Compiling rustc_version v0.4.1
+   Compiling iana-time-zone v0.1.65
+   Compiling inout v0.1.4
+   Compiling arrow-schema v56.2.1
+   Compiling zstd-safe v8.2.0
+   Compiling bitflags v1.3.2
+   Compiling ipnet v2.12.2
+   Compiling cfg_aliases v0.2.2
+   Compiling glob v0.3.4
+   Compiling clang-sys v1.9.1
+   Compiling arrow-data v56.2.1
+   Compiling nix v0.31.3
+   Compiling h2 v0.3.27
+   Compiling cipher v0.4.4
+   Compiling chrono v0.4.45
+   Compiling curve25519-dalek v4.1.3
+   Compiling idna_adapter v1.2.2
+   Compiling flate2 v1.1.10
+   Compiling universal-hash v0.5.1
+   Compiling inout v0.2.5
+   Compiling constant_time_eq v0.6.1
+   Compiling keccak v0.1.6
+   Compiling socket2 v0.5.10
+   Compiling opaque-debug v0.3.1
+   Compiling base64 v0.21.7
+   Compiling base64 v0.22.1
+   Compiling rustix v0.38.44
+   Compiling prettyplease v0.2.37
+   Compiling rustls-pemfile v1.0.4
+   Compiling polyval v0.6.2
+   Compiling hyper v0.14.32
+   Compiling sha3 v0.10.9
+   Compiling cipher v0.5.2
+   Compiling tokio-native-tls v0.3.1
+   Compiling arrow-array v56.2.1
+   Compiling idna v1.1.0
+   Compiling sha2 v0.11.1
+   Compiling hmac v0.13.0
+   Compiling purrdf-sparql-results v2.0.2
+   Compiling purrdf-sparql-algebra v2.0.2
+   Compiling md-5 v0.10.6
+   Compiling core-foundation v0.9.4
+   Compiling lexical-util v1.0.7
+   Compiling libbz2-rs-sys v0.2.5
+   Compiling lazy_static v1.5.1
+   Compiling signature v2.2.0
+   Compiling sync_wrapper v0.1.2
+   Compiling zlib-rs v0.6.8
+   Compiling twox-hash v2.1.4
+   Compiling minimal-lexical v0.2.1
+   Compiling mime v0.3.17
+   Compiling bumpalo v3.20.3
+   Compiling cpubits v0.1.1
+   Compiling ciborium-io v0.2.2
+   Compiling zopfli v0.8.4
+   Compiling ciborium-ll v0.2.2
+   Compiling aes v0.9.3
+   Compiling nom v7.1.3
+   Compiling structured-zstd v0.0.49
+   Compiling ed25519 v2.2.3
+   Compiling bzip2 v0.6.1
+   Compiling purrdf-sparql-eval v2.0.2 (/Users/sac/graphlaw/vendor/purrdf-sparql-eval)
+   Compiling system-configuration v0.5.1
+   Compiling pbkdf2 v0.13.0
+   Compiling lzma-rust2 v0.22.0
+   Compiling url v2.5.8
+   Compiling hyper-tls v0.5.0
+   Compiling zstd v0.14.3
+   Compiling ghash v0.5.1
+   Compiling ctr v0.9.2
+   Compiling aes v0.8.4
+   Compiling sha1 v0.11.0
+   Compiling serde_urlencoded v0.7.1
+   Compiling xattr v1.6.1
+   Compiling time v0.3.55
+   Compiling aead v0.5.2
+   Compiling ring v0.17.14
+   Compiling filetime v0.2.29
+   Compiling libloading v0.8.9
+   Compiling deflate64 v0.1.12
+   Compiling ppmd-rust v1.5.2
+   Compiling bindgen v0.69.5
+   Compiling typed-path v0.12.4
+   Compiling home v0.5.12
+   Compiling which v4.4.2
+   Compiling zip v9.0.5
+   Compiling tar v0.4.46
+   Compiling aes-gcm v0.10.3
+   Compiling reqwest v0.11.27
+   Compiling ed25519-dalek v2.2.0
+   Compiling cexpr v0.6.0
+   Compiling ciborium v0.2.2
+   Compiling itertools v0.12.1
+   Compiling visual-hashing v0.1.3
+   Compiling thiserror-impl v2.0.21
+   Compiling unsafe-libyaml v0.2.11
+   Compiling wasmtime-internal-core v48.0.7
+   Compiling roxmltree v0.20.0
+   Compiling rustc-hash v1.1.0
+   Compiling shlex v1.3.0
+   Compiling utf8parse v0.2.2
+   Compiling lazycell v1.3.0
+   Compiling anstyle-parse v1.0.0
+   Compiling serde_yaml_ng v0.10.0
+   Compiling purrdf-gts v2.0.2
+   Compiling frozen-duckdb-builder v2.0.2
+   Compiling lexical-write-integer v1.0.6
+   Compiling lexical-parse-integer v1.0.6
+   Compiling arrow-select v56.2.1
+   Compiling rustls-pki-types v1.15.1
+   Compiling getrandom v0.2.17
+   Compiling anstyle-query v1.1.5
+   Compiling colorchoice v1.0.5
+   Compiling untrusted v0.9.0
+   Compiling anstyle v1.0.14
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling fixedbitset v0.5.7
+   Compiling petgraph v0.8.3
+   Compiling frozen-duckdb-sys v2.0.2
+   Compiling anstream v1.0.0
+   Compiling purrdf-rdf v2.0.2
+   Compiling lexical-parse-float v1.0.6
+   Compiling lexical-write-float v1.0.6
+   Compiling terminal_size v0.4.4
+   Compiling strum_macros v0.26.4
+   Compiling strsim v0.11.1
+   Compiling tinyvec v1.13.3
+   Compiling hex v0.4.3
+   Compiling clap_lex v1.1.1
+   Compiling strum v0.26.3
+   Compiling leb128fmt v0.1.0
+   Compiling rustls v0.23.46
+   Compiling clap_builder v4.6.7
+   Compiling comfy-table v7.1.2
+   Compiling unicode-normalization v0.1.25
+   Compiling cranelift-bitset v0.135.7
+   Compiling lexical-core v1.0.6
+   Compiling rustls-webpki v0.103.16
+   Compiling purrdf-datalog v2.0.2
+   Compiling clap_derive v4.6.7
+   Compiling atoi v2.0.0
+   Compiling http v1.5.0
+   Compiling base64 v0.23.1
+   Compiling rust_decimal v1.43.0
+   Compiling ureq-proto v0.6.4
+   Compiling arrow-cast v56.2.1
+   Compiling clap v4.6.7
+   Compiling purrdf-entail v2.0.2
+   Compiling purrdf-slice v2.0.2
+   Compiling purrdf-shapes v2.0.2
+   Compiling caseless v0.2.2
+   Compiling arrow-ord v56.2.1
+   Compiling arrow-string v56.2.1
+   Compiling webpki-roots v1.0.10
+   Compiling sharded-slab v0.1.7
+   Compiling arrow-row v56.2.1
+   Compiling arrow-arith v56.2.1
+   Compiling tracing-log v0.2.0
+   Compiling strum_macros v0.27.2
+   Compiling thread_local v1.1.10
+   Compiling nu-ansi-term v0.50.3
+   Compiling frozen-duckdb v2.0.2
+   Compiling unicode-segmentation v1.13.3
+   Compiling utf8-zero v0.8.1
+   Compiling target-lexicon v0.13.5
+   Compiling strum v0.27.2
+   Compiling ureq v3.4.2
+   Compiling purrdf-text v2.0.2
+   Compiling tracing-subscriber v0.3.23
+   Compiling purrdf-validate v2.0.2
+   Compiling arrow v56.2.1
+   Compiling purrdf-geo v2.0.2
+   Compiling purrdf-columnar v2.0.2
+   Compiling purrdf-shex v2.0.2
+   Compiling purrdf-markdown v2.0.2
+   Compiling purrdf-json v2.0.2
+   Compiling num-bigint v0.5.1
+   Compiling hashlink v0.10.0
+   Compiling graphlaw v26.10.22 (/Users/sac/graphlaw)
+   Compiling cast v0.3.0
+   Compiling fallible-iterator v0.3.0
+   Compiling thiserror v2.0.21
+   Compiling cranelift-srcgen v0.135.7
+   Compiling fallible-streaming-iterator v0.1.9
+   Compiling graphlaw-eyeron v0.7.9 (/Users/sac/graphlaw/crates/graphlaw-eyeron)
+   Compiling cranelift-assembler-x64-meta v0.135.7
+   Compiling purrdf v2.0.2
+   Compiling pulley-macros v48.0.7
+   Compiling wasmparser v0.254.2
+   Compiling cobs v0.3.0
+   Compiling cranelift-entity v0.135.7
+   Compiling gimli v0.33.0
+warning: unused variable: `params`
+   --> src/sql_ast/serializer.rs:569:5
+    |
+569 |     params: &mut Vec<SqlLiteral>,
+    |     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_params`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+    --> src/sql_ast.rs:1592:13
+     |
+1592 |         let mut flag_lex = |pred: &str| -> Result<bool, AstError> {
+     |             ----^^^^^^^^
+     |             |
+     |             help: remove this `mut`
+     |
+     = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable `iniri` is assigned to, but never used
+    --> src/sql_ast.rs:2712:17
+     |
+2712 |             let mut iniri = false;
+     |                 ^^^^^^^^^
+     |
+     = note: consider using `_iniri` instead
+
+warning: value assigned to `iniri` is never read
+    --> src/sql_ast.rs:2729:31
+     |
+2729 |                     b'<' => { iniri = true; j += 1; }
+     |                               ^^^^^^^^^^^^ this value is reassigned later and never used
+2730 |                     b'>' => { iniri = false; j += 1; }
+     |                               ------------- `iniri` is overwritten here before the previous value is read
+     |
+     = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `iniri` is never read
+    --> src/sql_ast.rs:2730:31
+     |
+2730 |                     b'>' => { iniri = false; j += 1; }
+     |                               ^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+
+warning: function `CANON_ARROW_EMPTY_V1` should have a snake case name
+   --> src/egress/arrow.rs:180:8
+    |
+180 | pub fn CANON_ARROW_EMPTY_V1() -> &'static [u8; 32] {
+    |        ^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `canon_arrow_empty_v1`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+   Compiling wasmtime-internal-versioned-export-macros v48.0.7
+   Compiling cranelift-isle v0.135.7
+   Compiling cranelift-bforest v0.135.7
+warning: `graphlaw` (lib) generated 6 warnings (run `cargo fix --lib -p graphlaw` to apply 2 suggestions)
+   Compiling postcard v1.1.3
+   Compiling pulley-interpreter v48.0.7
+   Compiling cranelift-codegen-shared v0.135.7
+   Compiling object v0.39.1
+   Compiling cranelift-assembler-x64 v0.135.7
+   Compiling cpp_demangle v0.5.1
+   Compiling cranelift-codegen-meta v0.135.7
+   Compiling rustc-hash v2.1.3
+   Compiling wasm-encoder v0.254.2
+   Compiling wasmtime-internal-component-util v48.0.7
+   Compiling termcolor v1.4.1
+   Compiling arbitrary v1.5.0
+   Compiling cranelift-codegen v0.135.7
+   Compiling cranelift-control v0.135.7
+   Compiling wasmprinter v0.254.2
+   Compiling regalloc2 v0.15.2
+   Compiling rustc-demangle v0.1.28
+   Compiling id-arena v2.3.0
+   Compiling wasmtime-environ v48.0.7
+   Compiling zstd-safe v7.3.0
+   Compiling wit-parser v0.254.2
+   Compiling wasm-metadata v0.254.2
+   Compiling wasm-encoder v0.259.0
+   Compiling winnow v1.0.4
+   Compiling wasmtime-internal-unwinder v48.0.7
+   Compiling thiserror v1.0.69
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling wit-component v0.254.2
+   Compiling wast v259.0.0
+   Compiling wasmtime-internal-fiber v48.0.7
+   Compiling wasmtime-internal-jit-debug v48.0.7
+   Compiling serde_spanned v1.1.2
+   Compiling toml_datetime v0.7.5+spec-1.1.0
+   Compiling thiserror-impl v1.0.69
+   Compiling dirs-sys-next v0.1.2
+   Compiling wasmtime-internal-cache v48.0.7
+   Compiling wasmtime-internal-component-macro v48.0.7
+   Compiling uuid v1.28.0
+   Compiling toml_writer v1.1.3+spec-1.1.0
+   Compiling leb128 v0.2.7
+   Compiling wasmtime-internal-cranelift v48.0.7
+   Compiling fixedbitset v0.4.2
+   Compiling winnow v0.7.15
+   Compiling petgraph v0.6.5
+   Compiling toml v0.9.12+spec-1.1.0
+   Compiling wast v35.0.2
+   Compiling debugid v0.8.0
+   Compiling directories-next v2.0.0
+   Compiling cranelift-native v0.135.7
+   Compiling cranelift-frontend v0.135.7
+   Compiling wat v1.259.0
+   Compiling zstd v0.13.3
+   Compiling wasmtime-internal-wit-bindgen v48.0.7
+   Compiling wasmtime v48.0.7
+   Compiling itertools v0.14.0
+   Compiling io-lifetimes v2.0.4
+   Compiling io-lifetimes v3.0.1
+   Compiling wasm-compose v0.254.2
+   Compiling fxprof-processed-profile v0.8.1
+   Compiling witx v0.9.1
+   Compiling addr2line v0.26.1
+   Compiling wasmtime-internal-jit-icache-coherence v48.0.7
+   Compiling futures v0.3.34
+   Compiling async-trait v0.1.92
+   Compiling wiggle-macro v48.0.7
+   Compiling mach2 v0.6.0
+   Compiling io-extras v0.19.0
+   Compiling wiggle-generate v48.0.7
+   Compiling cap-primitives v4.0.3
+   Compiling fs-set-times v0.20.3
+   Compiling chacha20 v0.10.2
+   Compiling maybe-owned v0.3.4
+   Compiling ambient-authority v0.0.2
+   Compiling rand v0.10.3
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling crossbeam-channel v0.5.17
+   Compiling divan-macros v0.1.21
+   Compiling nom v8.0.0
+   Compiling byteorder v1.5.0
+   Compiling regex-lite v0.1.9
+   Compiling condtype v1.3.0
+   Compiling divan v0.1.21
+   Compiling hdrhistogram v7.6.0
+warning: unused variable: `c`
+   --> src/bin/graphlaw_ocel_export.rs:134:21
+    |
+134 |         if let Some(c) = cap.get_mut(0..1) {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_c`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `c`
+   --> src/bin/graphlaw_ocel_export.rs:143:21
+    |
+143 |         if let Some(c) = cap.get_mut(0..1) {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_c`
+
+warning: variable does not need to be mutable
+   --> src/bin/graphlaw_ocel_export.rs:325:9
+    |
+325 |     let mut emit = |activity: &'static str,
+    |         ----^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/bin/graphlaw_ocel_export.rs:403:31
+    |
+403 |         r1.authority.authority.clone(),
+    |                               ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+    = note: `#[warn(noop_method_call)]` on by default
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/bin/graphlaw_ocel_export.rs:419:31
+    |
+419 |         r1.authority.authority.clone(),
+    |                               ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/bin/graphlaw_ocel_export.rs:442:31
+    |
+442 |         r2.authority.authority.clone(),
+    |                               ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/bin/graphlaw_ocel_export.rs:458:31
+    |
+458 |         r2.authority.authority.clone(),
+    |                               ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+
+warning: `graphlaw` (bin "graphlaw_ocel_export") generated 7 warnings (run `cargo fix --bin "graphlaw_ocel_export" -p graphlaw` to apply 7 suggestions)
+   Compiling wiggle v48.0.7
+   Compiling wasmtime-wasi-io v48.0.7
+   Compiling wasmtime-wasi v48.0.7
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3m 10s
+     Running tests/canonical_cross_dialect.rs (target-battery-sqlrdf/debug/deps/canonical_cross_dialect-d077846a58e5a250)
+
+running 6 tests
+test n3_is_refused_unsupported_for_canonical ... ok
+test nonvacuity_one_quad_perturbation_moves_id ... ok
+test dataset_court_named_graph_differs_from_default_graph ... ok
+test dataset_court_named_graph_id_matches_across_trig_and_nquads ... ok
+test graph_court_pure_graph_id_identical_across_dialects ... ok
+test blank_node_court_relabeling_and_cross_dialect_id ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/duckdb_statement_kinds.rs (target-battery-sqlrdf/debug/deps/duckdb_statement_kinds-ac8c8a60c033f682)
+
+running 8 tests
+test generated_kinds_match_the_committed_grammar ... ok
+test copy_statement_writes_a_real_file_matching_the_table ... ok
+test expression_courts_flip_under_operator_inversion ... ok
+test every_statement_kind_runs ... ok
+test every_source_extension_answers_or_is_absent ... ok
+test every_command_class_compiles_from_expressions_and_runs_on_its_own_connection ... ok
+test attach_statement_binds_a_real_file_database_readable_through_the_alias ... ok
+test section6_2_certified_checks_run_through_compiled_ast_graphs ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.26s
+
+     Running tests/k5_hostile_sqlrdf.rs (target-battery-sqlrdf/debug/deps/k5_hostile_sqlrdf-d40ca70096eb3143)
+
+running 8 tests
+test b1_hostile_table_name_is_typed_refusal ... ok
+test e2_aggregate_wrapped_on_is_typed_refusal ... ok
+test b2_hostile_column_name_is_typed_refusal ... ok
+test d_where_admits_everything_is_lawful_select_semantics ... ok
+test a_literal_drop_table_smuggles_as_data_only ... ok
+test e1_schema_suffix_collision_is_typed_refusal ... ok
+test c_merge_tautological_on_is_typed_refusal ... ok
+test e3_unqualified_on_column_is_typed_refusal ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+     Running tests/refusal_crosswalk_differential.rs (target-battery-sqlrdf/debug/deps/refusal_crosswalk_differential-d6a3407ca9a31d62)
+
+running 6 tests
+test refusal_crosswalk_pin_matches_live_sibling ... ok
+test sabotage_twin_mutated_verdict_fails_court ... ok
+test erlmcp_code_totality_fail_closed ... ok
+test valve_class_differential_agreement ... ok
+test crosswalk_projection_query_agrees ... ok
+test refusal_crosswalk_pack_gates_clean_and_engines_agree ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.53s
+
+     Running tests/refusal_details.rs (target-battery-sqlrdf/debug/deps/refusal_details-431ce9f216939765)
+
+running 7 tests
+test lease_refusal_carries_reason_lease_id_step ... ok
+test receipt_required_carries_step ... ok
+test policy_refusal_carries_kind_state_action ... ok
+test plan_refusal_carries_index_action_and_unmet ... ok
+test every_law_error_variant_has_a_code ... ok
+test rust_variant_keeps_count_and_results_in_agreement ... ok
+test shacl_refusal_carries_one_structured_entry_per_violation ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/sql_rdf_conformance.rs (target-battery-sqlrdf/debug/deps/sql_rdf_conformance-14e6eda98690fab5)
+
+running 8 tests
+test report_emission_is_additive_and_clause_inventory_is_exhaustive ... ok
+test section6_2_certified_extension_values_match_generated_table ... ok
+test register_completeness_every_refusal_arm_is_enumerated ... ok
+test section7_1_compiles_to_target_parameterized_projection ... ok
+test section5_refusal_codes_in_register_and_in_src ... ok
+test section3_2_inventory_is_35_classes_with_typed_engine_refusals ... ok
+test section7_merge_admit_refuse_flip_on_real_duckdb ... ok
+test section4_shape_names_present_and_gates_refuse ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+
+     Running tests/sql_rdf_dialect.rs (target-battery-sqlrdf/debug/deps/sql_rdf_dialect-71209326aa00c39e)
+
+running 36 tests
+test duckdb_courts::aggregate_in_group_by_is_refusal_03 ... ok
+test duckdb_courts::property_stuffing_node_is_refusal_01 ... ok
+test duckdb_courts::aggregate_hidden_under_alias_indirection_in_where_is_refusal_03 ... ok
+test d5_operator_dual_carry_string_and_iri_is_refusal_01 ... ok
+test disallowed_operator_token_is_refusal_01 ... ok
+test duckdb_courts::nested_aggregate_is_refusal_03 ... ok
+test duckdb_courts::admitted_ast_executes_on_frozen_duckdb ... ok
+test duckdb_courts::group_having_order_by_select_executes_with_table_readback ... ok
+test duckdb_courts::aggregate_in_where_is_refusal_03 ... ok
+test duckdb_join_condition_courts::join_condition_aggregate_is_refusal_03 ... ok
+test l163_msg_aggregate_in_where_is_verbatim ... ok
+test l163_msg_no_canonical_graph_is_verbatim ... ok
+test l163_msg_literal_not_float_is_verbatim ... ok
+test l163_msg_connect_statement_is_verbatim ... ok
+test duckdb_courts::section7_merge_compiles_to_parameterized_sql_with_params ... ok
+test l163_msg_admission_seal_mismatch_is_verbatim ... ok
+test d4_direction_iri_object_is_refusal_01_not_silent_asc ... ok
+test l163_msg_missing_statement_index_is_verbatim ... ok
+test sniff_routes_sql_select_and_leaves_plain_turtle ... ok
+test sniff_sql_term_without_select_is_ambiguous ... ok
+test l163_msg_literal_not_int_is_verbatim_with_truncated_ident ... ok
+test section4_string_operator_tokens_compile ... ok
+test l163_msg_join_type_iri_is_verbatim ... ok
+test duckdb_courts::process_scope_column_in_select_list_is_refusal_03 ... ok
+test duckdb_courts::connect_disconnect_carry_refusal_02 ... ok
+test shape_violation_refuses_before_duckdb ... ok
+test missing_statement_index_is_refusal_01_before_duckdb ... ok
+test duckdb_courts::schema_qualified_from_list_compiles_and_executes ... ok
+test query_hash_determinism_court::parameter_change_moves_the_digest ... ok
+test query_hash_determinism_court::semantic_literal_change_moves_the_digest ... ok
+test d1_empty_select_list_is_refusal_01_not_select_star ... ok
+test refusal05_where_less_update_is_verbatim_and_pre_engine ... ok
+test sql_rdf_joins_the_rdf_dataset_path ... ok
+test refusal05_where_less_delete_is_verbatim_and_pre_engine ... ok
+test query_hash_determinism_court::receipt_equals_recomputed_canon_plus_params_hash ... ok
+test query_hash_determinism_court::five_cosmetic_variants_hash_identically_through_public_path ... ok
+
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.27s
+
+     Running tests/sql_rdf_laundering_corpus.rs (target-battery-sqlrdf/debug/deps/sql_rdf_laundering_corpus-60d56dd4bbfaafd2)
+
+running 23 tests
+test benign_skeleton_compiles ... ok
+test aggregate_unscoped_in_where_still_refuses_03 ... ok
+test aggregate_process_scope_in_having_compiles ... ok
+test d3_order_by_aggregate_expression_wrapper_compiles ... ok
+test d3_expression_wrapper_plus_discriminator_refuses ... ok
+test e4_malformed_offset ... ok
+test e3_duplicate_where_clause ... ok
+test dual_scope_on_column_refuses ... ok
+test e5_left_leftoperand_dual_key ... ok
+test aggregate_scope_process_in_where_refuses_03 ... ok
+test fromless_select_refuses_via_shacl_shape_channel ... ok
+test scope_on_operator_node_refuses ... ok
+test e2_hostile_from_under_benign_fromtable ... ok
+test e3_unknown_where_predicate_refuses_typed ... ok
+test e4_malformed_limit ... ok
+test e1_mixed_projection_select_item ... ok
+test view_scope_column_in_where_refuses_03 ... ok
+test process_scope_column_in_select_refuses_03 ... ok
+test d1_scope_on_from_table_refuses ... ok
+test d1_scope_on_join_table_refuses ... ok
+test tcb_aggregate_node_process_scope_in_where_refuses_03 ... ok
+test tcb_process_scope_argument_in_legal_having_aggregate_refuses_03 ... ok
+test deep_nested_expression_refuses_recursion_limit ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.61s
+
+
+# RETRO-TAIL 2026-10-26: EXIT=0 derived from this log's 8 'test result:' lines (all ok, 0 failed) — appended to satisfy the EXIT-tail capture law; pre-tail digest 7dec1d1f598a6f1861824f55927bec94e56a3f6785eb208559700bd0647c29b3
+EXIT=0

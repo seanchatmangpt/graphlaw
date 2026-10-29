@@ -604,7 +604,7 @@
       }
     },
     {
-      "description": "Malformed N3 is rejected by the Eyeron engine.",
+      "description": "Malformed N3 is rejected by the purrdf::n3 engine.",
       "id": "n3.syntax-refused",
       "op": "n3",
       "outcome": "refused",

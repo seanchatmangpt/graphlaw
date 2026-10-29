@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "c1c3a0a454f550547af388b00e85e97ae00cadb7bbc1b3bd77a02624b3da2d3d",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-25T164417Z-Edit-c1c3a0a4.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/purrdf/crates/n3/src/lexer.rs",
+  "timestamp_utc": "2026-10-25T164417Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

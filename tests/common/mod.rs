@@ -12,6 +12,8 @@
 #![cfg(all(feature = "abi", not(target_arch = "wasm32")))]
 #![allow(dead_code)]
 
+pub mod enclosure;
+
 use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};

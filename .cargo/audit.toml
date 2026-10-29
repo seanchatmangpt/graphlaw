@@ -1,0 +1,26 @@
+# cargo-audit configuration, auto-discovered at the .cargo/audit.toml
+# convention path (cargo-audit 0.22 does NOT read a repo-root audit.toml —
+# witnessed 2026-10-24: identical output with the file at the root and with no
+# config file at all). Mirrors the [advisories] table in deny.toml
+# (deny.toml:9-20).
+
+[advisories]
+ignore = [
+    # RUSTSEC-2026-0258 h2 0.3.27 (unbounded empty DATA frames, DoS):
+    # transitive via first reqwest ^0.11 consumer (frozen-duckdb tooling path);
+    # h2 0.4 is semver-incompatible with that pin. NOT on the in-WASM runtime
+    # execution or receipt-signing path (host tooling only).
+    # accepted 2026-10-24, expiry 2026-11-23, re-review on expiry (operator directive: compliance-final-verdict.md:374-388)
+    "RUSTSEC-2026-0258",
+    # unmaintained (transitive, host tooling only).
+    # accepted 2026-10-24, expiry 2026-11-23, re-review on expiry (operator directive: compliance-final-verdict.md:374-388)
+    "RUSTSEC-2025-0134",
+    # unmaintained (transitive, host tooling only).
+    # accepted 2026-10-24, expiry 2026-11-23, re-review on expiry (operator directive: compliance-final-verdict.md:374-388)
+    "RUSTSEC-2024-0449",
+]
+
+# cargo-audit 0.22 has no `yanked` config key (schema: ignore,
+# informational_warnings, severity_threshold only); yanked crates are denied
+# by default in 0.22 (--no-yanked is the opt-out), so the historical
+# `yanked = "deny"` line is dropped rather than ported.

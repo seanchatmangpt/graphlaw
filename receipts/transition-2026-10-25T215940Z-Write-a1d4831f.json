@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "a1d4831f0d4a25ea7c8157cf3b10cc2cd660c2ed4865514c00a43d3969adf0d2",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-25T215940Z-Write-a1d4831f.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/.claude/plans/the-point-is-to-abundant-willow.md",
+  "timestamp_utc": "2026-10-25T215940Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "4e3c644aabe2b01c4e7d475069ca39f362dbcdc629557f1e39c603c5f00f6e38",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T203204Z-Edit-4e3c644a.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/receipts/2026-10-24-crates-scratch-prep-26.10.22.md",
+  "timestamp_utc": "2026-10-24T203204Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

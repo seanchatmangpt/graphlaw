@@ -60,9 +60,9 @@ Final artifact identity (verified live this lane):
 
 ```
 $ b3sum priv/graphlaw.wasm
-472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea  priv/graphlaw.wasm
+472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea  priv/graphlaw.wasm # historical (superseded by final pin 58a44095…, GO-NO-GO §A G1)
 $ cat priv/graphlaw.wasm.blake3
-472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea
+472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea # historical (superseded by final pin 58a44095…, GO-NO-GO §A G1)
 ```
 
 Pin file byte-identical, size 58,121,500 B, pinned at `d9cab2f`
@@ -115,7 +115,7 @@ mutation survivors; receipt chain 1550 receipts VERIFIED
 (head 38422ef5…87129, --check exit 0, terminal receipt §3).
 
 Final artifact: priv/graphlaw.wasm
-b3sum 472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea
+b3sum 472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea # historical (superseded by final pin 58a44095…, GO-NO-GO §A G1)
 (58,121,500 B), pin file priv/graphlaw.wasm.blake3 byte-identical; npm
 js/npm/src/generated/artifact-meta.ts embeds the same digest. Terminal
 receipt: receipts/2026-10-23-v26.10.22-terminal.md.

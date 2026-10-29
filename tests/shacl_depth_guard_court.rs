@@ -138,7 +138,11 @@ fn chain_just_under_the_cap_still_admits() {
 fn guard_is_safe_on_a_small_stack_thread() {
     // The guard's own recursion is bounded at cap + 2 frames; prove it on a
     // 1 MiB stack against a graph deep past the cap.
-    let shapes = node_chain(4_096);
+    // 1_024 links stays under MAX_SHACL_SHAPES_BYTES (~118 KiB), so the
+    // byte cap cannot fire before the depth cap here (P07 unblock: the
+    // chain was 4_096 links ≈ 463 KiB, which the new measured byte cap
+    // refuses first — disclosed in the P07-shacl lane receipt).
+    let shapes = node_chain(1_024);
     let handle = std::thread::Builder::new()
         .stack_size(1024 * 1024)
         .spawn(move || {

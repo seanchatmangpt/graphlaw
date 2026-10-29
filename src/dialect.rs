@@ -7,6 +7,7 @@
 use std::sync::Arc;
 
 use crate::LawState;
+use purrdf::n3;
 
 /// A syntax GraphLaw can hand to an upstream engine.
 ///
@@ -44,7 +45,7 @@ pub enum Dialect {
     TriX,
     /// HexTuples.
     HexTuples,
-    /// Notation3 (owned by Eyeron).
+    /// Notation3 (owned by purrdf::n3).
     N3,
     /// ShEx compact syntax.
     ShExC,
@@ -66,18 +67,16 @@ pub enum Dialect {
 ///
 /// let e = Dialect::N3.engine();
 /// let owner = match e {
-///     Engine::Eyeron => "eyeron",
+///     Engine::PurRdf => "purrdf",
 ///     _ => "other", // required: new engines may be added
 /// };
-/// assert_eq!(owner, "eyeron");
+/// assert_eq!(owner, "purrdf");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum Engine {
     /// PurRDF owns the dialect.
     PurRdf,
-    /// Eyeron owns the dialect.
-    Eyeron,
     /// frozen-duckdb owns the dialect.
     FrozenDuckdb,
 }
@@ -86,7 +85,7 @@ impl Dialect {
     /// The engine that owns this dialect's semantics.
     pub const fn engine(self) -> Engine {
         match self {
-            Dialect::N3 => Engine::Eyeron,
+            Dialect::N3 => Engine::PurRdf,
             Dialect::SqlRdf => Engine::FrozenDuckdb,
             _ => Engine::PurRdf,
         }
@@ -182,7 +181,7 @@ impl ParseRefusal {
         }
     }
 
-    /// Line/col derived from a backend-supplied byte offset (Eyeron's own
+    /// Line/col derived from a backend-supplied byte offset (purrdf-n3's own
     /// `with_source_location` derives these the same way; the offset itself is
     /// the backend-provided fact).
     fn from_offset(source: &str, offset: usize) -> (Option<u32>, Option<u32>) {
@@ -234,7 +233,11 @@ impl ParseRefusal {
         };
         let (line, col, snippet) = match diag.location.as_ref() {
             Some(loc) => match (loc.line, loc.column) {
-                (Some(l), _) => (Some(l), loc.column, ParseRefusal::snippet_line(source, l)),
+                // purrdf 3.0 widened RdfLocation::line to u64; snippet_line takes u32.
+                (Some(l), _) => {
+                    let l32 = u32::try_from(l).unwrap_or(u32::MAX);
+                    (Some(l32), loc.column, ParseRefusal::snippet_line(source, l32))
+                }
                 (None, _) => (None, None, None),
             },
             None => (None, None, None),
@@ -251,8 +254,8 @@ impl ParseRefusal {
         }
     }
 
-    /// Build a refusal from an Eyeron [`eyeron::EyeronError`].
-    pub(crate) fn from_eyeron(dialect: Dialect, source: &str, err: &eyeron::EyeronError) -> Self {
+    /// Build a refusal from a purrdf-n3 [`n3::EyeronError`].
+    pub(crate) fn from_n3(dialect: Dialect, source: &str, err: &n3::EyeronError) -> Self {
         let msg = err.message.to_ascii_lowercase();
         let reason = if msg.contains("unknown prefix") || msg.contains("undefined prefix") {
             ReasonClass::UndefinedPrefix
@@ -404,9 +407,9 @@ pub fn check_typed(
     match dialect {
         Dialect::N3 => {
             let src = text()?;
-            eyeron::parse_n3(src, base)
+            n3::parse_n3(src, base)
                 .map(|_| ())
-                .map_err(|e| Box::new(ParseRefusal::from_eyeron(dialect, src, &e)))
+                .map_err(|e| Box::new(ParseRefusal::from_n3(dialect, src, &e)))
         }
         Dialect::Sparql => purrdf::sparql::SparqlParser::new()
             .parse_query(text()?)

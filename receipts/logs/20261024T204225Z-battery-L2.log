@@ -1,0 +1,789 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /Users/sac/graphlaw/wasm/Cargo.toml
+workspace: /Users/sac/graphlaw/Cargo.toml
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/plan_replay_oracle_gen.rs` found to be present in multiple build targets:
+  * `bin` target `plan_replay_oracle_gen`
+  * `example` target `plan_replay_oracle_gen`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/asp_tableaux_vector_gen.rs` found to be present in multiple build targets:
+  * `bin` target `asp_tableaux_vector_gen`
+  * `example` target `asp_tableaux_vector_gen`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/event_calculus_vectors.rs` found to be present in multiple build targets:
+  * `bin` target `event_calculus_vectors`
+  * `example` target `event_calculus_vectors`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/bayes_pop_vectors.rs` found to be present in multiple build targets:
+  * `bin` target `bayes_pop_vectors`
+  * `example` target `bayes_pop_vectors`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/naive_physics_vectors.rs` found to be present in multiple build targets:
+  * `bin` target `naive_physics_vectors`
+  * `example` target `naive_physics_vectors`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/allen_datalog.rs` found to be present in multiple build targets:
+  * `bin` target `allen_datalog`
+  * `example` target `allen_datalog`
+warning: /Users/sac/graphlaw/Cargo.toml: file `/Users/sac/graphlaw/examples/breed_oracle_gen.rs` found to be present in multiple build targets:
+  * `bin` target `breed_oracle_gen`
+  * `example` target `breed_oracle_gen`
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling cfg-if v1.0.5
+   Compiling serde v1.0.229
+   Compiling libc v0.2.189
+   Compiling syn v3.0.6
+   Compiling syn v2.0.119
+   Compiling serde_core v1.0.229
+   Compiling memchr v2.8.3
+   Compiling foldhash v0.2.0
+   Compiling version_check v0.9.5
+   Compiling bitflags v2.13.2
+   Compiling equivalent v1.0.2
+   Compiling libm v0.2.16
+   Compiling once_cell v1.21.4
+   Compiling generic-array v0.14.7
+   Compiling serde_derive v1.0.229
+   Compiling itoa v1.0.18
+   Compiling jobserver v0.1.35
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.14
+   Compiling cc v1.5.1
+   Compiling typenum v1.20.1
+   Compiling crypto-common v0.1.7
+   Compiling hashbrown v0.17.1
+   Compiling cpufeatures v0.2.17
+   Compiling bytes v1.12.1
+   Compiling anyhow v1.0.104
+   Compiling block-buffer v0.10.4
+   Compiling core-foundation-sys v0.8.7
+   Compiling digest v0.10.7
+   Compiling autocfg v1.5.1
+   Compiling smallvec v1.16.2
+   Compiling num-traits v0.2.19
+   Compiling allocator-api2 v0.2.21
+   Compiling zerocopy v0.8.59
+   Compiling zerocopy-derive v0.8.59
+   Compiling indexmap v2.14.2
+   Compiling log v0.4.34
+   Compiling sha2 v0.10.9
+   Compiling pin-project-lite v0.2.17
+   Compiling fnv v1.0.7
+   Compiling ryu v1.0.23
+   Compiling synstructure v0.14.0
+   Compiling getrandom v0.3.4
+   Compiling ahash v0.8.12
+   Compiling zeroize v1.9.0
+   Compiling fastrand v2.5.0
+   Compiling zerofrom-derive v0.1.8
+   Compiling heck v0.5.0
+   Compiling zerofrom v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling stable_deref_trait v1.2.1
+   Compiling rustversion v1.0.23
+   Compiling crossbeam-utils v0.8.23
+   Compiling semver v1.0.28
+   Compiling futures-core v0.3.34
+   Compiling yoke v0.8.3
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling zerovec v0.11.8
+   Compiling hashbrown v0.16.1
+   Compiling crc32fast v1.5.2
+   Compiling futures-sink v0.3.34
+   Compiling aho-corasick v1.1.5
+   Compiling crossbeam-epoch v0.9.21
+   Compiling regex-syntax v0.8.11
+   Compiling regex-automata v0.4.18
+   Compiling slab v0.4.12
+   Compiling rayon-core v1.13.0
+   Compiling crossbeam-deque v0.8.8
+   Compiling zmij v1.0.23
+   Compiling pkg-config v0.3.34
+   Compiling rustix v1.1.5
+   Compiling futures-task v0.3.34
+   Compiling futures-io v0.3.34
+   Compiling zstd-sys v2.1.2+zstd.1.5.7
+   Compiling regex v1.13.1
+   Compiling tinystr v0.8.4
+   Compiling errno v0.3.14
+   Compiling serde_json v1.0.151
+   Compiling foldhash v0.1.5
+   Compiling adler2 v2.0.1
+   Compiling litemap v0.8.3
+   Compiling writeable v0.6.4
+   Compiling hashbrown v0.15.5
+   Compiling icu_locale_core v2.3.0
+   Compiling potential_utf v0.1.6
+   Compiling zerotrie v0.2.5
+   Compiling half v2.7.1
+   Compiling tracing-attributes v0.1.31
+   Compiling utf8_iter v1.0.4
+   Compiling icu_normalizer_data v2.3.0
+   Compiling icu_collections v2.3.0
+   Compiling icu_provider v2.3.1
+   Compiling hybrid-array v0.4.15
+   Compiling purrdf-iri v2.0.2
+   Compiling either v1.18.0
+   Compiling icu_properties_data v2.3.0
+   Compiling purrdf-xsd v2.0.2
+   Compiling purrdf-cdt v2.0.2
+   Compiling num-integer v0.1.47
+   Compiling csv-core v0.1.13
+   Compiling purrdf-events v2.0.2
+   Compiling httparse v1.10.1
+   Compiling csv v1.4.0
+   Compiling percent-encoding v2.3.2
+   Compiling oxilangtag v0.1.6
+   Compiling icu_properties v2.3.0
+   Compiling purrdf-core v2.0.2
+   Compiling rayon v1.12.0
+   Compiling crypto-common v0.2.2
+   Compiling http v0.2.12
+   Compiling powerfmt v0.2.0
+   Compiling native-tls v0.2.18
+   Compiling time-core v0.1.9
+   Compiling subtle v2.6.1
+   Compiling deranged v0.5.8
+   Compiling num-conv v0.2.2
+   Compiling encoding_rs v0.8.42
+   Compiling cmov v0.5.4
+   Compiling getrandom v0.4.3
+   Compiling ctutils v0.4.5
+   Compiling form_urlencoded v1.2.2
+   Compiling num-bigint v0.4.8
+   Compiling block-buffer v0.12.1
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling system-configuration-sys v0.5.0
+   Compiling arrayvec v0.7.8
+   Compiling try-lock v0.2.5
+   Compiling rand_core v0.10.1
+   Compiling simdutf8 v0.1.5
+   Compiling scopeguard v1.2.0
+   Compiling multiversion_no_op v1.0.0
+   Compiling const-oid v0.10.2
+   Compiling digest v0.11.3
+   Compiling want v0.3.2
+   Compiling tokio v1.54.1
+   Compiling num-rational v0.4.2
+   Compiling http-body v0.4.6
+   Compiling num-iter v0.1.46
+   Compiling num-complex v0.4.6
+   Compiling blake3 v1.8.7
+   Compiling httpdate v1.0.3
+   Compiling tower-service v0.3.3
+   Compiling num v0.4.3
+   Compiling futures-channel v0.3.34
+   Compiling sha1 v0.10.7
+   Compiling core-foundation v0.10.1
+   Compiling security-framework-sys v2.17.0
+   Compiling tracing-core v0.1.36
+   Compiling cpufeatures v0.3.1
+   Compiling unicode-width v0.2.2
+   Compiling simd-adler32 v0.3.10
+   Compiling constant_time_eq v0.4.2
+   Compiling miniz_oxide v0.9.1
+   Compiling tracing v0.1.44
+   Compiling security-framework v3.7.0
+   Compiling futures-util v0.3.34
+   Compiling tokio-util v0.7.20
+   Compiling arrow-buffer v56.2.1
+   Compiling tempfile v3.27.0
+   Compiling icu_normalizer v2.3.0
+   Compiling rustc_version v0.4.1
+   Compiling iana-time-zone v0.1.65
+   Compiling inout v0.1.4
+   Compiling arrow-schema v56.2.1
+   Compiling bitflags v1.3.2
+   Compiling glob v0.3.4
+   Compiling zstd-safe v8.2.0
+   Compiling cfg_aliases v0.2.2
+   Compiling ipnet v2.12.2
+   Compiling nix v0.31.3
+   Compiling arrow-data v56.2.1
+   Compiling h2 v0.3.27
+   Compiling clang-sys v1.9.1
+   Compiling cipher v0.4.4
+   Compiling chrono v0.4.45
+   Compiling curve25519-dalek v4.1.3
+   Compiling idna_adapter v1.2.2
+   Compiling flate2 v1.1.10
+   Compiling universal-hash v0.5.1
+   Compiling inout v0.2.5
+   Compiling constant_time_eq v0.6.1
+   Compiling keccak v0.1.6
+   Compiling socket2 v0.5.10
+   Compiling base64 v0.22.1
+   Compiling base64 v0.21.7
+   Compiling opaque-debug v0.3.1
+   Compiling prettyplease v0.2.37
+   Compiling rustix v0.38.44
+   Compiling rustls-pemfile v1.0.4
+   Compiling polyval v0.6.2
+   Compiling hyper v0.14.32
+   Compiling sha3 v0.10.9
+   Compiling cipher v0.5.2
+   Compiling tokio-native-tls v0.3.1
+   Compiling arrow-array v56.2.1
+   Compiling idna v1.1.0
+   Compiling sha2 v0.11.1
+   Compiling hmac v0.13.0
+   Compiling purrdf-sparql-results v2.0.2
+   Compiling purrdf-sparql-algebra v2.0.2
+   Compiling md-5 v0.10.6
+   Compiling core-foundation v0.9.4
+   Compiling signature v2.2.0
+   Compiling bumpalo v3.20.3
+   Compiling minimal-lexical v0.2.1
+   Compiling lexical-util v1.0.7
+   Compiling ciborium-io v0.2.2
+   Compiling cpubits v0.1.1
+   Compiling sync_wrapper v0.1.2
+   Compiling libbz2-rs-sys v0.2.5
+   Compiling zlib-rs v0.6.8
+   Compiling twox-hash v2.1.4
+   Compiling lazy_static v1.5.1
+   Compiling mime v0.3.17
+   Compiling bzip2 v0.6.1
+   Compiling structured-zstd v0.0.49
+   Compiling aes v0.9.3
+   Compiling ciborium-ll v0.2.2
+   Compiling nom v7.1.3
+   Compiling zopfli v0.8.4
+   Compiling ed25519 v2.2.3
+   Compiling purrdf-sparql-eval v2.0.2 (/Users/sac/graphlaw/vendor/purrdf-sparql-eval)
+   Compiling system-configuration v0.5.1
+   Compiling pbkdf2 v0.13.0
+   Compiling lzma-rust2 v0.22.0
+   Compiling url v2.5.8
+   Compiling hyper-tls v0.5.0
+   Compiling zstd v0.14.3
+   Compiling ghash v0.5.1
+   Compiling ctr v0.9.2
+   Compiling aes v0.8.4
+   Compiling sha1 v0.11.0
+   Compiling serde_urlencoded v0.7.1
+   Compiling xattr v1.6.1
+   Compiling time v0.3.55
+   Compiling ring v0.17.14
+   Compiling aead v0.5.2
+   Compiling filetime v0.2.29
+   Compiling libloading v0.8.9
+   Compiling home v0.5.12
+   Compiling bindgen v0.69.5
+   Compiling typed-path v0.12.4
+   Compiling deflate64 v0.1.12
+   Compiling ppmd-rust v1.5.2
+   Compiling zip v9.0.5
+   Compiling which v4.4.2
+   Compiling tar v0.4.46
+   Compiling aes-gcm v0.10.3
+   Compiling reqwest v0.11.27
+   Compiling ed25519-dalek v2.2.0
+   Compiling cexpr v0.6.0
+   Compiling ciborium v0.2.2
+   Compiling itertools v0.12.1
+   Compiling visual-hashing v0.1.3
+   Compiling thiserror-impl v2.0.21
+   Compiling shlex v1.3.0
+   Compiling utf8parse v0.2.2
+   Compiling unsafe-libyaml v0.2.11
+   Compiling wasmtime-internal-core v48.0.7
+   Compiling roxmltree v0.20.0
+   Compiling lazycell v1.3.0
+   Compiling rustc-hash v1.1.0
+   Compiling serde_yaml_ng v0.10.0
+   Compiling purrdf-gts v2.0.2
+   Compiling anstyle-parse v1.0.0
+   Compiling frozen-duckdb-builder v2.0.2
+   Compiling lexical-parse-integer v1.0.6
+   Compiling lexical-write-integer v1.0.6
+   Compiling arrow-select v56.2.1
+   Compiling rustls-pki-types v1.15.1
+   Compiling getrandom v0.2.17
+   Compiling anstyle-query v1.1.5
+   Compiling anstyle v1.0.14
+   Compiling untrusted v0.9.0
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling colorchoice v1.0.5
+   Compiling fixedbitset v0.5.7
+   Compiling frozen-duckdb-sys v2.0.2
+   Compiling petgraph v0.8.3
+   Compiling anstream v1.0.0
+   Compiling lexical-write-float v1.0.6
+   Compiling purrdf-rdf v2.0.2
+   Compiling lexical-parse-float v1.0.6
+   Compiling terminal_size v0.4.4
+   Compiling strum_macros v0.26.4
+   Compiling clap_lex v1.1.1
+   Compiling tinyvec v1.13.3
+   Compiling leb128fmt v0.1.0
+   Compiling rustls v0.23.46
+   Compiling strum v0.26.3
+   Compiling strsim v0.11.1
+   Compiling hex v0.4.3
+   Compiling clap_builder v4.6.7
+   Compiling comfy-table v7.1.2
+   Compiling unicode-normalization v0.1.25
+   Compiling cranelift-bitset v0.135.7
+   Compiling lexical-core v1.0.6
+   Compiling rustls-webpki v0.103.16
+   Compiling purrdf-datalog v2.0.2
+   Compiling clap_derive v4.6.7
+   Compiling atoi v2.0.0
+   Compiling http v1.5.0
+   Compiling rust_decimal v1.43.0
+   Compiling base64 v0.23.1
+   Compiling ureq-proto v0.6.4
+   Compiling clap v4.6.7
+   Compiling arrow-cast v56.2.1
+   Compiling purrdf-entail v2.0.2
+   Compiling purrdf-slice v2.0.2
+   Compiling purrdf-shapes v2.0.2
+   Compiling caseless v0.2.2
+   Compiling arrow-ord v56.2.1
+   Compiling arrow-string v56.2.1
+   Compiling webpki-roots v1.0.10
+   Compiling sharded-slab v0.1.7
+   Compiling arrow-row v56.2.1
+   Compiling arrow-arith v56.2.1
+   Compiling tracing-log v0.2.0
+   Compiling strum_macros v0.27.2
+   Compiling thread_local v1.1.10
+   Compiling frozen-duckdb v2.0.2
+   Compiling utf8-zero v0.8.1
+   Compiling target-lexicon v0.13.5
+   Compiling unicode-segmentation v1.13.3
+   Compiling nu-ansi-term v0.50.3
+   Compiling tracing-subscriber v0.3.23
+   Compiling strum v0.27.2
+   Compiling purrdf-text v2.0.2
+   Compiling ureq v3.4.2
+   Compiling purrdf-validate v2.0.2
+   Compiling arrow v56.2.1
+   Compiling purrdf-geo v2.0.2
+   Compiling purrdf-columnar v2.0.2
+   Compiling purrdf-shex v2.0.2
+   Compiling purrdf-markdown v2.0.2
+   Compiling purrdf-json v2.0.2
+   Compiling num-bigint v0.5.1
+   Compiling hashlink v0.10.0
+   Compiling graphlaw v26.10.22 (/Users/sac/graphlaw)
+   Compiling fallible-streaming-iterator v0.1.9
+   Compiling cranelift-srcgen v0.135.7
+   Compiling thiserror v2.0.21
+   Compiling cast v0.3.0
+   Compiling fallible-iterator v0.3.0
+   Compiling cranelift-assembler-x64-meta v0.135.7
+   Compiling graphlaw-eyeron v0.7.9 (/Users/sac/graphlaw/crates/graphlaw-eyeron)
+   Compiling purrdf v2.0.2
+   Compiling pulley-macros v48.0.7
+   Compiling wasmparser v0.254.2
+warning: unused variable: `params`
+   --> src/sql_ast/serializer.rs:569:5
+    |
+569 |     params: &mut Vec<SqlLiteral>,
+    |     ^^^^^^ help: if this is intentional, prefix it with an underscore: `_params`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+    --> src/sql_ast.rs:1592:13
+     |
+1592 |         let mut flag_lex = |pred: &str| -> Result<bool, AstError> {
+     |             ----^^^^^^^^
+     |             |
+     |             help: remove this `mut`
+     |
+     = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable `iniri` is assigned to, but never used
+    --> src/sql_ast.rs:2712:17
+     |
+2712 |             let mut iniri = false;
+     |                 ^^^^^^^^^
+     |
+     = note: consider using `_iniri` instead
+
+warning: value assigned to `iniri` is never read
+    --> src/sql_ast.rs:2729:31
+     |
+2729 |                     b'<' => { iniri = true; j += 1; }
+     |                               ^^^^^^^^^^^^ this value is reassigned later and never used
+2730 |                     b'>' => { iniri = false; j += 1; }
+     |                               ------------- `iniri` is overwritten here before the previous value is read
+     |
+     = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `iniri` is never read
+    --> src/sql_ast.rs:2730:31
+     |
+2730 |                     b'>' => { iniri = false; j += 1; }
+     |                               ^^^^^^^^^^^^^
+     |
+     = help: maybe it is overwritten before being read?
+
+warning: function `CANON_ARROW_EMPTY_V1` should have a snake case name
+   --> src/egress/arrow.rs:180:8
+    |
+180 | pub fn CANON_ARROW_EMPTY_V1() -> &'static [u8; 32] {
+    |        ^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `canon_arrow_empty_v1`
+    |
+    = note: `#[warn(non_snake_case)]` (part of `#[warn(nonstandard_style)]`) on by default
+
+   Compiling cobs v0.3.0
+   Compiling cranelift-entity v0.135.7
+   Compiling gimli v0.33.0
+   Compiling wasmtime-internal-versioned-export-macros v48.0.7
+   Compiling cranelift-isle v0.135.7
+   Compiling cranelift-bforest v0.135.7
+   Compiling postcard v1.1.3
+   Compiling pulley-interpreter v48.0.7
+warning: `graphlaw` (lib) generated 6 warnings (run `cargo fix --lib -p graphlaw` to apply 2 suggestions)
+   Compiling cranelift-codegen-shared v0.135.7
+   Compiling object v0.39.1
+   Compiling cranelift-codegen-meta v0.135.7
+   Compiling cranelift-assembler-x64 v0.135.7
+   Compiling cpp_demangle v0.5.1
+   Compiling rustc-hash v2.1.3
+   Compiling cranelift-codegen v0.135.7
+   Compiling wasm-encoder v0.254.2
+   Compiling wasmtime-internal-component-util v48.0.7
+   Compiling termcolor v1.4.1
+   Compiling arbitrary v1.5.0
+   Compiling wasmprinter v0.254.2
+   Compiling cranelift-control v0.135.7
+   Compiling regalloc2 v0.15.2
+   Compiling id-arena v2.3.0
+   Compiling rustc-demangle v0.1.28
+   Compiling wasmtime-environ v48.0.7
+   Compiling zstd-safe v7.3.0
+   Compiling wit-parser v0.254.2
+   Compiling wasm-metadata v0.254.2
+   Compiling wasm-encoder v0.259.0
+   Compiling wasmtime-internal-unwinder v48.0.7
+   Compiling thiserror v1.0.69
+   Compiling winnow v1.0.4
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling wast v259.0.0
+   Compiling wit-component v0.254.2
+   Compiling wasmtime-internal-jit-debug v48.0.7
+   Compiling wasmtime-internal-fiber v48.0.7
+   Compiling toml_datetime v0.7.5+spec-1.1.0
+   Compiling serde_spanned v1.1.2
+   Compiling thiserror-impl v1.0.69
+   Compiling dirs-sys-next v0.1.2
+   Compiling wasmtime-internal-cache v48.0.7
+   Compiling fixedbitset v0.4.2
+   Compiling wasmtime-internal-component-macro v48.0.7
+   Compiling winnow v0.7.15
+   Compiling leb128 v0.2.7
+   Compiling uuid v1.28.0
+   Compiling toml_writer v1.1.3+spec-1.1.0
+   Compiling wasmtime-internal-cranelift v48.0.7
+   Compiling toml v0.9.12+spec-1.1.0
+   Compiling debugid v0.8.0
+   Compiling wast v35.0.2
+   Compiling cranelift-native v0.135.7
+   Compiling cranelift-frontend v0.135.7
+   Compiling petgraph v0.6.5
+   Compiling directories-next v2.0.0
+   Compiling wat v1.259.0
+   Compiling wasmtime-internal-wit-bindgen v48.0.7
+   Compiling zstd v0.13.3
+   Compiling wasmtime v48.0.7
+   Compiling itertools v0.14.0
+   Compiling io-lifetimes v3.0.1
+   Compiling io-lifetimes v2.0.4
+   Compiling witx v0.9.1
+   Compiling wasm-compose v0.254.2
+   Compiling fxprof-processed-profile v0.8.1
+   Compiling addr2line v0.26.1
+   Compiling wasmtime-internal-jit-icache-coherence v48.0.7
+   Compiling futures v0.3.34
+   Compiling async-trait v0.1.92
+   Compiling io-extras v0.19.0
+   Compiling mach2 v0.6.0
+   Compiling wiggle-macro v48.0.7
+   Compiling wiggle-generate v48.0.7
+   Compiling cap-primitives v4.0.3
+   Compiling fs-set-times v0.20.3
+   Compiling chacha20 v0.10.2
+   Compiling ambient-authority v0.0.2
+   Compiling maybe-owned v0.3.4
+   Compiling rand v0.10.3
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling crossbeam-channel v0.5.17
+   Compiling divan-macros v0.1.21
+   Compiling nom v8.0.0
+   Compiling condtype v1.3.0
+   Compiling byteorder v1.5.0
+   Compiling regex-lite v0.1.9
+   Compiling divan v0.1.21
+   Compiling hdrhistogram v7.6.0
+warning: unused variable: `c`
+   --> src/bin/graphlaw_ocel_export.rs:134:21
+    |
+134 |         if let Some(c) = cap.get_mut(0..1) {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_c`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `c`
+   --> src/bin/graphlaw_ocel_export.rs:143:21
+    |
+143 |         if let Some(c) = cap.get_mut(0..1) {
+    |                     ^ help: if this is intentional, prefix it with an underscore: `_c`
+
+warning: variable does not need to be mutable
+   --> src/bin/graphlaw_ocel_export.rs:325:9
+    |
+325 |     let mut emit = |activity: &'static str,
+    |         ----^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/bin/graphlaw_ocel_export.rs:403:31
+    |
+403 |         r1.authority.authority.clone(),
+    |                               ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+    = note: `#[warn(noop_method_call)]` on by default
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/bin/graphlaw_ocel_export.rs:419:31
+    |
+419 |         r1.authority.authority.clone(),
+    |                               ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/bin/graphlaw_ocel_export.rs:442:31
+    |
+442 |         r2.authority.authority.clone(),
+    |                               ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/bin/graphlaw_ocel_export.rs:458:31
+    |
+458 |         r2.authority.authority.clone(),
+    |                               ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+
+warning: `graphlaw` (bin "graphlaw_ocel_export") generated 7 warnings (run `cargo fix --bin "graphlaw_ocel_export" -p graphlaw` to apply 7 suggestions)
+   Compiling wasmtime-wasi-io v48.0.7
+   Compiling wiggle v48.0.7
+   Compiling wasmtime-wasi v48.0.7
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3m 14s
+     Running tests/chicago_boundary_constraints.rs (target-battery-chicago/debug/deps/chicago_boundary_constraints-a3430f47f1bad170)
+
+running 4 tests
+test disjoint_admits_disjoint_values_and_refuses_shared_value ... ok
+test max_inclusive_admits_at_boundary_and_refuses_past_it ... ok
+test min_inclusive_admits_at_boundary_and_refuses_below_it ... ok
+test closed_shape_admits_declared_properties_and_refuses_undeclared ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/chicago_cross_authority.rs (target-battery-chicago/debug/deps/chicago_cross_authority-6989d7cce8a663a2)
+
+running 71 tests
+test court_covers_every_kind ... ok
+test court_declares_exactly_the_published_case_count ... ok
+test xa_fc_canonical_unknown_dialect ... ok
+test xa_fc_canonical_missing_data ... ok
+test xa_fc_datalog_bad_triple ... ok
+test xa_fc_datalog_missing_facts ... ok
+test xa_fc_convert_malformed_text ... ok
+test xa_fc_entail_missing_regime ... ok
+test xa_fc_convert_non_rdf_target ... ok
+test xa_ceil_lease_expired ... ok
+test xa_fc_convert_unknown_target ... ok
+test xa_ceil_lease_select_refuses_derive ... ok
+test xa_ceil_lease_out_of_scope ... ok
+test xa_fc_entail_unknown_regime ... ok
+test xa_ceil_lease_select_refuses_n3 ... ok
+test xa_fc_missing_op ... ok
+test xa_fc_law_unknown_step ... ok
+test xa_fc_n3_missing_text ... ok
+test xa_fc_n3_text_not_string ... ok
+test xa_fc_parse_relative_iri_ntriples ... ok
+test xa_fc_shacl_data_not_spec_object ... ok
+test xa_fc_shacl_malformed_data ... ok
+test xa_fc_sparql_malformed_data ... ok
+test xa_fc_shex_unknown_schema_dialect ... ok
+test xa_inv_canonical_bnode_labels ... ok
+test xa_fc_shex_malformed_schema ... ok
+test xa_inv_canonical_serialization ... ok
+test xa_inv_n3_statement_order ... ok
+test xa_inv_datalog_fact_rule_order ... ok
+test xa_mut_datalog_add_edge_da ... ok
+test xa_mut_datalog_drop_edge_cd ... ok
+test xa_mut_n3_drop_edge_cd ... ok
+test xa_mut_owlrl_drop_edge_cd ... ok
+test xa_inv_owlrl_statement_order ... ok
+test xa_ceil_json_depth_over_cap has been running for over 60 seconds
+test xa_ceil_lease_observe_refuses_derive has been running for over 60 seconds
+test xa_ceil_n3_iterations has been running for over 60 seconds
+test xa_fc_canonical_malformed_data has been running for over 60 seconds
+test xa_fc_datalog_body_not_array has been running for over 60 seconds
+test xa_fc_datalog_unbound_head_variable has been running for over 60 seconds
+test xa_fc_entail_malformed_data has been running for over 60 seconds
+test xa_fc_law_malformed_n3_rules has been running for over 60 seconds
+test xa_fc_law_unsigned_lease has been running for over 60 seconds
+test xa_fc_n3_malformed_rule has been running for over 60 seconds
+test xa_fc_policy_malformed_problem has been running for over 60 seconds
+test xa_fc_shacl_malformed_shapes has been running for over 60 seconds
+test xa_fc_sparql_malformed_query has been running for over 60 seconds
+test xa_fc_unknown_op has been running for over 60 seconds
+test xa_neg_law_shacl_admission_refused has been running for over 60 seconds
+test xa_neg_shacl_pre_closure_violates has been running for over 60 seconds
+test xa_ceil_n3_iterations ... ok
+test xa_neg_shacl_pre_closure_violates ... ok
+test xa_neg_law_shacl_admission_refused ... ok
+test xa_fc_sparql_malformed_query ... ok
+test xa_neg_sparql_ask_da_false ... ok
+test xa_fc_shacl_malformed_shapes ... ok
+test xa_pos_convert_turtle_to_ntriples ... ok
+test xa_fc_unknown_op ... ok
+test xa_fc_policy_malformed_problem ... ok
+test xa_fc_n3_malformed_rule ... ok
+test xa_fc_law_unsigned_lease ... ok
+test xa_pos_parse_turtle ... ok
+test xa_fc_law_malformed_n3_rules ... ok
+test xa_pos_lease_observe_admits_shacl ... ok
+test xa_fc_datalog_unbound_head_variable ... ok
+test xa_ceil_lease_observe_refuses_derive ... ok
+test xa_fc_entail_malformed_data ... ok
+test xa_fc_canonical_malformed_data ... ok
+test xa_ceil_json_depth_over_cap ... ok
+test xa_pos_policy_admitted ... ok
+test xa_pos_shex_closure_conforms ... ok
+test xa_pos_canonical_edges ... ok
+test xa_pos_sparql_ask_ad ... ok
+test xa_pos_n3_single_rule ... ok
+test xa_pos_shacl_closure_conforms ... ok
+test xa_fc_datalog_body_not_array ... ok
+test xa_pos_sparql_ask_valid ... ok
+test xa_reach_n3_derived_closure_text ... ok
+test xa_reach_n3_vs_sparql_path_rdfc ... ok
+test xa_reach_n3_vs_law_n3_rdfc ... ok
+test xa_pos_json_depth_at_cap ... ok
+test xa_reach_sparql_count_n3_vs_owlrl ... ok
+test xa_reach_n3_vs_owlrl_rdfc ... ok
+test xa_reach_datalog_exact_facts ... ok
+test xa_pos_lease_construct_admits_owlrl ... ok
+test xa_reach_owlrl_vs_law_owlrl_rdfc ... ok
+test xa_reach_owlrl_entail_closure ... ok
+
+test result: ok. 71 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 97.46s
+
+     Running tests/chicago_fibo.rs (target-battery-chicago/debug/deps/chicago_fibo-bbc020496ce14074)
+
+running 61 tests
+test court_covers_every_kind ... ok
+test court_declares_exactly_the_published_case_count ... ok
+test fibo_boundary_micros_i64_max ... ok
+test fibo_boundary_micros_10000000000001 ... ok
+test fibo_boundary_micros_10000000000000 ... ok
+test fibo_boundary_decimal_10000000_000000 ... ok
+test fibo_boundary_decimal_9999999_999999 ... ok
+test fibo_boundary_micros_25000000000000 ... ok
+test fibo_boundary_decimal_10000000_000001 ... ok
+test fibo_boundary_micros_9999999999999 ... ok
+test fibo_boundary_fx_rate_499999_below ... ok
+test fibo_boundary_micros_i64_min ... ok
+test fibo_boundary_fx_rate_500000_is_threshold ... ok
+test fibo_dvp_security_only_refused_at_goal ... ok
+test fibo_eur_plan_admitted_with_admitted_rate ... ok
+test fibo_dvp_cash_only_refused_at_goal ... ok
+test fibo_eur_unadmitted_rate_derives_nothing ... ok
+test fibo_eur_rate_change_after_admission_invalidates_plan ... ok
+test fibo_delegation_dropped_edge_changes_closure ... ok
+test fibo_dvp_partial_left_behind_refused_by_goal_not ... ok
+test fibo_dvp_failed_state_pre_not_refuses_finalize ... ok
+test fibo_identity_contract_change_moves_rdfc_digest ... ok
+test fibo_identity_base_plan_admits ... ok
+test fibo_identity_amount_change_moves_rdfc_digest ... ok
+test fibo_identity_amount_change_refuses_prepared_plan ... ok
+test fibo_dvp_finalize_before_legs_refused ... ok
+test fibo_dvp_both_legs_settle_admitted ... ok
+test fibo_delegation_rule_order_invariant ... ok
+test fibo_identity_counterparty_change_moves_rdfc_digest ... ok
+test fibo_identity_counterparty_change_refuses_prepared_plan ... ok
+test fibo_identity_currency_change_moves_rdfc_digest ... ok
+test fibo_identity_currency_change_refuses_prepared_plan ... ok
+test fibo_eur_rate_1_05_stays_high_value_but_new_identity ... ok
+test fibo_eur_20m_admitted_rate_high ... ok
+test fibo_identity_statement_order_and_prefix_invariant ... ok
+test fibo_identity_contract_change_refuses_prepared_plan ... ok
+test fibo_identity_master_change_refuses_prepared_plan ... ok
+test fibo_lease_observe_ceiling_refuses_derivation ... ok
+test fibo_lease_expired_refuses_derivation ... ok
+test fibo_lease_select_ceiling_refuses_derivation ... ok
+test fibo_lease_plan_out_of_scope_refused ... ok
+test fibo_lease_out_of_scope_refuses_derivation ... ok
+test fibo_lease_plan_then_derive_stops_at_derive ... ok
+test fibo_receipt_gate_passes_after_record ... ok
+test fibo_xauth_decimal_lexical_forms_distinct_digests ... ok
+test fibo_receipt_gate_refused_without_record ... ok
+test fibo_master_agreement_change_moves_plan_digest ... ok
+test fibo_shapes_two_currencies_refused ... ok
+test fibo_shapes_two_decimals_refused ... ok
+test fibo_xauth_micros_decimal_above ... ok
+test fibo_shapes_missing_counterparty_refused ... ok
+test fibo_xauth_decimal_lexical_forms_share_verdict_not_digest ... ok
+test fibo_master_agreement_change_keeps_verdict ... ok
+test fibo_verdict_statement_order_invariant ... ok
+test fibo_xauth_micros_decimal_below ... ok
+test fibo_xauth_micros_decimal_at ... ok
+test fibo_delegation_datalog_matches_owl_rl ... ok
+test fibo_delegation_closure_with_cycle has been running for over 60 seconds
+test fibo_master_agreement_change_moves_digest_not_verdict has been running for over 60 seconds
+test fibo_usd_25m_high_value_control has been running for over 60 seconds
+test fibo_usd_25m_shapes_conform has been running for over 60 seconds
+test fibo_delegation_closure_with_cycle ... ok
+test fibo_master_agreement_change_moves_digest_not_verdict ... ok
+test fibo_usd_25m_shapes_conform ... ok
+test fibo_usd_25m_high_value_control ... ok
+
+test result: ok. 61 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 181.27s
+
+     Running tests/chicago_n3_datalog.rs (target-battery-chicago/debug/deps/chicago_n3_datalog-fa21a90f73ed6197)
+
+running 6 tests
+test malformed_n3_and_malformed_datalog_fail_closed ... ok
+test w3c_n3_implication_and_chaining_fire ... ok
+test n3_semantics_are_invariant_to_statement_order ... ok
+test souffle_transitive_closure_example_has_exact_least_fixpoint ... ok
+test n3_and_datalog_agree_on_the_shared_recursive_closure ... ok
+test datalog_fixpoint_is_invariant_to_fact_and_rule_order ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/chicago_validation.rs (target-battery-chicago/debug/deps/chicago_validation-6c00e6920735c6ed)
+
+running 12 tests
+test rowcount_receipt_courts::admitted_select_exact_rowcount_and_exact_values_readback ... ok
+test hostile_identifier_is_refused_and_does_not_change_rows ... ok
+test rowcount_receipt_courts::compiled_group_having_order_by_reads_back_its_own_rows ... ok
+test where_less_delete_refuses_pre_engine_and_database_is_byte_identical ... ok
+test process_scope_in_select_list_is_refusal_03_but_view_scope_executes ... ok
+test aggregate_in_where_is_refusal_03_and_database_unchanged ... ok
+test section7_merge_upserts_regional_sales_on_real_tables ... ok
+test dml_changes_row_counts_on_a_real_database ... ok
+test merge_receipt_is_blake3_of_canonical_graph_and_params_not_sql_text ... ok
+test dml_receipts_bind_readback_and_distinguish_statements ... ok
+test every_peg_statement_compiles_and_runs_or_refuses ... ok
+test ocel_trace_seals_every_statement_and_the_hostile_refusal ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.31s
+
+
+# RETRO-TAIL 2026-10-26: EXIT=0 derived from this log's 5 'test result:' lines (all ok, 0 failed) — appended to satisfy the EXIT-tail capture law; pre-tail digest 5d5337166ad00196cb37ca555f58e116854707121e563dd503e10fb37c221029
+EXIT=0

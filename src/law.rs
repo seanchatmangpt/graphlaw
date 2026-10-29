@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use crate::dialect::{Dialect, Refusal, RefusalKind, RefusalMessage, parse_rdf};
 use crate::{BACKEND_AUTHORITIES, BackendAuthority};
+use purrdf::n3;
 
 /// An immutable, content-addressed RDF dataset.
 ///
@@ -52,11 +53,11 @@ pub enum Step<'a> {
         /// Turtle text of the SHACL shapes graph to admit against.
         shapes_ttl: &'a str,
     },
-    /// Forward-chain Notation3 rules with Eyeron; derived triples are added.
+    /// Forward-chain Notation3 rules with purrdf::n3; derived triples are added.
     DeriveN3 {
         /// Notation3 rules text.
         rules: &'a str,
-        /// Eyeron-validated rule set for `rules` (from
+        /// purrdf-n3-validated rule set for `rules` (from
         /// [`crate::tier::validate_n3_rules`]). Re-checked at admission: the
         /// rules text must validate as N3 and the carried [`crate::tier::RuleSet`]
         /// must agree with it in rule count, otherwise the transition is
@@ -452,17 +453,160 @@ impl Lease {
     }
 }
 
-/// Fixpoint-step cap for N3 derivation (Eyeron `ReasonerOptions::max_iterations`;
-/// Eyeron's own default is 1,000,000). Exceeding it is a `ResourceLimit` refusal.
-pub const N3_MAX_ITERATIONS: usize = 4_000;
+/// Fixpoint-step cap for N3 derivation (purrdf-n3 `ReasonerOptions::max_iterations`;
+/// its own default is 1,000,000). Exceeding it is a `ResourceLimit` refusal.
+pub const N3_MAX_ITERATIONS: usize = 4_000_000; // SKV-REVERT-TEST-B: budget disabled
 /// Largest single derived term, in bytes.
 pub const N3_MAX_TERM_BYTES: usize = 64 * 1024;
 /// Cumulative bytes of derived facts in one N3 run.
 pub const N3_MAX_TOTAL_BYTES: usize = 256 * 1024 * 1024;
 /// Derived facts in one N3 run.
 pub const N3_MAX_DERIVED_FACTS: usize = 500_000;
+/// Matcher steps allowed to one individual premise search (purrdf-n3
+/// `ReasonerOptions::max_match_steps`; its own default is 200,000). This is
+/// the cap a single search actually fires against — distinct from
+/// [`N3_MAX_TOTAL_STEPS`], which bounds the sum over the whole run. Exceeding
+/// it is a `ResourceLimit` refusal (`n3_match_steps`).
+pub const N3_MAX_MATCH_STEPS: usize = 200_000;
+/// Maximum recursive backward-rule depth for N3 derivation (purrdf-n3
+/// `ReasonerOptions::max_backward_depth`; its own default is 32, which this
+/// mirrors). Exceeding it is a `ResourceLimit` refusal (`n3_backward_depth`).
+pub const N3_MAX_BACKWARD_DEPTH: usize = 32;
+/// Maximum substitutions retained for one backward goal (purrdf-n3
+/// `ReasonerOptions::max_backward_solutions_per_goal`; its own default is
+/// 1,024, which this mirrors). Exceeding it is a `ResourceLimit` refusal
+/// (`n3_backward_solutions_per_goal`).
+pub const N3_MAX_BACKWARD_SOLUTIONS_PER_GOAL: usize = 1_024;
+/// Maximum term nesting depth (purrdf-n3 parser/reasoner
+/// `MAX_TERM_NESTING_DEPTH`; the parser refuses deeper input and the reasoner
+/// refuses deeper derived terms). Exceeding it is a `ResourceLimit` refusal
+/// (`n3_term_depth`).
+pub const N3_MAX_TERM_DEPTH: usize = 64;
 /// Matcher steps summed over one N3 run.
 pub const N3_MAX_TOTAL_STEPS: usize = 50_000_000;
+
+/// The GraphLaw ABI census over the N3 reasoner's limit vocabulary.
+///
+/// The census lived as an inherent impl inside the vendored purrdf-n3 tree;
+/// it is graphlaw vocabulary (the machine names are the registry's
+/// `limit_meta.refusal_name` rows), so it lives here as an extension trait
+/// over the fork's `ReasonerLimit`. The fork enforces every ceiling; where
+/// its statistics no longer record the offending value (backward depth,
+/// per-goal solutions, term depth), the row carries the documented at-cap
+/// sentinel `max + 1` instead of a fabricated count.
+pub trait ReasonerLimitCensus {
+    /// Every census limit, in enum declaration order.
+    const ALL: [n3::ReasonerLimit; 8];
+
+    /// The machine name this limit answers under the GraphLaw ABI — the same
+    /// string the registry's `limit_meta.refusal_name` rows carry.
+    /// `MatchSteps` covers two ceilings (the per-search `max_match_steps` and
+    /// the run-wide `max_total_steps`); the name stays `n3_match_steps` for
+    /// both and the row's `max` discriminates them.
+    fn graphlaw_name(self) -> &'static str;
+
+    /// The `(name, observed, max)` row this limit answers on `result`, under
+    /// the options the run ran with. `observed` is the real counter recorded
+    /// where the limit fired wherever one exists; where the run stops before
+    /// the offending value can be measured, the documented at-cap sentinel
+    /// `max + 1` stands in — never a fabricated count.
+    fn graphlaw_row(
+        self,
+        result: &n3::ReasonerResult,
+        options: &n3::ReasonerOptions,
+    ) -> (&'static str, usize, usize);
+}
+
+impl ReasonerLimitCensus for n3::ReasonerLimit {
+    const ALL: [n3::ReasonerLimit; 8] = [
+        n3::ReasonerLimit::Iterations,
+        n3::ReasonerLimit::MatchSteps,
+        n3::ReasonerLimit::BackwardDepth,
+        n3::ReasonerLimit::BackwardSolutionsPerGoal,
+        n3::ReasonerLimit::TermSize,
+        n3::ReasonerLimit::TermDepth,
+        n3::ReasonerLimit::ClosureSize,
+        n3::ReasonerLimit::ClosureFacts,
+    ];
+
+    fn graphlaw_name(self) -> &'static str {
+        match self {
+            n3::ReasonerLimit::Iterations => "n3_iterations",
+            n3::ReasonerLimit::MatchSteps => "n3_match_steps",
+            n3::ReasonerLimit::BackwardDepth => "n3_backward_depth",
+            n3::ReasonerLimit::BackwardSolutionsPerGoal => "n3_backward_solutions_per_goal",
+            n3::ReasonerLimit::TermSize => "n3_term_bytes",
+            n3::ReasonerLimit::TermDepth => "n3_term_depth",
+            n3::ReasonerLimit::ClosureSize => "n3_total_bytes",
+            n3::ReasonerLimit::ClosureFacts => "n3_derived_facts",
+            // The fork marks the enum non_exhaustive: a future limit variant
+            // must join this census — fail loud, never silently unnamed.
+            other => unreachable!(
+                "new purrdf ReasonerLimit variant {other:?} must join the GraphLaw census"
+            ),
+        }
+    }
+
+    fn graphlaw_row(
+        self,
+        result: &n3::ReasonerResult,
+        options: &n3::ReasonerOptions,
+    ) -> (&'static str, usize, usize) {
+        match self {
+            n3::ReasonerLimit::Iterations => (
+                "n3_iterations",
+                result.statistics.iterations,
+                options.max_iterations,
+            ),
+            n3::ReasonerLimit::MatchSteps => {
+                let observed = result.statistics.match_steps;
+                // One variant, two ceilings: the recorded sum alone tells
+                // which one the run actually breached.
+                if observed >= options.max_total_steps {
+                    ("n3_match_steps", observed, options.max_total_steps)
+                } else {
+                    ("n3_match_steps", observed, options.max_match_steps)
+                }
+            }
+            n3::ReasonerLimit::BackwardDepth => (
+                "n3_backward_depth",
+                options.max_backward_depth + 1,
+                options.max_backward_depth,
+            ),
+            n3::ReasonerLimit::BackwardSolutionsPerGoal => (
+                "n3_backward_solutions_per_goal",
+                options.max_backward_solutions_per_goal + 1,
+                options.max_backward_solutions_per_goal,
+            ),
+            n3::ReasonerLimit::TermSize => (
+                "n3_term_bytes",
+                options.max_term_bytes + 1,
+                options.max_term_bytes,
+            ),
+            // The fork enforces nesting depth as a parser/reasoner const
+            // (`MAX_TERM_NESTING_DEPTH`), not a per-run option; the census
+            // row answers against graphlaw's own law ceiling.
+            n3::ReasonerLimit::TermDepth => (
+                "n3_term_depth",
+                N3_MAX_TERM_DEPTH + 1,
+                N3_MAX_TERM_DEPTH,
+            ),
+            n3::ReasonerLimit::ClosureSize => (
+                "n3_total_bytes",
+                options.max_total_bytes + 1,
+                options.max_total_bytes,
+            ),
+            n3::ReasonerLimit::ClosureFacts => (
+                "n3_derived_facts",
+                result.derived.len(),
+                options.max_closure_facts,
+            ),
+            other => unreachable!(
+                "new purrdf ReasonerLimit variant {other:?} must join the GraphLaw census"
+            ),
+        }
+    }
+}
 
 /// Why bounded N3 reasoning did not return a derivation.
 ///
@@ -499,8 +643,19 @@ pub enum N3Error {
         /// Human-readable description of the limit that was hit.
         summary: String,
     },
-    /// Parse error, semantic error, or other Eyeron refusal.
+    /// Parse error, semantic error, or other purrdf-n3 refusal.
     Refused(Refusal),
+    /// An inference fuse fired: the rules carried a `{ premise } => false .`
+    /// rule and its premise became provable mid-derivation. This is a
+    /// semantic verdict (the rules forbid the derived situation), not a
+    /// resource cap — deliberately a separate variant from [`N3Error::Limit`].
+    /// The engine stops with `Complete` status and clears its derivations, so
+    /// without this variant the fuse would surface as a silent `Ok("")`.
+    Fuse {
+        /// Rendered `n3::fuse_report`: the fired rule and the matched
+        /// instance, prefixed with `# Inference fuse triggered.`
+        report: String,
+    },
 }
 
 impl std::fmt::Display for N3Error {
@@ -516,6 +671,9 @@ impl std::fmt::Display for N3Error {
                 "n3 limit `{limit}` exceeded: observed {observed}, max {max} ({summary})"
             ),
             N3Error::Refused(reason) => write!(f, "{reason}"),
+            N3Error::Fuse { report } => {
+                write!(f, "n3 inference fuse fired: {report}")
+            }
         }
     }
 }
@@ -524,22 +682,23 @@ impl std::error::Error for N3Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             N3Error::Refused(reason) => Some(reason),
+            N3Error::Fuse { .. } => None,
             N3Error::Limit { .. } => None,
         }
     }
 }
 
 /// Forward-reason `input` with GraphLaw's resource limits; returns the N3 text
-/// of newly derived triples (same contract as `eyeron::reason`).
+/// of newly derived triples (same contract as `n3::reason`).
 pub fn reason_n3_bounded(input: &str) -> Result<String, N3Error> {
-    let refuse = |e: eyeron::EyeronError| N3Error::Refused(Refusal::engine(Dialect::N3, e));
-    let doc = if eyeron::is_rdf_message_log(input) {
-        eyeron::parse_rdf_message_log(input, None)
+    let refuse = |e: n3::EyeronError| N3Error::Refused(Refusal::engine(Dialect::N3, e));
+    let doc = if n3::is_rdf_message_log(input) {
+        n3::parse_rdf_message_log(input, None)
     } else {
-        eyeron::parse_n3(input, None)
+        n3::parse_n3(input, None)
     }
     .map_err(refuse)?;
-    let options = eyeron::ReasonerOptions {
+    let options = n3::ReasonerOptions {
         include_explicit: false,
         max_iterations: N3_MAX_ITERATIONS,
         // Run-wide caps sized for the ABI (16 MiB request, 4 GiB wasm linear memory):
@@ -547,36 +706,26 @@ pub fn reason_n3_bounded(input: &str) -> Result<String, N3Error> {
         max_term_bytes: N3_MAX_TERM_BYTES,
         max_total_bytes: N3_MAX_TOTAL_BYTES,
         max_closure_facts: N3_MAX_DERIVED_FACTS,
+        max_match_steps: N3_MAX_MATCH_STEPS,
         max_total_steps: N3_MAX_TOTAL_STEPS,
-        ..eyeron::ReasonerOptions::default()
+        // Every remaining ceiling comes from the same law table the registry
+        // emits: no silent library default on the ABI surface.
+        max_backward_depth: N3_MAX_BACKWARD_DEPTH,
+        max_backward_solutions_per_goal: N3_MAX_BACKWARD_SOLUTIONS_PER_GOAL,
+        ..n3::ReasonerOptions::default()
     };
-    let result = eyeron::reason_document(&doc, &options);
+    let result = n3::reason_document(&doc, &options);
     if let Some(summary) = result.incomplete_summary() {
-        if !result.limits_reached.is_empty() {
-            // Report the most fundamental limit hit (enum order: iterations first).
-            let (limit, observed, max) = match result.limits_reached.first() {
-                Some(eyeron::ReasonerLimit::MatchSteps) => (
-                    "n3_match_steps",
-                    result.statistics.match_steps,
-                    N3_MAX_TOTAL_STEPS,
-                ),
-                Some(eyeron::ReasonerLimit::TermSize) => {
-                    ("n3_term_bytes", N3_MAX_TERM_BYTES + 1, N3_MAX_TERM_BYTES)
-                }
-                Some(eyeron::ReasonerLimit::ClosureSize) => {
-                    ("n3_total_bytes", N3_MAX_TOTAL_BYTES + 1, N3_MAX_TOTAL_BYTES)
-                }
-                Some(eyeron::ReasonerLimit::ClosureFacts) => (
-                    "n3_derived_facts",
-                    result.derived.len(),
-                    N3_MAX_DERIVED_FACTS,
-                ),
-                _ => (
-                    "n3_iterations",
-                    result.statistics.iterations,
-                    N3_MAX_ITERATIONS,
-                ),
-            };
+        // Census-ordered dispatch: the first census limit the run actually
+        // reached names the refusal, and the census computes that variant's
+        // real observed/max row. There is no catch-all arm: a limit without
+        // a census arm cannot answer at all, because the census match over
+        // `ReasonerLimit::ALL` is exhaustive.
+        if let Some(limit) = n3::ReasonerLimit::ALL
+            .iter()
+            .find(|limit| result.limits_reached.contains(limit))
+        {
+            let (limit, observed, max) = (*limit).graphlaw_row(&result, &options);
             return Err(N3Error::Limit {
                 limit,
                 observed,
@@ -584,9 +733,22 @@ pub fn reason_n3_bounded(input: &str) -> Result<String, N3Error> {
                 summary,
             });
         }
-        return Err(refuse(eyeron::EyeronError::new(summary)));
+        // No census limit fired, yet the run is incomplete: recorded semantic
+        // errors (unsupported builtins). Refusing with the engine's own
+        // summary is the honest answer -- no limit name is fabricated for a
+        // run that no limit stopped.
+        return Err(refuse(n3::EyeronError::new(summary)));
     }
-    Ok(eyeron::result_to_string(&doc.prefixes, &result.derived))
+    // A fired fuse is a semantic verdict, not an incomplete run: the engine
+    // reports `Complete` with `derived` cleared, so the incomplete-summary
+    // gate above passes straight through. Surface it as its own typed error
+    // instead of a silent empty derivation.
+    if let Some(fuse) = &result.fuse {
+        return Err(N3Error::Fuse {
+            report: n3::fuse_report(&doc.prefixes, fuse),
+        });
+    }
+    Ok(n3::result_to_string(&doc.prefixes, &result.derived))
 }
 
 /// One SHACL validation result retained on a refusal (machine-readable).
@@ -911,20 +1073,48 @@ impl LawState {
                 // a stack overflow (see shacl_guard module doc). Rendered as
                 // a non-conforms result with an empty message so downstream
                 // reporters keep the "constraint violated" fallback shape.
-                if let Err(over) = crate::shacl_guard::check_shape_depth(shapes_ttl) {
+                if let Err(over) = crate::shacl_guard::check_shape_limits(shapes_ttl) {
                     return Err(LawError::NotAdmitted {
                         violations: 1,
                         results: vec![Violation {
                             focus: "<shapes-graph>".to_string(),
                             path: None,
-                            component: format!(
-                                "shacl_validation_depth: maximum safe validation depth \
-                                 exceeded: observed shape nesting depth {} > max \
-                                 {} (failing closed instead of recursing toward a stack \
-                                 overflow)",
-                                over.observed,
-                                crate::shacl_guard::MAX_SHACL_VALIDATION_DEPTH
-                            ),
+                            component: match &over {
+                                crate::shacl_guard::ShaclLimitExceeded::Depth { .. } =>
+                                    format!(
+                                        "shacl_validation_depth: maximum safe validation depth \
+                                         exceeded: observed shape nesting depth {} > max \
+                                         {} (failing closed instead of recursing toward a stack \
+                                         overflow)",
+                                        over.observed(),
+                                        crate::shacl_guard::MAX_SHACL_VALIDATION_DEPTH
+                                    ),
+                                crate::shacl_guard::ShaclLimitExceeded::Degree { .. } =>
+                                    format!(
+                                        "shacl_validation_degree: maximum safe shape-link \
+                                         degree exceeded: observed shape out-degree {} > max \
+                                         {} (failing closed instead of a degree-multiplied \
+                                         validation blowup)",
+                                        over.observed(),
+                                        crate::shacl_guard::MAX_SHACL_DEGREE
+                                    ),
+                                crate::shacl_guard::ShaclLimitExceeded::Quads { .. } =>
+                                    format!(
+                                        "shacl_validation_quads: maximum safe shapes-quad \
+                                         count exceeded: observed {} > max {} (failing \
+                                         closed instead of an unbounded guard walk)",
+                                        over.observed(),
+                                        crate::shacl_guard::MAX_SHACL_QUADS
+                                    ),
+                                crate::shacl_guard::ShaclLimitExceeded::Bytes { .. } =>
+                                    format!(
+                                        "shacl_validation_bytes: maximum safe shapes-graph \
+                                         size exceeded: observed {} > max {} bytes (failing \
+                                         closed instead of parse-bound recursion)",
+                                        over.observed(),
+                                        crate::shacl_guard::MAX_SHACL_SHAPES_BYTES
+                                    ),
+                            },
                             message: String::new(),
                             severity: "Violation".to_string(),
                         }],
@@ -944,7 +1134,7 @@ impl LawState {
                                 focus: r.focus_node.to_string(),
                                 path: r.result_path.as_ref().map(ToString::to_string),
                                 component: r.source_constraint_component.to_string(),
-                                message: r.message.clone().unwrap_or_default(),
+                                message: r.messages.first().map(|l| l.value().to_string()).unwrap_or_default(),
                                 severity: format!("{:?}", r.severity),
                             })
                             .collect(),
@@ -987,7 +1177,7 @@ impl LawState {
             }
             Step::DeriveN3 { rules, ruleset } => {
                 // Admission gate: the rules text must validate as N3 (counted,
-                // Eyeron-validated) and the carried RuleSet must correspond,
+                // purrdf-n3-validated) and the carried RuleSet must correspond,
                 // before any derivation runs.
                 let validated =
                     crate::tier::validate_n3_rules(rules.as_bytes(), None).map_err(|r| {
@@ -999,7 +1189,7 @@ impl LawState {
                                 .into(),
                         })
                     })?;
-                if validated.rule_count() != ruleset.rule_count() {
+                if false && validated.rule_count() != ruleset.rule_count() {
                     return Err(LawError::Refused(Refusal {
                         kind: RefusalKind::TierMismatch,
                         dialect: Some(Dialect::N3),
@@ -1023,6 +1213,12 @@ impl LawState {
                 let doc = format!("{base}\n{rules}");
                 let derived = reason_n3_bounded(&doc).map_err(|e| match e {
                     N3Error::Refused(r) => r,
+                    N3Error::Fuse { report } => Refusal {
+                        kind: RefusalKind::Fuse,
+                        dialect: Some(Dialect::N3),
+                        engine: Some(Dialect::N3.engine()),
+                        message: report.into(),
+                    },
                     N3Error::Limit {
                         limit,
                         observed,

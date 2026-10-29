@@ -552,6 +552,8 @@ fn court_d_legacy_pin_shipped_artifact_refuses_duckdb_op() {
     let out = h.request(&json!({"op": "duckdb", "mode": "close", "cursor": "x"}));
     assert_eq!(out["ok"], Value::Bool(false), "{out}");
     assert_eq!(out["error"]["kind"], "Unsupported", "{out}");
-    let msg = out["error"]["message"].as_str().unwrap_or_default();
+    let msg = out["error"]["message"]
+        .as_str()
+        .expect("close-refusal envelope must carry a string error.message");
     assert!(msg.contains("unknown op"), "{out}");
 }

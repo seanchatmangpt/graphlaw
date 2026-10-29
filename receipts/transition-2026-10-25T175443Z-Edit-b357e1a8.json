@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "b357e1a81095cba8a8e4ba7b7922447b2d126372d7247525944d0c4161820aa7",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-25T175443Z-Edit-b357e1a8.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/how-to/first-in-wasm-sql-lifecycle.md",
+  "timestamp_utc": "2026-10-25T175443Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

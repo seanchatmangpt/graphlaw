@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "0672f2c8777d1864c35efc47b2494e05850ec1967cc1b417798bc97e716c7d22",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-26T181848Z-Edit-0672f2c8.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/.claude/projects/-Users-sac-graphlaw/56e0a240-5f0e-4280-a223-1cbeba96c05c/workflows/scripts/moonshot-array-v2.js",
+  "timestamp_utc": "2026-10-26T181848Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

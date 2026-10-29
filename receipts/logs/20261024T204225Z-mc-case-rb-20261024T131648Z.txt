@@ -1,0 +1,16 @@
+src/abi.rs:152:5: replace limit_response -> Vec<u8> with vec![]
+src/abi.rs:152:5: replace limit_response -> Vec<u8> with vec![0]
+src/abi.rs:152:5: replace limit_response -> Vec<u8> with vec![1]
+src/abi.rs:157:5: replace missing_buffer_response -> Vec<u8> with vec![]
+src/abi.rs:157:5: replace missing_buffer_response -> Vec<u8> with vec![0]
+src/abi.rs:157:5: replace missing_buffer_response -> Vec<u8> with vec![1]
+src/abi.rs:167:5: replace unknown_buffer_response -> Vec<u8> with vec![]
+src/abi.rs:167:5: replace unknown_buffer_response -> Vec<u8> with vec![0]
+src/abi.rs:167:5: replace unknown_buffer_response -> Vec<u8> with vec![1]
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::new()
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::from_iter([Box::leak(Box::new(Default::default()))])
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::new(Box::leak(Box::new(Default::default())))
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::from(Box::leak(Box::new(Default::default())))
+src/abi.rs:271:9: delete match arm Some(Value::String(_)) in spec_of
+src/abi.rs:270:20: replace match guard s.is_object() with true in spec_of
+src/abi.rs:270:20: replace match guard s.is_object() with false in spec_of

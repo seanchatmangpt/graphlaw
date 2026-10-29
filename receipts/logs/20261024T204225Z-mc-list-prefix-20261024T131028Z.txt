@@ -1,0 +1,88 @@
+src/abi.rs:48:48: replace * with +
+src/abi.rs:48:48: replace * with /
+src/abi.rs:48:41: replace * with +
+src/abi.rs:48:41: replace * with /
+src/abi.rs:73:58: replace * with +
+src/abi.rs:73:58: replace * with /
+src/abi.rs:73:51: replace * with +
+src/abi.rs:73:51: replace * with /
+src/abi.rs:84:9: replace <impl From<Refusal> for Fail>::from -> Self with Default::default()
+src/abi.rs:94:5: replace fail_with_details -> Fail with Default::default()
+src/abi.rs:103:5: replace limit -> Fail with Default::default()
+src/abi.rs:117:5: replace check_limit -> Res<()> with Res::new()
+src/abi.rs:117:5: replace check_limit -> Res<()> with Res::from_iter([()])
+src/abi.rs:117:5: replace check_limit -> Res<()> with Res::new(())
+src/abi.rs:117:5: replace check_limit -> Res<()> with Res::from(())
+src/abi.rs:117:17: replace > with == in check_limit
+src/abi.rs:117:17: replace > with < in check_limit
+src/abi.rs:117:17: replace > with >= in check_limit
+src/abi.rs:125:5: replace json_depth -> usize with 0
+src/abi.rs:125:5: replace json_depth -> usize with 1
+src/abi.rs:130:25: replace == with != in json_depth
+src/abi.rs:132:25: replace == with != in json_depth
+src/abi.rs:138:13: delete match arm b'"' in json_depth
+src/abi.rs:139:13: delete match arm b'[' | b'{' in json_depth
+src/abi.rs:143:13: delete match arm b']' | b'}' in json_depth
+src/abi.rs:140:23: replace += with -= in json_depth
+src/abi.rs:140:23: replace += with *= in json_depth
+src/abi.rs:152:5: replace limit_response -> Vec<u8> with vec![]
+src/abi.rs:152:5: replace limit_response -> Vec<u8> with vec![0]
+src/abi.rs:152:5: replace limit_response -> Vec<u8> with vec![1]
+src/abi.rs:157:5: replace missing_buffer_response -> Vec<u8> with vec![]
+src/abi.rs:157:5: replace missing_buffer_response -> Vec<u8> with vec![0]
+src/abi.rs:157:5: replace missing_buffer_response -> Vec<u8> with vec![1]
+src/abi.rs:167:5: replace unknown_buffer_response -> Vec<u8> with vec![]
+src/abi.rs:167:5: replace unknown_buffer_response -> Vec<u8> with vec![0]
+src/abi.rs:167:5: replace unknown_buffer_response -> Vec<u8> with vec![1]
+src/abi.rs:173:5: replace bad_refusal -> Refusal with Default::default()
+src/abi.rs:182:5: replace bad -> Fail with Default::default()
+src/abi.rs:187:5: replace call -> Vec<u8> with vec![]
+src/abi.rs:187:5: replace call -> Vec<u8> with vec![0]
+src/abi.rs:187:5: replace call -> Vec<u8> with vec![1]
+src/abi.rs:198:5: replace respond -> Vec<u8> with vec![]
+src/abi.rs:198:5: replace respond -> Vec<u8> with vec![0]
+src/abi.rs:198:5: replace respond -> Vec<u8> with vec![1]
+src/abi.rs:214:5: replace refusal_json -> Value with Default::default()
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::new()
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::from_iter([""])
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::new("")
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::from("")
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::from_iter(["xyzzy"])
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::new("xyzzy")
+src/abi.rs:228:5: replace str_field -> Res<&'a str> with Res::from("xyzzy")
+src/abi.rs:234:5: replace opt_str -> Option<&'a str> with None
+src/abi.rs:234:5: replace opt_str -> Option<&'a str> with Some("")
+src/abi.rs:234:5: replace opt_str -> Option<&'a str> with Some("xyzzy")
+src/abi.rs:239:5: replace dialect_by_name -> Result<Dialect, Refusal> with Ok(Default::default())
+src/abi.rs:259:5: replace spec_dialect -> Res<Dialect> with Res::new()
+src/abi.rs:259:5: replace spec_dialect -> Res<Dialect> with Res::from_iter([Default::default()])
+src/abi.rs:259:5: replace spec_dialect -> Res<Dialect> with Res::new(Default::default())
+src/abi.rs:259:5: replace spec_dialect -> Res<Dialect> with Res::from(Default::default())
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::new()
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::from_iter([Box::leak(Box::new(Default::default()))])
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::new(Box::leak(Box::new(Default::default())))
+src/abi.rs:269:5: replace spec_of -> Res<&'a Value> with Res::from(Box::leak(Box::new(Default::default())))
+src/abi.rs:271:9: delete match arm Some(Value::String(_)) in spec_of
+src/abi.rs:270:20: replace match guard s.is_object() with true in spec_of
+src/abi.rs:270:20: replace match guard s.is_object() with false in spec_of
+src/abi.rs:279:5: replace state_of -> Res<LawState> with Res::new()
+src/abi.rs:279:5: replace state_of -> Res<LawState> with Res::from_iter([Default::default()])
+src/abi.rs:279:5: replace state_of -> Res<LawState> with Res::new(Default::default())
+src/abi.rs:279:5: replace state_of -> Res<LawState> with Res::from(Default::default())
+src/abi.rs:288:5: replace state_field -> Res<LawState> with Res::new()
+src/abi.rs:288:5: replace state_field -> Res<LawState> with Res::from_iter([Default::default()])
+src/abi.rs:288:5: replace state_field -> Res<LawState> with Res::new(Default::default())
+src/abi.rs:288:5: replace state_field -> Res<LawState> with Res::from(Default::default())
+src/abi.rs:292:5: replace term_json -> Value with Default::default()
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::new()
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::from_iter([String::new()])
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::new(String::new())
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::from(String::new())
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::from_iter(["xyzzy".into()])
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::new("xyzzy".into())
+src/abi.rs:312:5: replace nquads_of -> Res<String> with Res::from("xyzzy".into())
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::new()
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::from_iter([Default::default()])
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::new(Default::default())
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::from(Default::default())
+src/abi.rs:340:5: replace call_json -> Value with Default::default()

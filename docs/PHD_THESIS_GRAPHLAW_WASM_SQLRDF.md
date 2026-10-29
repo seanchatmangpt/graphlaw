@@ -5,10 +5,10 @@
 - **Author:** Sean Chatman
 - **Repository Subject:** `/Users/sac/graphlaw` (`graphlaw` v26.10.22, Rust Edition 2024, MSRV 1.96)
 - **Head Commit Witness:** `c6a1939f462de3287b94069f96eaf27ad877fb1f`
-- **Pinned WebAssembly Artifact (`priv/graphlaw.wasm` / `registry/ARTIFACTS.blake3`):** `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107` (57,781,384 bytes, W3C Exception Handling `Tag(13)` section count 1)
+- **Pinned WebAssembly Artifact (`priv/graphlaw.wasm` / `registry/ARTIFACTS.blake3`):** `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107` [historical — interim pin superseded by 58a44095…d2280a] (57,781,384 bytes, W3C Exception Handling `Tag(13)` section count 1)
 - **Upstream Authorities (`BACKEND_AUTHORITIES`):**
-  1. `PurRDF = 2.0.2` (RDF 1.2, RDFC-1.0 canonicalization, SPARQL 1.1/1.2, SHACL, ShEx 2.1, Datalog stratified fixpoint, RDF/RDFS/OWL-RL entailment)
-  2. `Eyeron = 0.7.9` (`crates/graphlaw-eyeron`, Notation3 parsing, forward-chaining reasoning, proof checking)
+  1. `PurRDF = 3.0.1` (RDF 1.2, RDFC-1.0 canonicalization, SPARQL 1.1/1.2, SHACL, ShEx 2.1, Datalog stratified fixpoint, RDF/RDFS/OWL-RL entailment; its native Notation3 crate `purrdf::n3` owns N3)
+  2. `purrdf-n3 = 3.0.1` (purrdf crates/n3, git-sourced from the pinned [seanchatmangpt/purrdf](https://github.com/seanchatmangpt/purrdf) fork: Notation3 parsing, forward-chaining reasoning, proof checking)
   3. `frozen-duckdb = 2.0.2` (Vectorized analytical execution, Parquet/CSV zone-map scan pipelines, SIMD aggregations, statically linked on both native and `wasm32-wasip1`)
 
 ---
@@ -19,7 +19,7 @@ In strict compliance with the repository's operating doctrine ($A = \mu(O^*)$, $
 
 | Standing Class | Meaning | Representative Witnessed Examples |
 | :--- | :--- | :--- |
-| **`ALIVE` / `WITNESSED`** | Executed and verified by an in-tree court against the real engine (`PurRDF`, `Eyeron`, `frozen-duckdb`, `wasmtime 48`, or `wasmi 2`). | `compile_turtle` sole-admission sealing ([`src/sql_ast.rs`](file:///Users/sac/graphlaw/src/sql_ast.rs)); 35 DuckDB PEG statement classes ([`tests/duckdb_statement_kinds.rs`](file:///Users/sac/graphlaw/tests/duckdb_statement_kinds.rs)); in-WASM DuckDB lifecycle under Wasmtime 48 W3C EH ([`tests/wasm_duckdb_lifecycle_eh.rs`](file:///Users/sac/graphlaw/tests/wasm_duckdb_lifecycle_eh.rs)); 4/4 FIBO banking courts; Divan 9,100× C1 cache amortization (`2.541 µs` vs. `23.13 ms`). |
+| **`ALIVE` / `WITNESSED`** | Executed and verified by an in-tree court against the real engine (`PurRDF`, `purrdf-n3`, `frozen-duckdb`, `wasmtime 48`, or `wasmi 2`). | `compile_turtle` sole-admission sealing ([`src/sql_ast.rs`](file:///Users/sac/graphlaw/src/sql_ast.rs)); 35 DuckDB PEG statement classes ([`tests/duckdb_statement_kinds.rs`](file:///Users/sac/graphlaw/tests/duckdb_statement_kinds.rs)); in-WASM DuckDB lifecycle under Wasmtime 48 W3C EH ([`tests/wasm_duckdb_lifecycle_eh.rs`](file:///Users/sac/graphlaw/tests/wasm_duckdb_lifecycle_eh.rs)); 4/4 FIBO banking courts; Divan 9,100× C1 cache amortization (`2.541 µs` vs. `23.13 ms`). |
 | **`PARTIAL_ALIVE`** | Core data structures and unit/contract courts are landed and green, with production wiring or digest bumps queued for the next phase. | `CanonArrow` 128-byte aligned header ([`src/egress/arrow.rs`](file:///Users/sac/graphlaw/src/egress/arrow.rs)) and `ExecutionReceiptV2` dual-witness seal ([`crates/graphlaw-reconstituted/src/lib.rs`](file:///Users/sac/graphlaw/crates/graphlaw-reconstituted/src/lib.rs)); `op="duckdb"` (op-15) dispatched in-module while omitted from the hashed 14-op table for digest stability. |
 | **`DESIGNED` / `QUEUED`** | Formal specification and falsifier courts exist on disk, queued behind the milestone integration commit. | ERRC 1000× Moonshots `E1` (alias window elimination), `E2` (shapes-as-single-description codegen), `A1` (scope as SHACL-entailed type) ([`docs/jira/v26.10.22/THESIS.md`](file:///Users/sac/graphlaw/docs/jira/v26.10.22/THESIS.md)). |
 | **`UNMET` / `FAIL` (Disclosed)** | A gated budget or post-quantum target that has not yet passed or been implemented; carried transparently as negative/boundary evidence rather than hidden. | Statistical Process Control (SPC) gate on the hot-path fold (`Cpk < 1.33` under fleet load in `receipts/spc-2026-10-22.json`); $\Sigma_{\text{PQC}}$ post-quantum modulus (Ed25519 is the active signing scheme in [`src/attest.rs`](file:///Users/sac/graphlaw/src/attest.rs)); 25M-row `TC_HOT_FULL=1` benchmark (500k-row smoke executed). |
@@ -56,7 +56,7 @@ We formalize **Admitted Computation** via the typed **Chatman Equation**, $A = \
 12. [Chapter 12: OCEL Causal Frame Chains (`src/receipt_chain/`) and Branchless Denial Polarity Algebra](#chapter-12-ocel-causal-frame-chains-srcreceipt_chain-and-branchless-denial-polarity-algebra)
 13. [Chapter 13: The 14+1 JSON ABI Dispatcher (`src/abi/`), Capability Registry (`src/registry/`), and `abi_manifest` Pinning](#chapter-13-the-141-json-abi-dispatcher-srcabi-capability-registry-srcregistry-and-abi_manifest-pinning)
 14. [Chapter 14: Dual-Tier Sandbox Runners (`graphlaw-run-eh` & `graphlaw-run`) and WASI Clock Patch Governance](#chapter-14-dual-tier-sandbox-runners-graphlaw-run-eh--graphlaw-run-and-wasi-clock-patch-governance)
-15. [Chapter 15: Vendored `Eyeron 0.7.9` Notation3 Engine (`crates/graphlaw-eyeron/`), Description Logic Dual-Route Verification (`dl_dualroute`), and Formal AI Oracles](#chapter-15-vendored-eyeron-079-notation3-engine-cratesgraphlaw-eyeron-description-logic-dual-route-verification-dl_dualroute-and-formal-ai-oracles)
+15. [Chapter 15: The `purrdf-n3` Notation3 Engine (git-sourced), Description Logic Dual-Route Verification (`dl_dualroute`), and Formal AI Oracles](#chapter-15-the-purrdf-n3-notation3-engine-git-sourced-description-logic-dual-route-verification-dl_dualroute-and-formal-ai-oracles)
 16. [Chapter 16: Self-Monitoring Pack (`src/smon.rs`), SA2A Semantic Evidence Courts, FIBO Banking Suite, and Complete Subsystem Atlas](#chapter-16-self-monitoring-pack-srcsmonrs-sa2a-semantic-evidence-courts-fibo-banking-suite-and-complete-subsystem-atlas)
 
 ---
@@ -85,7 +85,7 @@ Let us define each term precisely as implemented in the Rust kernel:
   $$O^* = \mathrm{aligned}(O) \cap \mathrm{grounded}(O) \cap \mathrm{bounded}(O) \cap \mathrm{admitted}(O)$$
   In GraphLaw, $O \to O^*$ is realized by byte-size and JSON-depth bounds ([`src/abi.rs`](file:///Users/sac/graphlaw/src/abi.rs#L48-L63)), two-tier dialect sniffing ([`src/dialect/sniff.rs`](file:///Users/sac/graphlaw/src/dialect/sniff.rs#L128)), SHACL recursion depth guards ([`src/shacl_guard.rs`](file:///Users/sac/graphlaw/src/shacl_guard.rs#L84)), closed-world SHACL shape validation ([`src/sql_ast.rs`](file:///Users/sac/graphlaw/src/sql_ast.rs)), `ScopePos` lattice verification, and Ed25519 `SignedLease` verification ([`src/law.rs`](file:///Users/sac/graphlaw/src/law.rs#L387)). Any candidate rejected at this boundary yields a stable, typed refusal (`REFUSAL-01`..`REFUSAL-05`, `RefusalKind::*`) and never touches the execution engine.
 - **$\mu$ (Lawful Manufacture):** A deterministic pure function mapping $O^*$ into an executable, sealed artifact $A$. For relational queries, $\mu$ is [`compile_turtle`](file:///Users/sac/graphlaw/src/sql_ast.rs), which produces a [`CompiledQuery`](file:///Users/sac/graphlaw/src/sql_ast/ast.rs#L555-L600) carrying the RDFC-1.0 canonical graph bytes $\mathrm{Canon}(G_{\text{AST}})$, the 32-byte structural anchor $h_{\text{ast}} = \mathrm{BLAKE3}(\mathrm{Canon}(G_{\text{AST}}))$, the parameterized SQL string, the `cacheable` classification bit, and the private 32-byte `admission_seal`. Applying $\mu$ to raw $O$ (bypassing `compile_turtle`) is a type/seal error refused by `verify_seal()`.
-- **$A$ (Actuation / Admitted Transition):** Execution of the sealed artifact against one of the three pinned upstream authorities (`PurRDF 2.0.2`, `Eyeron 0.7.9`, or `frozen-duckdb 2.0.2`) inside either the native host or the sealed `wasm32-wasip1` sandbox.
+- **$A$ (Actuation / Admitted Transition):** Execution of the sealed artifact against one of the three pinned upstream authorities (`PurRDF 3.0.1`, `purrdf-n3 3.0.1`, or `frozen-duckdb 2.0.2`) inside either the native host or the sealed `wasm32-wasip1` sandbox.
 - **$R$ (Cryptographic Receipt):** A five-fold tuple $R = \langle \mathrm{Id}, \mathrm{Auth}, \mathrm{Cons}, \mathrm{Rep}, \mathrm{St} \rangle$ binding:
   1. **Identity ($\mathrm{Id}$):** Content-addressed BLAKE3 digests—parent/child state IDs `blake3:<hex>` for [`LawState`](file:///Users/sac/graphlaw/src/law.rs#L27-L30) or $H_{\text{query}} = \mathrm{BLAKE3}(h_{\text{ast}} \mathbin{\Vert} P_{\text{params}})$ for [`ExecutionReceipt`](file:///Users/sac/graphlaw/src/duckdb_eval.rs#L283-L322).
   2. **Authority ($\mathrm{Auth}$):** Named [`BackendAuthority`](file:///Users/sac/graphlaw/src/lib.rs) and optional Ed25519 [`SignedLease`](file:///Users/sac/graphlaw/src/law.rs#L387) (`lease_id`, `Ceiling`, `key_id`).
@@ -132,7 +132,7 @@ flowchart TD
         VerifySeal["Verify Seal Gate (src/duckdb_eval.rs): compiled.verify_seal()"]
         ParamFold["Two-Node Parameter Fold: H_query = BLAKE3(h_ast || P_params)"]
         C1Cache["C1 QueryCache (src/query_cache.rs): Keyed by (H_query, Atomic Epoch)"]
-        Engines["Pinned Upstream Authorities: PurRDF 2.0.2 | Eyeron 0.7.9 | frozen-duckdb 2.0.2 (Native and wasm32-wasip1 via Wasmtime 48 W3C EH)"]
+        Engines["Pinned Upstream Authorities: PurRDF 3.0.1 | purrdf-n3 3.0.1 | frozen-duckdb 2.0.2 (Native and wasm32-wasip1 via Wasmtime 48 W3C EH)"]
 
         Seal --> VerifySeal
         VerifySeal -->|Tampered / Unsealed| Refusal
@@ -181,8 +181,8 @@ Consequently, state equality in GraphLaw is a constant-time 32-byte digest compa
 
 GraphLaw accepts 14 semantic and relational dialects through [`src/dialect/sniff.rs`](file:///Users/sac/graphlaw/src/dialect/sniff.rs#L128) and [`src/dialect.rs`](file:///Users/sac/graphlaw/src/dialect.rs#L368), organized into a strict **Two-Tier Model** ([`src/tier.rs`](file:///Users/sac/graphlaw/src/tier.rs)):
 
-1. **Dataset Tier (`Tier::Dataset` $\to$ `PurRDF 2.0.2`):** Turtle, TriG, N-Triples, N-Quads, RDF/XML, JSON-LD, YAML-LD, TriX, and HexTuples.
-2. **Logic / Rule Tier (`Tier::Logic` $\to$ `Eyeron 0.7.9`):** Notation3 (`Dialect::N3`), supporting formulas (`{ ... }`), implication (`=>`), and built-in predicates. N3 is never silently down-converted to an RDF dataset because dropping rule implications would silently discard normative constraints.
+1. **Dataset Tier (`Tier::Dataset` $\to$ `PurRDF 3.0.1`):** Turtle, TriG, N-Triples, N-Quads, RDF/XML, JSON-LD, YAML-LD, TriX, and HexTuples.
+2. **Logic / Rule Tier (`Tier::Logic` $\to$ `purrdf-n3 3.0.1`):** Notation3 (`Dialect::N3`), supporting formulas (`{ ... }`), implication (`=>`), and built-in predicates. N3 is never silently down-converted to an RDF dataset because dropping rule implications would silently discard normative constraints.
 3. **Schema & Relational Tiers (`Dialect::ShExC`, `Dialect::SqlRdf`):** ShExC schemas route to PurRDF's ShEx 2.1 validator; SQL-in-RDF graphs route to [`sql_ast::compile_turtle`](file:///Users/sac/graphlaw/src/sql_ast.rs).
 
 Crucially, if content is syntactically ambiguous between TriG and ShExC and no explicit hint is supplied, `dialect::sniff` refuses with `RefusalKind::Ambiguous` rather than guessing.
@@ -195,18 +195,18 @@ flowchart LR
     Sniff{"dialect::sniff: Content and Hint Analysis"}
     Input --> Sniff
 
-    subgraph DatasetTier["Tier 1: Dataset and Schema (PurRDF 2.0.2)"]
+    subgraph DatasetTier["Tier 1: Dataset and Schema (PurRDF 3.0.1)"]
         RDF["Turtle | TriG | N-Triples | N-Quads | RDF/XML | JSON-LD | YAML-LD | TriX | HexTuples"]
         ShEx["ShExC 2.1 Schema"]
-        PurRDF["Authority: PurRDF 2.0.2 (RDFC-1.0 | SPARQL 1.2 | SHACL | OWL-RL | Datalog)"]
+        PurRDF["Authority: PurRDF 3.0.1 (RDFC-1.0 | SPARQL 1.2 | SHACL | OWL-RL | Datalog)"]
         RDF --> PurRDF
         ShEx --> PurRDF
     end
 
-    subgraph LogicTier["Tier 2: Higher-Order Logic (Eyeron 0.7.9)"]
+    subgraph LogicTier["Tier 2: Higher-Order Logic (purrdf-n3 3.0.1)"]
         N3["Notation3 (N3): Formulas and Rules (=>)"]
-        Eyeron["Authority: graphlaw-eyeron 0.7.9 (Forward-Chaining Reasoner and Proof Checker)"]
-        N3 --> Eyeron
+        PurN3["Authority: purrdf::n3 3.0.1, git-sourced: seanchatmangpt/purrdf rev-pinned (Forward-Chaining Reasoner and Proof Checker)"]
+        N3 --> PurN3
     end
 
     subgraph RelationalTier["Tier 3: Relational AST (sql-rdf)"]
@@ -239,15 +239,15 @@ $$\mathsf{Observe} < \mathsf{Select} < \mathsf{Construct}$$
 
 | `Step` Variant | Step Name (`receipt.step`) | Required `Ceiling` | Upstream Capability / Authority | State Effect |
 | :--- | :--- | :--- | :--- | :--- |
-| `Step::AdmitShacl { shapes_ttl }` | `"admit:shacl"` | `Ceiling::Observe` | `SHACL` (`PurRDF 2.0.2`) | Pure gate ($\Delta S = 0$, `added = 0`). Refuses if $G \not\models S$. |
+| `Step::AdmitShacl { shapes_ttl }` | `"admit:shacl"` | `Ceiling::Observe` | `SHACL` (`PurRDF 3.0.1`) | Pure gate ($\Delta S = 0$, `added = 0`). Refuses if $G \not\models S$. |
 | `Step::AdmitSql` | `"admit:sql"` | `Ceiling::Observe` | `SHACL` + `sql_ast::compile_turtle` | Pure gate ($\Delta S = 0$). Validates dataset as `sql-rdf`. |
 | `Step::RequireReceipt { step }` | `"admit:require-receipt"` | `Ceiling::Observe` | `RDF 1.2 / codecs / storage IR` | Pure gate. Refuses unless receipt for `step` is in state. |
 | `Step::RequireSignedReceipt { step, trusted }` | `"admit:require-signed-receipt"` | `Ceiling::Observe` | `RDF 1.2` + `attest::verify` | Pure gate. Verifies Ed25519 signature over recorded receipt. |
 | `Step::Plan { plan }` | `"admit:plan"` | `Ceiling::Select` | `RDF 1.2` (`src/plan.rs`) | Replays bounded action sequence (`pre`, `pre_not`, `add`, `del`, `goal`, `goal_not`). |
-| `Step::DeriveN3 { rules, ruleset }` | `"derive:n3"` | `Ceiling::Construct` | `Notation3` (`Eyeron 0.7.9`) | Forward-chains N3 rules; adds derived triples to child `LawState`. |
+| `Step::DeriveN3 { rules, ruleset }` | `"derive:n3"` | `Ceiling::Construct` | `Notation3` (`purrdf-n3 3.0.1`) | Forward-chains N3 rules; adds derived triples to child `LawState`. |
 | `Step::Hooks { pack }` | `"derive:hooks"` | `Ceiling::Construct` | `Knowledge hooks` (`src/hooks.rs`) | Evaluates SPARQL `kh:` hooks to stratified fixpoint or refusal. |
-| `Step::EntailRdfs` | `"derive:rdfs"` | `Ceiling::Construct` | `RDF/RDFS/OWL-RL` (`PurRDF 2.0.2`) | Computes RDFS deductive closure $\mathcal{T}_{\text{RDFS}}(G)$. |
-| `Step::EntailOwlRl` | `"derive:owl-rl"` | `Ceiling::Construct` | `RDF/RDFS/OWL-RL` (`PurRDF 2.0.2`) | Computes OWL 2 RL deductive closure $\mathcal{T}_{\text{OWL-RL}}(G)$. |
+| `Step::EntailRdfs` | `"derive:rdfs"` | `Ceiling::Construct` | `RDF/RDFS/OWL-RL` (`PurRDF 3.0.1`) | Computes RDFS deductive closure $\mathcal{T}_{\text{RDFS}}(G)$. |
+| `Step::EntailOwlRl` | `"derive:owl-rl"` | `Ceiling::Construct` | `RDF/RDFS/OWL-RL` (`PurRDF 3.0.1`) | Computes OWL 2 RL deductive closure $\mathcal{T}_{\text{OWL-RL}}(G)$. |
 
 #### Offline Ed25519 Lease Verification (`SignedLease`)
 To prevent ambient authority, a transition under lease authority requires a [`Lease`](file:///Users/sac/graphlaw/src/law.rs#L255) (`id`, `holder`, `ceiling`, `scope`, `expires_unix`, `issued_unix`) wrapped in a [`SignedLease`](file:///Users/sac/graphlaw/src/law.rs#L387) carrying an RFC 8032 deterministic Ed25519 [`Attestation`](file:///Users/sac/graphlaw/src/attest.rs) (`key_id = BLAKE3(pubkey)`, `payload_blake3 = BLAKE3(canonical_json)`, `signature`). At admission:
@@ -448,7 +448,7 @@ flowchart TD
 
 A foundational architectural law of GraphLaw ([`CLAUDE.md`](file:///Users/sac/graphlaw/CLAUDE.md#L84-L87), [`Cargo.toml:70-74`](file:///Users/sac/graphlaw/Cargo.toml#L70-L74)) is that **DuckDB is not a feature flag**:
 - In pre-v26.10.22 systems, analytical execution was gated behind `#[cfg(not(target_arch = "wasm32"))]`, causing the WASM artifact to silently reject `op="duckdb"` with `unknown op 'duckdb'` and forcing hosts to maintain an unverified external database bridge.
-- In v26.10.22, `frozen-duckdb = "2.0.2"` is an unconditional dependency of the root `graphlaw` crate on every target, including `wasm32-wasip1`. The `graphlaw-wasm` crate (`wasm/Cargo.toml`) compiles and links the complete `graphlaw` kernel, `PurRDF 2.0.2`, `Eyeron 0.7.9`, and `libduckdb.a` (`88,161,726 B` static archive) into a single, self-contained **57,781,384-byte** WebAssembly module (`priv/graphlaw.wasm`, BLAKE3 `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`).
+- In v26.10.22, `frozen-duckdb = "2.0.2"` is an unconditional dependency of the root `graphlaw` crate on every target, including `wasm32-wasip1`. The `graphlaw-wasm` crate (`wasm/Cargo.toml`) compiles and links the complete `graphlaw` kernel, `PurRDF 3.0.1` (including `purrdf-n3 3.0.1` from the pinned seanchatmangpt/purrdf fork), and `libduckdb.a` (`88,161,726 B` static archive) into a single, self-contained **57,781,384-byte** WebAssembly module (`priv/graphlaw.wasm`, BLAKE3 `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107` [historical — interim pin superseded by 58a44095…d2280a]; digest/size reflect the pre-migration module (historical pin); re-measure at next wasm rebuild).
 
 ### 4.2 Ontology-Projected Linear-Memory ABI and the Side-Table Safety Contract
 
@@ -493,7 +493,7 @@ sequenceDiagram
     participant Host as Host Runtime (Wasmtime 48 / Elixir Wasmex / Node V8)
     participant FFI as wasm/src/ffi.rs (LIVE Side-Table & OUTSTANDING Cap)
     participant ABI as graphlaw::abi::call (Safe Rust Kernel)
-    participant Engine as PurRDF / Eyeron / frozen-duckdb
+    participant Engine as PurRDF / purrdf-n3 / frozen-duckdb
 
     Note over Host,Engine: Module Instantiation (_initialize / .init_array)
     Host->>FFI: Instantiate module & run .init_array ctors
@@ -562,10 +562,10 @@ GraphLaw resolves all three failure modes permanently:
 ```mermaid
 flowchart TD
     subgraph Toolchain["1. Uniform W3C EH Compilation (-fwasm-exceptions -mllvm -wasm-use-legacy-eh=0)"]
-        RustCore["graphlaw + PurRDF 2.0.2 + Eyeron 0.7.9 (Safe Rust Kernel)"]
+        RustCore["graphlaw + PurRDF 3.0.1 + purrdf-n3 3.0.1 (Safe Rust Kernel)"]
         DuckStatic["libduckdb.a (88.16 MiB) + libcore_functions_extension.a + libicu_extension.a"]
         Unwind["libunwind.a + libc++abi.a (New-EH Candidate B Pinned by SHA256)"]
-        WasiLibc["wasi-libc sysroot + vendor/purrdf-sparql-eval WASI clock patch"]
+        WasiLibc["wasi-libc sysroot; WASI clock gate lives in the pinned purrdf fork"]
     end
 
     subgraph ReactorGlue["2. Reactor Contract and GC Roots (wasm/src/lib.rs)"]
@@ -877,7 +877,7 @@ The table below synthesizes the witnessed empirical measurements and court stand
 | **Hot-Path BLAKE3 Parameter Fold** | **`184–216 ns/op` isolated** (`250–300 ns` fan-out; p99 `375 ns`) | `tests/p28_hot_path_bench.rs`, `receipts/spc-2026-10-22.json` | **`DISCLOSED FAIL` on SPC Gate**: Smoke median (`~0.20 µs`) is below the `0.25 µs` USL, but p99 (`375 ns`) under fleet contention yielded `Cpk = -0.0018` (`FAIL`). Carried transparently per doctrine. |
 | **SPSC `EvidenceRing` Producer Push** | **`<= 292 ns` max** (vs `10 µs` fence) | `tests/evidentiary_ring_court.rs`, `docs/jira/v26.10.22/DISSERTATION.md` §6.2 | **`WITNESSED`**: Wait-free 64-byte `RingDescriptor` push into 4096-slot `rtrb` ring. |
 | **Columnar Egress Serialization Tax** | **`1.354 ms`** (raw) vs **`9.246 ms`** (N-Triples) per 10k rows | `benches/sql_rdf_egress.rs`, `docs/whitepaper-v26.10.22.md` §3 | **`WITNESSED`**: Empirical **6.83×** text-rendering overhead motivating `CanonArrow` 128B dual-witness egress. |
-| **WASM Module Size & Sandbox Wall** | **`57,781,384 B`** (`55.10 MiB` <= `64 MiB` ceiling) | `tests/wasm_size_court.rs`, `registry/ARTIFACTS.blake3` | **`WITNESSED`**: Full `graphlaw` + `PurRDF` + `Eyeron` + `frozen-duckdb` + `core_functions` + `icu` with W3C EH (`Tag(13) = 1`). |
+| **WASM Module Size & Sandbox Wall** | **`57,781,384 B`** (`55.10 MiB` <= `64 MiB` ceiling) | `tests/wasm_size_court.rs`, `registry/ARTIFACTS.blake3` | **`WITNESSED`**: Full `graphlaw` + `PurRDF` + `purrdf-n3` + `frozen-duckdb` + `core_functions` + `icu` with W3C EH (`Tag(13) = 1`). Digest/size reflect the pre-migration module (historical pin); re-measure at next wasm rebuild. |
 | **In-WASM Memory-Wall Plateau** | **8/8 green** ($\Delta \le 2$ pages/cycle) | `tests/wasm_memory_wall.rs`, `tests/wasm_boundary_fuzz.rs` (1,172 frames) | **`WITNESSED`**: Bounded linear memory growth across repeated cycles with zero leaks or OOM traps. |
 | **FIBO Banking Domain Courts (Wasmtime 48)** | **4/4 suites green** (BCBS 239, Rehypothecation, UBO Sanctions, DvP Settlement) | `tests/bcbs_aggregation_court.rs`, `tests/rehypothecation_gate_court.rs`, `tests/ubo_sanctions_court.rs`, `tests/dvp_settlement_court.rs` | **`WITNESSED`**: Full financial ontology + SQL-in-RDF analytical verification including atomic batch rollback on DvP leg failure. |
 
@@ -1340,50 +1340,59 @@ stateDiagram-v2
     WriteStdout --> [*]: Exit 0
 ```
 
-### 14.2 WASI Clock Patch Governance (`build.rs` & `vendor/purrdf-sparql-eval`)
+### 14.2 WASI Clock Gate Provenance (`seanchatmangpt/purrdf`)
 
-Upstream `purrdf-sparql-eval` compiled `NOW()` on `target_arch = "wasm32"` by calling `js_sys::Date::new_0()`, which imports browser JavaScript symbols that do not exist in `wasm32-wasip1` and unconditionally panics on WASI runtimes. GraphLaw vendors `purrdf-sparql-eval` in [`vendor/purrdf-sparql-eval`](file:///Users/sac/graphlaw/vendor/purrdf-sparql-eval) and replaces the browser call with `std::time::SystemTime::now()` routed to WASI `clock_time_get(CLOCKID_REALTIME)`.
+Upstream `purrdf-sparql-eval` once compiled `NOW()` on `target_arch = "wasm32"` by calling `js_sys::Date::new_0()`, which imports browser JavaScript symbols that do not exist in `wasm32-wasip1` and traps on WASI runtimes. The fix — gating the browser-only clock/RNG paths on `all(target_arch = "wasm32", target_os = "unknown")` so WASI keeps the real std clock — lives in the purrdf fork ([seanchatmangpt/purrdf](https://github.com/seanchatmangpt/purrdf)) at the rev pinned in `Cargo.toml`. Nothing is patched: the pinned sources build for WASM as they are. The artifact carries exactly 28 imports, all `wasi_snapshot_preview1` — zero browser/host imports.
 
-To prevent a future `cargo update` or vendor refresh from silently regressing `NOW()` on WASI, [`build.rs`](file:///Users/sac/graphlaw/build.rs) enforces a compile-time source inspection gate: it reads `vendor/purrdf-sparql-eval/src/expression.rs`, verifies the presence of the `WASI_CLOCK_PATCH_APPLIED` marker, and aborts the build with a diagnostic error if the marker is missing.
+The provenance court is the pin itself: `Cargo.toml` rev-pins the fork, `deny.toml` allows that URL as its only git source, and CI's provenance step refuses any purrdf-family package resolving from anything else. Bumping the pin is a reviewed diff (dependabot ignores `purrdf*`; bumps are deliberate rev changes).
 
-#### Diagram 23: The `build.rs` Compile-Time WASI Clock Patch Guard
+#### Diagram 23: Pinned-fork WASI gate provenance
 
 ```mermaid
 flowchart LR
-    CargoBuild["cargo build (Host or wasm32-wasip1)"] --> BuildRs["build.rs: Inspect vendor/purrdf-sparql-eval/src/expression.rs"]
-    BuildRs --> HasMarker{"Contains 'WASI_CLOCK_PATCH_APPLIED'?"}
-    HasMarker -->|"No (Unpatched Upstream Vendor)"| Panic["panic!('vendor/purrdf-sparql-eval missing WASI clock patch')"]
-    HasMarker -->|"Yes (SystemTime::now -> WASI clock_time_get)"| Compile["Proceed to Compile graphlaw"]
+    CargoBuild["cargo build (Host or wasm32-wasip1)"] --> Resolve["Cargo resolves purrdf* from git+seanchatmangpt/purrdf?rev=<pin>"]
+    Resolve --> Fork["fork rev carries the all(wasm32, unknown) clock gate"]
+    Fork --> Compile["Build WASM directly — no patch machinery"]
 ```
 
 ---
 
-## 15. Chapter 15: Vendored `Eyeron` Notation3 Engine, $\mathcal{EL}$ Dual-Route Verification & Formal AI Vector Oracles
+## 15. Chapter 15: The `purrdf-n3` Notation3 Engine (git-sourced), $\mathcal{EL}$ Dual-Route Verification & Formal AI Vector Oracles
 
-### 15.1 Vendored `Eyeron 0.7.9` Notation3 Reasoner (`crates/graphlaw-eyeron/`)
+### 15.1 The `purrdf-n3 3.0.1` Notation3 Reasoner (purrdf crates/n3)
 
-For full Notation3 (`N3`) forward/backward chaining with scoped negation-as-failure (`log:notIncludes`, `log:collectAllIn`), arithmetic (`math:*`), string/list builtins, and formal proof emission (`r:Inference`, `r:Extraction`, `r:Parsing`), GraphLaw vendors and cleans `eyeron 0.7.9` (originally by Jos De Roo, MIT license) in [`crates/graphlaw-eyeron/`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/lib.rs).
+For full Notation3 (`N3`) forward/backward chaining with scoped negation-as-failure (`log:notIncludes`, `log:collectAllIn`), arithmetic (`math:*`), string/list builtins, and formal proof emission (`r:Inference`, `r:Extraction`, `r:Parsing`), GraphLaw consumes `purrdf-n3 3.0.1` — purrdf's own native Notation3 crate (`purrdf` crates/n3 @ 3.0.1), MIT/Apache-2.0/no-claim/MulanPSL-2.0 licensed — from the pinned [seanchatmangpt/purrdf](https://github.com/seanchatmangpt/purrdf) fork. GraphLaw consumes it through the stable `purrdf::n3` re-export (`BACKEND_AUTHORITIES` Notation3 authority `purrdf::n3`, revision `3.0.1`, [`src/lib.rs`](file:///Users/sac/graphlaw/src/lib.rs)); the engine was originally derived from the eyeron codebase (Jos De Roo) and was subsequently upstreamed into purrdf as its native `n3` crate — that derivation is lineage history, not current structure.
 
-The crate is organized into a clean 6-stage deterministic pipeline:
-1. **Lexer & N3 Parser ([`lexer.rs`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/lexer.rs), [`parser.rs`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/parser.rs), [`rdf_messages.rs`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/rdf_messages.rs)):** Parses N3 syntax (`{ ... } => { ... }`, `@forAll`, `@forSome`, paths, lists) or RDF message logs into [`ParsedDocument`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/lib.rs#L65).
-2. **Term & Prefix Interning ([`term.rs`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/term.rs), [`prefix.rs`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/prefix.rs)):** Interns IRIs, blank nodes, literals, and quoted formula graphs (`Term::Graph`).
-3. **Unification & Matching ([`unify.rs`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/unify.rs)):** Substitutes variable bindings across nested formula graphs.
-4. **Builtin Registry ([`builtins/`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/builtins/mod.rs)):** Evaluates `log:*`, `math:*`, `string:*`, `list:*`, `time:*`, and `crypto:*` predicates deterministically (with runtime timestamps neutralized for reproducible WASM execution).
-5. **Prepared Reasoner ([`reasoner.rs`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/reasoner.rs)):** Compiles parsed documents via [`prepare_reasoner`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/lib.rs#L118-L132) so a TBox/ruleset can be parsed once and cloned across thousands of ABox invocations (`PreparedReasoner::run`).
-6. **Formal Proof Writer & Independent Proof Checker ([`proof_writer.rs`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/proof_writer.rs), [`proof_check.rs`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/proof_check.rs)):** Emits W3C `reason:` (`http://www.w3.org/2000/10/swap/reason#`) proof graphs and verifies them via [`proof_check_n3`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/proof_check.rs), checking that every `r:Inference` step validly instantiates its rule's antecedent and consequent.
+The crate is organized into a clean 6-stage deterministic pipeline over the fork's `crates/n3/src/`:
+1. **Lexer & N3 Parser (`lexer.rs`, `parser.rs`, `rdf_compat.rs`):** Parses N3 syntax (`{ ... } => { ... }`, `@forAll`, `@forSome`, paths, lists) or RDF message logs (`parse_rdf_message_log` / `is_rdf_message_log`, re-exported from `parser.rs`) into an `ast::Document`.
+2. **Terms, Prefixes & Quoted Graphs (`ast.rs`):** Models IRIs, blank nodes, literals, and quoted formula graphs (`Term::Formula(Graph)`) together with prefix bindings for the whole document.
+3. **Unification & Matching (`reasoner.rs`):** Substitutes variable bindings across nested formula graphs during forward chaining.
+4. **Builtin Evaluation (`reasoner.rs`):** Evaluates `log:*`, `math:*`, `string:*`, `list:*`, `time:*`, and `crypto:*` predicates deterministically (with runtime timestamps neutralized for reproducible WASM execution).
+5. **Prepared Reasoner (`reasoner.rs`):** `PreparedReasoner::new(program: Document)` compiles a parsed document once (forward-agenda index built in the constructor) so a TBox/ruleset can be prepared once and reused across thousands of ABox invocations (`PreparedReasoner::reason(data, options)`).
+6. **Formal Proof Writer & Independent Proof Checker (`proof_writer.rs`, `proof_check.rs`, `proof_check_n3.rs`):** Emits W3C `reason:` (`http://www.w3.org/2000/10/swap/reason#`) proof graphs and verifies them via `proof_check_n3`, checking that every `r:Inference` step validly instantiates its rule's antecedent and consequent.
 
-#### Diagram 24: The `graphlaw-eyeron` Notation3 Reasoning & Formal Proof Verification Pipeline
+#### Diagram 24: The `purrdf-n3` Notation3 Reasoning & Formal Proof Verification Pipeline
 
 ```mermaid
 flowchart TD
-    N3Source["N3 Source / RDF Message Log"] --> Parser["lexer.rs + parser.rs -> ParsedDocument"]
-    Parser --> Prepare["prepare_reasoner(doc) -> PreparedReasoner (Reusable TBox)"]
-    Prepare --> Run["reasoner.rs: Forward Chaining + Scoped Closure (unify.rs + builtins/*)"]
-    Run --> Mode{"ReasonOptions.proof?"}
+    N3Source["N3 Source / RDF Message Log"] --> Parser["lexer.rs + parser.rs -> ast::Document"]
+    Parser --> Prepare["PreparedReasoner::new(doc) -> PreparedReasoner (Reusable TBox)"]
+    Prepare --> Run["reasoner.rs: Forward Chaining + Scoped Closure + Builtin Evaluation (log/math/string/list/time/crypto)"]
+    Run --> Mode{"ReasonerOptions.proof?"}
     Mode -->|"false (Deductive Closure)"| Closure["Emit Derived N3 Facts / Conclusions"]
     Mode -->|"true (Formal Proof Trace)"| ProofWriter["proof_writer.rs: Emit W3C swap/reason# Proof Graph (r:Proof, r:Inference, r:binding)"]
     ProofWriter --> ProofCheck["proof_check_n3(): Independently Re-Verify Every Inference Step"]
 ```
+
+The fork ships its N3 court suite
+(`crates/n3/tests/`: `n3_parse.rs`, `n3_reason.rs`, `n3_proofs.rs`, `n3_forgery.rs`;
+`harness = false`, executed in fork CI at the pinned rev), which pins the
+advertised quantifier surface
+(`@forAll`/`@forSome` positive parse courts), the single strict langtag
+grammar shared by both profiles (audit C8/F8: a malformed langtag refuses
+and case-folds on N3 too), and stage 6's proof pipeline end-to-end
+(derive → `proof_to_n3` → `check_proof` round-trip in `n3_proofs.rs`);
+parity receipt 2026-10-26: 72 passed / 0 failed (`vendor/README.md`).
 
 ### 15.2 Description Logic $\mathcal{EL}$ Dual-Route Verification (`src/bin/dl_dualroute.rs`) & The 7 AI Vector Oracles (`examples/*`)
 
@@ -1511,8 +1520,8 @@ Every subsystem in `/Users/sac/graphlaw` is cataloged below with its locus, thes
 | **22** | 14+1 JSON ABI Dispatcher (`json_depth`, Lease Check, 5 Op Modules) | [`src/abi.rs`](file:///Users/sac/graphlaw/src/abi.rs), [`src/abi/ops/`](file:///Users/sac/graphlaw/src/abi/ops/mod.rs) | Ch. 13.1 | Diag. 20 | `ALIVE` |
 | **23** | Dual-Digest Capability Registry & `abi_manifest` Pinning | [`src/registry/`](file:///Users/sac/graphlaw/src/registry/mod.rs), [`src/abi_manifest.rs`](file:///Users/sac/graphlaw/src/abi_manifest.rs) | Ch. 13.2 | Diag. 21 | `ALIVE` |
 | **24** | Out-of-Process Sandbox Runners (`graphlaw-run-eh` & `graphlaw-run`) | [`src/bin/graphlaw_run_eh.rs`](file:///Users/sac/graphlaw/src/bin/graphlaw_run_eh.rs), [`src/bin/graphlaw_run.rs`](file:///Users/sac/graphlaw/src/bin/graphlaw_run.rs) | Ch. 14.1 | Diag. 22 | `ALIVE` |
-| **25** | Compile-Time WASI Clock Patch Guard (`WASI_CLOCK_PATCH_APPLIED`) | [`build.rs`](file:///Users/sac/graphlaw/build.rs), [`vendor/purrdf-sparql-eval`](file:///Users/sac/graphlaw/vendor/purrdf-sparql-eval) | Ch. 14.2 | Diag. 23 | `ALIVE` |
-| **26** | Vendored `Eyeron 0.7.9` N3 Reasoner, `dl_dualroute` & 7 AI Oracles | [`crates/graphlaw-eyeron/`](file:///Users/sac/graphlaw/crates/graphlaw-eyeron/src/lib.rs), [`src/bin/dl_dualroute.rs`](file:///Users/sac/graphlaw/src/bin/dl_dualroute.rs), [`examples/`](file:///Users/sac/graphlaw/examples/) | Ch. 15 | Diag. 24, 25 | `ALIVE` |
+| **25** | Pinned-fork WASI gate provenance (pin + deny.toml + CI provenance step) | `Cargo.toml`, `deny.toml`, `.github/workflows/ci.yml` | Ch. 14.2 | Diag. 23 | `ALIVE` |
+| **26** | The `purrdf-n3` N3 Reasoner (git-sourced, pinned rev), `dl_dualroute` & 7 AI Oracles | [purrdf crates/n3](https://github.com/seanchatmangpt/purrdf/tree/main/crates/n3), [`src/bin/dl_dualroute.rs`](file:///Users/sac/graphlaw/src/bin/dl_dualroute.rs), [`examples/`](file:///Users/sac/graphlaw/examples/) | Ch. 15 | Diag. 24, 25 | `ALIVE` |
 | **27** | Self-Monitoring Pack (`smon`), SA2A Evidence Courts & FIBO Suite | [`src/smon.rs`](file:///Users/sac/graphlaw/src/smon.rs), [`src/bin/sa2a_run14_verify.rs`](file:///Users/sac/graphlaw/src/bin/sa2a_run14_verify.rs), [`tests/fibo_banking_suite.rs`](file:///Users/sac/graphlaw/tests/fibo_banking_suite.rs) | Ch. 16 | Diag. 26, 27, 28 | `ALIVE` |
 
 ---

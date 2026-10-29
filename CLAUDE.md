@@ -26,8 +26,11 @@ bash scripts/spc_court.sh                       # SPC gate: Cpk ≥ 1.33 on the 
 # WASI_SDK_PATH (/opt/wasi-sdk) is a wasi-sdk root (bin/clang, share/cmake/wasi-sdk-p1.cmake);
 # CI installs wasi-sdk 34 there.
 # ~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1 is the engine archive, not a wasi-sdk.
-WASI_SDK_PATH="/opt/wasi-sdk" \
-cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm   # wasm boundary (env required; typed build.rs refusal without it)
+# Local workstation: the SDK lives at /Users/sac/wasi-sdks/wasi-sdk-34 (CI installs /opt/wasi-sdk).
+# The link also requires the EH target-feature (CI exports it; without it: undefined _Unwind_GetWasmLPadContext):
+WASI_SDK_PATH=/Users/sac/wasi-sdks/wasi-sdk-34 \
+CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling" \
+  cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 WASI_SDK_PATH="/opt/wasi-sdk" \
 cargo test -p graphlaw-wasm                     # host contract around wasm/src/lib.rs
 ./target/debug/graphlaw-verify                  # receipt verify CLI
@@ -42,9 +45,14 @@ unchanged failing command without a new hypothesis.
 1. `cargo check` — compile gate (~fast)
 2. `cargo test --test <target>` — single court file
 3. `cargo test` — full host suite
-4. `bash scripts/mutation_court.sh` — anti-vacuity sweep
+4. `bash scripts/mutation_court.sh` — anti-vacuity sweep (dirty tree: `--force` is the sanctioned flag — mutates in place, restores byte-exact)
 5. `bash scripts/spc_court.sh` — SPC gate: Cpk ≥ 1.33 on the receipt fold path
 6. `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm` + `cargo test -p graphlaw-wasm` — wasm boundary courts
+
+### Env-gated courts
+- `GRAPHLAW_WASM=<abs path to graphlaw_wasm.wasm>` — wasm artifact courts execute instead of loud-skip
+- `GRAPHLAW_REQUIRE_WASM_PIN=1 GRAPHLAW_WASM=<path>` — enforces the ARTIFACTS wasm pin against actual bytes
+- `GRAPHLAW_RUN_EH=<abs graphlaw-run-eh binary>` — the packet-4 stdio runner courts (build with `--features runner-eh`)
 
 Exit discipline: a loud SKIP with a typed reason is not a pass; a gate that
 cannot exit 1 is the failure.
@@ -62,7 +70,9 @@ cannot exit 1 is the failure.
   `duckdb_statement_kinds.rs`, `trust_attest.rs` are the sql-rdf acceptance set
 - `wasm/` — `graphlaw-wasm` is the unit. It links this crate, including
   frozen-duckdb. SQL-in-RDF admits and evaluates inside that module.
-- `crates/graphlaw-eyeron/` — workspace-member crate (see root `Cargo.toml`)
+- The purrdf family is git-sourced from [seanchatmangpt/purrdf](https://github.com/seanchatmangpt/purrdf)
+  at the rev pinned in root `Cargo.toml` (branch `graphlaw-carried`: WASI clock gate + P01
+  n3 hardening live there); no vendored copies, no crates.io fallback
 - `docs/refusals.md` — the typed refusal register (REFUSAL-01..04 etc.),
   every refusal has a stable code + trigger + recovery; flips are receipt-gated
 - `docs/jira/v<version>/` — active milestone window (newest dir); tickets,
@@ -94,6 +104,7 @@ cannot exit 1 is the failure.
 - **Mutation court runs solo**: `scripts/mutation_court.sh` mutates the tree in
   place; serialize it against all lanes or its inversions false-red concurrent
   lanes' compiles.
+- **Parallel cargo**: concurrent lanes/courts MUST use their own `CARGO_TARGET_DIR` (e.g. `target-<lane>`) — shared `target/` deadlocks on cargo's package cache; the mutation court serializes against everything.
 - **Chicago (classicist) testing**: real frozen-duckdb connections
   (`GraphLawDuckDB::open_in_memory[_allowing_unsigned_extensions]`), assert on
   real table readbacks; mocks/stubs banned by default. Anti-vacuity: a court

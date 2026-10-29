@@ -71,12 +71,10 @@ const KNOWN_DIVERGENCES: &[(Dialect, &str, &str)] = &[
         "rdf-n-quads/nt-syntax-bad-string-05.nq",
         "long-string accepted in N-Quads",
     ),
-    // Turtle: langtag validity, relative base abuse, N3 extras not rejected.
-    (
-        Dialect::Turtle,
-        "rdf-turtle/turtle-syntax-bad-lang-01.ttl",
-        "malformed langtag accepted",
-    ),
+    // Turtle: relative base abuse, N3 extras not rejected. (The langtag row
+    // was removed 2026-10-26: purrdf 3.0.1 now validates the LANGTAG terminal
+    // (first subtag must be alpha), so turtle-syntax-bad-lang-01.ttl is refused
+    // and the divergence is closed in the engine, per the register protocol.)
     (
         Dialect::Turtle,
         "rdf-turtle/turtle-syntax-bad-base-03.ttl",
@@ -92,18 +90,13 @@ const KNOWN_DIVERGENCES: &[(Dialect, &str, &str)] = &[
         "rdf-turtle/turtle-syntax-bad-n3-extras-06.ttl",
         "N3 extra syntax accepted",
     ),
-    // TriG: same PurRdf gaps as Turtle (langtag, BASE, N3 extras) plus
+    // TriG: same PurRdf gaps as Turtle (BASE, N3 extras) plus
     // TriG-specific graph-level rules not enforced (lists/collections/BNodes
     // as graph labels, bad STRUCT) — all registered 2026-10-20 (lane H08).
     (
         Dialect::Trig,
         "rdf-trig/trig-syntax-bad-base-03.trig",
         "bad BASE accepted",
-    ),
-    (
-        Dialect::Trig,
-        "rdf-trig/trig-syntax-bad-lang-01.trig",
-        "malformed langtag accepted",
     ),
     (
         Dialect::Trig,
@@ -469,9 +462,9 @@ fn entries_for(dialect: Dialect) -> Vec<&'static (Dialect, &'static str, Kind)> 
 fn w3c_turtle_conformance() {
     let receipt = run_dialect(Dialect::Turtle, entries_for(Dialect::Turtle));
     assert_eq!(receipt.passed, 73, "turtle positive count drifted");
-    assert_eq!(receipt.refused, 90, "turtle negative count drifted");
+    assert_eq!(receipt.refused, 91, "turtle negative count drifted");
     assert_eq!(
-        receipt.known_diverged, 5,
+        receipt.known_diverged, 4,
         "turtle known-diverged count drifted — update KNOWN_DIVERGENCES"
     );
     assert_eq!(receipt.total, 168);
@@ -505,9 +498,9 @@ fn w3c_nquads_conformance() {
 fn w3c_trig_conformance() {
     let receipt = run_dialect(Dialect::Trig, entries_for(Dialect::Trig));
     assert_eq!(receipt.passed, 98, "trig positive count drifted");
-    assert_eq!(receipt.refused, 101, "trig negative count drifted");
+    assert_eq!(receipt.refused, 102, "trig negative count drifted");
     assert_eq!(
-        receipt.known_diverged, 15,
+        receipt.known_diverged, 14,
         "trig known-diverged count drifted — update KNOWN_DIVERGENCES"
     );
     assert_eq!(receipt.total, 214);
@@ -571,8 +564,8 @@ fn w3c_conformance_receipt_summary() {
             ConformanceReceipt {
                 dialect: Dialect::Turtle,
                 passed: 73,
-                refused: 90,
-                known_diverged: 5,
+                refused: 91,
+                known_diverged: 4,
                 total: 168
             },
             ConformanceReceipt {
@@ -592,8 +585,8 @@ fn w3c_conformance_receipt_summary() {
             ConformanceReceipt {
                 dialect: Dialect::Trig,
                 passed: 98,
-                refused: 101,
-                known_diverged: 15,
+                refused: 102,
+                known_diverged: 14,
                 total: 214
             },
             ConformanceReceipt {

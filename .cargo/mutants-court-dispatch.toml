@@ -1,0 +1,43 @@
+# P12 B1 mutation fleet — "dispatch" family config.
+#
+# Companion to the committed .cargo/mutants.toml: identical shared keys
+# (examine_globs, test_tool, additional_cargo_args, timeout scaling,
+# exclude_re) with the killer suite narrowed to the dispatch courts.
+# Targets the src/abi.rs dispatch surface: call, call_json, dispatch, respond,
+# refusal_json, bad / bad_refusal.
+#
+# Consumed ONLY through scripts/mutation_court.sh:
+#   MUTANTS_EXTRA="--config .cargo/mutants-court-dispatch.toml" \
+#     MUTANTS_OUTPUT=target-mutants/families/dispatch \
+#     scripts/mutation_court.sh --case '\bcall\b|\bcall_json\b|\bdispatch\b|\brespond\b|refusal_json|\bbad(_refusal)?\b'
+# Fleet driver: scripts/mutation_families.sh (preflight, escalation, verdict).
+
+examine_globs = ["src/registry.rs", "src/abi.rs"]
+
+test_tool = "cargo"
+
+# The registry and dispatch are behind the `abi` feature.
+additional_cargo_args = ["--features", "abi"]
+
+# Family killer suite: the dispatch courts.
+additional_cargo_test_args = [
+  "--test", "registry_dispatch",
+  "--test", "capabilities_digest",
+  "--test", "refusal_details",
+]
+
+# Rebuilding purrdf/purrdf-n3 after each family mutation is slow: scale the
+# baseline test time generously and never go below a cold-relink floor.
+timeout_multiplier = 6.0
+minimum_test_timeout = 60.0
+
+# Exact committed exclude_re from .cargo/mutants.toml (2026-10-24 working tree).
+exclude_re = [
+  "impl (std::fmt::)?(Debug|Display) for",
+  "<impl (std::fmt::)?(Debug|Display) for",
+  "fmt::Formatter",
+  "replace <impl Debug",
+  "replace <impl Display",
+  "\\bfmt\\b.*-> (std::fmt::)?Result",
+  "\\b(log|trace|debug|eprintln|println|tracing)\\b",
+]

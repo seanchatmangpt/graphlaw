@@ -9,5 +9,5 @@ updates:
     schedule:
       interval: weekly
     ignore:
-      # Pinned exactly and vendored-patched together; bumped deliberately.
+      # Git rev-pinned to seanchatmangpt/purrdf; bumped deliberately to a new rev.
       - dependency-name: "purrdf*"

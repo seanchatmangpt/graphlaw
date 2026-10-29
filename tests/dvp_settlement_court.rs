@@ -437,7 +437,9 @@ ex:dvp1 a sql:StatementSequence ;
         .request(&doc_req(SESSION, &multi_root, true))
         .expect("request transport");
     assert_eq!(mr["ok"], json!(false), "multi-root doc must be refused: {mr}");
-    let mr_msg = mr["error"]["message"].as_str().unwrap_or_default();
+    let mr_msg = mr["error"]["message"]
+        .as_str()
+        .expect("multi-root refusal envelope must carry a string error.message");
     assert!(
         mr_msg.contains("REFUSAL-01") && mr_msg.contains("more than one top-level root"),
         "typed multi-root refusal required: {mr_msg}"

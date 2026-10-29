@@ -9,11 +9,17 @@
 //!     admits;
 //! (b) hostile AST variants get typed SHACL violations naming the violated
 //!     shape and constraint component:
-//!       - a WHERE-less SELECT (unbounded scan) violates the anti-scan
-//!         property shape sql:HasWhereClause (of sql:SelectStatementShape)
-//!         on sh:minCount over sql:whereClause;
+//!       - a WHERE-less SELECT (unbounded scan) violates the anti-scan law
+//!         sql:HasWhereClause (of sql:SelectStatementShape). Since the
+//!         alias-window rework (ast_governance.ttl, commit 0d11bc3), that law
+//!         is a nested sh:node NodeShape with an sh:or over the legacy
+//!         (sql:whereClause) and normative (sql:where) spellings; the engine
+//!         folds nested sh:node results into a single violation at the
+//!         governed top-level shape on NodeConstraintComponent (the
+//!         sh:property pattern laws still report directly — see the
+//!         injection case).
 //!       - a table name carrying an injection token (`ColdChain; DROP`)
-//!         violates the pattern property shape sql:TableNamePattern (of
+//!         violates the pattern property shape sql:FromTableNamePattern (of
 //!         sql:TableRefShape) on sh:pattern.
 //!
 //! Conventions follow tests/wasm_abi.rs via tests/common/mod.rs. Real wasm
@@ -21,7 +27,7 @@
 
 mod common;
 
-use common::{read, wasm};
+use common::{native, read, wasm};
 use serde_json::{Value, json};
 
 fn governance_shapes() -> String {
@@ -74,12 +80,20 @@ fn governance_preflight_refuses_whereless_scan_naming_select_statement_shape() {
         .replace("sql:whereClause", "sql:comment");
     let r = wasm(&shacl_req(&ast, &shapes));
     let vs = violations(&r);
+    // The anti-scan law (sql:HasWhereClause) is a nested sh:node NodeShape
+    // with an sh:or alias window; the engine folds it into a single violation
+    // at the governed top-level shape (native and wasm agree — see the
+    // tmp_probe_native_whereless_report diagnostic). The refusal itself is
+    // the law: `violations()` already asserts conforms == false, and the
+    // assertion below pins the addressable folded form. Removing the
+    // anti-scan law from the shapes file flips this test (conforms becomes
+    // true), so the court is non-vacuous.
     assert!(
         vs.iter().any(
-            |(shape, component)| shape == "<http://graphlaw.org/sql#HasWhereClause>"
-                && component == "<http://www.w3.org/ns/shacl#MinCountConstraintComponent>"
+            |(shape, component)| shape == "<http://graphlaw.org/sql#SelectStatementShape>"
+                && component == "<http://www.w3.org/ns/shacl#NodeConstraintComponent>"
         ),
-        "expected sql:HasWhereClause (sql:SelectStatementShape) / MinCount violation, got {vs:?}"
+        "expected folded anti-scan violation on sql:SelectStatementShape / NodeConstraintComponent, got {vs:?}"
     );
 }
 
@@ -99,4 +113,15 @@ fn governance_preflight_refuses_injection_token_naming_table_ref_shape() {
             && component == "<http://www.w3.org/ns/shacl#PatternConstraintComponent>"),
         "expected sql:FromTableNamePattern (sql:TableRefShape) / Pattern violation, got {vs:?}"
     );
+}
+
+#[test]
+fn tmp_probe_native_whereless_report() {
+    let shapes = governance_shapes();
+    let ast = read("tests/fixtures/ast_governance/cold_chain_ast.ttl")
+        .replace("sql:whereClause", "sql:comment");
+    let n = native(&shacl_req(&ast, &shapes));
+    eprintln!("NATIVE WHERE-LESS REPORT: {n:#}");
+    let i = native(&shacl_req(&ast.replace("ocel_events", "ColdChain; DROP"), &shapes));
+    eprintln!("NATIVE INJECTION REPORT: {i:#}");
 }

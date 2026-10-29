@@ -3,9 +3,168 @@
 All notable changes to this project are documented here, in the
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-Versioning policy (stated once, applies to every entry): `graphlaw-eyeron` keeps its own
-independent, upstream-vendored version (currently 0.7.9) and is not coupled to the
-workspace calendar version; "Published as crates.io" lines refer to the `graphlaw` crate.
+Versioning policy (stated once, applies to every entry): the N3 engine is purrdf::n3
+(currently purrdf::n3 3.0.1) and rides the purrdf fork ([seanchatmangpt/purrdf](https://github.com/seanchatmangpt/purrdf),
+rev-pinned in `Cargo.toml`); the workspace stays on calendar versioning; graphlaw does
+not publish to crates.io — distribution is this repository and GitHub releases.
+
+## [26.10.28] - 2026-10-28
+
+### Changed
+
+- **registry:** the limits census grew to 19 rows (the four purrdf fork limit
+  constants now tracked) — `capability-registry.schema.json` and the
+  `limits_track_source_constants` court table truth-synced to match.
+- **ci:** every workflow toolchain pin raised 1.96.0 → 1.98.0 (11 pins across
+  ci/js/release/publish-npm/mutation) — the purrdf fork declares MSRV 1.98 and
+  cargo refuses older toolchains at resolution.
+
+### Breaking
+
+- **supply-chain:** the purrdf family (purrdf, purrdf-columnar and all transitives) is now
+  git-sourced from [seanchatmangpt/purrdf](https://github.com/seanchatmangpt/purrdf) at a rev
+  pin — the sole purrdf source; `[patch.crates-io]`, `vendor/` (purrdf, purrdf-n3,
+  purrdf-sparql-eval, purrdf-testkit), the `wasi-patched-deps` feature, `build.rs` and the
+  patch guard courts are deleted. Nothing is patched: the WASI clock gate and the P01
+  proof-checker hardening live in the fork at the pinned rev, so building WASM works
+  directly from the pinned sources. graphlaw does not publish to crates.io.
+- **DuckDB eval result-row sieve (WP P08, "the sieve becomes law")**: the evaluator
+  (`src/duckdb_eval.rs`) now caps every eval result set at `DEFAULT_ROW_ENVELOPE = 64`
+  rows. A result set over the envelope is a typed
+  `EvaluatorError::RowEnvelopeExceeded { limit, observed, max }` (`limit` =
+  `duckdb_result_rows`) fired INSIDE the row loop at `row_index > max` —
+  mid-materialization, strictly pre-receipt (no receipt, no cache store, no epoch
+  bump), never a post-loop check over a fully materialized set. `eval_ast_query` /
+  `eval_ast_document` delegate with the default envelope; new
+  `eval_ast_query_bounded` / `eval_ast_document_bounded` variants take the envelope
+  explicitly. Consult-side cache hits over the envelope re-refuse with the CACHED
+  `rows_emitted` as `observed`; a sieve refusal never stores a C1 cache entry. On the
+  wire, ABI op `duckdb` mode `exec` gains `max_rows` (absent → 64, `0` refused) mapped
+  to a typed `ResourceLimit` on both exec paths; document mode keeps
+  `BatchMemberFailed` and adds `limit`/`observed`/`max`; stream-mode `max_rows` is
+  UNCHANGED (a page size over an already-sieved result set, not a re-sieve). The
+  sieve guards the RDF-projection eval path only — `raw_connection` is not sieved.
+  Migration: reduce the query (GROUP BY / LIMIT / WHERE), or raise the envelope with
+  `*_bounded` / exec `max_rows`. Court: `tests/sieve_court.rs` (10 legs incl. a
+  10^6-row in-engine reduction landing inside the envelope and the raw differential);
+  cliff bench `benches/sieve_cliff.rs`.
+
+### Added
+
+- **n3:** Proof-checker hardening (WP P01). `purrdf::n3::proof_check::CheckPolicy`
+  (`trusted_resolve`, `trusted_digest`; hardened `false` by default;
+  `CheckPolicy::legacy()` restores pre-hardening behavior for old proof documents
+  and for courts witnessing the flips). Under the hardened default:
+  impure-builtin step conclusions (`log:content`, `log:semantics`,
+  `log:conclusion`, `list:map`, `localTime`, …) keep their obligation but lose
+  all resolution power — no premise, query support, or boundary evidence may
+  resolve to one; fact steps are held to the document that gives them — the
+  parser content-addresses every labeled document (BLAKE3 at the single
+  `SourceRef` constructor, `parser.rs`), the writer emits `pe:sourceDigest` on
+  fact steps, and `check_fact` runs a 5-row policy (recorded+equal → verified
+  with a label match; recorded, source carries none → C1; recorded and
+  differing → C1 cross-document splice; naming the source without recording →
+  obligation "unverified source digest"; neither → as before); rule
+  applications must pin every head universal with a recorded binding or a
+  premise — a step may no longer conclude every instance of its own head
+  (head-only universals survive when pinned with `pe:binding`). Forgery court
+  `crates/n3/tests/n3_forgery.rs` in the purrdf fork (F1 impure laundering → C4, F2
+  cross-document digest splice → C1, F3 variadic head → C1; each with a
+  `legacy()` flip twin and honest survivors): 13 passed / 0 failed. Fork suite:
+  85 passed / 0 failed at the pinned rev under the hardened default.
+- **n3:** `graphlaw::proof_lease::verify_leased_proof(lease_digest, source,
+  proof, label)` — binds `check_proof` to the caller's lease digest: the
+  source bytes are content-addressed first (`graphlaw::attest::lease_digest`,
+  BLAKE3 hex) and on mismatch the checker does not run, answering the typed
+  refusal `ProofLeaseError::LeaseDigestMismatch { lease_digest, source_digest }`;
+  only a matching lease reaches the hardened checker. Court
+  `tests/n3_proof_lease_court.rs` (honest proof under its own lease;
+  cross-source replay of an internally-honest pair refused at the gate;
+  a tampered claim under the correct lease still dies C4 in the checker; the
+  digest is third-party attestable via `attest::sign_bytes`/`verify_bytes`):
+  4 passed / 0 failed.
+- **beam bridge:** `graphlaw_ex/` — in-tree Elixir bridge over the wasm artifact
+  via `wasmex` 0.15.1. A GenServer turnstile (`graphlaw_ex/lib/graphlaw_ex/application.ex`)
+  is the sole boundary: every call is one instantiate → invoke → drop turn,
+  never a long-lived module. Opt-in auto-start (`:graphlaw_ex` application, no
+  supervised state unless configured); a real-artifact instantiation court
+  (`graphlaw_ex/test/`) instantiates the actual `graphlaw_wasm.wasm` and fails
+  loudly (typed skip with reason) when `GRAPHLAW_WASM` is unset.
+
+### Changed
+
+- **wasm:** artifact size ceiling raised 64 → 80 MiB in `scripts/wasm_audit.sh`
+  (`MAX_BYTES`). One-line SCAR: the fork-HEAD artifact measured 74,097,211 B and
+  the 64 MiB wall tripped CI; this buys headroom, not absolution — a slimming
+  follow-up is owed.
+- **n3:** the N3 limit census moves out of the vendored crate and into the
+  `ReasonerLimitCensus` extension trait (`src/law.rs:497`), implemented for
+  `n3::ReasonerLimit`; counters the fork does not yet record carry the
+  documented at-cap sentinel `max + 1`.
+
+## [26.10.26] - 2026-10-26
+
+N3 fix wave. Ten upstream purrdf-n3 engine defects fixed TDD-style in the upstream
+checkout and re-vendored at fix-wave HEAD with full test-suite parity (72/72);
+graphlaw-side limit-identity and registry-pin corrections; proof-pipeline and
+quantifier courts; wasm artifact row re-pinned to the EH-closure module bytes.
+
+### Added
+
+- **n3:** Eyeron upstreamed as the purrdf-n3 crate (purrdf crates/n3 @ 3.0.1, vendored
+  at vendor/purrdf-n3); consumed as purrdf::n3 like every other PurRDF capability;
+  Engine::Eyeron variant removed (engines: PurRdf, FrozenDuckdb).
+- Proof-pipeline court `tests/n3_proof_pipeline_court.rs` (derive → `proof_to_n3` →
+  `check_proof` round-trip, tamper rejection + tamper-flip twin, claim-line pin,
+  skolem distinctness): 5 passed / 0 failed.
+- Quantifier court `tests/n3_quantifier_court.rs` (`@forAll`/`@forSome` positive
+  derivations, skolem golden + determinism, anti-collapse, scope flip, six typed
+  misuses, admission wrap; anti-vacuity mutation witnessed): 10 passed / 0 failed.
+- `vendor/purrdf-testkit/` vendored as the vendored suite's path dev-dependency;
+  upstream `tests/` + `examples/` restored into `vendor/purrdf-n3/`; the suite runs
+  as a detached single-package workspace:
+  `cargo test --manifest-path vendor/purrdf-n3/Cargo.toml` — 72 passed / 0 failed
+  (lib 24 + n3_parse 28 + n3_proofs 4 + n3_reason 16), identical to upstream.
+- `docs/DIALECTS.md` Courts section now cites the vendored court suite; README and
+  thesis Ch 15 point at it.
+
+### Changed
+
+- Engine fixes upstreamed to purrdf-n3 and re-vendored (each with a witnessed RED →
+  GREEN court pair): F1 formula identity (`canonical_form`, not `Debug`, feeds skolem
+  IRIs / backward-rule salting / proof dedup), F2 verb-path generated triples kept,
+  F3 bare-word prefixed names refuse typed instead of minting `example.org` IRIs,
+  F4 unknown builtins yield `UnsupportedBuiltin` + Incomplete (never silent
+  Complete), F5 `math:equalTo`/`notEqualTo` exact on decimals and NaN, F6
+  non-finite exponentiation fails the premise instead of minting INF/NaN, F7
+  `@prefixfr:` no longer mis-lexes as a directive, F8 N3-profile langtags validated
+  and case-folded like RDF 1.2, F9 `"1e"` refuses as malformed numeric, F10 spaced
+  N3 path operators parse like unspaced. F14: upstream README claims truth-synced
+  (Known limitations section added).
+- N3 resource-limit receipts report their true ceiling: a `MatchSteps` receipt names
+  the per-search cap (`n3_match_steps`, 200,000) unless the run-wide total-steps sum
+  fired (disjunctive arm); `N3_MAX_MATCH_STEPS = 200_000` added in `src/law.rs` and
+  wired into `reason_n3_bounded`; registry emission (`src/registry/emit_json.rs`)
+  and `registry/capability-registry.{json,ttl}` + docs re-pinned from 50M to 200k.
+- Wasm artifact row re-pinned: `430da572…` / 60,893,336 B (exception-handling
+  closure build); boundary courts green at the new bytes (wasm_abi 25/25,
+  chicago_cross_authority 71/71, wasm_n3_admission 3/3, wasm_size_court 4/4). The
+  shipped `priv/graphlaw.wasm` + its pin still carried the previous module —
+  residual recorded, then closed below.
+- Wasm re-pin completed (X2 lane, 2026-10-26): SRC_STABLE-verified rebuild at the
+  post-`sql_ast`-migration surface mints `0858a760…` / 60,895,924 B; `priv/graphlaw.wasm`
+  + sidecar, `registry/ARTIFACTS.blake3` wasm row, README/WASM.md/SECURITY.md pins,
+  `js/npm` artifact-meta.ts (scripts/build.mjs) and gen-types.ts all moved together;
+  registry_artifacts 22/22 with the env-gated pin-vs-bytes check green; WASI import
+  inventory re-witnessed `Import[28]` unchanged (all `wasi_snapshot_preview1`).
+- js/npm version sync + gen-types re-run at 26.10.26.
+
+### Fixed
+
+- Version-bump digest truth-sync: the 26.10.26 bump flows into the emitted registry
+  (`graphlaw_version`), so `registry/capability-registry.{json,ttl}` and the
+  ARTIFACTS.blake3 registry row were regenerated (`graphlaw-registry --write` /
+  `--check` all ok); the L2 wasm row was preserved byte-identical.
 
 ## [26.10.22] - 2026-10-22
 

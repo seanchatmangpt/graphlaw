@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "3fb25edede31cfceaf0b2a72dbc9e21edfcbc692ac2ea11e8baeee1e532d6b0f",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T203717Z-Write-3fb25ede.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/bat-templates/r5-battery-full.md",
+  "timestamp_utc": "2026-10-24T203717Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

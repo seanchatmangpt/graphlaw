@@ -30,7 +30,7 @@ cargo run --example receipt_feedback
 # after record:  admitted by `admit:require-receipt`
 
 cargo test --test differential
-# N3 (Eyeron), Datalog and OWL-RL (PurRDF) must agree on a transitive closure
+# N3 (purrdf::n3), Datalog and OWL-RL (PurRDF) must agree on a transitive closure
 
 cargo test --test wasm_abi          # builds the WASI module and drives the hashed 14-op table (`duckdb` is dispatched by the module and omitted from that table until a digest bump)
                                     #   prerequisite: the canonical relink recipe — WASI_SDK_PATH at the unpacked frozen-duckdb cache SDK (~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1; its legacy-EH sysroot matches libduckdb.a; the published wasi-sdk-34 sysroot fails the link) plus the in-tree wrap shim compiled from tests/fixtures/wasm-shim/. Alternatively point GRAPHLAW_WASM at a prebuilt module. Recipe: docs/WASM.md.
@@ -54,23 +54,37 @@ Organized Diataxis-style; the hub is [docs/index.md](docs/index.md).
 
 ## Edge Sovereignty & Embedded Analytical Substrate (`frozen-duckdb`)
 
-GraphLaw unconditionally embeds the **`frozen-duckdb 2.0`** analytical engine, unlocking local analytical ingestion and **zero-trust semantic compaction (1,000:1 to 10,000:1)** at the extreme edge:
+GraphLaw unconditionally embeds the **`frozen-duckdb 2.0`** analytical engine, unlocking
+local analytical ingestion and zero-trust semantic compaction at the extreme edge.
+Compaction ratios and latencies are workload-dependent and intentionally uncited; the
+reduction claim is court-scoped: `tests/sieve_court.rs` witnesses a 1,000,000-row
+in-engine GROUP BY reduction landing inside the evaluator's default 64-row result
+envelope.
 
-* **High-Throughput Local Ingestion**: Sensor streams and OCEL v2 event traces are appended directly into local columnar Arrow/Parquet buffers with microsecond latencies.
+* **High-Throughput Local Ingestion**: Sensor streams and OCEL v2 event traces are
+  appended directly into local columnar Arrow/Parquet buffers. Throughput is
+  workload-dependent; no fixed latency figure is asserted.
 * **Declarative SQL-in-RDF Pushdowns**: Structured analytical reductions are authored as W3C RDF ASTs (`sql-ast.ttl`), validated by a fail-closed SHACL pre-flight gate, and pushed down into DuckDB's vectorized execution engine. 35 statement classes are
   generated from the DuckDB PEG grammar (`ggen/sql-dialect/`), with expression-level
   compilation for SELECT and the command classes, typed `REFUSAL-01..04` refusals, and
   BLAKE3 receipts binding the canonical AST graph + parameters.
-* **Signed Semantic Compaction**: Massive event bursts reduce to minimal, cryptographically verifiable RDF facts sealed with BLAKE3 execution receipts. A 500,000-event telemetry burst compresses to ~1 KB of signed triples before syncing across intermittent/DDIL networks.
-* **WASM size**: The pinned artifact in `registry/ARTIFACTS.blake3` is **58,124,612 bytes**
-  (blake3 `58a44095…d2280a`, byte-identical to `priv/graphlaw.wasm` on this tree) — the
+* **Signed Semantic Compaction**: Massive event bursts reduce to minimal,
+  cryptographically verifiable RDF facts sealed with BLAKE3 execution receipts. Burst
+  sizes and output footprints are workload-dependent; no fixed ratio is asserted. The
+  court-witnessed surface is `tests/sieve_court.rs`: a 10^6-row source reduces
+  in-engine to 64 result rows inside the default envelope, and any result set over the
+  envelope refuses with a typed `ResourceLimit` (`duckdb_result_rows`).
+* **WASM size**: The pinned artifact in `registry/ARTIFACTS.blake3` is **60,895,924 bytes**
+  (blake3 `0858a760…a5ddd2f1`, byte-identical to `priv/graphlaw.wasm` on this tree) — the
   shipped DuckDB-linked new-EH artifact, verified live on all four pin surfaces
   (`priv/graphlaw.wasm.blake3`, `registry/ARTIFACTS.blake3` wasm row,
-  `js/npm/src/generated/artifact-meta.ts`, live `b3sum`; final-tree-audit check 2,
-  `docs/jira/v26.10.23/final-tree-audit.md`). Historical pins (prior artifact
-  generations, each superseded and retained here only for provenance): the EH-closure
-  settle pin `fa155830…` (57,781,384 B), the pre-closure pin `991b2bee…`
-  (46,138,360 B), and the legacy pre-DuckDB pin `f149433c…` (7,104,147 B). The ~58 MB
+  `js/npm/src/generated/artifact-meta.ts`, live `b3sum`; four-surface re-verification
+  2026-10-26, X2 lane re-pin). Historical pins (prior artifact
+  generations, each superseded and retained here only for provenance): the 26.10.26 L2-WASM
+  re-mint `430da572…` (60,893,336 B), the 26.10.23 four-surface settle pin `58a44095…d2280a`
+  (58,124,612 B; final-tree-audit check 2, `docs/jira/v26.10.23/final-tree-audit.md`), the
+  EH-closure settle pin `fa155830…` (57,781,384 B), the pre-closure pin `991b2bee…`
+  (46,138,360 B), and the legacy pre-DuckDB pin `f149433c…` (7,104,147 B). The ~61 MB
   size class vs the 46 MB pre-closure pin is the wave's own statically-registered
   core_functions/icu extensions + statement-sequence/REFUSAL-05 code under LTO
   (libc swap effect measured at −106 B). The size court ceiling is the 64 MiB sandbox wall
@@ -120,11 +134,14 @@ chain of content-addressed states; the first violated precondition refuses with
 
 `dialect::sniff` recognizes 14 dialects under a two-tier model: dataset
 syntaxes (Turtle, TriG, N-Triples, N-Quads, RDF/XML, JSON-LD, YAML-LD, TriX,
-HexTuples) route to PurRDF; Notation3 routes to Eyeron as a separate logic
+HexTuples) route to PurRDF; Notation3 routes to purrdf::n3 as a separate logic
 tier (`n3` op, never silently down-converted to a dataset). Ambiguous content
 (TriG vs ShExC) is refused with `Ambiguous` demanding a hint rather than
 guessed. The parse surface is pinned by the vendored W3C RDF 1.1 syntax
-conformance court (`cargo test --test w3c_conformance`). Full matrix:
+conformance court (`cargo test --test w3c_conformance`). The N3 logic tier's
+parse and proof surface is pinned by the purrdf fork's own N3 suite (parse,
+proofs, reason, and the forgery court under `crates/n3/tests/`), executed in
+fork CI at the rev pinned below. Full matrix:
 [docs/DIALECTS.md](docs/DIALECTS.md).
 
 ## WebAssembly module
@@ -151,8 +168,8 @@ wire-superset with the same exit-code contract). Build and embed details:
 
 Capability | Authority
 ---|---
-RDF 1.2, codecs, SPARQL 1.1/1.2, SHACL, ShEx 2.1, Datalog/stratified fixpoint, RDF/RDFS/OWL-RL entailment | PurRDF 2.0.2 (`purrdf = "=2.0.2"`)
-Notation3 parsing/reasoning/proofs | Eyeron 0.7.9 (vendored `crates/graphlaw-eyeron` from upstream 0.7.7 @ `eyereasoner/eyeron@d6568f65`; see its `UPSTREAM.md`)
+RDF 1.2, codecs, SPARQL 1.1/1.2, SHACL, ShEx 2.1, Datalog/stratified fixpoint, RDF/RDFS/OWL-RL entailment | PurRDF 3.0.1 (git [`seanchatmangpt/purrdf`](https://github.com/seanchatmangpt/purrdf), rev-pinned)
+Notation3 parsing/reasoning/proofs | **Notation3** — purrdf::n3 3.0.1 (purrdf crates/n3, git-sourced: [`seanchatmangpt/purrdf`](https://github.com/seanchatmangpt/purrdf), rev-pinned)
 Vectorized columnar execution, Parquet scan pipelines, SIMD aggregations | DuckDB 2.0 (`frozen-duckdb = "2.0"`)
 
 GraphLaw owns the composition boundary and semantic assets (ontologies, packs,
@@ -191,7 +208,7 @@ Execution/use of the kernel is governed by the P28 Sovereign Invariant License v
 
 ## Releasing
 
-CI (`.github/workflows/release.yml`) builds and tests, tags `vX.Y.Z`, and creates the GitHub release with `graphlaw.wasm` (plus checksum) whenever a change that bumps the version in `Cargo.toml` reaches `main`. It never publishes to crates.io: publishing is local-only — from a logged-in machine run `cargo publish -p graphlaw` (the registry credential is the machine's own cargo login, never a repository secret). Building `graphlaw` for WASI outside this workspace is a compile error by design (the clock fix lives in `vendor/`); use the release asset.
+CI (`.github/workflows/release.yml`) builds and tests, tags `vX.Y.Z`, and creates the GitHub release with `graphlaw.wasm` (plus checksum) whenever a change that bumps the version in `Cargo.toml` reaches `main`. graphlaw does not publish to crates.io: its purrdf dependency is the rev-pinned [`seanchatmangpt/purrdf`](https://github.com/seanchatmangpt/purrdf) fork, so the crate cannot publish; distribution is this repository and the GitHub release assets. Building `graphlaw` for WASI works directly from the pinned sources: `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`.
 
 ## Production rule
 

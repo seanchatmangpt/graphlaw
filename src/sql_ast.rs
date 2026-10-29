@@ -1810,12 +1810,28 @@ fn frame_references_target(_frame: &FrameSpec, _target: &TableRef) -> bool {
 
 /// Validates an RDF AST dataset in Turtle syntax against the canonical SHACL rules in `ontologies/sql-ast.ttl`.
 pub fn validate_ast_shacl(turtle_dataset: &str, shapes_ttl: &str) -> Result<(), AstError> {
-    if let Err(over) = crate::shacl_guard::check_shape_depth(shapes_ttl) {
-        return Err(
-            AstError::new(RefusalCode::MalformedAst, refusal_arm::SHACL_DEPTH)
-                .with_num(over.observed)
-                .with_aux_num(crate::shacl_guard::MAX_SHACL_VALIDATION_DEPTH),
-        );
+    if let Err(over) = crate::shacl_guard::check_shape_limits(shapes_ttl) {
+        // Depth keeps the existing internal arm; the other physical caps
+        // carry their typed limit name through the documented free-form
+        // compat arm (LEGACY_MESSAGE) — `src/sql_ast/refusals.rs` (the arm
+        // table) is coordinator-owned and NOT in this lane's lease, so no
+        // new arms are minted here (refusal codes stay append-only).
+        return match over {
+            crate::shacl_guard::ShaclLimitExceeded::Depth { observed } => Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::SHACL_DEPTH)
+                    .with_num(observed)
+                    .with_aux_num(crate::shacl_guard::MAX_SHACL_VALIDATION_DEPTH),
+            ),
+            other => Err(
+                AstError::new(RefusalCode::MalformedAst, refusal_arm::LEGACY_MESSAGE)
+                    .with_ident(format!(
+                        "{}: observed {} > max {} (fail closed)",
+                        other.limit_name(),
+                        other.observed(),
+                        other.cap()
+                    )),
+            ),
+        };
     }
 
     let ds = purrdf::parse_dataset(turtle_dataset.as_bytes(), "text/turtle", None)
@@ -1829,14 +1845,31 @@ pub fn validate_ast_shacl(turtle_dataset: &str, shapes_ttl: &str) -> Result<(), 
 
     if !report.conforms {
         // Typed SHACL_VIOLATIONS carrier: first violation renders on the cold
-        // path, `num` counts the remainder ("(+N more violations)").
+        // path, `num` counts the remainder ("(+N more violations)"). When the
+        // shape message already names a refusal arm (its `[REFUSAL-01 ARM]`
+        // marker), re-emit that typed arm — the marker is the single source
+        // of truth, so a gate refusal carries the spec'd code instead of
+        // burying it under the generic carrier (pur(rd)f 3.0.1 enforces the
+        // SQLRDF-25 shapes at the gate).
         let first = report.results.first().ok_or_else(|| {
             AstError::new(RefusalCode::MalformedAst, refusal_arm::SHACL_VIOLATIONS)
         })?;
+        let message = first
+            .messages
+            .first()
+            .map(|l| l.value().to_string())
+            .unwrap_or_else(|| "violation".into());
+        let typed_arm = message
+            .split("[REFUSAL-")
+            .nth(1)
+            .and_then(|rest| rest.split(']').next())
+            .and_then(|tag| tag.split_whitespace().nth(1))
+            .and_then(refusal_arm::by_marker);
+        let arm = typed_arm.unwrap_or(refusal_arm::SHACL_VIOLATIONS);
         return Err(
-            AstError::new(RefusalCode::MalformedAst, refusal_arm::SHACL_VIOLATIONS)
+            AstError::new(RefusalCode::MalformedAst, arm)
                 .with_ident(&first.focus_node)
-                .with_aux_ident(first.message.as_deref().unwrap_or("violation"))
+                .with_aux_ident(message)
                 .with_num(report.results.len()),
         );
     }
@@ -2439,7 +2472,39 @@ impl DatasetReader {
         // with multiple bare roots (or roots of disjoint categories) refuses
         // typed now — never a silent pick.
         match candidates.len() {
-            0 => Err(AstError::MissingProperty(ty.into(), "sql:*Statement".into())),
+            0 => {
+                // Rec §2 namespace discipline: a root typed as a `*Statement`
+                // class under a FOREIGN namespace refuses typed REFUSAL-01 —
+                // the class IRI is present, so "missing rdf:type" would
+                // misstate the defect. Free-form carrier arm (LEGACY_MESSAGE,
+                // the pivot_refusal precedent); codes are append-only, no new
+                // arm is minted.
+                let foreign_class = self.outgoing.iter().find_map(|(subj, preds)| {
+                    if is_object.contains(subj) {
+                        return None;
+                    }
+                    preds.get(ty)?.iter().find_map(|t| match t {
+                        RdfTerm::Iri(iri)
+                            if iri.ends_with("Statement") && !iri.starts_with(prefix) =>
+                        {
+                            Some(iri.clone())
+                        }
+                        _ => None,
+                    })
+                });
+                match foreign_class {
+                    Some(iri) => Err(AstError::new(
+                        RefusalCode::MalformedAst,
+                        refusal_arm::LEGACY_MESSAGE,
+                    )
+                    .with_ident(format!(
+                        "statement class '{iri}' is outside the sql-rdf namespace \
+                         ({prefix}); only http://graphlaw.org/sql#*Statement \
+                         classes are admissible"
+                    ))),
+                    None => Err(AstError::MissingProperty(ty.into(), "sql:*Statement".into())),
+                }
+            }
             1 => Ok(candidates.pop().expect("len == 1 guarded")),
             _ => Err(AstError::new(
                 RefusalCode::MalformedAst,
@@ -5294,7 +5359,13 @@ mod star_modifier_tests {
             "{PRE}ex:S a sql:SelectStatement ; sql:statementIndex 1 ;\n  sql:fromTable [ sql:tableName \"telemetry_events\" ] ;\n  sql:selectList ( ex:cols ) .\nex:cols a sql:Columns ;\n  sql:columnsLambda [ sql:columnName \"c\" ] .\n"
         );
         let err = compile_turtle(&doc).expect_err("lambda refuses");
-        assert_eq!(err.ctx.shape_id, refusal_arm::COLUMNS_LAMBDA);
+        // purrdf 3.0.1's SHACL engine enforces the SQLRDF-25 shapes at the
+        // gate, so a lambda-form Columns is caught as the pattern-requirement
+        // refusal; the gate re-emits the shape's own typed marker arm
+        // (by_marker) instead of the generic SHACL_VIOLATIONS carrier. The
+        // typed walker's COLUMNS_LAMBDA arm remains for shape-valid docs that
+        // reach it via other entry points.
+        assert_eq!(err.ctx.shape_id, refusal_arm::COLUMNS_PATTERN);
     }
 
     #[test]

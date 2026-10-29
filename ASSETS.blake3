@@ -443,7 +443,7 @@ f85c49e63508ddb601083eff09ddc5a4d534dfff2a92eac5be7ad05afde7a9fe  248255  RdfXml
 56094cadbc7075b3000ed4fe3451262cdad99fdc22494318f0caaa1d3f1879a1  112777  Turtle  ontologies/provenance/prov-o.ttl
 658e28277937d0300d9325bd17613b852167920d2fb9c4ba716dd491f5414641  10220  RdfXml  ontologies/provenance/rdfs.rdf
 ff114c5c20184d31e9ccbc59091b689dd108ec94910ed019446b6fdc5855cbfa  28966  RdfXml  ontologies/provenance/skos.rdf
-d501ffc93e5b2ba6568dcd93e4442a80abab1e65f6a2aa2a99910d5ae0ee4566  2369438  NTriples  ontologies/schema-org/schema_all_https.nt
+d501ffc93e5b2ba6568dcd93e4442a80abab1e65f6a2aa2a99910d5ae0ee4566  2369438  Turtle  ontologies/schema-org/schema_all_https.nt
 c0755632e69639cb89d57d7ff392efd1c59b63fd86aa29a724decd4e02fd1788  1553866  RdfXml  ontologies/schema-org/schema_all_https.rdf
 0dc80464d4719608c5e4fa96a3a00a282262ad6c6bfbed0825f20b9aad9d4bff  1111367  Turtle  ontologies/schema-org/schemaorg-all-https.ttl
 6cc160e0cafda90b8afb41e2c3081932da15f34f738bf667faffe1917dcb8c3d  6089  Turtle  ontologies/shapes/ast_governance.ttl
@@ -459,7 +459,7 @@ d6626c624f613f7e5ee660897d56286a9aa0b0cf94a245e107b0ba700b5b2fb9  22344  Turtle 
 26874b21e0ce98a251668b36ed91d5c776fa3dd0480edc1de8a3c14683819c68  41670  RdfXml  ontologies/social/relationship.rdf
 ff114c5c20184d31e9ccbc59091b689dd108ec94910ed019446b6fdc5855cbfa  28966  RdfXml  ontologies/social/skos.rdf
 d52a6f796180902cec36f566d5059780f43a635a0faed98c4152b339c9499a7a  32183  Turtle  ontologies/social/vcard.ttl
-91f58dd684fee8978687001b1140a67fb31b7f2c5a1e23b6ee7645ec34fa6d69  44718  Turtle  ontologies/sql-ast.ttl
+b01f78f8be1e8fa7baffab6f307ba5b9edf019c81f1d3918af8a07add525c8f0  44716  Turtle  ontologies/sql-ast.ttl
 1cbf7e6fef4af8db3947ab944aadff72d311e2b0ddefb69da60232ce532cab78  937897  Turtle  packs/self-monitoring-pack/fixtures/session-real-broad-topic.ttl
 bc6e8e64772a56df8b1750bda7de600942b840b59b0f01dc6d77756834535db6  937865  Turtle  packs/self-monitoring-pack/fixtures/session-real.ttl
 08394236e3644fa937e0e00c28eec1bafcb42b9f5cf51a1f9f218a40f1b4a76e  10460  Turtle  packs/self-monitoring-pack/hook.ttl

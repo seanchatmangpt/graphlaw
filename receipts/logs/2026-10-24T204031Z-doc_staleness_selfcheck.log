@@ -1,0 +1,6 @@
+LEG1 FRESH: gate exit 0 on live symbol anchor — PASS
+LEG2 ROT: gate exit 1 with R5-SYMBOL finding on the rotted anchor — PASS
+LEG3 FRESH-REMOVAL: gate exit 0 after anchor removal — PASS
+  witness: FINDING R5-SYMBOL docs/jira/v26.10.24/anchor-doc.md:3: anchor 'src/selfcheck_target.rs#selfcheck_symbol' resolves to no line with a symbol token containing 'selfcheck_symbol'
+doc_staleness_selfcheck: PASS (corpus /Users/sac/.cache/tmp/doc-staleness-selfcheck.dikHIR removed)
+EXIT=0

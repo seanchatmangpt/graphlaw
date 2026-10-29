@@ -65,6 +65,28 @@ use crate::sql_ast::{CompiledQuery, SqlLiteral};
 // Re-exported or native types from purrdf
 use purrdf::TermValue;
 
+// ---------------------------------------------------------------------------
+// WP P08 — the sieve becomes law. The evaluator's result-row envelope is a
+// compile-time constant: an eval result set that would materialize more than
+// `DEFAULT_ROW_ENVELOPE` rows is a typed
+// [`EvaluatorError::RowEnvelopeExceeded`] refusal fired INSIDE the row loop
+// (strictly mid-materialization, strictly pre-receipt), never a post-loop
+// check that would have already materialized the 10^6 rows it refuses.
+// Raw `raw_connection` reads and engine-internal `COPY ... TO` egress are
+// NOT sieved: the envelope guards the RDF-projection eval path only (the
+// raw-control leg of `tests/sieve_court.rs` witnesses the differential).
+// ---------------------------------------------------------------------------
+
+/// Default maximum number of result rows a single eval materializes into the
+/// RDF projection (WP P08). `0` is never a lawful value — callers wanting a
+/// smaller or larger window pass one explicitly via the `*_bounded` variants;
+/// the ABI op layer refuses wire `max_rows: 0`.
+pub const DEFAULT_ROW_ENVELOPE: usize = 64;
+
+/// ResourceLimit name carried by [`EvaluatorError::RowEnvelopeExceeded`] and
+/// by the wire `ResourceLimit` details the ABI op layer mints from it.
+pub const ROW_ENVELOPE_LIMIT: &str = "duckdb_result_rows";
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct RdfTriple {
     pub subject: String,
@@ -77,8 +99,9 @@ pub struct RdfTriple {
 /// variant byte-for-byte — IRI, blank node (label + scope ordinal), literal
 /// (lexical form, datatype IRI, language tag, base direction token), and
 /// recursive quoted triples. `Serialize`/`Deserialize` are exact inverses;
-/// no string rendering, no precision loss. If purrdf lands native serde,
-/// delete this shadow in favor of it.
+/// no string rendering, no precision loss. purrdf 3.0 removed serde derives
+/// from ALL public purrdf types by upstream design; this shadow is permanent,
+/// not a pending deletion.
 #[derive(serde::Serialize, serde::Deserialize)]
 enum SerTerm {
     Iri(String),
@@ -116,9 +139,9 @@ impl From<TermValue> for SerTerm {
                 direction: direction.map(|d| format!("{d:?}")),
             },
             TermValue::Triple { s, p, o } => SerTerm::Triple {
-                s: Box::new((*s).into()),
-                p: Box::new((*p).into()),
-                o: Box::new((*o).into()),
+                s: Box::new(s.into_inner().into()),
+                p: Box::new(p.into_inner().into()),
+                o: Box::new(o.into_inner().into()),
             },
         }
     }
@@ -148,9 +171,9 @@ impl From<SerTerm> for TermValue {
                 }),
             },
             SerTerm::Triple { s, p, o } => TermValue::Triple {
-                s: Box::new((*s).into()),
-                p: Box::new((*p).into()),
-                o: Box::new((*o).into()),
+                s: purrdf::TermBox::new(TermValue::from(*s)),
+                p: purrdf::TermBox::new(TermValue::from(*p)),
+                o: purrdf::TermBox::new(TermValue::from(*o)),
             },
         }
     }
@@ -211,6 +234,24 @@ pub enum EvaluatorError {
         source: Box<EvaluatorError>,
         partial: BatchReceipt,
     },
+    /// WP P08 (the sieve becomes law): an eval result set exceeded its row
+    /// envelope. Fired mid-materialization inside the row loop at
+    /// `row_index > max` — the loop has consumed exactly `observed` rows and
+    /// stops there (never a post-loop check after full materialization), and
+    /// strictly before any receipt formation, cache store, or epoch bump.
+    /// `limit` names the wire limit (`duckdb_result_rows`); the ABI op layer
+    /// maps this variant to a typed `ResourceLimit` refusal carrying the same
+    /// name, `observed`, and `max`. Recovery: reduce the query (GROUP BY /
+    /// LIMIT / WHERE), or raise the envelope with an explicit `*_bounded`
+    /// call if the caller genuinely wants more rows.
+    RowEnvelopeExceeded {
+        /// Wire limit name (constant [`ROW_ENVELOPE_LIMIT`]).
+        limit: &'static str,
+        /// Rows consumed when the sieve fired (first row strictly over `max`).
+        observed: usize,
+        /// The envelope that was in force.
+        max: usize,
+    },
 }
 
 impl fmt::Display for EvaluatorError {
@@ -235,6 +276,10 @@ impl fmt::Display for EvaluatorError {
             Self::BatchMemberFailed { index, source, .. } => write!(
                 f,
                 "statement-sequence member {index} failed (prior members committed, best-effort autocommit): {source}"
+            ),
+            Self::RowEnvelopeExceeded { limit, observed, max } => write!(
+                f,
+                "result-row envelope exceeded ({limit}): eval materialized row {observed} against an envelope of {max} — reduce the query (GROUP BY / LIMIT / WHERE) or execute with an explicit larger bounded envelope"
             ),
         }
     }
@@ -1208,13 +1253,42 @@ impl GraphLawDuckDB {
     }
 
     /// Executes a `CompiledQuery`, binds typed parameters to placeholders, computes the
-    /// cryptographic execution receipt, and projects tabular rows into RDF triples.
+    /// cryptographic execution receipt, and projects tabular rows into RDF
+    /// triples under the default result-row envelope
+    /// ([`DEFAULT_ROW_ENVELOPE`], WP P08). A result set over the envelope is
+    /// a typed [`EvaluatorError::RowEnvelopeExceeded`] refusal fired
+    /// mid-materialization, strictly pre-receipt. Callers needing a
+    /// different window use [`GraphLawDuckDB::eval_ast_query_bounded`].
     pub fn eval_ast_query(
         &self,
         query_iri: &str,
         compiled: &CompiledQuery,
         subject_iri_prefix: &str,
         predicate_iri_prefix: &str,
+    ) -> Result<ExecutionReceipt, EvaluatorError> {
+        self.eval_ast_query_bounded(
+            query_iri,
+            compiled,
+            subject_iri_prefix,
+            predicate_iri_prefix,
+            DEFAULT_ROW_ENVELOPE,
+        )
+    }
+
+    /// WP P08 bounded variant of [`GraphLawDuckDB::eval_ast_query`]: the
+    /// caller supplies the result-row envelope explicitly. `max_rows` is the
+    /// exact row budget for this one execution — the sieve fires at
+    /// `row_index > max_rows` mid-materialization — and consult-side cache
+    /// entries over it refuse the same way. Passing
+    /// [`DEFAULT_ROW_ENVELOPE`] here is byte-identical to
+    /// [`GraphLawDuckDB::eval_ast_query`].
+    pub fn eval_ast_query_bounded(
+        &self,
+        query_iri: &str,
+        compiled: &CompiledQuery,
+        subject_iri_prefix: &str,
+        predicate_iri_prefix: &str,
+        max_rows: usize,
     ) -> Result<ExecutionReceipt, EvaluatorError> {
         self.eval_member(
             query_iri,
@@ -1223,6 +1297,7 @@ impl GraphLawDuckDB {
             predicate_iri_prefix,
             true,
             true,
+            max_rows,
         )
     }
 
@@ -1250,6 +1325,33 @@ impl GraphLawDuckDB {
         subject_iri_prefix: &str,
         predicate_iri_prefix: &str,
         atomic: bool,
+    ) -> Result<BatchReceipt, EvaluatorError> {
+        self.eval_ast_document_bounded(
+            query_iri,
+            document,
+            subject_iri_prefix,
+            predicate_iri_prefix,
+            atomic,
+            DEFAULT_ROW_ENVELOPE,
+        )
+    }
+
+    /// WP P08 bounded variant of [`GraphLawDuckDB::eval_ast_document`]:
+    /// every sequence member is evaluated under the caller-supplied
+    /// result-row envelope instead of [`DEFAULT_ROW_ENVELOPE`]. A member
+    /// over the envelope is a typed
+    /// [`EvaluatorError::RowEnvelopeExceeded`] inside
+    /// [`EvaluatorError::BatchMemberFailed`] (pipeline) or the typed
+    /// `status:"aborted"` partial receipt (atomic), exactly like any other
+    /// member failure.
+    pub fn eval_ast_document_bounded(
+        &self,
+        query_iri: &str,
+        document: &crate::sql_ast::CompiledDocument,
+        subject_iri_prefix: &str,
+        predicate_iri_prefix: &str,
+        atomic: bool,
+        max_rows: usize,
     ) -> Result<BatchReceipt, EvaluatorError> {
         // Design section 6: if ANY member is non-cacheable or mutating, no
         // member stores. (compile_turtle_document stamps sequence members
@@ -1281,6 +1383,7 @@ impl GraphLawDuckDB {
                 // The batch never consults the cache (design section 6).
                 false,
                 all_cacheable,
+                max_rows,
             ) {
                 Ok(receipt) => {
                     rows_emitted.push(receipt.rows_emitted);
@@ -1333,8 +1436,9 @@ impl GraphLawDuckDB {
     /// [`GraphLawDuckDB::eval_ast_query`] (consult+store) and
     /// [`GraphLawDuckDB::eval_ast_document`] (never consults; stores only
     /// under the batch cache law). `cache_consult`/`cache_store` gate the C1
-    /// seams; every other step — seal verify, receipt hash, prepare/bind,
-    /// execute, epoch bump on mutating members — is byte-identical.
+    /// seams; `max_rows` is the WP P08 result-row envelope (the sieve);
+    /// every other step — seal verify, receipt hash, prepare/bind, execute,
+    /// epoch bump on mutating members — is byte-identical.
     fn eval_member(
         &self,
         query_iri: &str,
@@ -1343,6 +1447,7 @@ impl GraphLawDuckDB {
         predicate_iri_prefix: &str,
         cache_consult: bool,
         cache_store: bool,
+        max_rows: usize,
     ) -> Result<ExecutionReceipt, EvaluatorError> {
         // Lane A02: coarse monotonic start tick (one relaxed atomic load,
         // <10 ns median) instead of an Instant::now() syscall-class read.
@@ -1395,6 +1500,20 @@ impl GraphLawDuckDB {
                 .cache
                 .consult(query_hash, compiled.canon_graph_bytes.as_deref())
         {
+            // WP P08: the envelope re-check rides the consult seam too. A
+            // cached entry minted under a larger envelope (or before the
+            // sieve existed) must not smuggle an over-envelope result set
+            // past the sieve — a consult hit over `max_rows` is the same
+            // typed refusal as an execution-side breach, without touching
+            // the engine. The entry itself is left in place (epoch-valid);
+            // only this consult is refused.
+            if receipt.rows_emitted > max_rows {
+                return Err(EvaluatorError::RowEnvelopeExceeded {
+                    limit: ROW_ENVELOPE_LIMIT,
+                    observed: receipt.rows_emitted,
+                    max: max_rows,
+                });
+            }
             // Restamp the caller's IRI; the receipt identity (hash,
             // rows, triples) is epoch-valid cached state.
             receipt.query_iri = query_iri.to_string();
@@ -1457,6 +1576,21 @@ impl GraphLawDuckDB {
 
         while let Some(row) = rows.next()? {
             row_index += 1;
+            // WP P08 — the sieve fires INSIDE the row loop, strictly
+            // mid-materialization: the engine has produced exactly
+            // `row_index` rows when the guard trips at row `max_rows + 1`,
+            // so a 10^6-row result set stops at row 65 under the default
+            // envelope instead of materializing first and refusing after.
+            // Strictly pre-receipt: no ExecutionReceipt, no C1 store, and no
+            // epoch bump happens on this path (the early return below jumps
+            // past all three seams).
+            if row_index > max_rows {
+                return Err(EvaluatorError::RowEnvelopeExceeded {
+                    limit: ROW_ENVELOPE_LIMIT,
+                    observed: row_index,
+                    max: max_rows,
+                });
+            }
             let row_subject = format!("{}/row_{}", subject_iri_prefix, row_index);
 
             for (col_idx, col_name) in column_names.iter().enumerate() {
@@ -1857,6 +1991,25 @@ impl GraphLawDuckDB {
         self.conn.flush_prepared_statement_cache();
         self.stmt_cache.prepared_keys.borrow_mut().clear();
         self.cache.bump();
+        Ok(())
+    }
+
+    /// Mounts the PurRDF five-table Parquet specification (`terms`, `quads`,
+    /// `reifiers`, `annotations`, `blobs`) from `directory` as zero-copy DuckDB views.
+    ///
+    /// Each file `<directory>/<table>.parquet` is registered under its canonical table name
+    /// via `read_parquet(...)`.
+    pub fn register_purrdf_parquet_views(
+        &self,
+        directory: &std::path::Path,
+    ) -> Result<(), EvaluatorError> {
+        for table in purrdf_columnar::Table::ALL {
+            let file_path = directory.join(table.file_name());
+            let path_str = file_path
+                .to_str()
+                .ok_or_else(|| EvaluatorError::ReceiptError("invalid unicode in path".into()))?;
+            self.register_parquet_view(table.name(), path_str, false)?;
+        }
         Ok(())
     }
 

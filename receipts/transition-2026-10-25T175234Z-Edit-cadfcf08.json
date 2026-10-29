@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "cadfcf08dd2ae8b1498d30bd1d122d98541d68e359dc0d1a499885060dc7eb4d",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-25T175234Z-Edit-cadfcf08.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/refusals.md",
+  "timestamp_utc": "2026-10-25T175234Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

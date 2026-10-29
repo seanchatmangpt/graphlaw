@@ -132,8 +132,8 @@ you; if you drive them yourself, the discipline is:
 ## WASM artifact state
 
 The shipped `wasm/graphlaw.wasm` is pinned by BLAKE3
-`58a4409505f32b5d9aebc8c0ce2e2adeaba05c8c4b55f951a244ab4ad7d2280a`
-(58,124,612 B; the DuckDB-linked new-EH artifact; verified across all four
+`0858a760f9df87c66cdc01a04f6f4ce15926f400cb974b67a7d14513a5ddd2f1`
+(60,895,924 B; the DuckDB-linked new-EH artifact; verified across all four
 pin surfaces including this generated file — `src/generated/artifact-meta.ts`;
 the digest is re-pinned on every
 `npm run build`). The host for these bytes is the wasmtime-48 EH runner

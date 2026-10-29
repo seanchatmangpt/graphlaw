@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "7ff8affd6aad498d2f2b3848fec111eaca16d4d9d2dbf4382b6e0cd08fcd9528",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-26T182446Z-Write-7ff8affd.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/w0-vector-pin-normalize.py",
+  "timestamp_utc": "2026-10-26T182446Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

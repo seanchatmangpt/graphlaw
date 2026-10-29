@@ -1,5 +1,6 @@
 use super::sniff::skeleton;
 use super::{Dialect, Engine, ParseRefusal};
+use purrdf::n3;
 
 /// Why a document was refused.
 ///
@@ -46,6 +47,14 @@ pub enum RefusalKind {
     /// engine error. Refusal codes are append-only; this variant is never
     /// renumbered.
     BareSql,
+    /// SNIFF-01's runtime sibling: an N3 derivation whose rules declared the
+    /// derived situation forbidden — a `{ premise } => false .` inference
+    /// fuse whose premise became provable mid-fixpoint. This is a semantic
+    /// verdict about the *content*, not a resource cap ([`RefusalKind::ResourceLimit`])
+    /// and not an engine rejection: the run completed, the verdict is just
+    /// "the rules forbid this". Append-only (`docs/refusals.md`, `Fuse` row);
+    /// never renumbered.
+    Fuse,
 }
 
 /// Diagnostic text on a [`Refusal`]. Literals stay a `'static` borrow so the
@@ -209,8 +218,8 @@ impl std::fmt::Display for ReasonClass {
     }
 }
 
-impl From<eyeron::ReasonerLimit> for ReasonClass {
-    fn from(limit: eyeron::ReasonerLimit) -> Self {
+impl From<n3::ReasonerLimit> for ReasonClass {
+    fn from(limit: n3::ReasonerLimit) -> Self {
         ReasonClass::Limit {
             name: limit.to_string(),
             observed: 0,

@@ -43,4 +43,7 @@ __pycache__/
 tests_py/__pycache__/
 tests_py/.pytest_cache/
 
+# root pytest cache (python court scratch; regenerable)
+/.pytest_cache/
+
 *.output

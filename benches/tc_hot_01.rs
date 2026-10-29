@@ -286,12 +286,17 @@ fn main() {
     let mut baseline_hist = Histogram::<u64>::new(3).expect("hdrhistogram init");
     let mut clone_hist = Histogram::<u64>::new(3).expect("hdrhistogram init");
     let mut refusal_hist = Histogram::<u64>::new(3).expect("hdrhistogram init");
-    // Per-sample clone-path series for the Shewhart control-chart rules
-    // (scripts/spc_court.sh): rule 1 needs raw samples beyond mean±3σ, rule 2
-    // needs run-length structure over consecutive samples. Raw u64 ns values,
-    // in measurement order. Recorded unconditionally (allocation is per-leg
+    // Windowed clone-path series for the SPC court (scripts/spc_court.sh):
+    // one amortized per-op value per SPC_WINDOW-iteration window, not raw
+    // per-sample ns. Statistic change per spc-red-remediation-design §3 and
+    // Amendment 1 (A1.1/A1.4): the per-sample statistic mixed an OS-scheduler
+    // tail into the fold's sigma; the windowed statistic fences the body and
+    // the gate's tail terms fence the tail. u64 ns per-op values, in
+    // measurement order. Recorded unconditionally (allocation is per-leg
     // trivial vs the hash cost); exported only under TC_HOT_SPC_EXPORT.
-    let mut clone_series: Vec<u64> = Vec::with_capacity(1 << 12);
+    // Capacity 1<<14 covers FULL mode (10M iters → 9,999 windows) in one
+    // allocation.
+    let mut clone_series: Vec<u64> = Vec::with_capacity(1 << 14);
     let mut tail: [u8; 32] = [0u8; 32];
     // Variance-stability self-check (charter invariant: run-to-run variance
     // < 5%): 3 consecutive batches of equal size, per-batch clone-path p50,
@@ -300,6 +305,18 @@ fn main() {
     const VARIANCE_BUDGET_PCT: f64 = 5.0;
     let batch_iters = iters / BATCHES;
     let mut batch_p50s: Vec<u64> = Vec::with_capacity(BATCHES as usize);
+    // SPC window width (spc-red-remediation-design §3, Amendment 1 A1.1/A1.4):
+    // the gate statistic is the amortized per-op cost over SPC_WINDOW
+    // consecutive anchor folds, so per-sample Instant quantization (~41ns on
+    // this host) and the OS scheduler tail stop dominating sigma. Two
+    // disclosed biases, both bounded and accepted:
+    // 1. integer truncation — window nanos / SPC_WINDOW drops the division
+    //    remainder, an under-report bias of strictly < 1 ns per op;
+    // 2. remainder-drop — batch_iters is not a multiple of SPC_WINDOW, so
+    //    `batch_iters % SPC_WINDOW` iterations per batch fall outside every
+    //    window and are untimed (SMOKE: 999 of 1M = 0.0999%; disclosed live
+    //    by the SPC_STATISTIC line below).
+    const SPC_WINDOW: u64 = 1000;
     let mut rendered_buf = StackBuf::new();
     let start = Instant::now();
     for _batch in 0..BATCHES {
@@ -313,25 +330,13 @@ fn main() {
             tail = d;
             baseline_hist.record(el.as_nanos() as u64).expect("record");
 
-            // Leg 2: production anchor fold (one stack buffer, one update).
-            if inject_ns > 0 {
-                // Anti-vacuity busy-spin (structural fault injection, no sleeps).
-                let spin_start = Instant::now();
-                while spin_start.elapsed().as_nanos() < inject_ns as u128 {
-                    std::hint::black_box(&spin_start);
-                }
-            }
-            let t1 = Instant::now();
-            let d2 = fold_params_anchored(black_box(&state), black_box(&params));
-            let el2 = t1.elapsed();
-            black_box(d2);
-            let el2_ns = el2.as_nanos() as u64;
-            clone_hist.record(el2_ns).expect("record");
-            batch_clone_hist.record(el2_ns).expect("record");
-            clone_series.push(el2_ns);
-
-            // Leg 3: refusal invariant. Two static copies. `Display` formats
-            // kind, engine, and dialect and stays outside this timed section.
+        }
+        // Leg 3: refusal invariant, run FIRST inside each batch (before the
+        // timed clone-path windows) so its per-sample Instant sampling cannot
+        // perturb the windowed statistic. Two static copies. `Display` formats
+        // kind, engine, and dialect and stays outside this timed section.
+        // Body verbatim from the former interleaved iteration loop.
+        for _ in 0..batch_iters {
             let t2 = Instant::now();
             let message = graphlaw::dialect::RefusalMessage::Static("tc-hot-01 invariant probe");
             rendered_buf.clear();
@@ -341,10 +346,43 @@ fn main() {
             black_box(rendered_buf.as_str());
             refusal_hist.record(el3.as_nanos() as u64).expect("record");
         }
+
+        // Leg 2: production anchor fold (one stack buffer, one update),
+        // WINDOWED per spc-red-remediation-design §3 / Amendment 1: one
+        // Instant sample per SPC_WINDOW-fold window, per_op =
+        // window_ns / SPC_WINDOW (amortized per-op). The inject spin stays
+        // INSIDE the window clock: an injected fault must inflate the window
+        // per-op value, never dodge the statistic.
+        let windows = batch_iters / SPC_WINDOW;
+        for _ in 0..windows {
+            let w0 = Instant::now();
+            for _ in 0..SPC_WINDOW {
+                if inject_ns > 0 {
+                    // Anti-vacuity busy-spin (structural fault injection, no sleeps).
+                    let spin_start = Instant::now();
+                    while spin_start.elapsed().as_nanos() < inject_ns as u128 {
+                        std::hint::black_box(&spin_start);
+                    }
+                }
+                let d2 = fold_params_anchored(black_box(&state), black_box(&params));
+                black_box(d2);
+            }
+            let per_op = (w0.elapsed().as_nanos() / u128::from(SPC_WINDOW)) as u64;
+            clone_hist.record(per_op).expect("record");
+            batch_clone_hist.record(per_op).expect("record");
+            clone_series.push(per_op);
+        }
         batch_p50s.push(batch_clone_hist.value_at_quantile(0.50));
     }
     let timed_iters = batch_iters * BATCHES;
     let total = start.elapsed();
+    println!(
+        "SPC_STATISTIC clone_path=amortized_per_op_windowed window_width={} windows_per_batch={} windows_total={} untimed_tail_iters_per_batch={} (batch_iters % SPC_WINDOW, remainder-drop disclosure) truncation_bias=<1ns_per_op (integer division, remainder dropped); per-sample clone_path statistic superseded (spc-red-remediation-design §3/A1)",
+        SPC_WINDOW,
+        batch_iters / SPC_WINDOW,
+        (batch_iters / SPC_WINDOW) * BATCHES,
+        batch_iters % SPC_WINDOW
+    );
 
     // ------------------------------------------------------------------
     // Charter A03 param-integration legs (aggregate timing). Per-call

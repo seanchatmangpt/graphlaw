@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # partition_court.sh — Chicago court over the operator's three-partition code census
-# (courts/code-partition/manifest.json). Read-only over src/, crates/graphlaw-eyeron/src/,
+# (courts/code-partition/manifest.json). Read-only over src/,
 # wasm/src/. Writes only its self-check scratch under /tmp. Exits 1 on any violation;
 # exits 2 only when court inputs are missing (BLOCKED, never a silent pass).
 set -u

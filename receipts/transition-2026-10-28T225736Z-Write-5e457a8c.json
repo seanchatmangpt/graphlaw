@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "5e457a8ce7eaa0e30327ef99a9f09a1176ba7d95841180dedb7df0370ee5bd18",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-28T225736Z-Write-5e457a8c.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.28/QFD-HOUSE-OF-QUALITY.md",
+  "timestamp_utc": "2026-10-28T225736Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

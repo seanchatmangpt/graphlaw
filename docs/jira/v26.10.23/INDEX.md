@@ -3,9 +3,11 @@
 Registered 2026-10-24. This window is the post-v26.10.22 wave: ADRs, design
 specs, release gates, and the compliance program. Every markdown doc in
 `docs/jira/v26.10.23/` is registered below — doc count re-read from disk
-2026-10-24 (closeout lane): 26 non-INDEX docs, all registered (the prior
-"23" figure and the final-tree-audit check-7 "24 = 23 + INDEX" note predate
-the final-tree-audit, risk-management-plan, and the operator-runbook
+2026-10-24 (latest re-read: publish machine-prep lane, same day):
+27 non-INDEX docs, all registered (the closeout lane's 26 predated
+PUBLISH-COMPLETION-RUNBOOK.md; the closeout lane's own note — the prior
+"23" figure and the final-tree-audit check-7 "24 = 23 + INDEX" note —
+predates the final-tree-audit, risk-management-plan, and the operator-runbook
 registrations). Statuses are the docs' own self-declared standing on disk,
 not verdicts by this index.
 
@@ -43,6 +45,21 @@ as "if landed").
   the tag; OD-4 letter; OD-6 signature; mutation sweep solo; post-act
   verification + follow-up receipts), each with commands/expected/typed
   failures; flips no register.
+- [PUBLISH-COMPLETION-RUNBOOK.md](PUBLISH-COMPLETION-RUNBOOK.md) —
+  Runbook (2026-10-24, publish machine-prep lane).
+  P16 §§2–8 completion protocol keyed to PUBLISH-STATUS rows by stage
+  (A npm / B crates.io / C v26.10.24 preview / D closure / E standing
+  watch), each typed machine-prep vs operator-act vs machine-verification
+  vs receipt; A.2 retry-loop (TP freshness gate, bounded ≤25-min watch,
+  E404/ENEEDAUTH/E403/EPUBLISHCONFLICT-phantom classification with the
+  re-query-before-refire rule); A.3 post-success verification with the
+  b3sum-of-packaged-artifact == pin install smoke; A.4 docs-flip commit
+  spec; B.2 crates sequence (never-abort verify-leg rule); B.3 smokes;
+  B.4 CRITICAL closure order (addendum APPEND → GO-NO-GO §A.1 pointer →
+  RECEIPTS-INDEX → chain sync LAST); rests on two receipts landed this
+  date (`receipts/2026-10-24-npm-attempt-ledger.md`,
+  `receipts/2026-10-24-crates-scratch-prep-26.10.22.md`); flips no
+  register.
 - [final-tree-audit.md](final-tree-audit.md) — Audit (2026-10-24, HEAD
   `4df19b5`).
   Adversarial audit of the released tree: 8-check verdict table — version
@@ -91,10 +108,16 @@ All four ADRs are Proposed; none has a flip witness or landed code yet.
 - [design-dev-loop-self-hosting.md](design-dev-loop-self-hosting.md) — DRAFT.
   Dev-loop self-hosting, the process-mining endgame: the repo emits events
   but never admits its own dev loop through the law kernel.
-- [design-sniff-fixes.md](design-sniff-fixes.md) — Spec (unimplemented).
+- [design-sniff-fixes.md](design-sniff-fixes.md) — **Implemented**
+  (correction 2026-10-24, v26.10.24 register lane: was filed "Spec
+  (unimplemented)"; the implementation landed in `6da1d33`).
   Sniff-layer fixes for the G8 root-cause class behind `corpus_conformance`
   failures: one file (`src/dialect/sniff.rs`) plus a new
-  `tests/sniff_court.rs`.
+  `tests/sniff_court.rs`. On disk: `HEAD_BUDGET = 8192`
+  (`src/dialect/sniff.rs:25`), `tests/sniff_court.rs` landed, SNIFF-01
+  `BareSql` registered at `docs/refusals.md:220`. Residual: the
+  native-vs-wasm sniff differential (battery L4) is carried as G8 in
+  `docs/jira/v26.10.24/ROADMAP-v26.10.24.md`.
 - [design-read-frame-bound.md](design-read-frame-bound.md) — SPEC
   (unimplemented).
   `read_frame` length-prefix bound (G4) in both stdio runners
@@ -141,11 +164,30 @@ projected 7 matrices; disk holds 6 — all are registered).
 
 ## Counts
 
-- Docs on disk in this window: 27 `.md` files including this INDEX.md —
-  26 non-INDEX docs, all registered above; verified by per-file link check
-  2026-10-24 (closeout lane; `final-tree-audit.md` and
-  `risk-management-plan.md` were on disk unregistered before this pass and
-  are now registered).
+- Docs on disk in this window: 28 `.md` files including this INDEX.md —
+  27 non-INDEX docs, all registered above. Count re-read from disk
+  2026-10-24 (publish machine-prep lane; the prior 27/26 figures were the
+  closeout lane's count before PUBLISH-COMPLETION-RUNBOOK.md landed; the
+  closeout pass itself registered `final-tree-audit.md` and
+  `risk-management-plan.md`).
 - PUBLISH-STATUS.md: landed 2026-10-24 03:20 — registered.
 - OPERATOR-RUNBOOK-v26.10.22-PUBLISH.md: landed 2026-10-24 — registered
   (flips no register; the runbook is a runbook, not a verdict).
+
+## Successor window (forward pointer)
+
+Registered 2026-10-24 (v26.10.24 register lane). **v26.10.23 was skipped as
+a release moniker** by operator directive 2026-10-24: no release is cut
+under this number; this window's docs stand as the record of the
+post-v26.10.22 wave, and the active window is `docs/jira/v26.10.24/`
+(single-release consolidation; thesis + registers in its INDEX.md). This
+window has no RECEIPTS.md — recorded as a finding there; no retroactive
+ledger is created. Open rows carry forward into the v26.10.24 registers:
+G2 mutation verdict (inventory 204 post-`a00770b` widening), G3 battery
+remainder (op_differential sniff + 5 unexecuted L4 courts + L5/L6),
+R-1 wrap-flag inversion (SQLRDF-27 form), R-2 re-review 2026-11-23,
+OD-4/OD-6 signatures, G2-CanonArrow (`egress_arrow` op), G6 benches, D3
+GWS tokens, D4 fuzz/memory-wall/exit-codes durability, W08,
+reference-generated regen at cut. This window's own disposition (retired
+lanes, receipts) lives in
+[`ROADMAP-v26.10.24.md`](../v26.10.24/ROADMAP-v26.10.24.md) RETIRE/CARRY.

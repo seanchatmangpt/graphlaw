@@ -3,7 +3,7 @@
 @prefix owl:   <http://www.w3.org/2002/07/owl#> .
 @prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
 @prefix sh:    <http://www.w3.org/ns/shacl#> .
-@prefix sql:   <http://graphlaw.org/sql#> .
+@prefix sql: <http://graphlaw.org/sql#> .
 @prefix fn:    <http://graphlaw.org/functions#> .
 
 <http://graphlaw.org/sql>

@@ -1,5 +1,5 @@
 //! Law-state transitions over the innovation reference pack, end to end:
-//! Turtle (PurRDF) -> N3 derivation (Eyeron) -> SHACL admission (PurRDF)
+//! Turtle (PurRDF) -> N3 derivation (purrdf::n3) -> SHACL admission (PurRDF)
 //! -> SPARQL discovery and CONSTRUCT (PurRDF), every step receipted.
 
 use graphlaw::dialect::{Dialect, RefusalKind};
@@ -53,7 +53,7 @@ fn innovation_pipeline_derives_admits_and_projects() {
         })
         .expect("derive");
     assert_eq!(r1.step, "derive:n3");
-    assert_eq!(r1.authority.authority, "eyeron");
+    assert_eq!(r1.authority.authority, "purrdf::n3");
     assert_eq!((r1.parent.as_str(), r1.child.as_str()), (s0.id(), s1.id()));
     assert_ne!(s0.id(), s1.id());
     assert!(

@@ -4,7 +4,8 @@
 
 | version | supported |
 |---|---|
-| 26.10.22 (latest released) | yes — the current workspace release line on `main` |
+| 26.10.26 (latest released) | yes — the current workspace release line on `main` |
+| 26.10.22 (crates.io; no GitHub tag) | yes |
 | 26.10.21 (crates.io; no GitHub tag) | yes |
 | v26.10.13 (newest published GitHub release / crate) | yes |
 | 26.10.14 – 26.10.20 | intermediate workspace versions; fixed forward on `main`, no per-version patches |
@@ -27,7 +28,7 @@ vulnerability"). Do not open a public issue for an undisclosed vulnerability.
 
 In scope: untrusted plan, policy, and JSON ABI input; receipt forgery; resource exhaustion
 (memory, CPU, unbounded loops); egress via `COPY ... TO` and `ATTACH`; sandbox escapes from
-the EH host (see "EH host sandbox" below). Vulnerabilities in PurRDF, Eyeron, or DuckDB
+the EH host (see "EH host sandbox" below). Vulnerabilities in PurRDF, purrdf-n3, or DuckDB
 (`frozen-duckdb`) themselves belong upstream.
 
 Egress specifics in scope:
@@ -85,10 +86,10 @@ What the bundled EH runner (`src/bin/graphlaw_run_eh.rs`, feature `runner-eh`) d
 ### Imported WASI capability inventory
 
 The shipped artifact (`priv/graphlaw.wasm`, b3sum
-`58a4409505f32b5d9aebc8c0ce2e2adeaba05c8c4b55f951a244ab4ad7d2280a`,
-58,124,612 B — the live pin, 4-surface verified) imports 28 functions, all
+`0858a760f9df87c66cdc01a04f6f4ce15926f400cb974b67a7d14513a5ddd2f1`,
+60,895,924 B — the live pin, 4-surface verified) imports 28 functions, all
 `wasi_snapshot_preview1`. Re-witnessed on this exact pin with
-`wasm-objdump -x priv/graphlaw.wasm` on 2026-10-24 (`Import[28]`; all 28
+`wasm-objdump -x priv/graphlaw.wasm` on 2026-10-26 (`Import[28]`; all 28
 names below match the live section, no non-WASI import modules):
 
 `random_get`, `environ_get`, `environ_sizes_get`, `clock_time_get`,

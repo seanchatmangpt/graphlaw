@@ -1,0 +1,4 @@
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::new()
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::from_iter([Default::default()])
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::new(Default::default())
+src/abi.rs:318:5: replace dispatch -> Res<Value> with Res::from(Default::default())

@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "d4364c0e47b6a46e56d20191c4761421a55f1a688e674055713253e65704c40a",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-26T085611Z-Edit-d4364c0e.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/jira/v26.10.23/n3-audit-100-report.md",
+  "timestamp_utc": "2026-10-26T085611Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

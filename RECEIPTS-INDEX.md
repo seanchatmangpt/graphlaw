@@ -3,9 +3,16 @@
 renamed from RECEIPTS.md 2026-10-24; per-version ledgers live under
 `docs/jira/<version>/`.
 
-Pointer index for durable witness receipts under `receipts/`. Newest last.
+Pointer index for durable witness receipts under `receipts/`. Newest first.
 Machine receipts (JSON) are append-only; rows point to their witnesses.
 
 | date | receipt | subject | verdict | machine receipt (sha256) |
 |---|---|---|---|---|
+| 2026-10-26 | `docs/jira/v26.10.26/RECEIPTS.md` | v26.10.26 milestone: purrdf-n3 fix wave (F1–F10 + F14 fixed upstream TDD-style, re-vendored at fix-wave HEAD with 72/72 suite parity), graphlaw-side F11 limit identities + F12 registry 200k re-pin, proof-pipeline 5/0 + quantifier 10/0 courts, ARTIFACTS wasm row re-pinned to `430da572…`/60,893,336 B, release mechanics 7/7 at 26.10.26 | PARTIAL_ALIVE — D1 + D3 CLOSED, D2 3/4, D4 2/5 (full-suite OPEN(CLASSIFIED-RED), bench OPEN(FAIL-AS-MEASURED), grep OPEN(STRICT-READING-FAIL)), D5 CLOSED | — (md receipt, b3sum `c37067f48facb39b0aeddf6078f16f064d98da48e02fd8a02c8257cc0453435b`) |
+| 2026-10-25 | `receipts/2026-10-25-n3-upstreaming-purrdf.md` | N3 engine upstreaming: graphlaw-eyeron retired, purrdf::n3 3.0.1 (vendored) is the only N3 engine; Engine::Eyeron removed; wasm module links 60,880,445 B, boundary courts 71+25+3 green; full suite green at close; mutation sweep INTERRUPTED at 2h cap (baseline PASS + kill witnessed + byte-exact restore) | PARTIAL_ALIVE (one open rung: 204-mutant sweep) | — (md receipt, b3sum `d38ae51de7349a04553791e6a1a41dc77f6fdde9d39f489ac9184bc0c7d69deb`) |
 | 2026-10-24 | `receipts/2026-10-24-spc-solo-rerun.md` | SPC gate solo rerun (falsifier for 2026-10-23 fleet-load FAIL) — `CARGO_TARGET_DIR=target-lane-spc2 bash scripts/spc_court.sh`, exit 1 | FAIL — Cpk 0.632 < 1.33 (p99 167ns in spec; prior tail confirmed load-induced, sd 16282.667→64.24ns) | `receipts/spc-2026-10-24T032511.json` `b346c2ae873243cd8dd66025c9828b7c33f642b0761cb635fe84176b8061d650` |
+| 2026-10-24 | `receipts/2026-10-24-battery-dialect-census.md` | L1 sqlrdf leg: census 36/0 + refusal surface, 102/0 (logs b3sum-digested; splice-proven) | PASS | — (md receipt, b3sum `91cee82a06b69199ecf938eef7a74680ebf895a5fb94f5c1b3f2251335ea444c`) |
+| 2026-10-24 | `receipts/2026-10-24-battery-receipt-v2.md` | receipt-v2 fold family: v1 fold pinned, v2 emission self-verifies, 44/0 | PASS | — (md receipt, b3sum `7ce1dfc745c80d2a741de0877d025b4beb48d781476e7a001f4e513561b0685f`) |
+| 2026-10-24 | `receipts/2026-10-24-battery-trust-attest.md` | Ed25519 attestation courts (`src/attest.rs`), 12/0; Sigma_PQC §1.4 second formula stays UNMET | PASS | — (md receipt, b3sum `dfdb8091ccb9468a81f43252aa490debf62918788163daffd6f3e727137767fc`) |
+| 2026-10-24 | `receipts/2026-10-24-battery-banking.md` | L4 greens incl. G3 gating leg dvp 4/0 on shipped pin `58a44095…`, 13/0 | PASS | — (md receipt, b3sum `99cce2e4840fd8409c5b5e088e1280a9d8df2629d8f7faa1a6bf5d9d438bc59d`) |
+| 2026-10-24 | `receipts/2026-10-24-battery-full.md` | FULL battery consolidated: L1-L3 + dvp DISCHARGED; op_differential 15/1 CLASSIFIED-RED (sniff differential), 4 courts SKIP-UNEXECUTED, L5/L6 NOT RUN; census 36/0 (never 69/0) | RED/INCOMPLETE (classification of record) | — (md receipt, b3sum `7fa6e1489e6a4a5da358fd471189d3c2a442650ba2141e5d5289e15a11fccbaf`) |

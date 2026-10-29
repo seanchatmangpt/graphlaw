@@ -10,8 +10,8 @@ permissions:
 
 jobs:
   # Local equivalent: cargo fmt --check && cargo clippy --all-targets
-  # --features pack-tools,abi,wasi-patched-deps,evidentiary-ring -- -D warnings
-  # && cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring
+  # --features pack-tools,abi,evidentiary-ring -- -D warnings
+  # && cargo test --locked --all-targets --features pack-tools,abi,evidentiary-ring
   native:
     name: native (fmt + clippy + full host suite + registry check)
     runs-on: ubuntu-latest
@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
-          toolchain: 1.96.0
+          toolchain: 1.98.0
           components: rustfmt, clippy
           targets: wasm32-wasip1
       # WASI setup: the wasm link REQUIRES a staged toolchain (WASI_SDK_PATH
@@ -43,7 +43,7 @@ jobs:
         # castle-diff excluded: pulls nightly-only wasm4pm-compat (E0554 on stable).
         # evidentiary-ring (native SPSC ring) is host-buildable and must not
         # dodge the gate (RUST-8 lane L7).
-        run: cargo clippy --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring -- -D warnings
+        run: cargo clippy --all-targets --features pack-tools,abi,evidentiary-ring -- -D warnings
       - name: Build WASI module
         # The DuckDB-linked artifact requires the exception-handling target
         # feature at link time (new-EH duckdb wasm archive; wasmtime 48 hosts
@@ -56,21 +56,33 @@ jobs:
       - name: Test backend authorities
         env:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
-        run: cargo test --locked --all-targets --features pack-tools,abi,wasi-patched-deps,evidentiary-ring
+        run: cargo test --locked --all-targets --features pack-tools,abi,evidentiary-ring
       - name: Upload WASI module
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: graphlaw-wasm
           path: target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
-      - name: Package both crates together (publish readiness)
-        run: cargo package -p graphlaw-eyeron -p graphlaw
+      - name: Purrdf resolves from the pinned fork (provenance)
+        run: |
+          cargo metadata --format-version 1 > /tmp/graphlaw-meta.json
+          for pkg in purrdf purrdf-sparql-eval purrdf-n3 purrdf-columnar; do
+            src=$(jq -r --arg p "$pkg" '.packages[] | select(.name == $p) | .source // "none"' /tmp/graphlaw-meta.json)
+            echo "$pkg -> $src"
+            case "$src" in
+              git+https://github.com/seanchatmangpt/purrdf*)
+                echo "  ok (fork)";;
+              *)
+                echo "  REFUSED: $pkg is not sourced from the pinned fork"; exit 1;;
+            esac
+          done
+
       - name: Docs
-        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features pack-tools,abi,wasi-patched-deps
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features pack-tools,abi
 
   # Nightly-only cross-engine court (L41). Lives in a workspace-excluded crate
   # because ggen-engine -> wasm4pm-compat 26.8.7 is nightly-only (E0554 on
-  # stable) and a git dep in the root manifest would trip the publishability
-  # manifest check (tests/authority_manifest.rs).
+  # stable); the only root-manifest git dep is the pinned purrdf fork
+  # (tests/authority_manifest.rs enforces fork-only git sources).
   # Local equivalent (nightly toolchain required): cd courts/castle-diff && cargo +nightly test
   castle-diff:
     name: castle hash-unification court (nightly)
@@ -109,7 +121,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
-          toolchain: 1.96.0 # pinned: matches rust-toolchain.toml
+          toolchain: 1.98.0 # pinned: matches rust-toolchain.toml
           targets: wasm32-wasip1, wasm32-unknown-unknown
       # WASI setup — same composite staged-SDK + duckdb-archive recipe as the
       # native job above (cache key hashes the action recipe, not this file).
@@ -139,10 +151,9 @@ jobs:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
         run: >
           cargo test --locked
-          --test wasi_patch_guard
           --test wasm_duckdb_lifecycle_eh
           --test wasm_duckdb_op_wired
-          --features abi,wasi-patched-deps,runner-eh
+          --features abi,runner-eh
       - name: Run landed wasm court suites (loud-skip unlanded)
         env:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
@@ -169,16 +180,14 @@ jobs:
       matrix:
         include:
           - package: graphlaw
-            features: pack-tools,abi,wasi-patched-deps,evidentiary-ring
+            features: pack-tools,abi,evidentiary-ring
           - package: graphlaw-wasm
-            features: ""
-          - package: graphlaw-eyeron
             features: ""
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
-          toolchain: 1.96.0
+          toolchain: 1.98.0
           components: clippy
       # frozen-duckdb-sys host cmake fails on ubuntu-24.04 with
       # "Could NOT find CURL" (the runner image ships no libcurl dev headers);
@@ -197,7 +206,11 @@ jobs:
         run: cargo test --locked
 
   # Local equivalent: cargo install cargo-semver-checks --locked, then
-  # cargo semver-checks --package graphlaw (needs a published baseline).
+  # cargo semver-checks --package graphlaw --baseline-version 26.10.21
+  # (26.10.21 is the newest crates.io-published release; the workspace
+  # version is CalVer so each release cycle is a major-looking bump to
+  # semver-checks — lints against the 26.10.21 baseline are triaged via the
+  # [package.metadata.cargo-semver-checks.lints] allow-block, not skipped).
   semver:
     name: semver compatibility (cargo-semver-checks vs published baseline)
     runs-on: ubuntu-latest
@@ -206,7 +219,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
-          toolchain: 1.96.0
+          toolchain: 1.98.0
       # frozen-duckdb-sys host cmake fails on ubuntu-24.04 with
       # "Could NOT find CURL"; install it before the build runs.
       - name: Install libcurl dev + pkg-config (frozen-duckdb-sys host cmake)
@@ -214,6 +227,7 @@ jobs:
       - uses: obi1kenobi/cargo-semver-checks-action@6b69fcf40e9b5fb17adeb57e4b6ecd020649a239 # v2
         with:
           package: graphlaw
+          baseline-version: 26.10.21
 
   # Local equivalent: cargo install cargo-deny --locked, then
   # cargo deny check advisories licenses bans sources.
@@ -240,7 +254,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
-          toolchain: 1.96.0
+          toolchain: 1.98.0
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
       - name: Audit Cargo.lock
@@ -248,10 +262,13 @@ jobs:
 
   # External oracle: the IN-REPO pytest suites (tests_py + the pm4pytest BCBS
   # driver in tests/) running against the binaries this repo just built.
-  # Chicago-style: real subprocesses, no mocks. Both conftest.py files resolve
-  # binaries via GRAPHLAW_REPO / GRAPHLAW_TARGET_DIR env overrides and build
-  # their own fixtures (tests_py/conftest.py builds blackbox_fixture with the
-  # runner-eh feature), so no feature name is hardcoded into pytest args here.
+  # Chicago-style: real subprocesses, no mocks. Binary resolution: both
+  # conftest.py files derive the repo root from __file__ (GRAPHLAW_REPO is
+  # NOT an override — zero references in tests/ or tests_py/, witnessed
+  # 2026-10-24); GRAPHLAW_TARGET_DIR is the LANE ROOT (tests/conftest.py
+  # joins debug/ itself), so it points at <workspace>/target, never
+  # <workspace>/target/debug. tests_py/conftest.py hardcodes REPO/target/debug
+  # for its own bins, matching the default target dir of the build step below.
   # Allow-failure until the suite is stable; flip continue-on-error to false
   # once it has been green across several CI runs.
   external-oracle:
@@ -263,7 +280,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
-          toolchain: 1.96.0
+          toolchain: 1.98.0
       # frozen-duckdb-sys host cmake fails on ubuntu-24.04 with
       # "Could NOT find CURL"; install it before the build runs.
       - name: Install libcurl dev + pkg-config (frozen-duckdb-sys host cmake)
@@ -277,16 +294,17 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install pytest
-        run: python -m pip install pytest
+        # pm4py is a real dependency of the in-repo oracle suites (BCBS driver
+        # + tests_py imports); a missing import is a collection error, not a
+        # loud skip.
+        run: python -m pip install pytest pm4py
       - name: Build graphlaw bins and the blackbox_fixture example
         run: cargo build --bins --example blackbox_fixture --features runner-eh
       - name: Run in-repo pytest suite
         env:
-          GRAPHLAW_REPO: ${{ github.workspace }}
-          GRAPHLAW_TARGET_DIR: ${{ github.workspace }}/target/debug
+          GRAPHLAW_TARGET_DIR: ${{ github.workspace }}/target
         run: pytest tests_py -v
       - name: Run BCBS aggregation pytest court
         env:
-          GRAPHLAW_REPO: ${{ github.workspace }}
-          GRAPHLAW_TARGET_DIR: ${{ github.workspace }}/target/debug
+          GRAPHLAW_TARGET_DIR: ${{ github.workspace }}/target
         run: pytest tests/test_bcbs_aggregation.py -v

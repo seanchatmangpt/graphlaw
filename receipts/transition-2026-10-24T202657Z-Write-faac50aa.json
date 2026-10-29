@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "faac50aa1f778dd13c0729a91abc08bb566f0384817e9ab81ee8690a58610f11",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-24T202657Z-Write-faac50aa.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/e04/standalone/Cargo.toml.handoff.txt",
+  "timestamp_utc": "2026-10-24T202657Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

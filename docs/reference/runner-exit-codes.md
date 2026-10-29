@@ -20,10 +20,11 @@ boundary: the WASI environment is sterile (explicitly empty — nothing from
 the host env reaches the guest), the frame prefix is bounded by
 `graphlaw::abi::MAX_REQUEST_BYTES` and refused pre-allocation (92), and
 every guest execution runs under a fuel budget of `100_000_000_000` units (reset
-per request) with epoch interruption armed as the wall-clock strangle path;
-a spent budget is a typed refusal (98), never a raw trap or hang, and a fired
-epoch deadline surfaces as an interrupt trap (97) until a host watchdog
-increments the epoch.
+per request) with epoch interruption driven by a host watchdog that increments
+the engine epoch every 50 ms; a spent budget is a typed refusal (98), never a
+raw trap or hang, and a guest stalling past the armed epoch deadline traps
+`Interrupt` and exits typed 99 (`--epoch-ticks` arms the deadline; the default
+1e9 ticks ≈ 1.6 years is the disarmed production posture).
 
 | Code | Name / condition | stderr shape | Recovery |
 |---|---|---|---|
@@ -40,6 +41,7 @@ increments the epoch.
 | 96 | Instantiate/link/export failure | `wasm instantiation failed: <e>` | Rebuild vs ABI. |
 | 97 | Guest ABI / memory fault | `guest ABI fault` + frames | Read backtrace; rebuild. |
 | 98 | Guest fuel budget spent (`FUEL_PER_REQUEST` = 100_000_000_000) | `guest exhausted fuel budget 100000000000` | Driver: shrink the request or raise the budget. |
+| 99 | Guest epoch deadline expired (watchdog stall past `--epoch-ticks`; default disarmed) | `guest epoch deadline expired after <ticks> ticks (wall-clock strangle)` | Driver: arm more ticks, or the guest is genuinely stalled — respawn. |
 
 Exact diagnostic strings (each prefixed `graphlaw-run-eh: `):
 
@@ -55,6 +57,7 @@ invalid wasm artifact: <engine error>
 wasm instantiation failed: <error>
 guest ABI fault: <detail>
 guest exhausted fuel budget 100000000000
+guest epoch deadline expired after <ticks> ticks (wall-clock strangle)
 ```
 
 Diagnostics on 97: the anyhow chain is rendered with `{:#}` (root cause, e.g.
@@ -100,6 +103,10 @@ obtain a digest: `b3sum target/.../graphlaw_wasm.wasm` or the pinned row in
   witnessed 7/0 (7 passed, 0 failed) covering 0, 84, 90, 95, 96 (non-WASI
   import and missing-ABI-exports legs), and 97 (pending artifact-pin
   capabilities frame, loud pending-skip until the pin lands).
+- `tests/wasm_enclosure_court.rs` — the hard-enclosure court: per-op fuel
+  calibration from the registry controls, typed `guest_fuel`/`guest_epoch`
+  envelopes, the epoch-stall leg, the 9000-frame leaking campaign, the
+  63/64 + 31/33 stack probes, and the runner's exit-99 watchdog leg.
 - `tests/wasm_frame_bound_court.rs` — frame-bound court over the same binary
   (EH legs; the wasmi legs were retired with the host).
 - `docs/how-to/run-the-wasm-module.md` — operator how-to for driving the

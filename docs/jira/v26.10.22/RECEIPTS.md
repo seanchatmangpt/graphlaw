@@ -2093,3 +2093,48 @@ verbatim.
   action at integration: refresh this one chain entry (documented
   re-baseline/extend precedent), then sync. The receipt is final and
   frozen from this lane.
+
+## 2026-10-24 battery receipts (pointer rows, append-only)
+
+Five durable receipts for the 2026-10-24 battery legs (battery-receipts
+execution lane; logs b3sum-digested in each receipt; per-court
+`Running`/`test result:` pairs spliced mechanically from the logs; capture-
+masking disclosure: the battery driver's shell echoed success unconditionally
+so the LOGS are the evidence of record, not leg exit codes).
+
+- **battery-dialect-census (L1 sqlrdf)** — Date: 2026-10-24. **Receipt**:
+  `receipts/2026-10-24-battery-dialect-census.md` (b3sum
+  `91cee82a06b69199ecf938eef7a74680ebf895a5fb94f5c1b3f2251335ea444c`).
+  **Verdict**: 8 targets, 102 passed / 0 failed; sql-rdf statement-kind
+  census **36/0** ("69/0" witnessed nowhere in the logs); typed-refusal
+  register courted against `docs/refusals.md` in both directions.
+- **battery-receipt-v2 (L3 receipt family)** — Date: 2026-10-24.
+  **Receipt**: `receipts/2026-10-24-battery-receipt-v2.md` (b3sum
+  `7ce1dfc745c80d2a741de0877d025b4beb48d781476e7a001f4e513561b0685f`).
+  **Verdict**: 8 targets, 44 passed / 0 failed; v1 fold matches its settled
+  b3sum pin, v2 prefix = ADR literal, v2 emission self-verifies and is
+  deterministic across independent engines; chain tamper detection live.
+- **battery-trust-attest (L3 attestation)** — Date: 2026-10-24. **Receipt**:
+  `receipts/2026-10-24-battery-trust-attest.md` (b3sum
+  `dfdb8091ccb9468a81f43252aa490debf62918788163daffd6f3e727137767fc`).
+  **Verdict**: 12 passed / 0 failed on the existing Ed25519 path
+  (`src/attest.rs`); exhaustive byte-flip refusals; expiry/skew/ceiling bind.
+  Sigma_PQC (§1.4 second formula) stays UNMET — quoted, no scheme/parameter
+  set/modulus defined.
+- **battery-banking (L4 greens)** — Date: 2026-10-24. **Receipt**:
+  `receipts/2026-10-24-battery-banking.md` (b3sum
+  `99cce2e4840fd8409c5b5e088e1280a9d8df2629d8f7faa1a6bf5d9d438bc59d`).
+  **Verdict**: 5 courts, 13 passed / 0 failed, incl. the G3 gating leg
+  `dvp_settlement_court` **4/0** (battery9's 2/2 RED closed on the shipped
+  pin `58a44095…`). The L4 leg as a whole is RED/INCOMPLETE — see
+  battery-full.
+- **battery-full (consolidated, classification of record)** — Date:
+  2026-10-24. **Receipt**: `receipts/2026-10-24-battery-full.md` (b3sum
+  `7fa6e1489e6a4a5da358fd471189d3c2a442650ba2141e5d5289e15a11fccbaf`).
+  **Verdict**: battery RED/INCOMPLETE. L1 102/0 + L2 154/0 + L3 114/0
+  DISCHARGED; L4: `op_differential` 15/1 CLASSIFIED-RED (native-NTriples vs
+  wasm-Turtle sniff differential, fresh witness for
+  `docs/jira/v26.10.23/design-sniff-fixes.md`), 4 courts SKIP-UNEXECUTED
+  behind the fail-fast cut (`op_examples`, `op_forward_compat`,
+  `rehypothecation_gate_court`, `ubo_sanctions_court`); L5/L6 NOT RUN.
+  Falsifiers (a)-(d) at the receipt.

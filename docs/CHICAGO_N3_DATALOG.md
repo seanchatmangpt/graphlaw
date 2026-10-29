@@ -8,7 +8,7 @@ large fraction of semantic regressions without claiming exhaustive conformance.
 
 GraphLaw does not implement either semantics locally:
 
-- Eyeron owns N3 parsing/reasoning.
+- purrdf::n3 owns N3 parsing/reasoning.
 - PurRDF owns Datalog compilation and least-fixpoint evaluation.
 
 The court therefore verifies GraphLaw's exact admitted authority path rather

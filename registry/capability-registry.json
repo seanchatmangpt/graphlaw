@@ -30,7 +30,7 @@
       "capability": "Knowledge hooks (kh: orchestration over SPARQL)"
     },
     {
-      "authority": "eyeron",
+      "authority": "purrdf::n3",
       "capability": "Notation3"
     },
     {
@@ -40,10 +40,9 @@
   ],
   "engines": [
     "PurRdf",
-    "Eyeron",
     "FrozenDuckdb"
   ],
-  "graphlaw_version": "26.10.22",
+  "graphlaw_version": "26.10.28",
   "law_steps": [
     {
       "ceiling": "observe",
@@ -253,6 +252,18 @@
       "source": "src/abi.rs",
       "unit": "bytes"
     },
+    "n3_max_backward_depth": {
+      "refusal_name": "n3_backward_depth",
+      "scope": "n3",
+      "source": "src/law.rs",
+      "unit": "count"
+    },
+    "n3_max_backward_solutions_per_goal": {
+      "refusal_name": "n3_backward_solutions_per_goal",
+      "scope": "n3",
+      "source": "src/law.rs",
+      "unit": "count"
+    },
     "n3_max_derived_facts": {
       "refusal_name": "n3_derived_facts",
       "scope": "n3",
@@ -277,11 +288,23 @@
       "source": "src/law.rs",
       "unit": "bytes"
     },
+    "n3_max_term_depth": {
+      "refusal_name": "n3_term_depth",
+      "scope": "n3",
+      "source": "src/law.rs",
+      "unit": "count"
+    },
     "n3_max_total_bytes": {
       "refusal_name": "n3_total_bytes",
       "scope": "n3",
       "source": "src/law.rs",
       "unit": "bytes"
+    },
+    "n3_max_total_steps": {
+      "refusal_name": "n3_match_steps",
+      "scope": "n3",
+      "source": "src/law.rs",
+      "unit": "steps"
     }
   },
   "limits": {
@@ -295,11 +318,15 @@
     "max_plan_total_atoms": 100000,
     "max_policy_entries": 100000,
     "max_request_bytes": 16777216,
+    "n3_max_backward_depth": 32,
+    "n3_max_backward_solutions_per_goal": 1024,
     "n3_max_derived_facts": 500000,
-    "n3_max_iterations": 4000,
-    "n3_max_match_steps": 50000000,
+    "n3_max_iterations": 4000000,
+    "n3_max_match_steps": 200000,
     "n3_max_term_bytes": 65536,
-    "n3_max_total_bytes": 268435456
+    "n3_max_term_depth": 64,
+    "n3_max_total_bytes": 268435456,
+    "n3_max_total_steps": 50000000
   },
   "model_enums": [
     {
@@ -857,7 +884,7 @@
             },
             {
               "default": null,
-              "doc": "Owning engine (PurRdf or Eyeron).",
+              "doc": "Owning engine (PurRdf or FrozenDuckdb).",
               "enum": null,
               "name": "engine",
               "nullable": false,
@@ -1469,7 +1496,7 @@
           "fields": [
             {
               "default": null,
-              "doc": "Reasoner output; shape is owned by Eyeron.",
+              "doc": "Reasoner output; shape is owned by purrdf::n3.",
               "enum": null,
               "name": "derived",
               "nullable": false,
@@ -2106,13 +2133,13 @@
   "receipt_surface": {
     "files": [
       {
-        "blake3": "blake3:8ba7c75dcbc90fd9bf8cf9abffbe97cb4a0b4c41a02b2412fb65c55fc77f1582",
-        "bytes": 139342,
+        "blake3": "blake3:5a2928000a2baa3baa4875c3ac1f1f25568e1dca84be196485dd8d851d965abe",
+        "bytes": 146995,
         "path": "src/duckdb_eval.rs"
       },
       {
-        "blake3": "blake3:44360950a2d762463ffc1d97426ddbf1fcaebd9e990cd9c12ce93efd0e14a747",
-        "bytes": 235210,
+        "blake3": "blake3:91043aef1aa5f0f5b6e9ac962029b0a5bbc86fcc9067e4b34e78a13c79258ea7",
+        "bytes": 238814,
         "path": "src/sql_ast.rs"
       },
       {
@@ -2121,24 +2148,24 @@
         "path": "src/sql_ast/ast.rs"
       },
       {
-        "blake3": "blake3:ff76944e9b8f7bd780b31c67501c016a96862101bca1bd8253bcfa728a1eb4d0",
-        "bytes": 41884,
+        "blake3": "blake3:6753b9d35b7a07efac63d2f13ccf07a49e5132016bb86a08403db0d4b6bddb1b",
+        "bytes": 42489,
         "path": "src/sql_ast/refusals.rs"
       },
       {
-        "blake3": "blake3:b35468f29ed40d7aff2ebf67e1d5d1dfb8a06dc10e0e2893dd1a3d24689c54d6",
-        "bytes": 22880,
+        "blake3": "blake3:cfd42425bf68b2326bb54bcc8ab36d598f7353691a3b991c209dcea3057f2907",
+        "bytes": 22838,
         "path": "src/sql_ast/serializer.rs"
       },
       {
-        "blake3": "blake3:91f58dd684fee8978687001b1140a67fb31b7f2c5a1e23b6ee7645ec34fa6d69",
-        "bytes": 44718,
+        "blake3": "blake3:b01f78f8be1e8fa7baffab6f307ba5b9edf019c81f1d3918af8a07add525c8f0",
+        "bytes": 44716,
         "path": "ontologies/sql-ast.ttl"
       }
     ],
     "schema": "graphlaw.receipt-surface/1"
   },
-  "receipt_surface_blake3": "blake3:7e34917e1499443427f7ac66939d430691572b484379907355824970e23725b4",
+  "receipt_surface_blake3": "blake3:11fb8f9ab810b8f387fb162da274cb53717752238b8d58b30fbb29e53042b5ca",
   "refusal_codes": [
     {
       "code": "Refused",
@@ -2431,7 +2458,7 @@
     "owl-rl",
     "d"
   ],
-  "registry_blake3": "blake3:2a4d109e8ba2c71ff0fc49cc38dbb829dbc8970e13960d9e6202da633ea81c7e",
+  "registry_blake3": "blake3:6e1103673508ade20f2276e93c7c948dd4f7c31689a25a325fac4a308856035d",
   "schema": "graphlaw.capability-registry/1",
   "surface_blake3": "blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9"
 }

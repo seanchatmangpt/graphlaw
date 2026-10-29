@@ -723,7 +723,7 @@ fn xa_fc_n3_malformed_rule() {
     case(
         "xa_fc_n3_malformed_rule",
         r####"{"op":"n3","text":"{ ?x a } =>"}"####,
-        r####"[{"ptr":"/ok","eq":false},{"ptr":"/error/kind","eq":"EngineRejected"},{"ptr":"/error/engine","eq":"Eyeron"}]"####,
+        r####"[{"ptr":"/ok","eq":false},{"ptr":"/error/kind","eq":"EngineRejected"},{"ptr":"/error/engine","eq":"PurRdf"}]"####,
         None,
         None,
         None,
@@ -1123,7 +1123,7 @@ fn xa_fc_law_malformed_n3_rules() {
     case(
         "xa_fc_law_malformed_n3_rules",
         r####"{"op":"law","data":{"text":"@prefix : <https://chicago.graphlaw.dev/> .\n:a :edge :b .\n:b :edge :c .\n:c :edge :b .\n:c :edge :d .\n","dialect":"turtle"},"steps":[{"step":"n3","rules":"{ ?x a } =>"}]}"####,
-        r####"[{"ptr":"/ok","eq":false},{"ptr":"/error/kind","eq":"EngineRejected"},{"ptr":"/error/engine","eq":"Eyeron"},{"ptr":"/error/details/code","eq":"Refused"}]"####,
+        r####"[{"ptr":"/ok","eq":false},{"ptr":"/error/kind","eq":"EngineRejected"},{"ptr":"/error/engine","eq":"PurRdf"},{"ptr":"/error/details/code","eq":"Refused"}]"####,
         None,
         None,
         None,

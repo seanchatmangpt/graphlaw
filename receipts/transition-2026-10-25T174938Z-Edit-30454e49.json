@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "30454e49d8a2699e98d85211f1f379b1418972c63c146878abc9e77bf94e0e57",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-25T174938Z-Edit-30454e49.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/tmp/reconcile_partition.py",
+  "timestamp_utc": "2026-10-25T174938Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

@@ -12,7 +12,7 @@
 //!
 //! Route (documented per task): stratified negation via purrdf-datalog's
 //! NEGATED atoms driven DIRECTLY through `graphlaw::datalog` (the curated
-//! re-export of purrdf::datalog 2.0.2; its `seminaive::evaluate` stratifies
+//! re-export of purrdf::datalog 3.0.1; its `seminaive::evaluate` stratifies
 //! the program and refuses non-stratifiable programs with the concrete
 //! negative-cycle report). NOT the graphlaw JSON-ABI `datalog` op —
 //! src/abi.rs::atom() hard-codes `ClauseAtom::positive`, a positive-only shim
@@ -51,8 +51,8 @@ use graphlaw::datalog::{
 };
 use serde_json::json;
 
-const PURRDF: &str = "2.0.2";
-const EYERON: &str = "0.7.9";
+const PURRDF: &str = "3.0.1";
+const N3_ENGINE: &str = "purrdf-n3/3.0.1";
 const GENERATOR: &str = "event_calculus_vectors";
 /// Live crate version stamped into provenance (post-L98/L106 pattern).
 const GL_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -542,7 +542,7 @@ fn build_vector(
             "graphlaw_rev": rev,
             "graphlaw_version": GL_VERSION,
             "purrdf": PURRDF,
-            "eyeron": EYERON,
+            "n3_engine": N3_ENGINE,
             "generator": GENERATOR,
             "stratified": true,
         },

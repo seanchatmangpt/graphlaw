@@ -1,5 +1,7 @@
 # Dialects
 
+See also: [ARD-26.10.25-DIALECTS](file:///Users/sac/graphlaw/docs/ARD-26.10.25-DIALECTS.md) for the full architectural review on the Sovereign Lattice, formal semantics, and projection mechanics.
+
 How GraphLaw routes RDF and logic syntaxes to upstream engines, what each
 dialect supports, and what is permanently out of scope. Source of truth:
 `src/dialect.rs`; the wire op table: `src/registry.rs`.
@@ -10,7 +12,7 @@ GraphLaw splits syntaxes into two tiers. The tier model is landed code:
 `src/tier.rs` (module doc: "Two-tier document routing (R04)") defines
 `Tier::{Rdf, N3Logic}`, `Dialect::tier()`, declared-tier admission
 (`DialectDecl`, `admit_declared`, `admit_bytes_tiered`), and
-`validate_n3_rules` (Eyeron-validated `RuleSet` with rule counts). When a
+`validate_n3_rules` (purrdf::n3-validated `RuleSet` with rule counts). When a
 caller supplies a `DialectDecl`, sniffing is skipped entirely and dispatch is
 on the declared tier; without a declaration, sniffing behaves as before.
 
@@ -18,9 +20,9 @@ on the declared tier; without a declaration, sniffing behaves as before.
   N-Quads, RDF/XML, JSON-LD, YAML-LD, TriX, HexTuples). These are parsed,
   converted, canonicalized, and queried through `graphlaw::dialect` routing
   into PurRDF.
-- **Logic tier (Eyeron)** — Notation3 (`Dialect::N3`,
-  `Tier::N3Logic`) is owned by Eyeron
-  (`Dialect::N3.engine() == Engine::Eyeron`). N3 carries forward rules and
+- **Logic tier (purrdf::n3)** — Notation3 (`Dialect::N3`,
+  `Tier::N3Logic`) is owned by purrdf::n3
+  (`Dialect::N3.engine() == Engine::PurRdf`). N3 carries forward rules and
   quantifiers (`=>`, `@forAll`/`@forSome`); it is a separate logic surface
   (the `n3` op with its own iteration/fact/byte caps), not another way to
   spell a dataset. N3 input to RDF data operations is refused as
@@ -195,15 +197,15 @@ Wire shapes:
 Typed refusals (never a trap):
 
 - Unknown or expired session on `exec` with `"session"`:
-  "unknown or expired session `<name>`" (`src/duckdb_op.rs:323`).
+  "unknown or expired session `<name>`" (`src/duckdb_op.rs#exec`).
 - Duplicate open: "session `<name>` already exists (close it before
-  reopening)" (`src/duckdb_op.rs:530`).
+  reopening)" (`src/duckdb_op.rs#open_session`).
 - Over-cap open: 16 live sessions max (`MAX_SESSIONS`,
   `src/duckdb_op.rs:79`); the 17th open is a `duckdb_sessions`
-  ResourceLimit refusal (`src/duckdb_op.rs:533`).
+  ResourceLimit refusal (`src/duckdb_op.rs#open_session`).
 
 Registry semantics: the session registry is process-local and crash-only
-(`sessions()`, `src/duckdb_op.rs:83-85`) — it dies with the process, like
+(`sessions()`, `src/duckdb_op.rs#sessions`) — it dies with the process, like
 cursor state. Closing a session frees its connection; a subsequent open of
 the same name succeeds.
 
@@ -218,8 +220,8 @@ request carries `"document":true` plus the Turtle AST document:
  "subject_prefix":"...","vocab_prefix":"..."}
 ```
 
-Routing (`src/duckdb_op.rs:372-374`): the flag diverts to
-`exec_document_on` (`src/duckdb_op.rs:463`) before the single-statement
+Routing (`src/duckdb_op.rs#exec_on`): the flag diverts to
+`exec_document_on` (`src/duckdb_op.rs#exec_document_on`) before the single-statement
 compile path; the legacy path is untouched. The document compiles via
 `compile_turtle_document` and evaluates member-by-member on the target
 connection — a named session or a fresh connection, same routing as the
@@ -230,11 +232,11 @@ Laws on the document path:
 - **SQLRDF-17, document form**: wire `params` are refused — a non-empty
   wire param list is a typed refusal because each sequence member's
   literals live in the Turtle AST document itself
-  (`src/duckdb_op.rs:474-477`). The AST document is the admission record.
+  (`src/duckdb_op.rs#exec_document_on`). The AST document is the admission record.
 - **G6 ATTACH policy**: every member passes `enforce_attach_policy`
-  before the engine sees it (`src/duckdb_op.rs:479-481`), applied
+  before the engine sees it (`src/duckdb_op.rs#enforce_attach_policy`), applied
   per member, not per document.
-- **`ast.text` stays refused** (`src/duckdb_op.rs:357-360`) — graph-backed
+- **`ast.text` stays refused** (`src/duckdb_op.rs#exec_on`) — graph-backed
   statements only.
 
 Success answers a BatchReceipt wire shape:
@@ -248,16 +250,16 @@ Success answers a BatchReceipt wire shape:
 - `failed_at` — `null` on full success.
 
 A mid-sequence member failure is the typed `BatchMemberFailed` envelope,
-never a generic DB error (`src/duckdb_op.rs:507-524`): details carry
+never a generic DB error (`src/duckdb_op.rs#exec_document_on`): details carry
 `code: "BatchMemberFailed"`, `member` (0-based index), `message`, and
-`partial_receipt` — a `BatchReceipt` (`src/duckdb_eval.rs:408-421`) whose
+`partial_receipt` — a `BatchReceipt` (`src/duckdb_eval.rs#BatchReceipt`) whose
 `members[0..failed_at]` executed and committed (documented best-effort
-sequential autocommit, `src/duckdb_eval.rs:401-405`); `members[i..]` did
+sequential autocommit, `src/duckdb_eval.rs#eval_ast_document`); `members[i..]` did
 not execute. The error type is `EvaluatorError::BatchMemberFailed`
-(`src/duckdb_eval.rs:209-212`), folded by `eval_ast_document`
-(`src/duckdb_eval.rs:1052`).
+(`src/duckdb_eval.rs#EvaluatorError`), folded by `eval_ast_document`
+(`src/duckdb_eval.rs#eval_ast_document`).
 
-Courts (lib tests, `src/duckdb_op.rs:1091+`): three-member CREATE→INSERT→
+Courts (lib tests, `src/duckdb_op.rs#session_lifecycle_create_insert_select`): three-member CREATE→INSERT→
 SELECT with real table readback; failing member yields the typed
 `BatchMemberFailed` envelope with partial receipt; legacy exec without the
 flag is unchanged. Witnessed 2026-10-23 (earlier lanes, not re-run this
@@ -280,7 +282,7 @@ supports:
 | YAML-LD    | PurRDF | no (hint only) | yes | yes | yes |
 | TriX       | PurRDF | yes (`<TriX`) | yes | yes | yes |
 | HexTuples  | PurRDF | yes (`["`) | yes | yes | yes |
-| N3         | Eyeron | yes (`=>`, `@forAll`, `@forSome`) | yes | no (logic tier: `n3` op only) | no |
+| N3         | purrdf::n3 | yes (`=>`, `@forAll`, `@forSome`) | yes | no (logic tier: `n3` op only) | no |
 | ShExC      | PurRDF | yes (needs `shex`/`shexc` hint vs TriG) | yes | no (validation only) | no |
 | ShExJ      | PurRDF | yes (`"type":"Schema"`) | yes | no (validation only) | no |
 | Sparql     | PurRDF | yes (SELECT/CONSTRUCT/ASK/… keywords) | yes | no (query/update text) | no |
@@ -385,6 +387,16 @@ Cross-dialect claims are enforced by court tests, not prose:
   extras accepted in Turtle; 1 positive: Turtle `123.E+1` DOUBLE refused).
   Per-dialect known-diverged counts are pinned by literal assertions that
   break when an engine fix closes a divergence, forcing register removal.
+- The purrdf fork's N3 court suite (`crates/n3/tests/`: `n3_parse.rs`, `n3_reason.rs`,
+  `n3_proofs.rs`, `n3_forgery.rs`; `harness = false`, run in fork CI at the rev
+  pinned in `Cargo.toml`).
+  Pins the N3 row's advertised surface: positive `@forAll`/`@forSome` parse
+  courts (`for_all_registers_root_universals`,
+  `for_some_registers_root_existentials`), one strict langtag grammar shared
+  by both profiles (a malformed langtag refuses and case-folds on N3 too;
+  audit C8/F8), and the proof pipeline's derive → `proof_to_n3` →
+  `check_proof` round-trip (`n3_proofs.rs`). Parity receipt 2026-10-26:
+  72 passed / 0 failed (`vendor/README.md`).
 
 ## Permanent boundaries
 
@@ -393,10 +405,10 @@ Stated as scope, not roadmap:
 - **No remote JSON-LD context loading.** JSON-LD is parsed with the contexts
   present in the document; GraphLaw never fetches contexts over the network.
   (`ReasonClass::RemoteContext` / `FD_REMOTE_CONTEXT_FORBIDDEN`.)
-- **No N3-as-codegen.** N3 is a logic/derivation surface (Eyeron); GraphLaw
+- **No N3-as-codegen.** N3 is a logic/derivation surface (purrdf::n3); GraphLaw
   does not treat N3 rules as template/generation logic.
 - **DeriveN3 rules text input (open follow-up, G02).** `Step::DeriveN3`
-  carries its N3 rules as `&'a str` text plus an Eyeron-validated `RuleSet`
+  carries its N3 rules as `&'a str` text plus a purrdf::n3-validated `RuleSet`
   that is re-checked at admission (rule-count agreement, `TierMismatch`
   otherwise). No additional input ergonomic (e.g. a raw-string/binary form
   for rules containing quote-heavy syntax) has landed; the follow-up is

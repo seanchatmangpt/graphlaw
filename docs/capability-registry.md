@@ -59,7 +59,7 @@ with a `.blake3` file.
   "surface_blake3": "blake3:<64 lowercase hex>",
   "registry_blake3": "blake3:<64 lowercase hex>",
   "authorities": [{"capability": "...", "authority": "..."}],
-  "engines": ["PurRdf", "Eyeron", "FrozenDuckdb"],
+  "engines": ["PurRdf", "FrozenDuckdb"],
   "refusal_kinds": ["NotSemanticContent", "Ambiguous", "EngineRejected", "Unsupported", "ResourceLimit"],
   "rdf_dialects": [], "other_dialects": [],
   "regimes": ["simple", "rdf", "rdfs", "owl-rl", "d"],
@@ -71,7 +71,7 @@ with a `.blake3` file.
              "max_atoms_per_field": 10000, "max_json_depth": 64, "max_outstanding_alloc_bytes": 268435456,
              "max_plan_actions": 1000, "max_plan_total_atoms": 100000, "max_policy_entries": 100000,
              "max_request_bytes": 16777216, "n3_max_derived_facts": 500000, "n3_max_iterations": 4000,
-             "n3_max_match_steps": 50000000, "n3_max_term_bytes": 65536, "n3_max_total_bytes": 268435456},
+             "n3_max_match_steps": 200000, "n3_max_term_bytes": 65536, "n3_max_total_bytes": 268435456},
   "refusal_codes": [{"code": "...", "order": 1, "kind": null, "fields": []}],
   "law_steps": [{"name": "...", "order": 1, "ceiling": "observe", "fields": []}],
   "ops": []

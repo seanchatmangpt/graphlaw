@@ -87,7 +87,7 @@ fn ocel_export_sqlite_readback() {
         db_path,
         "SELECT DISTINCT authority FROM event_Receipt ORDER BY 1",
     );
-    assert_eq!(auths, "eyeron\npurrdf::shapes", "receipt authorities");
+    assert_eq!(auths, "purrdf::n3\npurrdf::shapes", "receipt authorities");
 
     // 6. Every event relates at least one plan, subject and authority object.
     let orphans = sqlite(

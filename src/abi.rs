@@ -4,7 +4,7 @@
 //! `./wasm`: hosts (for example Elixir through Wasmex) exchange UTF-8 JSON and
 //! never touch Rust types. A request is `{"op": "...", ...}`; a response is
 //! `{"ok": true, ...}` or `{"ok": false, "error": {kind, engine, dialect,
-//! message}}`. Every op delegates to PurRDF or Eyeron; nothing here parses RDF.
+//! message}}`. Every op delegates to PurRDF (incl. purrdf::n3); nothing here parses RDF.
 //!
 //! Ops (14, in registry order; the machine-readable surface is [`crate::registry`]):
 //! `capabilities`, `sniff`, `parse`, `convert`, `canonical`, `sparql`, `shacl`, `shex`,

@@ -58,10 +58,10 @@ and no naming fix is owed. Configure the Trusted Publisher on
    the tag push alone does not run release.yml; merging/bumping on main
    does.
 4. **release.yml verify work=yes.** Open the "Release" run and check the
-   plan step's outputs (`work=yes` requires any of tag/eyeron/graphlaw
-   unpublished, `.github/workflows/release.yml:68-78`). A green run with
+   plan step's outputs (`work=yes` requires tag or graphlaw unpublished,
+   `.github/workflows/release.yml:65-78`). A green run with
    `work=no` is normal — nothing to release, not a skipped gate
-   (`.github/workflows/release.yml:32-35`). Confirm the "Tag and create the
+   (`.github/workflows/release.yml:30-34`). Confirm the "Tag and create the
    GitHub release" step created release `v26.10.22` with graphlaw.wasm,
    capability-registry.json/.ttl, op-examples.json, each with `.blake3`
    sidecars (`.github/workflows/release.yml:164-179`).
@@ -73,10 +73,11 @@ and no naming fix is owed. Configure the Trusted Publisher on
    no NPM_TOKEN secret exists or may be added
    (`.github/workflows/publish-npm.yml:3-6`); plain `npm publish`, never
    `--provenance` (`.github/workflows/publish-npm.yml:205-209`).
-6. **crates.io: eyeron first, then graphlaw, locally.**
-   `cargo publish -p graphlaw-eyeron && cargo publish -p graphlaw`
-   from the logged-in machine (`.github/workflows/release.yml:8-12`).
-   graphlaw depends on graphlaw-eyeron, so eyeron must land first.
+6. **crates.io: none.**
+   graphlaw does not publish to crates.io — the purrdf dependency is the
+   rev-pinned [seanchatmangpt/purrdf](https://github.com/seanchatmangpt/purrdf) fork, and a git-only dependency
+   cannot publish. Distribution is this repository and the GitHub release assets
+   (`.github/workflows/release.yml`).
 7. **Post-publish verification.** `cargo search graphlaw` (or open
    https://crates.io/crates/graphlaw and
    https://www.npmjs.com/package/@seanchatmangpt/graphlaw); confirm the
@@ -88,8 +89,8 @@ and no naming fix is owed. Configure the Trusted Publisher on
 ## Failure modes
 
 - **Hold silently skips green.** With `RELEASE_HOLD=true`, release.yml's
-  plan step rewrites tag/eyeron/graphlaw to `yes` and exits green with
-  work=no (`.github/workflows/release.yml:74-77`): the run is green but
+  plan step rewrites tag/graphlaw to `yes` and exits green with
+  work=no (`.github/workflows/release.yml:70-73`): the run is green but
   nothing tagged or published. publish-npm's jobs skip entirely at job
   level (`.github/workflows/publish-npm.yml:48,158`). A green run is not
   evidence of a release while the hold is set — check the hold first.

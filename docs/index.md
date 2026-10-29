@@ -47,6 +47,9 @@ Freshness vocabulary: **CURRENT** (maintained against the live tree) ·
   surface and digest rule (`graphlaw-registry --check`). CURRENT.
 - [DIALECTS.md](DIALECTS.md) — dialect routing table; source of truth
   `src/dialect.rs`. CURRENT.
+- [ARD-26.10.25-DIALECTS.md](ARD-26.10.25-DIALECTS.md) — Architectural Review Document:
+  RDF Dialects, Formal Semantics & Projection Mechanics (Sovereign Lattice, PurRDF 5-table Parquet,
+  Loss Matrix, SHACL/Datalog relational pushdown). CURRENT.
 - [refusals.md](refusals.md) — typed refusal register: codes, `details`
   fields, remediation. CURRENT.
 - [reference/refusal-catalog.md](reference/refusal-catalog.md) — user-facing
@@ -201,4 +204,4 @@ producing repo unless noted.
 | Spec dossier: `docs/jira/v26.10.21/{WASM-SANDBOX-SPEC,GRAPHLAW-SPEC,COLDCHAIN-CASE-STUDY}.md` + `receipts/` (gl4/gl5 graphlaw courts, gws2/gws7/gws11 wasm courts, wasm1 otp29 port, coldchain receipts) | `/Users/sac/smalt` | graphlaw (downstream consumer evidence: wasm sandbox + graphlaw engine courts run against the graphlaw artifact) | none (read-only spec receipts; re-run smalt courts against a new graphlaw wasm sha) | VERIFIED — all three spec docs + receipts dir present 2026-10-22; receipts confirmed by filename grep |
 | Frozen vector fixtures: `crates/wasm4pm-cognition/tests/fixtures/graphlaw/*.json` (50 vectors, ENCODERS.md, SCHEMA.md, REV-RELEASE-MAP.md) | graphlaw (`scripts/gen_wasm4pm_graphlaw_vectors.py`) | `/Users/sac/wasm4pm` (test court `tests/graphlaw_vector_oracle.rs`; `graphlaw_rev_ancestry_court` requires fixture rev to remain an ancestor of graphlaw main) | `python3 scripts/gen_wasm4pm_graphlaw_vectors.py` (regenerate at new graphlaw rev, then commit in wasm4pm) | VERIFIED — fixtures dir + generator script present; ancestry court named in REV-RELEASE-MAP.md |
 | WASI FFI shell: `wasm/src/ffi.rs` ("Rendered by ggen (rust-wasi-wasmex-pack) from the wja: graph", header `wasm/src/ffi.rs:7`) | `/Users/sac/ggen-marketplace` pack `rust-wasi-wasmex-pack` (`templates/abi/ffi.rs.tmpl` + `queries/ffi.rq`) | graphlaw `wasm/src/ffi.rs` (generated artifact — regenerate, never hand-edit) | `ggen sync run` from the pack graph (no `ggen.toml` pin in graphlaw root yet — render is manual today) | VERIFIED — template, `ffi.rq` query, and rendered artifact all present; template header matches artifact header |
-| frozen-duckdb crate | crates.io `frozen-duckdb` 2.0.2 | graphlaw `Cargo.toml:35` (`frozen-duckdb = { version = "2.0.2" }`) | none — not a path dep and not under `[patch.crates-io]` (the only patch entry is `purrdf-sparql-eval`, `Cargo.toml:144-145`) | CLOSED — version-pinned to 2.0.2. Do not add a path `[patch]`. |
+| frozen-duckdb crate | crates.io `frozen-duckdb` 2.0.2 | graphlaw `Cargo.toml` `[dependencies]` (`frozen-duckdb = { version = "2.0.2" }`) | none — not a path dep; `[patch.crates-io]` no longer exists (the purrdf family is git-sourced from the pinned [`seanchatmangpt/purrdf`](https://github.com/seanchatmangpt/purrdf) fork) | CLOSED — version-pinned to 2.0.2. Do not add a path `[patch]`. |

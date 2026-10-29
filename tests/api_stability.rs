@@ -14,7 +14,7 @@ fn public_enums_match_with_wildcard_arms() {
         _ => "other",
     };
     let e = match Dialect::N3.engine() {
-        Engine::Eyeron => "eyeron",
+        Engine::PurRdf => "purrdf",
         _ => "other",
     };
     let k = match RefusalKind::Ambiguous {
@@ -57,7 +57,7 @@ fn public_enums_match_with_wildcard_arms() {
         [d, e, k, c, l, r, p, s, a, st, le],
         [
             "n3",
-            "eyeron",
+            "purrdf",
             "ambiguous",
             "observe",
             "expired",

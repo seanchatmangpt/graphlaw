@@ -182,6 +182,11 @@ for root, dirs, files in os.walk("docs/jira"):
 #     near-miss patterns (`file.rs: 12`) are reported as R5-NEARMISS findings,
 #     not silently unmatched.
 ANCHOR = re.compile(r"\b([A-Za-z0-9_./-]+\.(?:rs|sh|ttl|md|toml|json)):(\d+)(?:-(\d+))?\b")
+# Symbolic anchor form (X2 gate-first design, v26.10.24 P7 W4a): `path#SYMBOL`
+# resolves when ANY line of the target matches SYMBOLIC and ALSO contains the
+# symbol token (word-boundary, escaped) — drift-proof against pure line-number
+# churn, unlike `:NN`. Both forms are accepted; `:NN` validation is unchanged.
+ANCHOR_SYM = re.compile(r"\b([A-Za-z0-9_./-]+\.(?:rs|sh|ttl|md|toml|json))#([A-Za-z0-9_]+)\b")
 NEARMISS = re.compile(r"\b[A-Za-z0-9_./-]+\.(?:rs|sh|ttl|md|toml|json):\s+\d")
 SYMBOLIC = re.compile(r"(pub |fn |struct |enum |mod |const |impl |use )|^\s*[A-Za-z_][A-Za-z0-9_]*\s*[:=]")
 def scan_anchors(path):
@@ -204,13 +209,32 @@ def scan_anchors(path):
                 fail("R5", f"{path}:{i}", f"anchor '{target}:{ln}' resolves to a line with no symbol token")
             if hi:
                 if not SYMBOLIC.search(tl[hi_n - 1]):
-                    fail("R5", f"{path}:{i}", f"range anchor '{target}:{ln}-{hi_n}' end line {hi_n} has no symbol token")# scope (R3 lane): top-level docs, milestone INDEX files, all jira prose and
+                    fail("R5", f"{path}:{i}", f"range anchor '{target}:{ln}-{hi_n}' end line {hi_n} has no symbol token")
+        for m in ANCHOR_SYM.finditer(line):
+            target, sym = m.group(1), m.group(2)
+            tpath = target if os.path.exists(target) else os.path.join(os.path.dirname(path), target)
+            if not os.path.exists(tpath):
+                fail("R5-SYMBOL", f"{path}:{i}", f"anchor '{target}#{sym}' target does not exist on disk")
+                continue
+            tl = open(tpath, encoding="utf-8", errors="replace").read().splitlines()
+            sym_re = re.compile(r"\b" + re.escape(sym) + r"\b")
+            if not any(SYMBOLIC.search(l) and sym_re.search(l) for l in tl):
+                fail("R5-SYMBOL", f"{path}:{i}", f"anchor '{target}#{sym}' resolves to no line with a symbol token containing '{sym}'")
+# scope (R3 lane): top-level docs, milestone INDEX files, all jira prose and
 # docs/explanation — expect a large findings list on the real tree; the findings
 # are the deliverable, the docs are not fixed in this lane.
 import glob as _glob
 _scan_set = set(_glob.glob("docs/*.md"))
-_scan_set.update(_glob.glob("docs/jira/*/INDEX.md"))
-_scan_set.update(_glob.glob(os.path.join("docs", "jira", "**", "*.md"), recursive=True))
+# current-window-only scan (X2 gate-first design): glob docs/jira/v* dirs,
+# sort by (major, minor, patch), scan ONLY the highest version recursively.
+# Closed windows leave scope automatically when the next window dir lands —
+# the exemption is self-maintaining, no per-window allowlist.
+def _vkey(d):
+    m = re.match(r"v(\d+)\.(\d+)\.(\d+)$", os.path.basename(d))
+    return tuple(int(x) for x in m.groups()) if m else (0, 0, 0)
+_jira_windows = sorted((d for d in _glob.glob("docs/jira/v*") if os.path.isdir(d)), key=_vkey)
+if _jira_windows:
+    _scan_set.update(_glob.glob(os.path.join(_jira_windows[-1], "**", "*.md"), recursive=True))
 _scan_set.update(_glob.glob("docs/explanation/**/*.md", recursive=True))
 for p in sorted(_scan_set):
     if os.path.isfile(p):

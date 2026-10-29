@@ -6,9 +6,9 @@
 //! wasmex host would drive it.
 //!
 //! Ruleset adaptation (typed): the case-study prose names `gl:greaterThan`;
-//! eyeron's native builtin vocabulary is the SWAP math family
+//! purrdf::n3's native builtin vocabulary is the SWAP math family
 //! (`http://www.w3.org/2000/10/swap/math#greaterThan`, `#notGreaterThan`,
-//! `#lessThan` — see `crates/graphlaw-eyeron/src/ast.rs`). The ruleset below
+//! `#lessThan` — see purrdf fork crates/n3 `src/ast.rs`). The ruleset below
 //! uses the native SWAP IRIs; no other adaptation was needed.
 //!
 //! Fail-closed leg: a batch whose premises are incomplete (typed

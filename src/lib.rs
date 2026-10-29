@@ -7,7 +7,7 @@
 //!   RDF/RDFS/OWL-RL entailment, one admission law
 //!   ([`LawState`]: parse → shape-validate → entail → step, each transition
 //!   content-addressed and receipted), and RDF event ingestion.
-//! - Eyeron owns Notation3 parsing and reasoning.
+//! - purrdf::n3 (upstream purrdf-n3, vendored) owns Notation3 parsing and reasoning.
 //!
 //! GraphLaw intentionally contains no fallback parser, rule evaluator, triplestore,
 //! SHACL/ShEx validator, SPARQL evaluator, or OWL ruleset of its own. Missing
@@ -70,21 +70,6 @@
 #![deny(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(all(target_os = "wasi", not(graphlaw_wasi_clock_patched)))]
-compile_error!(
-    "graphlaw from crates.io cannot run SPARQL on WASI: upstream reads the clock through \
-     JavaScript on every wasm32 target, which traps outside the browser. The \
-     `wasi-patched-deps` feature does not apply the fix. Use the prebuilt \
-     graphlaw.wasm attached to each GitHub release, or build inside the graphlaw repository \
-     workspace (`cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`), which \
-     vendors the clock gate and lets build.rs set graphlaw_wasi_clock_patched."
-);
-
-/// True when `build.rs` saw the vendored `purrdf-sparql-eval` clock gate
-/// (`target_os = "unknown"`). False on a crates.io build, which does not
-/// ship `vendor/` and therefore cannot compile for WASI.
-pub const WASI_CLOCK_PATCH_APPLIED: bool = cfg!(graphlaw_wasi_clock_patched);
-
 #[cfg(feature = "abi")]
 #[cfg_attr(docsrs, doc(cfg(feature = "abi")))]
 pub mod abi;
@@ -93,6 +78,8 @@ pub mod abi;
 pub mod abi_manifest;
 pub mod attest;
 pub mod dialect;
+/// Lease-bound proof verification: `check_proof` behind a caller lease digest (WP P01).
+pub mod proof_lease;
 /// CanonArrow dual-witness columnar egress (ADR-CANONARROW).
 pub mod egress;
 pub mod hooks;
@@ -120,15 +107,14 @@ pub mod tier;
 /// API stability; prefer the curated modules below.
 pub use purrdf;
 
-/// Unstable escape hatch: the whole Eyeron crate. Not covered by GraphLaw's own
-/// API stability; prefer the curated modules below.
-pub use eyeron;
+/// PurRDF's byte-deterministic, five-table Parquet columnar codec.
+pub use purrdf_columnar;
 
 /// Unstable re-export of PurRDF's RDF API. Not covered by GraphLaw's stability promise.
 pub mod rdf {
     pub use purrdf::{
         CanonHash, RdfDataset, RdfDatasetBuilder, RdfDiagnostic, RdfLiteral, SerializeGraph,
-        SparqlEngine, SparqlRequest, SparqlResult, TermId, TermValue, canonicalize, parse_dataset,
+        SparqlEngine, SparqlRequest, SparqlResult, TermId, TermValue, parse_dataset,
         parse_dataset_with, serialize_dataset, try_canonicalize,
     };
 }
@@ -163,13 +149,34 @@ pub mod events {
     pub use purrdf::events::*;
 }
 
-/// Unstable re-export of Eyeron's Notation3 API. Not covered by GraphLaw's stability promise.
+/// Unstable re-export of PurRDF's GeoSPARQL API. Not covered by GraphLaw's stability promise.
+pub mod geo {
+    pub use purrdf::geo::*;
+}
+
+/// Unstable re-export of PurRDF's full-text search API. Not covered by GraphLaw's stability promise.
+pub mod text {
+    pub use purrdf::text::*;
+}
+
+/// Unstable re-export of PurRDF's retrieval and ranking composition API.
+pub mod retrieval {
+    pub use purrdf::retrieval::*;
+}
+
+/// Unstable re-export of PurRDF's GTS container engine API.
+pub mod gts {
+    pub use purrdf::gts::*;
+}
+
+/// Unstable re-export of PurRDF's SARIF validation reporting boundary.
+pub mod validate {
+    pub use purrdf::validate::*;
+}
+
+/// Unstable re-export of Notation3 API (`purrdf::n3::*`). Not covered by GraphLaw's stability promise.
 pub mod n3 {
-    pub use eyeron::{
-        CompletionStatus, EyeronError, PreparedReasoner, RdfFormat, ReasonerError, ReasonerLimit,
-        ReasonerOptions, ReasonerResult, ReasonerStatistics, Result, parse_n3, parse_rdf12,
-        proof_to_n3, reason, reason_document, result_to_string, triples_to_n3, triples_to_trig,
-    };
+    pub use purrdf::n3::*;
 }
 
 /// The canonical immutable, content-addressed GraphLaw law state.
@@ -191,42 +198,42 @@ pub const BACKEND_AUTHORITIES: &[BackendAuthority] = &[
     BackendAuthority {
         capability: "RDF 1.2 / codecs / storage IR",
         authority: "purrdf",
-        revision: "2.0.2",
+        revision: "3.0.1",
     },
     BackendAuthority {
         capability: "SPARQL 1.1/1.2",
         authority: "purrdf::sparql",
-        revision: "2.0.2",
+        revision: "3.0.1",
     },
     BackendAuthority {
         capability: "SHACL",
         authority: "purrdf::shapes",
-        revision: "2.0.2",
+        revision: "3.0.1",
     },
     BackendAuthority {
         capability: "ShEx 2.1",
         authority: "purrdf::shex",
-        revision: "2.0.2",
+        revision: "3.0.1",
     },
     BackendAuthority {
         capability: "Datalog",
         authority: "purrdf::datalog",
-        revision: "2.0.2",
+        revision: "3.0.1",
     },
     BackendAuthority {
         capability: "RDF/RDFS/OWL-RL entailment",
         authority: "purrdf::entail",
-        revision: "2.0.2",
+        revision: "3.0.1",
     },
     BackendAuthority {
         capability: "Knowledge hooks (kh: orchestration over SPARQL)",
         authority: "purrdf::sparql",
-        revision: "2.0.2",
+        revision: "3.0.1",
     },
     BackendAuthority {
         capability: "Notation3",
-        authority: "eyeron",
-        revision: "0.7.7 (eyereasoner/eyeron@d6568f657c19805b64223acf28d74234156bb837, vendored)",
+        authority: "purrdf::n3",
+        revision: "3.0.1",
     },
     BackendAuthority {
         capability: "Vectorized columnar execution, Parquet scan, and SIMD aggregations",

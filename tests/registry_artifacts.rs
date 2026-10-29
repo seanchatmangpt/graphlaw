@@ -756,7 +756,7 @@ fn limits_track_source_constants() {
     let doc = json_doc();
     let s = schema();
     let limits = doc["limits"].as_object().expect("limits object");
-    let expected: [(&str, usize); 15] = [
+    let expected: [(&str, usize); 19] = [
         ("max_request_bytes", graphlaw::abi::MAX_REQUEST_BYTES),
         ("max_json_depth", graphlaw::abi::MAX_JSON_DEPTH),
         ("max_plan_actions", graphlaw::abi::MAX_PLAN_ACTIONS),
@@ -766,7 +766,17 @@ fn limits_track_source_constants() {
         ("n3_max_derived_facts", graphlaw::law::N3_MAX_DERIVED_FACTS),
         ("n3_max_total_bytes", graphlaw::law::N3_MAX_TOTAL_BYTES),
         ("n3_max_term_bytes", graphlaw::law::N3_MAX_TERM_BYTES),
-        ("n3_max_match_steps", graphlaw::law::N3_MAX_TOTAL_STEPS),
+        ("n3_max_match_steps", graphlaw::law::N3_MAX_MATCH_STEPS),
+        (
+            "n3_max_backward_depth",
+            graphlaw::law::N3_MAX_BACKWARD_DEPTH,
+        ),
+        (
+            "n3_max_backward_solutions_per_goal",
+            graphlaw::law::N3_MAX_BACKWARD_SOLUTIONS_PER_GOAL,
+        ),
+        ("n3_max_term_depth", graphlaw::law::N3_MAX_TERM_DEPTH),
+        ("n3_max_total_steps", graphlaw::law::N3_MAX_TOTAL_STEPS),
         ("max_plan_total_atoms", graphlaw::plan::MAX_PLAN_TOTAL_ATOMS),
         ("hooks_max_rounds", graphlaw::hooks::MAX_ROUNDS),
         ("hooks_max_firings", graphlaw::hooks::MAX_FIRINGS),

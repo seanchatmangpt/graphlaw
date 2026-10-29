@@ -3,11 +3,11 @@
 
 Encodes Reiter successor-state progression (situation_calculus breed) and
 STRIPS step replay (strips breed) as Datalog in N3, runs the graphlaw
-eyeron reasoner to derive holds-at-situation facts, and emits fixture
+purrdf::n3 reasoner to derive holds-at-situation facts, and emits fixture
 vectors per wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw/SCHEMA.md (v1).
 
 Usage (from /Users/sac/graphlaw):
-  cargo build --release -p graphlaw-eyeron
+  cargo build --release --bin n3_derive
   python3 scripts/gen_wasm4pm_graphlaw_vectors.py
 """
 
@@ -18,15 +18,15 @@ import subprocess
 from pathlib import Path
 
 GRAPHLAW = Path("/Users/sac/graphlaw")
-EYERON = Path(
-    os.environ.get("EYERON_BIN", str(GRAPHLAW / "target/release/graphlaw-eyeron"))
+N3_BIN = Path(
+    os.environ.get("N3_BIN", str(GRAPHLAW / "target/release/n3_derive"))
 )
 DEFAULT_OUT = Path(
     "/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/graphlaw"
 )
 
-PURRDF = "2.0.2"
-EYERON_VERSION = "0.7.8"
+PURRDF = "3.0.1"
+N3_ENGINE_VERSION = "3.0.1"
 
 
 def graphlaw_rev():
@@ -57,20 +57,20 @@ def generator_note(rev):
         "situation constants s0..sN (holds(F,do(A,S)) :- causes(F,A); "
         "holds(F,do(A,S)) :- holds(F,S), keeps(F,A), keeps = closed-world "
         "completion of not causes_del), derives holds fluents with "
-        f"graphlaw-eyeron {EYERON_VERSION}, emits SCHEMA.md v1 vectors"
+        f"purrdf-n3 {N3_ENGINE_VERSION} (purrdf fork), emits SCHEMA.md v1 vectors"
     )
 
 
 PREFIX = "@prefix : <http://example.org/sc#> ."
 
 
-def run_eyeron(n3, tag):
-    """Run eyeron; return set of (subject, situation) from derived ':holds' lines."""
+def run_n3_oracle(n3, tag):
+    """Run the n3_derive oracle bin; return set of (subject, situation) from derived ':holds' lines."""
     n3_path = Path(f"/tmp/glvec_{tag}.n3")
     n3_path.write_text(n3)
-    proc = subprocess.run([str(EYERON), str(n3_path)], capture_output=True, text=True)
+    proc = subprocess.run([str(N3_BIN), str(n3_path)], capture_output=True, text=True)
     if proc.returncode != 0:
-        raise RuntimeError(f"eyeron failed on {tag}:\n{proc.stderr}")
+        raise RuntimeError(f"n3_derive failed on {tag}:\n{proc.stderr}")
     holds = set()
     for line in proc.stdout.splitlines():
         parts = line.split()
@@ -157,7 +157,7 @@ def emit_vector(out_dir, vector_id, breed, breed_input, derived_facts,
             "graphlaw_rev": rev,
             "graphlaw_version": graphlaw_version(),
             "purrdf": PURRDF,
-            "eyeron": EYERON_VERSION,
+            "n3_engine": f"purrdf-n3/{N3_ENGINE_VERSION}",
             "generator": generator_note(rev),
             "stratified": False,
         },
@@ -285,7 +285,7 @@ def domain_strips_planval():
     return {
         "intent": (
             "plan validation: given plan close-door1,turn-on-light validated "
-            "step-by-step (pre/add/del + goal reach) against the eyeron oracle"
+            "step-by-step (pre/add/del + goal reach) against the purrdf::n3 oracle"
         ),
         "rules": [
             {"id": "close-door1", "premise": ["door1=open"],
@@ -341,7 +341,7 @@ def main():
     ]:
         dom = dom_fn()
         n3, _ = build_sitcalc_n3(dom["fluents"], dom["actions"], dom["sequence"])
-        holds = run_eyeron(n3, slug)
+        holds = run_n3_oracle(n3, slug)
         sit_final = f"s{len(dom['sequence'])}"
         holds_final = sorted(f for (f, s_) in holds if s_ == sit_final)
         touched = set()
@@ -354,7 +354,7 @@ def main():
                 "/Users/sac/wasm4pm/crates/wasm4pm-cognition/tests/fixtures/papers/"
                 "situation_calculus.json").read_text())
             assert sorted(holds_final) == sorted(papers["expected"]["holds_final"]), (
-                "paper cross-check failed: eyeron != papers fixture")
+                "paper cross-check failed: purrdf::n3 != papers fixture")
             print("  paper cross-check vs papers/situation_calculus.json: OK")
 
         verdicts = {
@@ -362,7 +362,7 @@ def main():
             "frame_persist": f"{len(frame_persist)} fluents persisted by frame inertia",
         }
         notes = (
-            f"Ground truth derived by eyeron N3 progression over explicit "
+            f"Ground truth derived by purrdf::n3 N3 progression over explicit "
             f"situation constants s0..{sit_final}. Frame-persist set "
             f"{frame_persist} = initial fluents never mentioned in any "
             f"executed action's add/del lists (hand-checked)."
@@ -388,7 +388,7 @@ def main():
         plan = dom.get("plan")
         if plan:
             n3, _ = build_strips_n3(initial_atoms, dom["actions"], plan)
-            holds = run_eyeron(n3, slug)
+            holds = run_n3_oracle(n3, slug)
             t_final = f"t{len(plan)}"
             all_atoms = set(initial_atoms)
             for a in plan:
@@ -399,7 +399,7 @@ def main():
                 goal_atom = f"{g['predicate']}={g['value']}"
                 assert goal_atom in final_atoms, (
                     f"plan does not reach goal {goal_atom}; final={final_atoms}")
-            print(f"  eyeron plan replay reaches goal: {final_atoms}")
+            print(f"  purrdf::n3 plan replay reaches goal: {final_atoms}")
         else:
             final_atoms = []
             print("  refusal vector: no plan; breed must refuse")
@@ -412,7 +412,7 @@ def main():
             verdicts["outcome"] = "refused"
             verdicts["refusal_message"] = "unreachable goal within depth 16"
         notes = (
-            "Ground truth derived by eyeron N3 replay of the given plan over "
+            "Ground truth derived by purrdf::n3 N3 replay of the given plan over "
             "explicit time constants t0..tN; each step's pre/add/del encoded "
             "as adds/keeps Datalog, goal reach asserted at tN."
             if plan

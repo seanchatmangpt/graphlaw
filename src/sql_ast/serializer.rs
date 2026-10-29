@@ -399,7 +399,7 @@ impl SelectStatement {
                     if !first {
                         sql.push(' ');
                     }
-                    serialize_frame(frame, sql, params, depth + 1)?;
+                    serialize_frame(frame, sql, depth + 1)?;
                 }
                 sql.push(')');
             }
@@ -566,7 +566,6 @@ impl SetOperationStatement {
 fn serialize_frame(
     frame: &FrameSpec,
     sql: &mut String,
-    params: &mut Vec<SqlLiteral>,
     depth: usize,
 ) -> Result<(), AstError> {
     let _ = depth;

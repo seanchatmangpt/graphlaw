@@ -15,7 +15,9 @@
 //!   `graphlaw::abi::MAX_REQUEST_BYTES` (exit 92, before any allocation),
 //!   and guest execution runs under a per-request fuel budget
 //!   (`FUEL_PER_REQUEST`, exhaustion = typed exit 98) with epoch
-//!   interruption armed.
+//!   interruption driven by a host watchdog that increments the engine epoch
+//!   every 50 ms: a guest stalling past the armed deadline traps `Interrupt`
+//!   and exits typed 99 (`--epoch-ticks` re-arms the deadline).
 //!
 //! Import policy is unchanged: only `wasi_snapshot_preview1` imports are
 //! accepted; anything else is a typed instantiation refusal (exit 96).
@@ -45,13 +47,58 @@ const _: () = assert!(graphlaw::abi::MAX_REQUEST_BYTES <= WALL_BYTES as usize);
 /// trap or an unbounded hang. Reset before every guest execution.
 const FUEL_PER_REQUEST: u64 = 100_000_000_000;
 
-/// Epoch-deadline ticks beyond the current epoch, set once at store creation.
-/// No watchdog increments the engine epoch yet, so the deadline cannot fire
-/// today; arming it (`epoch_interruption(true)` + a finite deadline — the
-/// wasmtime default deadline of 0 traps immediately) makes the wall-clock
-/// strangle path (`Engine::increment_epoch`) available without a behavior
-/// change. A fired deadline surfaces as an interrupt trap → AbiFault (97).
+/// Epoch-deadline ticks beyond the current epoch, re-armed every request
+/// cycle. A host watchdog (`WATCHDOG_INTERVAL`) increments the engine epoch
+/// every 50 ms, so the default `EPOCH_TICKS` (1e9 ≈ 1.6 years) is the
+/// effectively-disarmed production posture: the wall-clock strangle path is
+/// live — `--epoch-ticks N` arms a real deadline and a guest that stalls past
+/// it traps `Interrupt` → typed exit 99.
 const EPOCH_TICKS: u64 = 1_000_000_000;
+
+/// Watchdog cadence: one engine-epoch increment per 50 ms
+/// (SLEEP-CLASS: SCHEDULING — the interval IS the real-world epoch tick the
+/// wasmtime epoch-interruption pattern is defined over; the thread has
+/// nothing else to do between ticks).
+const WATCHDOG_INTERVAL: std::time::Duration = std::time::Duration::from_millis(50);
+
+/// The epoch watchdog: increments the engine epoch every
+/// [`WATCHDOG_INTERVAL`] until the stop flag is set (set on `Drop`, joined —
+/// no orphaned ticker outlives the host).
+struct Watchdog {
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    handle: Option<std::thread::JoinHandle<()>>,
+}
+
+impl Watchdog {
+    fn spawn(engine: Engine) -> Self {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let stop = std::sync::Arc::new(AtomicBool::new(false));
+        let flag = stop.clone();
+        let handle = std::thread::spawn(move || {
+            while !flag.load(Ordering::Acquire) {
+                std::thread::sleep(WATCHDOG_INTERVAL);
+                if flag.load(Ordering::Acquire) {
+                    break;
+                }
+                engine.increment_epoch();
+            }
+        });
+        Watchdog {
+            stop,
+            handle: Some(handle),
+        }
+    }
+}
+
+impl Drop for Watchdog {
+    fn drop(&mut self) {
+        use std::sync::atomic::Ordering;
+        self.stop.store(true, Ordering::Release);
+        if let Some(h) = self.handle.take() {
+            let _ = h.join();
+        }
+    }
+}
 
 #[derive(Debug)]
 enum RunError {
@@ -86,6 +133,10 @@ enum RunError {
     /// Guest spent its entire per-request fuel budget (`FUEL_PER_REQUEST`).
     /// Exit 98 — a budget refusal, not a trap.
     FuelExhausted,
+    /// The watchdog drove the engine epoch past the store deadline while the
+    /// guest ran (`Trap::Interrupt`). Exit 99 — the wall-clock strangle path,
+    /// classified AFTER fuel (98).
+    EpochExpired { ticks: u64 },
 }
 
 impl RunError {
@@ -103,6 +154,7 @@ impl RunError {
             RunError::WasmInstantiation(_) => 96,
             RunError::AbiFault(_) => 97,
             RunError::FuelExhausted => 98,
+            RunError::EpochExpired { .. } => 99,
         }
     }
 
@@ -143,6 +195,10 @@ impl RunError {
             RunError::FuelExhausted => {
                 format!("graphlaw-run-eh: guest exhausted fuel budget {FUEL_PER_REQUEST}")
             }
+            RunError::EpochExpired { ticks } => format!(
+                "graphlaw-run-eh: guest epoch deadline expired after {ticks} ticks \
+                 (wall-clock strangle)"
+            ),
         }
     }
 }
@@ -157,6 +213,7 @@ fn run() -> Result<ExitCode, RunError> {
     let mut wasm: Option<PathBuf> = None;
     let mut expect_blake3: Option<String> = None;
     let mut mode = Mode::Eval;
+    let mut epoch_ticks: Option<u64> = None;
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
         match a.as_str() {
@@ -171,6 +228,10 @@ fn run() -> Result<ExitCode, RunError> {
                 None => {
                     return Err(RunError::Usage("--expect-blake3 needs a hex digest".into()))
                 }
+            },
+            "--epoch-ticks" => match args.next().and_then(|v| v.parse::<u64>().ok()) {
+                Some(t) if t > 0 => epoch_ticks = Some(t),
+                _ => return Err(RunError::Usage("--epoch-ticks needs a tick count > 0".into())),
             },
             other => return Err(RunError::Usage(format!("unknown argument `{other}`"))),
         }
@@ -200,7 +261,7 @@ fn run() -> Result<ExitCode, RunError> {
         }
     }
 
-    let mut host = Host::new(&bytes)?;
+    let mut host = Host::new(&bytes, epoch_ticks.unwrap_or(EPOCH_TICKS))?;
 
     let mut stdin = std::io::stdin().lock();
     let mut stdout = std::io::stdout().lock();
@@ -247,10 +308,12 @@ struct Host {
     alloc: wasmtime::TypedFunc<u32, u32>,
     free: wasmtime::TypedFunc<(u32, u32), ()>,
     call: wasmtime::TypedFunc<(u32, u32), u64>,
+    epoch_ticks: u64,
+    _watchdog: Watchdog,
 }
 
 impl Host {
-    fn new(bytes: &[u8]) -> Result<Self, RunError> {
+    fn new(bytes: &[u8], epoch_ticks: u64) -> Result<Self, RunError> {
         let mut config = Config::new();
         config.wasm_exceptions(true);
         config.wasm_backtrace_details(WasmBacktraceDetails::Enable);
@@ -336,6 +399,8 @@ impl Host {
             call: instance
                 .get_typed_func::<(u32, u32), u64>(&mut store, "gl_call")
                 .map_err(|_| export("gl_call"))?,
+            epoch_ticks,
+            _watchdog: Watchdog::spawn(engine.clone()),
             store,
             memory,
         })
@@ -346,10 +411,13 @@ impl Host {
     fn request_bytes(&mut self, body: &[u8]) -> Result<Vec<u8>, RunError> {
         // Fresh deterministic budget per request: one guest call cannot
         // spend more than FUEL_PER_REQUEST regardless of driver behavior;
-        // exhaustion is classified from Trap::OutOfFuel in `abi_fault`.
+        // exhaustion is classified from Trap::OutOfFuel in `abi_fault`. The
+        // epoch deadline is re-armed for the cycle too (reset BOTH budgets
+        // per request cycle — the enclosure law).
         self.store
             .set_fuel(FUEL_PER_REQUEST)
             .map_err(|e| RunError::AbiFault(format!("set_fuel: {e:#}")))?;
+        self.store.set_epoch_deadline(self.epoch_ticks);
         if body.len() > WALL_BYTES as usize {
             // Memory wall: enforced before any reply can be framed.
             return Err(RunError::Trap);
@@ -357,7 +425,7 @@ impl Host {
         let ptr = self
             .alloc
             .call(&mut self.store, body.len() as u32)
-            .map_err(|e| abi_fault("gl_alloc", e))?;
+            .map_err(|e| abi_fault("gl_alloc", e, self.epoch_ticks))?;
         if ptr == 0 {
             return Err(RunError::AbiFault(
                 "gl_alloc refused a request the caller pre-checked".into(),
@@ -369,7 +437,7 @@ impl Host {
         let packed = self
             .call
             .call(&mut self.store, (ptr, body.len() as u32))
-            .map_err(|e| abi_fault("gl_call", e))?;
+            .map_err(|e| abi_fault("gl_call", e, self.epoch_ticks))?;
         let (out_ptr, out_len) = ((packed >> 32) as u32, (packed & 0xffff_ffff) as u32);
         let mut out = vec![0u8; out_len as usize];
         self.memory
@@ -377,7 +445,7 @@ impl Host {
             .map_err(|e| RunError::AbiFault(format!("memory read: {e}")))?;
         self.free
             .call(&mut self.store, (out_ptr, out_len))
-            .map_err(|e| abi_fault("gl_free", e))?;
+            .map_err(|e| abi_fault("gl_free", e, self.epoch_ticks))?;
         Ok(out)
     }
 }
@@ -385,16 +453,21 @@ impl Host {
 /// Wraps a wasmtime trap into `RunError::AbiFault`, printing the guest
 /// backtrace (one line per frame) to stderr so trap diagnosis does not need
 /// external disassembly. Requires `WasmBacktraceDetails::Enable` for names.
-fn abi_fault(op: &str, e: wasmtime::Error) -> RunError {
+fn abi_fault(op: &str, e: wasmtime::Error, epoch_ticks: u64) -> RunError {
     if let Some(bt) = e.downcast_ref::<wasmtime::WasmBacktrace>() {
         for (i, frame) in bt.frames().iter().enumerate() {
             let name = frame.func_name().unwrap_or("<unknown>");
             eprintln!("graphlaw-run-eh: guest frame #{i} in {op}: {name}");
         }
     }
-    // Fuel exhaustion is a budget refusal (exit 98), not a crash.
+    // Fuel exhaustion is a budget refusal (exit 98), not a crash; the epoch
+    // deadline firing is the wall-clock strangle (exit 99), classified after
+    // fuel.
     if let Some(wasmtime::Trap::OutOfFuel) = e.downcast_ref::<wasmtime::Trap>() {
         return RunError::FuelExhausted;
+    }
+    if let Some(wasmtime::Trap::Interrupt) = e.downcast_ref::<wasmtime::Trap>() {
+        return RunError::EpochExpired { ticks: epoch_ticks };
     }
     RunError::AbiFault(format!("{op}: {e:#}"))
 }

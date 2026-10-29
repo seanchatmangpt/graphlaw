@@ -130,39 +130,24 @@ fn compare(name: &str, index: usize, req: &Value) {
     .panic_for(name, req, &native, &wasm);
 }
 
-/// Host `capabilities` lists `frozen-duckdb`. The wasm module does not link
-/// that engine, so its authority list omits it. Every other field, including
-/// both digests, stays byte-for-field identical.
+/// Since the EH closure the wasm module links frozen-duckdb as part of the
+/// ONE unit (repo law: DuckDB is not a feature), so host and wasm advertise
+/// the SAME authority list — compared for full equality now. Every field,
+/// including both digests, stays byte-for-field identical.
 fn compare_capabilities(native: &[u8], wasm: &[u8]) {
     let n: Value = serde_json::from_slice(native).expect("native capabilities JSON");
     let w: Value = serde_json::from_slice(wasm).expect("wasm capabilities JSON");
-    let n_auth = n["authorities"].as_array().expect("native authorities");
-    let w_auth = w["authorities"].as_array().expect("wasm authorities");
-    assert!(
-        n_auth.iter().any(|a| a["authority"] == "frozen-duckdb"),
-        "host capabilities dropped frozen-duckdb: {n}"
+    assert_eq!(
+        n["authorities"], w["authorities"],
+        "native and wasm authority lists diverged: {{native: {n}, wasm: {w}}}"
     );
     assert!(
-        w_auth.iter().all(|a| a["authority"] != "frozen-duckdb"),
-        "wasm capabilities still advertise frozen-duckdb: {w}"
-    );
-    let stripped: Vec<Value> = n_auth
-        .iter()
-        .filter(|a| a["authority"] != "frozen-duckdb")
-        .cloned()
-        .collect();
-    assert_eq!(
-        stripped.as_slice(),
-        w_auth.as_slice(),
-        "authority lists diverge beyond frozen-duckdb"
-    );
-    let mut n_rest = n.clone();
-    let mut w_rest = w.clone();
-    n_rest.as_object_mut().unwrap().remove("authorities");
-    w_rest.as_object_mut().unwrap().remove("authorities");
-    assert_eq!(
-        n_rest, w_rest,
-        "capabilities fields other than authorities diverged"
+        n["authorities"]
+            .as_array()
+            .expect("native authorities")
+            .iter()
+            .any(|a| a["authority"] == "frozen-duckdb"),
+        "capabilities dropped frozen-duckdb — the ONE-unit law broke: {n}"
     );
 }
 

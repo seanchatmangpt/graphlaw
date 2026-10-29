@@ -28,7 +28,7 @@ additional_cargo_test_args = [
   "--test", "abi_response_builders_court",
 ]
 
-# Rebuilding purrdf/eyeron after each mutation is slow: scale the baseline
+# Rebuilding purrdf/purrdf-n3 after each mutation is slow: scale the baseline
 # test time generously and never go below a floor that covers a cold relink.
 timeout_multiplier = 6.0
 minimum_test_timeout = 60.0

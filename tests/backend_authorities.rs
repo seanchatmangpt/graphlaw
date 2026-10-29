@@ -5,7 +5,7 @@ const _: () = assert!(!LEGACY_FALLBACK_ENABLED);
 #[test]
 fn authority_manifest_names_external_backends() {
     assert!(BACKEND_AUTHORITIES.iter().any(|a| a.authority == "purrdf"));
-    assert!(BACKEND_AUTHORITIES.iter().any(|a| a.authority == "eyeron"));
+    assert!(BACKEND_AUTHORITIES.iter().any(|a| a.authority == "purrdf::n3"));
 }
 
 #[test]
@@ -20,7 +20,7 @@ fn purrdf_parses_rdf_without_graphlaw_parser_code() {
 }
 
 #[test]
-fn eyeron_executes_n3_without_graphlaw_reasoner_code() {
+fn purrdf_n3_executes_n3_without_graphlaw_reasoner_code() {
     let program = r#"
         @prefix : <https://example.org/> .
         :s :kind :Human .
@@ -36,9 +36,9 @@ fn purrdf_executes_sparql_without_graphlaw_query_engine() {
     use graphlaw::sparql::NativeSparqlEngine;
 
     let mut builder = RdfDatasetBuilder::new();
-    let cat = builder.intern_iri("https://example.org/cat");
-    let says = builder.intern_iri("https://example.org/says");
-    let meow = builder.intern_literal(RdfLiteral::simple("meow"));
+    let cat = builder.intern_iri("https://example.org/cat").expect("intern");
+    let says = builder.intern_iri("https://example.org/says").expect("intern");
+    let meow = builder.intern_literal(RdfLiteral::simple("meow")).expect("intern");
     builder.push_quad(cat, says, meow, None);
     let dataset = builder.freeze().expect("valid dataset");
 

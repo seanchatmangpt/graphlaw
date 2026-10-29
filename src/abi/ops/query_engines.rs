@@ -38,14 +38,15 @@ pub(in crate::abi) fn op_sparql(v: &Value) -> Res<Value> {
 pub(in crate::abi) fn op_shacl(v: &Value) -> Res<Value> {
     let data = state_field(v, "data")?;
     let shapes_text = str_field(v, "shapes")?;
-    // Bound shape-nesting depth BEFORE the evaluator recurses (see law.rs
-    // Step::AdmitShacl for the same guard, rendered there as a SHACL result);
-    // here it surfaces as the typed ResourceLimit refusal.
-    if let Err(over) = crate::shacl_guard::check_shape_depth(shapes_text) {
+    // Bound shape-nesting depth / degree / quads / bytes BEFORE the evaluator
+    // recurses (see law.rs Step::AdmitShacl for the same guard, rendered
+    // there as a SHACL result); here it surfaces as the typed ResourceLimit
+    // refusal.
+    if let Err(over) = crate::shacl_guard::check_shape_limits(shapes_text) {
         return Err(limit(
-            "shacl_validation_depth",
-            over.observed,
-            crate::shacl_guard::MAX_SHACL_VALIDATION_DEPTH,
+            over.limit_name(),
+            over.observed(),
+            over.cap(),
         ));
     }
     let shapes = crate::shacl::engine::parse_shapes(shapes_text, opt_str(v, "base"))
@@ -61,7 +62,7 @@ pub(in crate::abi) fn op_shacl(v: &Value) -> Res<Value> {
             "severity": format!("{:?}", r.severity),
             "component": r.source_constraint_component.to_string(),
             "shape": r.source_shape.to_string(),
-            "message": r.message,
+            "message": r.messages.first().map(|l| l.value().to_string()),
         })).collect::<Vec<_>>(),
     }))
 }
@@ -227,6 +228,15 @@ pub(in crate::abi) fn op_datalog(v: &Value) -> Res<Value> {
 pub(in crate::abi) fn op_n3(v: &Value) -> Res<Value> {
     let out = crate::law::reason_n3_bounded(str_field(v, "text")?).map_err(|e| match e {
         crate::law::N3Error::Refused(r) => Fail::from(r),
+        crate::law::N3Error::Fuse { report } => super::super::fail_with_details(
+            Refusal {
+                kind: RefusalKind::Fuse,
+                dialect: Some(Dialect::N3),
+                engine: Some(Dialect::N3.engine()),
+                message: report.clone().into(),
+            },
+            json!({"code": "Fuse", "message": report}),
+        ),
         crate::law::N3Error::Limit {
             limit: name,
             observed,

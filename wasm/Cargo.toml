@@ -5,9 +5,9 @@ name = "graphlaw-wasm"
 # Re-pin registry/ARTIFACTS.blake3 and priv/graphlaw.wasm.blake3 from a real
 # `cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`
 # in the same commit as any further version bump. Do not fabricate a digest.
-version = "26.10.22"
+version = "26.10.28"
 edition = "2024"
-rust-version = "1.96"
+rust-version = "1.98"
 license = "MIT AND LicenseRef-P28-SIL-2.1.0"
 description = "GraphLaw as a WebAssembly module: a JSON-over-linear-memory ABI for hosts such as Elixir (Wasmex)"
 publish = false
@@ -16,7 +16,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-graphlaw = { path = "..", features = ["abi", "wasi-patched-deps"] }
+graphlaw = { path = "..", features = ["abi"] }
 
 # Size-optimised profile for the WebAssembly module (`--profile wasm`); kept
 # separate so native release builds and tests are unaffected.

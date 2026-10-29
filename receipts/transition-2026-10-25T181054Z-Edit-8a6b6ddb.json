@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "8a6b6ddb334af89fdef80918aac02c8a34ee332494add1b3c65dd8add49df597",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-10-25T181054Z-Edit-8a6b6ddb.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/PHD_THESIS_GRAPHLAW_WASM_SQLRDF.md",
+  "timestamp_utc": "2026-10-25T181054Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

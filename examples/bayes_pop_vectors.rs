@@ -57,8 +57,8 @@ use graphlaw::datalog::seminaive::{compile, evaluate};
 use graphlaw::datalog::store::RelationStore;
 use serde_json::{Value, json};
 
-const PURRDF: &str = "2.0.2";
-const EYERON: &str = "0.7.9";
+const PURRDF: &str = "3.0.1";
+const N3_ENGINE: &str = "purrdf-n3/3.0.1";
 
 // ------------------------------------------------------------- engine plumbing
 
@@ -977,7 +977,7 @@ fn main() {
                 "provenance": {
                     "graphlaw_rev": rev,
                     "purrdf": PURRDF,
-                    "eyeron": EYERON,
+                    "n3_engine": N3_ENGINE,
                     "generator": "bayes_pop_vectors",
                     "stratified": true,
                     "datalog_program": {
@@ -1057,7 +1057,7 @@ fn main() {
                 "provenance": {
                     "graphlaw_rev": rev,
                     "purrdf": PURRDF,
-                    "eyeron": EYERON,
+                    "n3_engine": N3_ENGINE,
                     "generator": "bayes_pop_vectors",
                     "stratified": true,
                     "datalog_program": {
