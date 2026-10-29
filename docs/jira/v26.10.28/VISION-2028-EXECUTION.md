@@ -64,3 +64,9 @@ consumed" naming exact files+lines and stating why the artifact differs
 from or delegates to what exists. A design that re-derives a sibling
 checkout's content is a REFUSED deliverable. graphlaw/src stays unread
 while the mutation court holds it solo.
+
+Prior-art map additions (2026-10-29): /Users/sac/beam4pm (process-mining
+substrate — GL28-1's OCEL 2.0 consumer side may already exist there; search
+before building the wasm4pm stream) and /Users/sac/xaas (the portfolio
+control plane — GL28-2/GL28-4 egress consumers; check its receipt/attestation
+layers before drafting the EU exporter transport).
