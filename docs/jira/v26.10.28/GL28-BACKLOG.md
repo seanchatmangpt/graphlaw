@@ -3,9 +3,32 @@
 Part A (landed substrate) carries the receipts in RECEIPTS.md and the live
 GitHub release. Parts B-D below are the honest gaps between the Vision 2028
 C4 model and the tree, each with its typed falsifier. Sequencing:
-GL28-9 -> GL28-10 (close the window), GL28-6 -> GL28-7 -> GL28-5 (enforcement
+GL28-9 -> GL28-10 (close the window), GL28-6 -> GL28-7 (enforcement
 teeth), GL28-1 -> GL28-8 (Article 12 persistence), GL28-2/GL28-3 (large
 integrations), GL28-4/GL28-13/GL28-11/GL28-12 parallelizable.
+
+## Sync 2026-10-28 (state re-read at write time)
+
+- **GL28-5 — LANDED.** `documentation/reference/conformance_claim.md`
+  exists on disk (verified this sync). The enforcement-teeth sequencing
+  slot GL28-5 held is closed; no further order re-asks for it.
+- **GL28-6 — DESIGN filed** (`GL28-6-KILLSWITCH-DESIGN.md`, this dir);
+  implementation lane in flight. Standing: DESIGN, not LANDED.
+- **GL28-7 — DESIGN filed** (`GL28-7-AUTHORITY-PORT-DESIGN.md`, this dir);
+  implementation lane in flight. Standing: DESIGN, not LANDED.
+- **GL28-13 — census filed** (`GL28-13-SLIMMING-CENSUS.md`): ICU drop
+  (−3 MB) + MinSizeRel wasm32 rebuild (−10–18 MB) restores the original
+  64 MiB gate without the 80 MiB SCAR ceiling.
+- **GL28-2 — spec filed** (`GL28-2-SMALT-WIRE-SPEC.md`); implementation
+  not started. Standing: DESIGN.
+- **Upstream pack** — branch `blake3-digest-keys` @ `041a039ae` landed in
+  /Users/sac/ggen-marketplace (verified: branch checked out, HEAD
+  matches; 48 files, unpushed). Standing: LANDED-local,
+  BLOCKED-external(push).
+- **npm unblock path documented** (`receipts/2026-10-24-npm-attempt-ledger.md`):
+  first publish manual, then Trusted Publisher mapping (2-day expiry);
+  hex publish path documented (dry-run needs no auth). Standing:
+  DOCUMENTED, publish itself BLOCKED-external.
 
 ## Part B — drawn but unbuilt
 
@@ -25,8 +48,8 @@ integrations), GL28-4/GL28-13/GL28-11/GL28-12 parallelizable.
 ## Part C — thin enforcement paths
 
 - **GL28-5** Reclassify seed receipts under the EU-Article vocabulary — S.
-  documentation/reference/conformance_claim.md naming court -> article clause,
-  receipt-gated, falsifier column.
+  **LANDED 2026-10-28**: documentation/reference/conformance_claim.md naming
+  court -> article clause, receipt-gated, falsifier column.
 - **GL28-6** Article 14 kill-switch — M. Operator-held Ed25519 revocation
   lease checked per call by EngineLoad/Host; court: revocation stops
   actuation with a typed refusal, flip-twin with an honest survivor.
@@ -49,3 +72,16 @@ integrations), GL28-4/GL28-13/GL28-11/GL28-12 parallelizable.
 - **GL28-12** npm publish (executed 2026-10-29 — see RECEIPTS) + mix
   hex.publish decision.
 - **GL28-13** wasm slimming SCAR (80 MiB ceiling is carrying cost).
+
+### GL28-3 discovery (2026-10-29 census)
+
+Both repos on disk (/Users/sac/ferroplan, /Users/sac/autofde-lab). The seam
+is more wired than the C4 draws: graphlaw `Policy::admit`
+(src/policy.rs:466-471) already consumes ferroplan `UniversalPlan` JSON
+(planning_runtime.rs:313; PlanStep carries start + duration at :288-294),
+and graphlaw_ex exposes `policy` as one of the 14 typed verbs. Gaps to
+close for C01: (a) `glx:CandidatePlan` RDF projection (only `ce:`
+vocabulary exists, upstream in chatman-ecosystem.ttl:15-16); (b) explicit
+step-dependency edges (implicit in tsched.rs:93-185 consume/produce
+logic, not materialized on the plan struct); (c) the lease-ceiling court
+(`c01_plan_lease_court`) against `Capability.API.law/2`/`policy/2`.
