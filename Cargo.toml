@@ -187,7 +187,7 @@ features = ["abi", "evidentiary-ring", "pack-tools"]
 # tests keep their unconditional dev-dependency below.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 wasmtime = { version = "48", optional = true, features = ["runtime"] }
-wasmtime-wasi = { version = "48", optional = true }
+wasmtime-wasi = { version = "50", optional = true }
 # GWS-18 successor: hosts the DuckDB-linked wasm artifact with wasmtime 48
 # new-style EH (Config::wasm_exceptions). The frozen-duckdb wasm static
 # archive is rebuilt with -fwasm-exceptions -mllvm -wasm-use-legacy-eh=0
@@ -199,7 +199,7 @@ divan = "0.1"
 # EH lifecycle court (tests/wasm_duckdb_lifecycle_eh.rs): hosts the
 # DuckDB-linked artifact under wasmtime 48 with new W3C exceptions.
 wasmtime = { version = "48", features = ["runtime"] }
-wasmtime-wasi = "48"
+wasmtime-wasi = "50"
 serde_json = "1"
 hdrhistogram = "7"
 
