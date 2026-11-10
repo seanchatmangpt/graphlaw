@@ -1,12 +1,15 @@
 # runner-exit-codes
 
+As of 2026-11-09: table re-diffed against `RunError::code`/`diagnostic` in
+`src/bin/graphlaw_run_eh.rs` (codes 0, 2, 84, 86, 90-99; all match).
+
 Typed exit codes for the graphlaw stdio runner. Source of truth:
 `src/bin/graphlaw_run_eh.rs` (`RunError::code`). Diagnostics are one line on
 stderr; malformed input never panics the runner — every failure is typed.
 Exit codes are stable; courts depend on them.
 
 The legacy `graphlaw-run` wasmi host was retired 2026-10-24
-(`docs/jira/v26.10.23/ADR-wasmi-retirement.md`); `graphlaw-run-eh` is the sole
+(`docs/adr/ADR-wasmi-retirement.md`); `graphlaw-run-eh` is the sole
 packet-4 stdio runner and every exit code below is stub-compatible with the
 retired host's contract.
 
@@ -33,8 +36,8 @@ raw trap or hang, and a guest stalling past the armed epoch deadline traps
 | 84 | Digest mismatch (`--expect-blake3`) | `ARTIFACT DIGEST MISMATCH` | Re-pin or rebuild. |
 | 86 | Guest trap (`--crash`, or > 64 MiB) | `guest trap` | Court fixture; shrink payload. |
 | 90 | EOF mid-frame | `EOF mid-frame` | Fix the driver. |
-| 92 | Frame length prefix exceeds MAX_REQUEST_BYTES | `frame length <len> exceeds cap <cap>` | Driver: chunk or shrink the frame. |
 | 91 | Stdin read error | `stdin read error: <io>` | Fix driver/pipe. |
+| 92 | Frame length prefix exceeds MAX_REQUEST_BYTES | `frame length <len> exceeds cap <cap>` | Driver: chunk or shrink the frame. |
 | 93 | Malformed envelope (bad base64) | `malformed envelope` | Fix the payload. |
 | 94 | Non-JSON ABI response | `non-JSON response: <e>` | Rebuild the artifact. |
 | 95 | Invalid wasm (or engine config) | `invalid wasm artifact: <e>` | Rebuild or repoint. |
@@ -78,7 +81,7 @@ an `_initialize` trap are also 96.
 
 ## `--wasm` / `GRAPHLAW_WASM` resolution ladder
 
-Resolution order in `graphlaw_run_eh.rs` (178-185):
+Resolution order in `graphlaw_run_eh.rs` (`args` parse and `wasm_path` fallback chain, ~lines 220-250):
 
 1. `--wasm <path>` — highest precedence; missing value is exit 2.
 2. `GRAPHLAW_WASM` env var, when `--wasm` is absent.
@@ -100,7 +103,7 @@ obtain a digest: `b3sum target/.../graphlaw_wasm.wasm` or the pinned row in
 ## Courts
 
 - `tests/graphlaw_run_eh_court.rs` — black-box court over the real binary:
-  witnessed 7/0 (7 passed, 0 failed) covering 0, 84, 90, 95, 96 (non-WASI
+  7 `#[test]` fns (witnessed 7/0 on 2026-10-24; not re-run this pass) covering 0, 84, 90, 95, 96 (non-WASI
   import and missing-ABI-exports legs), and 97 (pending artifact-pin
   capabilities frame, loud pending-skip until the pin lands).
 - `tests/wasm_enclosure_court.rs` — the hard-enclosure court: per-op fuel
@@ -108,7 +111,7 @@ obtain a digest: `b3sum target/.../graphlaw_wasm.wasm` or the pinned row in
   envelopes, the epoch-stall leg, the 9000-frame leaking campaign, the
   63/64 + 31/33 stack probes, and the runner's exit-99 watchdog leg.
 - `tests/wasm_frame_bound_court.rs` — frame-bound court over the same binary
-  (EH legs; the wasmi legs were retired with the host).
+  (4 `#[test]` fns as of 2026-11-09: the EH legs; the wasmi legs were retired with the host).
 - `docs/how-to/run-the-wasm-module.md` — operator how-to for driving the
   runner.
 

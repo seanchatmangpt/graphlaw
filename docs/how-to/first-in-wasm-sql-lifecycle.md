@@ -8,11 +8,16 @@ quads, close, and then watch an unbounded DELETE get refused typed.
 Ground truth for the wire shapes: `docs/DIALECTS.md`
 ("DuckDB op session mode" and "Document sequences" sections).
 
-Prerequisites: a checkout of `/Users/sac/graphlaw`, Python 3 for the driver
-script, and `WASI_SDK_PATH` pointing at a wasi-sdk root
-(`bin/clang` + `share/cmake/wasi-sdk-p1.cmake`). On this machine the
-frozen-duckdb cache root doubles as one:
-`$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1`.
+Prerequisites: a checkout of `/Users/sac/graphlaw` (crate `26.10.28`, Rust 1.98),
+Python 3 for the driver script, and `WASI_SDK_PATH` pointing at a wasi-sdk root
+(`bin/clang` + `share/cmake/wasi-sdk-p1.cmake`). The canonical build recipe
+(including the EH target-feature, without which the link fails with
+`undefined _Unwind_GetWasmLPadContext`) lives in `docs/WASM.md`; this tutorial
+only needs the runner and a built or pinned artifact. If you do not want to build
+the module, `priv/graphlaw.wasm` is the pinned prebuilt artifact. As of
+2026-11-09 the SQL steps in sections 4-8 are transcripts from the 2026-10-23 run
+against an earlier pin; wire shapes are unchanged but hashes, sizes and timings
+will differ on your run.
 
 ## 0. How the pieces fit
 
@@ -37,7 +42,8 @@ frames of a scenario to ONE runner process; do not restart per frame.
 
     cargo build --features runner-eh --bin graphlaw-run-eh
 
-Real output (this build, 2026-10-23):
+Real output (a 2026-10-23 build at crate 26.10.22 — the crate is now 26.10.28, so
+the banner version differs; captured transcript, not a 2026-11-09 run):
 
     Compiling graphlaw v26.10.22 (/Users/sac/graphlaw)
     Compiling purrdf v2.0.2
@@ -46,21 +52,20 @@ Real output (this build, 2026-10-23):
 
 ## 2. Build the artifact
 
-    WASI_SDK_PATH="$HOME/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1" \
+    WASI_SDK_PATH=/Users/sac/wasi-sdks/wasi-sdk-34 \
+    CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling" \
     cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 
-Illustrative transcript (not a captured run — the current tree compiles
-`purrdf-n3 v3.0.1`; banner order and timings vary):
+Illustrative transcript (not a captured run; banner order, crate versions and
+timings vary — expect `graphlaw-wasm v26.10.28`):
 
-    Compiling purrdf-n3 v3.0.1
-    Compiling purrdf v3.0.1
-    Compiling graphlaw-wasm v26.10.22 (/Users/sac/graphlaw/wasm)
+    Compiling graphlaw-wasm v26.10.28 (/Users/sac/graphlaw/wasm)
     Finished `wasm` profile [optimized] target(s) in 4m 00s
 
-This lands at
-`target/wasm32-wasip1/wasm/graphlaw_wasm.wasm` (~57 MB). A
-previously-materialized copy of the same module also lives at
-`priv/graphlaw.wasm`; the runs below used it. (Without `WASI_SDK_PATH` the
+This lands at `target/wasm32-wasip1/wasm/graphlaw_wasm.wasm` (the pinned
+artifact `priv/graphlaw.wasm` is 62,909,537 B, ~63 MB, per
+`registry/ARTIFACTS.blake3` as of 2026-11-09). The runs below used the
+pinned copy at `priv/graphlaw.wasm`. (Without `WASI_SDK_PATH` the
 frozen-duckdb-sys `build.rs` refuses typed: "WASI_SDK_PATH required".)
 
 ## 3. Write the frame driver
@@ -107,6 +112,7 @@ tutorial author on the first run.)
 
 The SQL fixtures are Turtle documents from the FIBO court-matrix set
 (`tests/fixtures/fibo/`, described in
+`tests/fixtures/fibo/README.md` and
 `docs/jira/v26.10.22/designs/fibo-pm4py-court-matrix.md`). SQL-in-RDF means
 the *admission record is a graph*: each fixture is a `sql:Statement` node the
 module SHACL-validates, compiles to SQL, and executes.
@@ -260,7 +266,7 @@ for the bounded-UPDATE twin.
 
 ## Recap
 
-You built the EH runner and the 57 MB module, spoke packet-4, kept one
+You built the EH runner and the ~63 MB module, spoke packet-4, kept one
 session alive across CREATE → INSERT → SELECT, drained the result as nquads,
 closed cleanly, and watched the SHACL layer refuse an unbounded DELETE typed
 before the engine ever saw it. Next steps: whole-document sequences
@@ -271,7 +277,9 @@ the court files `tests/wasm_fibo_fixtures_eh.rs` and
 
 ## Verification (receipt)
 
-Every step above was executed while writing this tutorial, 2026-10-23:
+Every step above was executed while writing this tutorial, 2026-10-23 (scratch
+drivers `/tmp/first_sql_frames*.py` were throwaway copies of the section 3 driver
+and are not in the tree; the transcripts embedded above are the receipt):
 
 - `cargo build --features runner-eh --bin graphlaw-run-eh` — exit 0,
   "Finished `dev` profile ... in 7m 57s" (embedded above).

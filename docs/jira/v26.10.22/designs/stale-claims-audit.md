@@ -1,5 +1,7 @@
 # Stale-claims audit — v26.10.22 (skeptic lane, read-only)
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 Date: 2026-10-22. The REFUSAL-04 trigger, the `feature duckdb` sentences, the 25 MiB ceiling, and the CLAUDE.md default-features comment were corrected later the same day. `registry/capability-registry.json` and `.ttl` still carry the old DuckDb field sentence until `graphlaw-registry` is regenerated (no build was run for that). Scope of the original pass: stale doc claims, dead architecture references,
 unverifiable assertions, wrong-premise tests. Read-only on code; this report is
 the only write. Concurrent lanes are editing this tree — every finding carries
@@ -13,7 +15,7 @@ a lane-in-flight note where applicable.
 
 - **File:line:** `docs/wasm-integration.md:107-131`
 - **Stale text:** "digest `cbc80f07346f025d4e1cd001f21d15474928cb055d4b1a9c0ac7c31c5938dc6a` … 6,654,496 bytes … Minted at the **26.10.13** source state … `wasm/Cargo.toml` reads `version = "26.10.13"`" (historical)
-- **Correction:** The live pin is `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`, 6,793,617 B, `pin-source=26.10.21`; `wasm/Cargo.toml` reads `version = "26.10.21"`.
+- **Correction:** The live pin is `332ea218…c30c`, 6,793,617 B, `pin-source=26.10.21`; `wasm/Cargo.toml` reads `version = "26.10.21"`.
 - **Evidence:** `cat registry/ARTIFACTS.blake3` → `wasm 332ea218…2c30c 6793617 graphlaw_wasm.wasm`, header `pin-source=26.10.21`; `grep '^version' wasm/Cargo.toml` → `26.10.21`; `ls -l priv/graphlaw.wasm` → 6,793,617 B Oct 22 12:56; `b3sum priv/graphlaw.wasm` → `332ea218…2c30c` (matches pin).
 - Note: `docs/WASM.md` step 7 of the upgrade checklist already names this file's
   pin section as a pending update; still stale as read.

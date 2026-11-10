@@ -1,15 +1,15 @@
 # js
 
-JavaScript/TypeScript distribution of GraphLaw: the npm package `graphlaw`, a
+JavaScript/TypeScript distribution of GraphLaw: the npm package `@seanchatmangpt/graphlaw`, a
 typed client over the pinned wasm32-wasip1 artifact — no wasm-bindgen, no
 second implementation of any engine. Embedded analytical pushdowns are powered by `frozen-duckdb 2.0` within a strict 64 MB WASM boundary.
 
 ## What this is
 
-Package `graphlaw` wraps the single byte-pinned wasm32-wasip1 artifact built
+Package `@seanchatmangpt/graphlaw` wraps the single byte-pinned wasm32-wasip1 artifact built
 from this repo. Node (>= 20, ESM) and browsers/bundlers use the same
-zero-dependency WASI preview1 stub set — the wasm module imports only 7
-trivial `wasi_snapshot_preview1` functions, satisfied by a self-contained stub
+zero-dependency WASI preview1 stub set — the wasm module imports 28
+`wasi_snapshot_preview1` functions (`npm/src/wasi-stubs.ts`), satisfied by a self-contained stub
 shim in the client, so no external WASI runtime or shim package is needed
 anywhere. There is no wasm-bindgen layer — the
 same artifact bytes are driven through the JSON ABI in every runtime, so
@@ -20,10 +20,10 @@ engine behavior.
 
 | path | contents |
 |---|---|
-| `npm/` | package root (`graphlaw`) |
+| `npm/` | package root (`@seanchatmangpt/graphlaw`, version `26.10.28` as of 2026-11-09) |
 | `npm/src/` | hand-written TypeScript sources (client, runtime, wire, errors, limits) |
 | `npm/src/generated/` | generated from `registry/capability-registry.json` — do not edit |
-| `npm/scripts/` | codegen and build scripts (`gen-types.mjs`, `build.mjs`, `sync-version.mjs`) |
+| `npm/scripts/` | codegen and build scripts (`gen-types.mjs`, `build.mjs`, `assemble.mjs`, `pack-smoke.mjs`, `sync-version.mjs`) |
 | `npm/test/` | vitest suites (node project, browser project, corpus, limits, forward-compat) |
 | `HANDWRITTEN.md` | ledger of hand-written vs generated surfaces |
 
@@ -34,8 +34,12 @@ cd js/npm
 npm install
 npm run gen      # regenerate src/generated/ from registry/capability-registry.json
 npm run build    # gen + bundle (build.mjs) + tsc -p tsconfig.build.json
-npm test         # vitest run --project node
+npm test         # vitest run
 ```
+
+Publish status: npm `latest` is `26.10.14` (re-read 2026-11-09); `26.10.28` is
+awaiting the operator-gated Trusted Publisher leg (GL28-12 in
+`docs/jira/v26.10.28/RECEIPTS.md`).
 
 Browser suite: `npm run test:browser`. Lint/pack checks: `npm run lint:pkg`
 (`publint` + `attw`).

@@ -115,7 +115,7 @@ required-features = ["abi"]
 
 # EH-capable host (wasmtime 48, new W3C exceptions) for the DuckDB-linked
 # artifact — the sole packet-4 stdio runner after the wasmi retirement
-# (docs/jira/v26.10.23/ADR-wasmi-retirement.md).
+# (docs/adr/ADR-wasmi-retirement.md).
 [[bin]]
 name = "graphlaw-run-eh"
 path = "src/bin/graphlaw_run_eh.rs"

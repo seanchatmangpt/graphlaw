@@ -5,6 +5,12 @@
 > SQLRDF-01..SQLRDF-11 were written. It is **not** a fetched W3C publication,
 > and its W3C status claims below are document text, not facts asserted by
 > this repository.
+>
+> **As of 2026-11-09:** unchanged as the conformance text for graphlaw; the
+> normative text below is not edited. Later tickets (SQLRDF-12..SQLRDF-28) extend
+> the implemented surface, see `docs/refusals.md` and
+> `docs/reference-generated/sql-rdf-conformance.md` (regenerated from
+> `cargo test --test sql_rdf_conformance`). Cite by section.
 
 **World Wide Web Consortium (W3C Recommendation 22 October 2026)**
 

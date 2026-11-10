@@ -1,5 +1,7 @@
 # SQLRDF-23 Design: Statement Sequences (G5)
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 Status: verified design (anchors read from the tree 2026-10-23)
 Ticket: SQLRDF-23 (this window)
 Owner lane: docs lane (this file + INDEX row only)

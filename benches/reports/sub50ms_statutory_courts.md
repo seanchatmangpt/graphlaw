@@ -1,5 +1,11 @@
 # sub50ms_statutory_courts
 
+As of 2026-11-09: **the timing figures below are from the 2026-10-26 run and were
+not re-run in this pass.** Re-verified against sources on this date: ceilings
+(500 us / 5 ms / 30 ms, 40 ms budget, 50 ms strict) and iteration counts (full run
+SHACL 2,000, N3 400; `--quick` 400 / 100) match `benches/statutory_boundary_50ms.rs`
+(lines 21, 132-133, 227-244); the `[[bench]]` entry exists in `Cargo.toml`.
+
 Statutory boundary benchmark report: the 80/20 EU-AI-Act operational envelope
 (Art. 12 logging, Art. 14 fail-closed oversight, Art. 15 deductive
 traceability), measured on the real `graphlaw` pipeline — real BLAKE3 receipt
@@ -64,12 +70,15 @@ run's measured numbers.
 
 ## Witnesses (all from this tree)
 
-- `graphlaw_wasm.wasm` — 60,880,445 B, links and executes N3 inside the
+- `graphlaw_wasm.wasm` — 60,880,445 B at the 2026-10-26 run (the artifact today is
+  62,909,537 B, the 2026-10-29 GL28-13 relink, `priv/graphlaw.wasm` re-read
+  2026-11-09; `tests/wasm_size_court.rs` carries the live ceiling), links and executes N3 inside the
   module (`wasm_abi` 71 passed, `chicago_cross_authority` 25 passed,
   `wasm_n3_admission` 3 passed, `wasm_size_court` 4/4).
 - Receipt hot path: `benches/tc_hot_01.rs` (anchored fold ≤ 250 ns p99
   reference, consistent with this run's flat 125 ns).
-- Migration + audit receipts: `receipts/2026-10-25-n3-upstreaming-purrdf.md`.
+- Migration + audit receipts: `receipts/2026-10-25-n3-upstreaming-purrdf.md`
+  (archived out of the tree; `git show 095ce07:receipts/2026-10-25-n3-upstreaming-purrdf.md`).
 
 ## Honest caveats (binding)
 
@@ -78,7 +87,7 @@ run's measured numbers.
    proof trees; the defensible differentiator is sealed, machine-checkable
    wire artifacts vs. narrative diagnostics, plus in-sandbox execution.
 2. The 2026-10-25 audit
-   (`docs/jira/v26.10.23/n3-audit-100-report.md`) holds verdict
+   (`docs/reference/n3-audit-100-report.md`, read it for the current verdict) held verdict
    **conditional**: the N3 proof pipeline's court coverage is being closed in
    the current fix wave. This bench is now a positive witness for Art. 15
    latency and completeness (incomplete fixpoints fail the gate), but it does

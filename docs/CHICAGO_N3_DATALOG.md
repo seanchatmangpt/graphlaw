@@ -2,7 +2,8 @@
 
 ## Purpose
 
-This court is the bounded v26.10.1 smoke test for GraphLaw's two rule-language
+This court is the bounded 80/20 smoke test (introduced in v26.10.1; re-read against
+`tests/chicago_n3_datalog.rs` on 2026-11-09, 6 `#[test]` functions) for GraphLaw's two rule-language
 authorities. It deliberately tests the small set of invariants that catch a
 large fraction of semantic regressions without claiming exhaustive conformance.
 
@@ -58,12 +59,22 @@ PASS does not mean:
 - support for every N3 builtin or Datalog extension;
 - a performance superiority claim.
 
-Those belong to larger v26.10.1 corpus and benchmark courts.
+Those belong to larger corpus and benchmark courts, none of which are part of this court.
 
 ## Execution
 
-The dedicated CI step is:
+Run the court alone with:
 
-cargo test --all-features --test chicago_n3_datalog
+    cargo test --all-features --test chicago_n3_datalog
 
-The normal full test suite also executes the same integration test.
+As of 2026-11-09 `.github/workflows/` has no step dedicated to this court by name; the
+full-suite jobs in `ci.yml` (`cargo test --locked --all-targets --features
+pack-tools,abi,evidentiary-ring`) compile and execute it as part of the whole suite.
+
+The 6 tests map to the court list above: implication/chaining (1-2) in
+`w3c_n3_implication_and_chaining_fire`, order invariance (3) in
+`n3_semantics_are_invariant_to_statement_order`, exact least fixpoint including the c/b
+cycle (4-5) in `souffle_transitive_closure_example_has_exact_least_fixpoint`, Datalog order
+invariance (6) in `datalog_fixpoint_is_invariant_to_fact_and_rule_order`, N3/Datalog
+agreement (7) in `n3_and_datalog_agree_on_the_shared_recursive_closure`, fail-closed (8) in
+`malformed_n3_and_malformed_datalog_fail_closed`.

@@ -1,5 +1,7 @@
 # CHARTER-DFLSS.md
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 > **UNVERIFIED CHARTER TEXT**: The operator's charter ("Project Charter &
 > Industrial Verification Dossier: The Invariant Data Substrate", DMEDI Track
 > Phase 5) was dispatched to this milestone by summary only. No verbatim
@@ -21,14 +23,14 @@ still absent (NOT-MET — see checklist).
 **Refusal latency** — dispatch-carried 0.10 µs — **UNVERIFIED / NOT-MET**:
 timed but UNGATED (no 100ns assert exists), the zero-alloc
 `RefusalMessage::Static` fast path is not landed, and the 0.10µs figure
-appears nowhere in code ([designs/ctq-traceability.md](designs/ctq-traceability.md)
+appears nowhere in code (designs/ctq-traceability.md
 row 1).
 
 **Throughput** — dispatch-carried 12M rows/sec — **PARTIAL, NOT-MET at
 claimed scale**: 500k-row smoke only; 12M printed, never gated; the 25M
 `TC_HOT_FULL=1` run is unexecuted
-([designs/ctq-traceability.md](designs/ctq-traceability.md) row 4,
-[designs/TC-HOT-benchmarks.md](designs/TC-HOT-benchmarks.md)).
+(designs/ctq-traceability.md row 4,
+designs/TC-HOT-benchmarks.md).
 
 **Ledger write latency** — dispatch-carried 0.25 µs — **CONTRADICTED-BY-RECEIPT
 (was MET-smoke)**: fold path 0.19–0.22 µs on the bench run, but the SPC court
@@ -37,9 +39,9 @@ over the same path verdicts FAIL (cpk −0.0018, p99 375 ns > 250 ns USL,
 gated. Ring max push 292 ns vs 10 µs fence; joint ring→ledger court green.
 Caveats: 1M not 10M iters, contention ceiling,
 eval wrapper UNKNOWN (prepare 302–541 µs/call)
-([designs/hot-path-baseline.md](designs/hot-path-baseline.md),
-[designs/ctq-traceability.md](designs/ctq-traceability.md) row 3,
-[DFLSS-DOSSIER.md §1](DFLSS-DOSSIER.md) Develop table).
+(designs/hot-path-baseline.md,
+designs/ctq-traceability.md row 3,
+DFLSS-DOSSIER.md §1 Develop table).
 
 ## §2 Pareto (dispatch-carried summary, adjudicated)
 
@@ -56,17 +58,17 @@ witnessed**. The witnessed ledger (22 defects, each with an on-disk witness) is:
 
 Sensitivity: ±1–2 items (±5 pts) per bucketing, but injection stays <48% and
 audit <8.3% under any defensible bucketing — the two REFUTED claims cannot be
-rescued. Receipt: [designs/defect-pareto-verified.md](designs/defect-pareto-verified.md).
+rescued. Receipt: designs/defect-pareto-verified.md.
 Consolidated census (dedup across 4 ledgers): 41 unique = 16 fixed + 6
 ticketed-open + 3 open-by-design + 16 open-unticketed
-([DFLSS-DOSSIER.md §7](DFLSS-DOSSIER.md)).
+(DFLSS-DOSSIER.md §7).
 
 ## §3 p-FMEA (dispatch-carried summary, adjudicated)
 
 The RPN rows (420→10, 240→8, 270→9) are dispatch-carried only — no on-disk
 p-FMEA receipt computes them. **UNVERIFIED**; they are not citable as
 receipts. The on-disk FMEA that exists is the court-backed table at
-[DFLSS-DOSSIER.md §4](DFLSS-DOSSIER.md) (F1–F8): F1 laundering corpus 11/0 at
+DFLSS-DOSSIER.md §4 (F1–F8): F1 laundering corpus 11/0 at
 12:58 PDT, re-run 23/0 on 2026-10-22 (corpus grew in-window — see refresh
 block); F2 receipt-invariance chicago 9/0 (re-run 9/0, 2026-10-22); F3 typed
 refusals dialect 25/0 at 13:0x, re-run 33/0 on 2026-10-22; F4 wasm 9/9
@@ -94,7 +96,7 @@ fold-path timings, true M3 path):
 μ = 278.0 ns, σ = 202.1 ns, Cpk(Cpu) = **−0.05**, P(X > USL=250 ns) = 42.9%;
 quantiles p50=250 / p90=333 / p99=375 / p99.9=458 ns; other runs μ=326/652/
 340/370/347 ns, Cpk −0.09..0.00 under fan-out contention. Receipt:
-[designs/cpk-correction.md](designs/cpk-correction.md).
+designs/cpk-correction.md.
 
 SPC court receipt (honest-FAIL, both legs):
 `receipts/spc-2026-10-22.json` + `-inject.json` (n=1,000,000, tc_hot_01
@@ -113,13 +115,13 @@ condition: quiet-machine re-measurement, no concurrent lanes.
 OCAP control-plan rows: **NOT-LANDED — owned by lane 4; NOT-MET in this
 file.** The
 skeleton rows the audit must adjudicate are at
-[DFLSS-DOSSIER.md §6](DFLSS-DOSSIER.md); lane 4's adjudication is the witness
+DFLSS-DOSSIER.md §6; lane 4's adjudication is the witness
 when it lands. Per-surface courts that exist independent of the OCAP audit:
 law admission dialect 25/0 at 13:0x, re-run 33/0 on 2026-10-22, receipt
 signing trust_attest 10/0 (re-run 10/0, 2026-10-22), ring 6/0 at filing,
 re-run 10/0 + ledger 9/0 (re-run 9/0), cache 7/0 at 13:5x, re-run 8/0, wasm
 9/9 (as-filed; not re-run) — all re-read from
-[DFLSS-DOSSIER.md §6/§8](DFLSS-DOSSIER.md) at this file's completion, with
+DFLSS-DOSSIER.md §6/§8 at this file's completion, with
 the W18 re-execution receipt appended below.
 
 ## Count refresh — lane W18, 2026-10-22 (real re-run output)
@@ -148,12 +150,12 @@ Commands run from `/Users/sac/graphlaw`; embedded output is the receipt:
       citations above
 - [x] §2 Pareto class labels + values re-verified — two charter claims
       REFUTED, one bucket STRUCTURAL MISS —
-      [designs/defect-pareto-verified.md](designs/defect-pareto-verified.md)
+      designs/defect-pareto-verified.md
 - [x] §3 p-FMEA RPN rows marked UNVERIFIED (no on-disk witness); residual
       register reconciled with the `tests/sql_rdf_laundering_corpus.rs`
       depth court (closed, this session)
 - [x] §5.2 capability stats re-verified — charter Cpk 1.44 REFUTED; measured
-      Cpk ≤ 0 — [designs/cpk-correction.md](designs/cpk-correction.md) +
+      Cpk ≤ 0 — designs/cpk-correction.md +
       `receipts/spc-2026-10-22.json`
 - [ ] **NOT-MET** — §6 OCAP rows transcribed verbatim (lane 4 owns the
       adjudication; NOT-LANDED at this file's completion time)

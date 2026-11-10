@@ -3,7 +3,8 @@
 - **Id**: GL28-4
 - **Title**: EU High-Risk AI attestation exporter — signed conformance-claim
   document per release
-- **Status**: SPEC (design; no implementation on disk)
+- **Status**: SPEC (design; no implementation on disk — re-checked 2026-11-09:
+  `src/attestation_export.rs` and `tests/attestation_export.rs` absent)
 - **Conformance target**: EU AI Act Arts. 9/10/12/14/15 evidence bundle,
   machine-checkable; every claim row re-verifiable from the artifact alone
 - **Size**: M, **policy-gated** (see §8)
@@ -25,7 +26,7 @@
   `sign_bytes(&SigningKey, payload) -> Attestation`,
   `verify_bytes`, and `Attestation { payload_blake3, key_id, signature }`
   with strict canonical JSON `to_json`/`from_json`
-  (`src/attest.rs:346-433`). No new crypto is written; the exporter is a
+  (`src/attest.rs` lines 346-433). No new crypto is written; the exporter is a
   payload-shaping module over `attest.rs`.
 - The release pin surface already exists:
   `registry/ARTIFACTS.blake3` (24 lines, format

@@ -11,7 +11,10 @@ graphlaw-verify --start state.nt --plan plan.json --receipts ./receipts \
     [--subject <key>] --trusted-key <hex-public-key> [--trusted-key ...]
 ```
 
-Build with `--features abi`. Usage/I-O errors (including no `--trusted-key`) exit **2**.
+Build with `--features abi` (`required-features` on the `graphlaw-verify` `[[bin]]`,
+`src/bin/graphlaw_verify.rs`). `--start` picks its RDF dialect by extension
+(`.nq`, `.nt`, `.ttl`, `.trig`; default N-Quads); `--receipts` defaults subject
+discovery to its only subdirectory unless `--subject` is given. Usage/I-O errors (including no `--trusted-key`) exit **2**.
 
 ## What it does
 
@@ -30,9 +33,10 @@ Build with `--features abi`. Usage/I-O errors (including no `--trusted-key`) exi
 
 ## Worked example
 
-`tests/verify_cli.rs` (7 tests, re-witnessed 2026-10-24: `cargo test
---features abi --test verify_cli` → `7 passed; 0 failed; 0 ignored;
-0 measured; 0 filtered out`, exit 0) drives the
+`tests/verify_cli.rs` (7 tests; re-witnessed 2026-11-09:
+`CARGO_TARGET_DIR=a lane-local CARGO_TARGET_DIR cargo test --features abi --test verify_cli`
+→ `test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out;
+finished in 0.83s`, exit 0) drives the
 real binary end to end: a robot-move plan admitted over N-Triples, every receipt signed
 by a seeded Ed25519 key, written via `ReceiptStore::put_signed`, then verified:
 

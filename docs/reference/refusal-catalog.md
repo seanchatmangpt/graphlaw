@@ -1,5 +1,10 @@
 # Refusal Catalog
 
+As of 2026-11-09: cross-checked against `docs/refusals.md`, `src/abi.rs` (envelope),
+`src/dialect/refusal.rs` (`RefusalKind`), `src/duckdb_op.rs` and `src/duckdb_eval.rs`
+(limits). Envelope example corrected (`details` nests inside `error`); sections
+for arms the register carries but this view omitted were added below.
+
 What a caller sees when GraphLaw refuses work, and what to do about it. This is a
 user-facing view; the normative register is [`docs/refusals.md`](../refusals.md).
 Codes are stable and append-only — they are never renumbered or reused.
@@ -13,24 +18,29 @@ Over the JSON ABI (feature `abi`), every refusal is one envelope:
   "ok": false,
   "error": {
     "kind": "DuckDb",
-    "message": "unknown or expired session `metrics`"
-  },
-  "details": {
-    "code": "REFUSAL-03",
-    "shape_id": 5
+    "engine": null,
+    "dialect": null,
+    "message": "unknown or expired session `metrics`",
+    "details": {
+      "code": "REFUSAL-03",
+      "shape_id": 5
+    }
   }
 }
 ```
 
 - `error.kind` is the coarse refusal class (`RefusalKind`,
   `src/dialect/refusal.rs`).
-- `details` is optional. Engine-raised failures (bad syntax, unknown query
+- `error.details` is optional (built in `src/abi.rs`, `o["details"]` on the
+  error object). Engine-raised failures (bad syntax, unknown query
   form) carry no `details`; the typed codes below always do. Decoders must
   treat `details` as optional and unknown codes as open — see the
-  [capability registry](capability-registry.md).
+  [capability registry](../capability-registry.md).
 - Full envelope/ABI field reference: [abi-reference.md](../abi-reference.md).
 
 ## SQL-AST codes (`REFUSAL-01`..`REFUSAL-05`)
+
+The JSON snippets in this section show the `error.details` object only.
 
 These fire during SQL-in-RDF compile/validation, before the query is
 dispatched to frozen-duckdb. Each message embeds a `[REFUSAL-nn]` marker; the
@@ -205,6 +215,38 @@ sql:SetOperationStatement <s1> carries no sql:setRight; a set operation \
 is binary by construction
 ```
 
+## Other MalformedAst arms (see the register for the full table)
+
+All are `[REFUSAL-01]` arms refused at compile with zero engine contact; the
+normative rows with numeric discriminants are in
+[`docs/refusals.md`](../refusals.md).
+
+- `LITERAL_NOT_INT` (`RefusalCode = 36`) / `LITERAL_NOT_FLOAT` (`= 37`) — an
+  `xsd:integer` / `xsd:double` `sql:literalValue` whose lexical form does not
+  parse; never coerced to 0. Recovery: fix the lexical form.
+- `JOIN_TYPE_IRI` (`refusal_arm = 37`) — `sql:joinType` is neither
+  `sql:InnerJoin` nor `sql:LeftJoin`; never downgraded to Inner.
+- Star-modifier, window, composite and CTE arms (`refusal_arm = 42`..`52`:
+  `WINDOW_FN_POSITION`, `FRAME_UNIT`, `FRAME_BOUND`, `QUALIFY_EXPR`,
+  `ATOMIC_LITERAL`, `CTE_NO_QUERY`, `COMPOSITE_DEPTH`, `COMPOSITE_MEMBER`,
+  `STAR_MODIFIER_POSITION`, `COLUMNS_LAMBDA`, `COLUMNS_PATTERN`).
+- Set-operation arms are `refusal_arm = 53`..`56` (section above).
+
+## Routing and engine kinds
+
+`RefusalKind` (`src/dialect/refusal.rs`) has nine arms: `NotSemanticContent`,
+`Ambiguous`, `EngineRejected`, `Unsupported`, `ResourceLimit`, `TierMismatch`,
+`DuckDb`, `BareSql`, `Fuse`. Beyond those detailed under Runtime surfaces:
+
+- `TierMismatch` — the document belongs to the other semantic tier (for
+  example N3 logic handed to an RDF parser). Recovery: declare the right tier
+  or dialect.
+- `BareSql` (SNIFF-01) — bare SQL text with no SPARQL markers is refused at
+  routing instead of being admitted as SPARQL. Recovery: wrap it as SQL-in-RDF
+  (`sql:` vocabulary) or pass an explicit dialect.
+- `Fuse` — an N3 `{ premise } => false .` fuse became provable mid-fixpoint:
+  the rules forbid the derived situation. Recovery: fix the data or the rules.
+
 ## Runtime surfaces
 
 Refusals raised while executing an admitted query against the DuckDB
@@ -244,11 +286,13 @@ member mid-sequence returns the typed envelope:
 ```json
 {
   "ok": false,
-  "error": { "kind": "DuckDb" },
-  "details": {
-    "code": "BatchMemberFailed",
-    "member": 2,
-    "partial_receipt": { "...": "receipt for the prefix that did run" }
+  "error": {
+    "kind": "DuckDb",
+    "details": {
+      "code": "BatchMemberFailed",
+      "member": 2,
+      "partial_receipt": { "...": "receipt for the prefix that did run" }
+    }
   }
 }
 ```
@@ -268,6 +312,7 @@ Bounded process-local resources. `details` carries `limit`, `observed`,
 | `duckdb_chunk_rows` | 10,000 rows per chunk | Reduce the chunk `n` or paginate. |
 | `duckdb_chunk_bytes` | 16 MiB per chunk | Reduce chunk size. |
 | `duckdb_views` | 64 mounted views per request | Mount fewer views. |
+| `duckdb_result_rows` | result-row envelope on the RDF-projection eval path (`ROW_ENVELOPE_LIMIT`, `src/duckdb_eval.rs`) | Narrow the query or page it. |
 
 Other limits on other surfaces (`request_bytes`, `json_depth`, N3 reasoner
 limits, and so on) are listed in the register.

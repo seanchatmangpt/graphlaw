@@ -5,29 +5,31 @@ v26.10.28, mapped to the post-EU-AI-Act 2028 regime (Articles 9-15).
 Compliance-relevant edges that are drawn but not yet built are marked with
 their GL28 backlog reference rather than asserted.
 
-## Facts (re-read from the tree, 2026-10-28)
+## Facts (re-read from the tree, 2026-11-09; wasm lines updated after the GL28-13 relink 95cd3df)
 
 Full digests (copy from here; each line ≤100):
 
 ```
-wasm blake3
-c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c
+wasm blake3 (priv/graphlaw.wasm.blake3, post-relink)
+c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c
 registry blake3
 6e1103673508ade20f2276e93c7c948dd4f7c31689a25a325fac4a308856035d
 fork rev
 2223f8945e19eb9aed750fe038b0fa833bd17c83
 ```
 
-- wasm artifact: blake3 `c38b1fdb…` (74,097,211 B) — `registry/ARTIFACTS.blake3:17`
+- wasm artifact: blake3 `c92caeb6…` (62,909,537 B, `ls -l priv/graphlaw.wasm`) — `registry/ARTIFACTS.blake3`
+  wasm row; the v26.10.28 release asset was `c38b1fdb…` (74,097,211 B), superseded by the relink
 - WASI imports: 28/28 `wasi_snapshot_preview1`, zero host-module imports
-  (GO-NO-GO.md:30)
+  (GO-NO-GO.md §0, WASI import audit row)
 - purrdf fork: `graphlaw-carried` @ `2223f894…` (RECEIPTS.md)
 - registry digest: `blake3:6e110367…`
   (`registry/capability-registry.json` `registry_blake3`)
 - limit rows: 19; law-steps: 10 (same registry, counted 2026-10-28)
 - SPC: Cpk 6.0979 / 14.4149 (gate 1.33), p99 125/118 ns
   (`receipts/spc-2026-10-28T165319.json`, `…T171756.json`)
-- wasm size ceiling: 80 MiB (SCAR — carrying cost, slimming OPEN)
+- wasm size ceiling: 128 MB policy (`tests/wasm_size_court.rs` MAX_BYTES 134,217,728);
+  GL28-13 CLOSED at 95cd3df (the 80 MiB SCAR ceiling is retired)
 
 ## Level 1 — C4 Context
 
@@ -108,7 +110,7 @@ stateDiagram-v2
 `ΔS_admitted + Φ_lease ≡ R_receipt` — every admitted state change plus the
 lease potential it consumed is conserved into exactly one receipt. At
 v26.10.28 this holds within the process (`src/receipt_chain.rs`); persisting
-the chain per admission is GL28-8.
+the chain per admission is GL28-8 (open in the register).
 
 ## Compliance matrix — EU AI Act 2028 (Articles 9-15)
 
@@ -119,10 +121,13 @@ Only realized mechanisms are claimed; gaps carry GL28 references.
 | Art. 9 | 19-limit regime, sentinels; cliff court vs fork counters | census 13/13; cliff 10/10 |
 | Art. 10 | Fork digest policy + head pinning; fork @ 2223f894 | fork n3 89/89; pipeline 5/5 |
 | Art. 12 | Append-only receipts, per-file blake3; chain in RAM | abi_manifest 10/10; gap GL28-8 |
-| Art. 14 | Ed25519 receipts, `graphlaw-verify` CLI | trust_attest 12/12; gap GL28-6 |
+| Art. 14 | Ed25519 receipts, `graphlaw-verify` CLI | trust_attest 12/12; kill-switch GL28-6 LANDED @ 4d2ffd0 (graphlaw_ex) |
 | Art. 15 | SPC gate on receipt fold, Cpk 6.0979/14.4149 | `spc_court.sh` exit 0; 2 receipts |
 
-Not yet realized (backlog): Art. 12 OCEL 2.0 telemetry projection (GL28-1),
-Art. 14 operator kill-switch (GL28-6), untrusted-agent ingress (GL28-7),
-receipt-chain persistence (GL28-8), attestation exporter (GL28-4), wasm
-slimming SCAR (GL28-13).
+Realized since the original write (statuses per GL28-BACKLOG.md): GL28-1 OCEL 2.0
+bridge ALIVE (cd69757), GL28-6 kill-switch and GL28-7 authority ceiling LANDED
+(4d2ffd0, graphlaw_ex), GL28-13 wasm slimming CLOSED (95cd3df), GL28-14 MCP
+manifest projection landed (14df7b9).
+
+Not yet realized (backlog): receipt-chain persistence (GL28-8), attestation
+exporter (GL28-4, spec only), Smalt gate kernel-side receipt mint (GL28-2, partial).

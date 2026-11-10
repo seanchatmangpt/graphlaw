@@ -1,5 +1,14 @@
 # shacl_boundary_cliff
 
+As of 2026-11-09: **all timing and pass-count figures below are from the
+2026-10-26 run and were not re-run in this pass.** Re-verified against sources:
+the four caps equal the constants in `src/shacl_guard.rs` (`MAX_SHACL_SHAPES_BYTES`
+= 128 * 1024, `MAX_SHACL_QUADS` = 16_384, `MAX_SHACL_DEGREE` = 128,
+`MAX_SHACL_VALIDATION_DEPTH` = 16); `tests/shacl_boundary_cliff_court.rs` (8
+`#[test]` fns) and `tests/shacl_depth_guard_court.rs` (6) exist; the bench
+`benches/shacl_boundary_cliff.rs` is registered in `Cargo.toml`. The "Not my
+diff" section is a 2026-10-26 lane classification, kept as history.
+
 WP P07 (hard SHACL caps): measured boundary cliff, the four caps pinned
 from those measurements, and the boundary-court receipts. Every number
 below is from a real run of `benches/shacl_boundary_cliff.rs` (exit 0,

@@ -1,5 +1,7 @@
 # ADR-CANONARROW (Revised; absorbed into the v26.10.22 release boundary — the 26.10.23 moniker is deferred): Canonical Arrow IPC Dual-Witness Columnar Egress
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 Operator-approved specification, 2026-10-23. Baseline measurements: N-Triples
 text rendering 9.246 ms / 10k rows; DuckDB raw row materialization 1.354 ms;
 raw-bytes digest proxy ~992 µs; serialization penalty ~6.83× (Lane 4, v26.10.22).

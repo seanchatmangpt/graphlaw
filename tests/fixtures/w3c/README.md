@@ -18,3 +18,8 @@ Eval tests elsewhere (which assert graph isomorphism against a result file)
 are vendored but out of scope for this court. The RDF/XML suite retains its
 nested per-test subdirectories; `TESTS.tar.gz`/`TESTS.zip` were excluded from
 the vendor (duplicate copies of the same corpus).
+
+Each suite's `reports/` dir holds third-party EARL reports plus a rollup `template.md`; the
+`earl-report` invocation is in that dir's `README`. These are vendored inputs and are not read
+by `tests/w3c_conformance.rs`. Corpus counts live in `tests/w3c_manifest.rs` (regenerate with
+the script above, never hand-edit).

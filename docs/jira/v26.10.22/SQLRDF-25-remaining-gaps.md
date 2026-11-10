@@ -1,5 +1,7 @@
 # SQLRDF-25 — Remaining deferred gaps ledger
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 - **Id**: SQLRDF-25-RG
 - **Title**: SQLRDF-25 deferred-gap ledger — star modifiers, PIVOT/UNPIVOT, composite literals, JSON operators
 - **Status**: Open
@@ -7,7 +9,7 @@
 
 ## Relationship to the SQLRDF-25 ticket
 
-[`SQLRDF-25.md`](SQLRDF-25.md) is the parent order. Its "Already-implemented
+`SQLRDF-25.md` is the parent order. Its "Already-implemented
 boundary" (EXPLAIN/PRAGMA/SET/INSTALL/LOAD, MERGE INTO, statement sequences)
 and its landed gaps (window functions, QUALIFY, CTEs — REFUSAL-01 arms for
 window-outside-scope, frame, QUALIFY shape, CTE placement already appended in

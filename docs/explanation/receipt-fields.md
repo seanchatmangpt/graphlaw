@@ -18,7 +18,7 @@ conformance to any external receipt schema.
 `ReceiptRecord` (`RECEIPT_RECORD_VERSION = 1`), frozen wire strings
 (`graphlaw-chain/base`, `graphlaw-chain/v2-fold`), byte-exact BLAKE3 frame hashing —
 golden-tested against the committed TCPS fixture (`tests/receipt_chain_golden_test.rs`,
-4 tests) — a 4-stage validator, a JSONL `ReceiptStore`, and an epoch module. ggen
+5 tests) — a 4-stage validator, a JSONL `ReceiptStore`, and an epoch module. ggen
 migrates onto this to retire its vendored graphlaw-core.
 
 ## The two-witness receipt model (DuckDB executions)
@@ -30,37 +30,40 @@ digests**.
 
 `H_query = BLAKE3(Canon(G_AST) || P_params)` — the sql-rdf Recommendation §1.4 first
 formula. Computed by `admitted_statement_hash`
-(`src/duckdb_eval.rs:125-133`) from:
+(`src/duckdb_eval.rs#admitted_statement_hash`) from:
 
 - `Canon(G_AST)` — the RDFC-1.0 canonical N-Quads form of the admitted AST graph,
-  produced by `canonical_ast_graph_bytes` (`src/duckdb_eval.rs:83-89`) via
+  produced by `canonical_ast_graph_bytes` (`src/duckdb_eval.rs#canonical_ast_graph_bytes`) via
   `purrdf::parse_dataset` + `purrdf::try_canonicalize`; parse or canonicalization
   failure is the typed `EvaluatorError::ReceiptError`, never a panic.
 - `P_params` — the typed parameter buffer, hashed in bind order by
-  `hash_param_buffer` (`src/duckdb_eval.rs:93-117`): one type tag byte per parameter
+  `hash_param_buffer` (`src/duckdb_eval.rs#hash_param_buffer`): one type tag byte per parameter
   (`0x01` String, `0x02` Integer LE, `0x03` Float bit-pattern LE, `0x04` Boolean,
   `0x00` Null) followed by little-endian value bytes.
 
-`eval_ast_query` computes it at `src/duckdb_eval.rs:175-183` when the compile was
-graph-backed (`compiled.ast_graph_turtle` present); hand-built ASTs without a graph
-fall back to the legacy hash of the SQL text plus the same parameter buffer. The
-field and its formula are documented at `src/duckdb_eval.rs:59-63`.
+`eval_ast_query_bounded` (`src/duckdb_eval.rs#eval_ast_query_bounded`) computes it
+from the compile-time anchor `compiled.receipt_state` (`h_ast = BLAKE3(Canon(G_AST))`,
+folded with the parameter buffer by `fold_params_anchored`, bit-identical to
+`admitted_statement_hash`) or from `compiled.canon_graph_bytes`. A query carrying
+neither is a typed `EvaluatorError::NoCanonicalGraph` refusal — there is no
+raw-SQL-text hash fallback. The field and its formula are documented on
+`ExecutionReceipt.query_hash` (`src/duckdb_eval.rs#ExecutionReceipt`).
 
 Court: `tests/chicago_validation.rs::merge_receipt_is_blake3_of_canonical_graph_and_params_not_sql_text`
 (replay equality, literal mutation flips, and an explicit assertion that `query_hash`
 is **not** a hash of the SQL text), plus the replay-determinism court
 `admitted_statement_receipt_is_canon_params_and_replay_deterministic`
-(`src/duckdb_eval.rs:521-582`).
+(`src/duckdb_eval.rs#admitted_statement_receipt_is_canon_params_and_replay_deterministic`).
 
 ### Witness 2 — the state-readback digest (DML courts)
 
-DML courts (`tests/chicago_validation.rs:129-154`, `state_receipt`) hash a **different
+DML courts (`tests/chicago_validation.rs#state_receipt`) hash a **different
 input**: the executed SQL text, a `0xff` separator, and the ordered table readback
 (`SELECT id, COALESCE(name, '') FROM t ORDER BY id, name` over the real frozen-duckdb
 connection). `dml_receipts_bind_readback_and_distinguish_statements`
-(`tests/chicago_validation.rs:157-171`) uses it to prove insert/update/delete/merge
+(`tests/chicago_validation.rs#dml_receipts_bind_readback_and_distinguish_statements`) uses it to prove insert/update/delete/merge
 distinguish each other and replay identically. SQLRDF-09 keeps the two digests
-distinct (`tests/chicago_validation.rs:380-387`).
+distinct (`tests/chicago_validation.rs#merge_receipt_is_blake3_of_canonical_graph_and_params_not_sql_text`).
 
 ### When each is the right witness
 
@@ -81,16 +84,16 @@ distinct (`tests/chicago_validation.rs:380-387`).
 Because `Canon(G_AST)` is RDFC-1.0 canonical form, syntax-only variations of the same
 dataset produce identical canonical bytes and therefore identical `H_query`:
 
-- statement order and prefix renames (`tests/canonical_abi.rs:40-46`)
+- statement order and prefix renames (`tests/canonical_abi.rs#canonical_identity_invariant_under_reordering_and_prefix_renaming`)
 - blank-node label choices, via isomorphism canonicalization
-  (`tests/canonical_abi.rs:65-71`)
+  (`tests/canonical_abi.rs#canonical_handles_blank_node_isomorphism`)
 - whitespace/quoting style (Turtle parse then canonicalize discards it)
 
 Identity *does* move when a statement's content changes
-(`tests/canonical_abi.rs:49-54`) and when the typed parameter buffer changes
-(`src/duckdb_eval.rs:569-581`).
+(`tests/canonical_abi.rs#canonical_identity_moves_when_a_statement_changes`) and when the typed parameter buffer changes
+(`src/duckdb_eval.rs#admitted_statement_receipt_is_canon_params_and_replay_deterministic`).
 
-Probe receipt (2026-10-22, tree @ ed3be81):
+Probe receipt (2026-10-22, tree @ ed3be81; historical — re-run before citing for a later tree):
 
 ```
 $ CARGO_TARGET_DIR=target-docs cargo test --test canonical_abi
@@ -113,21 +116,19 @@ test dml_receipts_bind_readback_and_distinguish_statements ... ok
 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.17s
 ```
 
-## Known deviation: hand-built-AST fallback
+## Closed deviation: hand-built-AST fallback (SQLRDF-17)
 
-The `(None, Some(turtle))` arm in `eval_ast_query`
-([src/duckdb_eval.rs:180-182](../../src/duckdb_eval.rs)) re-canonicalizes
-`ast_graph_turtle` at execution time
-(`canonical_ast_graph_bytes(turtle)`) for hand-built `CompiledQuery`s that
-carry no compile-time `canon_graph_bytes`. This is compliant today but is
-flagged as a PRD §3.1.1 violation-to-be (execution-time re-canonicalization,
-`docs/jira/v26.10.22/PRD-P28-SIL.md`) once the P28 zero-overhead program
-([SQLRDF-18](../jira/v26.10.22/SQLRDF-18.md)) closes the hand-built entry
-point.
+An earlier revision hashed hand-built `CompiledQuery`s (no compile-time canon anchor)
+by re-canonicalizing `ast_graph_turtle` at execution time, with a legacy raw-SQL-text
+hash arm behind it. Both arms are deleted: the `(None, None)` arm of the receipt match
+in `eval_ast_query_bounded` returns `EvaluatorError::NoCanonicalGraph`, so every
+admitted execution carries the canonical-graph identity. `canonical_ast_graph_bytes`
+remains the public canonicalizer used at compile time and by `eval_admitted_ast`, which
+canonicalizes caller-supplied Turtle.
 
 ## History
 
 The two dated session receipts are historical records, preserved under `docs/archive/`:
 
-- [receipt-2026-10-09-receipt-chain-and-refuse-hooks](../archive/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md)
-- [receipt-2026-10-10-publish-dod](../archive/receipt-2026-10-10-publish-dod.md)
+- receipt-2026-10-09-receipt-chain-and-refuse-hooks
+- receipt-2026-10-10-publish-dod

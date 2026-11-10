@@ -30,9 +30,9 @@ Rather than transmitting every raw reading across the network, GraphLaw compress
 
 ## 2. Hardened Edge Boundaries & Deterministic Memory
 
-Running complex analytical engines inside edge containers or WASM sandboxes has historically been plagued by out-of-memory crashes:
+Running complex analytical engines inside edge containers or WASM sandboxes has historically been plagued by out-of-memory crashes. Status below as of 2026-11-09:
 
-* **Strict WASM Ceiling**: GraphLaw's core combined with `frozen-duckdb` compiles to a compact **~36.5 MiB** WASM footprint, well within the standard **64 MiB linear memory ceiling**.
+* **Single WASM unit**: GraphLaw's core and `frozen-duckdb` link into one module, `graphlaw-wasm`. As of 2026-11-09 the pinned artifact is 62,909,537 bytes (~60.0 MiB on disk, `registry/ARTIFACTS.blake3`). The size is the file, not a memory bound: `graphlaw-run-eh` (wasmtime 48) caps the request frame (`WALL_BYTES`, 64 MiB) and the outstanding allocation (`MAX_OUTSTANDING_ALLOC_BYTES`, 16 MiB), but provides **no linear-memory ceiling** (`docs/WASM.md`, sandbox qualification section).
 * **Deterministic Allocation**: The `frozen-duckdb` buffer manager enforces hard memory accounting on operator pipelines (HashJoin, AggregateHashTable), avoiding swap thrashing or allocator aborts inside edge micro-VMs.
 * **Zero-Copy Arrow ABI**: Direct `ValueRef` inspection allows moving values directly from vector chunks into typed RDF literals (`TermValue::Literal`) without intermediate string parsing, double-buffering, or memory fragmentation.
 

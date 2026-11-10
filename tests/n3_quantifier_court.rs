@@ -1,6 +1,6 @@
 //! N3 quantifier execution court (closes audit F15 / C10).
 //!
-//! Audit C10 (`docs/jira/v26.10.23/n3-audit-100-report.md`): `docs/DIALECTS.md`
+//! Audit C10 (`docs/reference/n3-audit-100-report.md`): `docs/DIALECTS.md`
 //! advertises N3 support "yes (`=>`, `@forAll`, `@forSome`)" while the
 //! quantifier surface was never positively executed — no committed input
 //! reached `parse_quantifier`, all four quantifier refusal arms

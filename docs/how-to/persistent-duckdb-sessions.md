@@ -3,19 +3,22 @@
 Grounded in `src/duckdb_op.rs` as landed; the conformance text lives in
 `docs/DIALECTS.md` ("DuckDB op session mode"). Wire transport is the
 packet-4 stdio protocol (4-byte big-endian length-prefixed JSON frames)
-spoken by `graphlaw-run-eh`.
+spoken by `graphlaw-run-eh`. Op-15 is the `duckdb` op: dispatched inside the
+module but off the hashed 14-op table (`src/abi.rs`, `docs/WASM.md`). Code anchors
+below are symbol-form (`path#symbol`), re-verified against the tree on 2026-11-09;
+the wire transcripts are captured runs from 2026-10-23.
 
 ## Why sessions
 
 Without a `"session"` field, every `exec` opens a **fresh in-memory
-connection** and throws it away (`src/duckdb_op.rs:326-339`): a table
+connection** and throws it away (the no-`session` branch of exec in `src/duckdb_op.rs`): a table
 created in one call is gone by the next. A **named session** registers one
 persistent in-memory connection in a process-local registry, so later
 `exec` calls on the same name reuse it — the CREATE→INSERT→SELECT
 lifecycle works across frames.
 
 Session state is process-local and crash-only (`sessions()`,
-`src/duckdb_op.rs:83-85`): it dies with the host process, like cursor
+`src/duckdb_op.rs#sessions`): it dies with the host process, like cursor
 state. Keep the whole lifecycle inside one host process.
 
 ## The lifecycle in four frames
@@ -37,15 +40,15 @@ state. Keep the whole lifecycle inside one host process.
 
 ## Limits and typed refusals
 
-- **16 live sessions max** (`MAX_SESSIONS`, `src/duckdb_op.rs:79`); the
+- **16 live sessions max** (`MAX_SESSIONS`, `src/duckdb_op.rs#MAX_SESSIONS`); the
   17th open is a `duckdb_sessions` ResourceLimit refusal
-  (`src/duckdb_op.rs:622`). Session state is process-local and
+  (`check_limit("duckdb_sessions", ...)` in the open path of `src/duckdb_op.rs`). Session state is process-local and
   crash-only — it dies with the host instance, never persists to disk;
   a restarted host starts with zero sessions.
 - **Duplicate open** is refused: "session `<name>` already exists (close
-  it before reopening)" (`src/duckdb_op.rs:618-621`).
+  it before reopening)" (open path of `src/duckdb_op.rs`).
 - **Unknown or expired session** on `exec` with `"session"`:
-  "unknown or expired session `<name>`" (`src/duckdb_op.rs:334`).
+  "unknown or expired session `<name>`" (exec path of `src/duckdb_op.rs`).
 - Closing a session frees its connection; reopening the same name
   succeeds after close.
 
@@ -67,7 +70,7 @@ close-unknown: {'ok': True}
 `"document":true` on an exec request compiles a whole Turtle AST document
 (`sql:StatementSequence`) via `compile_turtle_document` and evaluates it
 member-by-member on the target connection — a named session or a fresh
-connection, same routing (`src/duckdb_op.rs:383-384, 474`). Success
+connection, same routing (`exec_document_on`, `src/duckdb_op.rs#exec_document_on`). Success
 answers a **BatchReceipt**: `query_iri`, 64-hex `doc_hash`, `members`
 (one `ExecutionReceipt` each, spine order), per-member `rows_emitted`,
 `failed_at: null`.
@@ -76,13 +79,13 @@ Laws on this path:
 
 - **No wire `params`** — a non-empty wire param list is the SQLRDF-17
   refusal; each member's literals live in the AST document itself
-  (`src/duckdb_op.rs:480-487`).
+  (`src/duckdb_op.rs#exec_document_on`).
 - **Partial-commit semantics** — best-effort sequential autocommit
-  (`src/duckdb_eval.rs:401-405`): a mid-sequence member failure answers
-  the typed `BatchMemberFailed` envelope (`src/duckdb_op.rs:507-524`)
+  (`src/duckdb_eval.rs#BatchReceipt`): a mid-sequence member failure answers
+  the typed `BatchMemberFailed` envelope (`src/duckdb_op.rs#exec_document_on`)
   whose `partial_receipt` holds exactly `members[0..failed_at]` — their
   effects **stay committed** (not a hidden rollback); `members[i..]` never
-  executed (`BatchReceipt`, `src/duckdb_eval.rs:400-424`).
+  executed (`BatchReceipt`, `src/duckdb_eval.rs#BatchReceipt`).
 
 Witnessed success over the real wire (`document:true` exec against the
 named session `howto-doc`, two-member CREATE→INSERT; exit 0):
@@ -111,7 +114,8 @@ the partial receipt with real committed effects).
 ## Worked example: CREATE → INSERT → SELECT → close
 
 One host process, six frames. Driver:
-`python3 /tmp/glaw_frames.py` (packet-4 framer; CREATE/INSERT documents
+a throwaway packet-4 framer (the section 3 driver of
+`docs/how-to/first-in-wasm-sql-lifecycle.md` is the maintained equivalent; CREATE/INSERT documents
 are the court-admitted FIBO fixtures `tests/fixtures/fibo/tc01_create.ttl`
 and `tc01_insert.ttl`). Real output:
 
@@ -153,7 +157,7 @@ The SELECT in frame 4 reads the row INSERT put down in frame 3 — on the
 session, not a fresh connection. Without `"session"` on frames 2-4, frame
 4 would fail on a missing table.
 
-Binary used: `graphlaw-run-eh` built from this tree (feature `runner-eh`,
+Binary used (2026-10-23 run): `graphlaw-run-eh` built from that tree (feature `runner-eh`,
 `src/bin/graphlaw_run_eh.rs`) hosting `priv/graphlaw.wasm`. To replay:
 build the host (`cargo build --features runner-eh --bin graphlaw-run-eh`),
 then run a packet-4 framer that sends the six frames above to one host

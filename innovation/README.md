@@ -80,4 +80,9 @@ The corresponding executable tests are:
 - `tests/wasm_abi.rs` (innovation pack through the WASM ABI)
 - `tests/corpus_conformance.rs` (`innovation` is a conformance root)
 
+As of 2026-11-09: every file named above exists on disk (`ontology.ttl`,
+`blue-ocean-triz.n3`, `industry-fixture.n3`, `candidate.shacl.ttl`,
+`candidate.shex.json`, `construct-futures.rq`, `opportunities.rq`) and the three
+named test files exist; pack hashes are pinned in the root `ASSETS.blake3`.
+
 The design deliberately treats innovation as **closure + contradiction + construction + constraint + falsification + planning**, not as an inherently cognitive act.

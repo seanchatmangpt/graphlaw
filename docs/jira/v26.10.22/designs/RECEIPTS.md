@@ -1,5 +1,7 @@
 # RECEIPTS — moonshot layer, v26.10.22
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 Manufacturing receipt for the moonshot layer (SQLRDF-16/SQLRDF-17 family) of
 the v26.10.22 sql-rdf wave. Subject: `/Users/sac/graphlaw` @ `ed3be81` +
 uncommitted working set (coordinator owns git). Companion to the window-level
@@ -11,21 +13,21 @@ all commands re-executed by this lane (cwd `/Users/sac/graphlaw`).
 
 | # | Lane | Product | Standing |
 | --- | --- | --- | --- |
-| 1 | Thesis filing | [THESIS.md](../THESIS.md) skeleton (verbatim body PENDING — dispatch did not carry the prose) | LANDED (skeleton) |
-| 2 | E1 spec | [E1-alias-elimination.md](E1-alias-elimination.md) | LANDED |
+| 1 | Thesis filing | THESIS.md skeleton (verbatim body PENDING — dispatch did not carry the prose) | LANDED (skeleton) |
+| 2 | E1 spec | E1-alias-elimination.md | LANDED |
 | 3 | E1 court | census court spec inside E1 design | LANDED |
 | 4 | E1 census | alias-window census (grep receipt) | LANDED |
-| 5 | E2 spec | [E2-shapes-reader.md](E2-shapes-reader.md) | LANDED |
-| 6 | E3 spec | [E3-conformance.md](E3-conformance.md) | LANDED |
+| 5 | E2 spec | E2-shapes-reader.md | LANDED |
+| 6 | E3 spec | E3-conformance.md | LANDED |
 | 7 | C1 spec | [C1-cache.md](C1-cache.md) | LANDED |
 | 8 | C2 spec | C2 inventory (folded into SQLRDF-17) | LANDED |
-| 9 | A1 spec | [A1-scope-as-type.md](A1-scope-as-type.md) | LANDED |
-| 10 | R2 spec | [R2-capability-routes.md](R2-capability-routes.md) | LANDED |
+| 9 | A1 spec | A1-scope-as-type.md | LANDED |
+| 10 | R2 spec | R2-capability-routes.md (archived) | LANDED |
 | 11 | R1 implementation + court | `CompiledQuery.canon_graph_bytes` + counter court + gates | LANDED (code) |
-| 12 | E3 skeleton | [tests/sql_rdf_conformance.rs](../../../tests/sql_rdf_conformance.rs) rung skeleton | LANDED (4/5 green, 1 live flip failure — see §4) |
-| 13 | Skeptic | [SKEPTIC-thesis-review.md](SKEPTIC-thesis-review.md) (row-name→falsifier corrections folded into SQLRDF-16) | LANDED |
-| 14 | Moonshot backlog ticket | [SQLRDF-16.md](../SQLRDF-16.md) (8 rows, falsifiers, dependency order) | LANDED |
-| 15 | C2 spin-out ticket | [SQLRDF-17.md](../SQLRDF-17 Current-behavior pointers re-verified on disk 12:52 PDT | LANDED |
+| 12 | E3 skeleton | [tests/sql_rdf_conformance.rs](../../../../tests/sql_rdf_conformance.rs) rung skeleton | LANDED (4/5 green, 1 live flip failure — see §4) |
+| 13 | Skeptic | SKEPTIC-thesis-review.md (row-name→falsifier corrections folded into SQLRDF-16) | LANDED |
+| 14 | Moonshot backlog ticket | SQLRDF-16.md (8 rows, falsifiers, dependency order) | LANDED |
+| 15 | C2 spin-out ticket | SQLRDF-17.md (archived) Current-behavior pointers re-verified on disk 12:52 PDT | LANDED |
 
 Count reconciliation: the ledger says 15; the table itemizes 15 rows; the
 dispatch prose named 12 dispatches (E1 spec+court+census counted as three).
@@ -35,18 +37,18 @@ pointers were re-verified on disk by this lane (§4).
 ## 2. What LANDED
 
 - **SQLRDF-16 corrected table** —
-  [`docs/jira/v26.10.22/SQLRDF-16.md`](../SQLRDF-16.md), verified on disk
+  `docs/jira/v26.10.22/SQLRDF-16.md`, verified on disk
   12:43 mtime, read 12:52 PDT. Eight rows (E1/A1/E2/E3/R1/R2/A1/C1/C2 family)
   with skeptic-hardened falsifiers, dependency order
   `E1→A1→E2→E3`, `R1→C1 (+E1→C1)`, `R2→C2`, all BLOCKED-BY the v26.10.22
   integration commit. Corrected-per-skeptic banner present (SQLRDF-16.md:26-29).
 - **SQLRDF-17 C2-hole ticket** —
-  [`docs/jira/v26.10.22/SQLRDF-17.md`](../SQLRDF-17.md), verified on disk
+  `docs/jira/v26.10.22/SQLRDF-17.md` (archived), verified on disk
   12:43 mtime, read 12:52 PDT: the C2 hole P1 with Current-behavior pointers
   at `src/duckdb_op.rs:198-219`, `src/duckdb_eval.rs:183-188` / `:155`,
   `src/dialect.rs:740-758`; pointer re-verification in §4 below.
 - **THESIS skeleton with PENDING-VERBATIM banner** —
-  [`docs/jira/v26.10.22/THESIS.md`](../THESIS.md): filed against `ed3be81`
+  `docs/jira/v26.10.22/THESIS.md`: filed against `ed3be81`
   (65 dirty paths), verbatim-body status PENDING banner at lines 12-19, moonshot
   id/falsifier-shorthand table, Part III sequencing. No operator text quoted.
 - **designs/ 8 files** — [INDEX.md](INDEX.md) + 7 design records
@@ -105,16 +107,16 @@ pointers were re-verified on disk by this lane (§4).
 
 ## 3. DESIGNED-NOT-IMPLEMENTED (all BLOCKED-BY: v26.10.22 integration commit)
 
-Per [SQLRDF-16](../SQLRDF-16.md) rows; designs exist, code does not:
+Per SQLRDF-16 rows; designs exist, code does not:
 
 - **E1 migration** — alias-window elimination. Design only
-  ([E1-alias-elimination.md](E1-alias-elimination.md)); the alias window is
+  (E1-alias-elimination.md); the alias window is
   still live in `ontologies/sql-ast.ttl` and the compiler.
 - **A1 closure** — validation-scoped RDFS closure + positional scope shapes
-  ([A1-scope-as-type.md](A1-scope-as-type.md)); currently the SQLRDF-13 plan
+  (A1-scope-as-type.md); currently the SQLRDF-13 plan
   only; `sh:class` entailment withheld at `ontologies/sql-ast.ttl:315-330`.
 - **E2 generator** — shapes-driven reader generation
-  ([E2-shapes-reader.md](E2-shapes-reader.md)); the reader is still
+  (E2-shapes-reader.md); the reader is still
   hand-written `src/sql_ast.rs`.
 - **C1 cache** — H_query content-addressed eval cache
   ([C1-cache.md](C1-cache.md)); no cache exists; additionally E1-gated per
@@ -140,7 +142,7 @@ Per [SQLRDF-16](../SQLRDF-16.md) rows; designs exist, code does not:
   (`src/duckdb_op.rs:198-219`), hashed via the legacy `(None, None)` arm
   (`src/duckdb_eval.rs:183-188`), with a sniff misroute (`src/dialect.rs:740-758`)
   and `pub raw_connection()` (`src/duckdb_eval.rs:155`). Filed as
-  [SQLRDF-17](../SQLRDF-17.md); Current-behavior pointers re-verified by
+  SQLRDF-17 (archived); Current-behavior pointers re-verified by
   this lane on disk 12:52 PDT (grep receipts above: `canon_graph_bytes`
   match arm at `src/duckdb_eval.rs:178`, `get_single_object` at
   `src/sql_ast.rs:575`).

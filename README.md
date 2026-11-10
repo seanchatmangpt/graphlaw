@@ -10,7 +10,7 @@ over three pinned upstream engines, without reimplementing any standards algorit
 cargo add graphlaw
 ```
 
-MSRV 1.96. Feature flags: `abi` (JSON ABI, registry, verification binaries),
+MSRV 1.98 (pinned by `rust-toolchain.toml` at 1.98.0; the purrdf fork declares MSRV 1.98). Feature flags: `abi` (JSON ABI, registry, verification binaries),
 `pack-tools` (self-monitoring pack tooling).
 
 ## First 10 minutes
@@ -32,7 +32,7 @@ cargo run --example receipt_feedback
 cargo test --test differential
 # N3 (purrdf::n3), Datalog and OWL-RL (PurRDF) must agree on a transitive closure
 
-cargo test --test wasm_abi          # builds the WASI module and drives the hashed 14-op table (`duckdb` is dispatched by the module and omitted from that table until a digest bump)
+cargo test --test wasm_abi          # builds the WASI module and drives the hashed 14-op table (the module dispatches 15 ops, `src/abi.rs:319-333`; `duckdb` is dispatched but omitted from the hashed table until a digest bump)
                                     #   prerequisite: the canonical relink recipe — WASI_SDK_PATH at the unpacked frozen-duckdb cache SDK (~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1; its legacy-EH sysroot matches libduckdb.a; the published wasi-sdk-34 sysroot fails the link) plus the in-tree wrap shim compiled from tests/fixtures/wasm-shim/. Alternatively point GRAPHLAW_WASM at a prebuilt module. Recipe: docs/WASM.md.
 
 cargo test --test sql_rdf_dialect   # SQL-in-RDF compile + admission courts
@@ -46,15 +46,14 @@ Organized Diataxis-style; the hub is [docs/index.md](docs/index.md).
 
 | | |
 |---|---|
-| **Index** | [docs/INDEX.md](docs/INDEX.md) |
 | **Tutorial** | [Quickstart](docs/quickstart.md) |
 | **How-to** | [Run the WASM module](docs/how-to/run-the-wasm-module.md) · [First in-WASM SQL lifecycle](docs/how-to/first-in-wasm-sql-lifecycle.md) · [Persistent DuckDB sessions](docs/how-to/persistent-duckdb-sessions.md) · [Document sequences](docs/how-to/document-sequences.md) · [Signed leases](docs/how-to/authorize-with-signed-leases.md) · [Offline verification](docs/how-to/verify-without-trusting-the-operator.md) · [Knowledge hooks](docs/how-to/use-knowledge-hooks.md) · [Edge Ingestion & Compaction](docs/how-to/how-to-edge-ingestion-and-compaction.md) · [Use from JavaScript](docs/how-to/use-from-javascript.md) |
-| **Reference** | [ABI reference](docs/abi-reference.md) · [Capability registry](docs/capability-registry.md) · [Refusals](docs/refusals.md) · [API stability](docs/api-stability.md) · [WASM integration](docs/wasm-integration.md) · [WASM runbook](docs/WASM.md) · [Dialects](docs/DIALECTS.md) · [Full generated reference](docs/reference-generated/reference.md) |
+| **Reference** | [ABI reference](docs/abi-reference.md) · [Capability registry](docs/capability-registry.md) · [Refusals](docs/refusals.md) · [API stability](docs/api-stability.md) · [WASM integration](docs/wasm-integration.md) · [WASM runbook](docs/WASM.md) · [Dialects](docs/DIALECTS.md) · [Conformance claim](docs/reference/conformance_claim.md) · [WASM gap register](docs/reference/wasm-gap-register.md) |
 | **Explanation** | [Qualification algebra](docs/QUALIFICATION_ALGEBRA.md) · [Chicago courts](docs/CHICAGO_N3_DATALOG.md) ([FIBO](docs/CHICAGO_FIBO.md), [cross-authority](docs/CHICAGO_CROSS_AUTHORITY.md)) · [Receipt fields](docs/explanation/receipt-fields.md) · [Edge Sovereignty & Compaction](docs/explanation/edge-sovereignty-and-zero-trust-compaction.md) |
 
 ## Edge Sovereignty & Embedded Analytical Substrate (`frozen-duckdb`)
 
-GraphLaw unconditionally embeds the **`frozen-duckdb 2.0`** analytical engine, unlocking
+GraphLaw unconditionally embeds the **`frozen-duckdb 2.0.2`** analytical engine, unlocking
 local analytical ingestion and zero-trust semantic compaction at the extreme edge.
 Compaction ratios and latencies are workload-dependent and intentionally uncited; the
 reduction claim is court-scoped: `tests/sieve_court.rs` witnesses a 1,000,000-row
@@ -74,21 +73,15 @@ envelope.
   court-witnessed surface is `tests/sieve_court.rs`: a 10^6-row source reduces
   in-engine to 64 result rows inside the default envelope, and any result set over the
   envelope refuses with a typed `ResourceLimit` (`duckdb_result_rows`).
-* **WASM size**: The pinned artifact in `registry/ARTIFACTS.blake3` is **60,895,924 bytes**
-  (blake3 `0858a760…a5ddd2f1`, byte-identical to `priv/graphlaw.wasm` on this tree) — the
-  shipped DuckDB-linked new-EH artifact, verified live on all four pin surfaces
+* **WASM size**: The pinned artifact in `registry/ARTIFACTS.blake3` is **62,909,537 bytes**
+  (blake3 `c92caeb6…c6c1b9c`, byte-identical to `priv/graphlaw.wasm` on this tree) — the
+  shipped DuckDB-linked new-EH artifact, present on all pin surfaces
   (`priv/graphlaw.wasm.blake3`, `registry/ARTIFACTS.blake3` wasm row,
-  `js/npm/src/generated/artifact-meta.ts`, live `b3sum`; four-surface re-verification
-  2026-10-26, X2 lane re-pin). Historical pins (prior artifact
-  generations, each superseded and retained here only for provenance): the 26.10.26 L2-WASM
-  re-mint `430da572…` (60,893,336 B), the 26.10.23 four-surface settle pin `58a44095…d2280a`
-  (58,124,612 B; final-tree-audit check 2, `docs/jira/v26.10.23/final-tree-audit.md`), the
-  EH-closure settle pin `fa155830…` (57,781,384 B), the pre-closure pin `991b2bee…`
-  (46,138,360 B), and the legacy pre-DuckDB pin `f149433c…` (7,104,147 B). The ~61 MB
-  size class vs the 46 MB pre-closure pin is the wave's own statically-registered
-  core_functions/icu extensions + statement-sequence/REFUSAL-05 code under LTO
-  (libc swap effect measured at −106 B). The size court ceiling is the 64 MiB sandbox wall
-  (`tests/wasm_size_court.rs`). A SQL-in-RDF document parsed as `sql` returns the same
+  `js/npm/src/generated/artifact-meta.ts`; re-read from disk 2026-11-09). Every earlier
+  pin is superseded; the historical rows are retained as comments in
+  `registry/ARTIFACTS.blake3` and in git history. The size court ceiling is the 128 MB policy
+  ceiling (134,217,728 B, re-anchored 2026-10-29 under GL28-13; `tests/wasm_size_court.rs`) —
+  a policy bound, not a slimming claim. A SQL-in-RDF document parsed as `sql` returns the same
   dataset id as the same bytes parsed as Turtle. `REFUSAL-04` is the non-document-backed
   builtin reader, not a missing engine.
 * **Disconnected Fail-Closed Operations**: Missing filter bounds or excursion breaches trigger immediate local actuator lockouts and quarantined states without requiring an upstream cloud coordinator.
@@ -102,16 +95,16 @@ The WASM module is also wrapped as the npm package
 Node or the browser without touching Rust. See
 [docs/how-to/use-from-javascript.md](docs/how-to/use-from-javascript.md).
 
-> **Publish state** (verified 2026-10-24): the package IS published — latest
-> on npm is `26.10.14` (published pre-OIDC). Version `26.10.22` is packed and
-> CI-validated (`publish-npm` run 40084544193: validate-and-pack GREEN;
-> tag `v26.10.22` pushed at `29c6d98`), but its publish is typed-blocked on
-> the one-time npm Trusted Publisher configuration (E404, machine-impossible
-> by design). Until that lands, `npm i @seanchatmangpt/graphlaw` installs
-> `26.10.14`. Status locus: `docs/jira/v26.10.23/PUBLISH-STATUS.md`.
+> **Publish state** (verified 2026-11-09 against `docs/jira/v26.10.28/INDEX.md` and
+> `docs/jira/v26.10.28/RECEIPTS.md`): the package exists on npm at `26.10.14`
+> (published pre-OIDC). Publishing `26.10.28` has NOT been executed — no publish receipt
+> exists; it is typed-blocked on the one-time npm Trusted Publisher configuration
+> (tracked as GL28-12 in `docs/jira/v26.10.28/GL28-BACKLOG.md`). Until that lands,
+> `npm i @seanchatmangpt/graphlaw` installs `26.10.14`; `js/npm/package.json` is at
+> `26.10.28`.
 
 ```sh
-npm i @seanchatmangpt/graphlaw  # published: 26.10.14 (26.10.22 publishes after the Trusted Publisher act)
+npm i @seanchatmangpt/graphlaw  # published: 26.10.14 (26.10.28 publishes after the Trusted Publisher act)
 ```
 
 ```js
@@ -160,7 +153,7 @@ results. Host runner: `graphlaw-run-eh` (wasmtime 48, `wasm_exceptions`
 enabled) is the sole packet-4 stdio runner — it hosts the DuckDB-linked
 artifact; sessions, document sequences, and the SQL surface run there. The
 wasmi-based `graphlaw-run` binary was retired 2026-10-24
-(`docs/jira/v26.10.23/ADR-wasmi-retirement.md`; the EH runner is a
+(`docs/adr/ADR-wasmi-retirement.md`; the EH runner is a
 wire-superset with the same exit-code contract). Build and embed details:
 [docs/WASM.md](docs/WASM.md).
 
@@ -170,7 +163,7 @@ Capability | Authority
 ---|---
 RDF 1.2, codecs, SPARQL 1.1/1.2, SHACL, ShEx 2.1, Datalog/stratified fixpoint, RDF/RDFS/OWL-RL entailment | PurRDF 3.0.1 (git [`seanchatmangpt/purrdf`](https://github.com/seanchatmangpt/purrdf), rev-pinned)
 Notation3 parsing/reasoning/proofs | **Notation3** — purrdf::n3 3.0.1 (purrdf crates/n3, git-sourced: [`seanchatmangpt/purrdf`](https://github.com/seanchatmangpt/purrdf), rev-pinned)
-Vectorized columnar execution, Parquet scan pipelines, SIMD aggregations | DuckDB 2.0 (`frozen-duckdb = "2.0"`)
+Vectorized columnar execution, Parquet scan pipelines, SIMD aggregations | DuckDB 2.0 (`frozen-duckdb = "2.0.2"`)
 
 GraphLaw owns the composition boundary and semantic assets (ontologies, packs,
 queries) and the decision about which upstream implementation has standing.

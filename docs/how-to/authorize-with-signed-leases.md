@@ -6,7 +6,7 @@ for tests: anyone can build a lease and pick the time — the signed path is the
 
 ## 1. Generate a key (deterministic, no RNG)
 
-`graphlaw::attest` uses `ed25519-dalek =2.2.0` with caller-supplied seeds:
+`graphlaw::attest` uses `ed25519-dalek =2.2.0` (pinned in `Cargo.toml`) with caller-supplied seeds:
 
 ```rust,ignore
 use graphlaw::attest::{SigningKey, TrustedKeys};
@@ -19,7 +19,7 @@ let trusted = TrustedKeys::new([issuer.verifying_key()]);
 ## 2. Issue and authorize
 
 ```rust,ignore
-use graphlaw::law::{Clock, Lease, Step, SystemClock};
+use graphlaw::law::{Ceiling, Clock, Lease, Step, SystemClock};
 use graphlaw::attest::sign_lease;
 
 let lease = Lease {

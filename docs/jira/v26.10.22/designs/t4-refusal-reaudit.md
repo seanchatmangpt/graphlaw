@@ -1,5 +1,7 @@
 # T4 refusal-register re-audit (post-switchover drift check)
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 - Date: 2026-10-22, lane T4, repo `/Users/sac/graphlaw`, one canonical checkout.
 - Baseline: V-L11 pre-switchover audit (anchors already carried V-L11 dated corrections in-register).
 - Scope: `docs/refusals.md` file anchors re-verified after the SQLRDF-18 switchover wiring (facades + dirs).

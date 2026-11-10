@@ -1,6 +1,6 @@
 # How to: Edge Ingestion & Zero-Trust Semantic Compaction
 
-This guide demonstrates how to configure `graphlaw` with its embedded `frozen-duckdb` analytical substrate to ingest dense local telemetry event streams, execute declarative SQL-in-RDF queries, and compact massive event streams into cryptographic state proofs with 1,000:1 to 10,000:1 reduction.
+This guide demonstrates how to configure `graphlaw` with its embedded `frozen-duckdb` analytical substrate to ingest dense local telemetry event streams, execute declarative SQL-in-RDF queries, and compact massive event streams into cryptographic state proofs. Reduction is workload-dependent; no fixed ratio is asserted (see `docs/explanation/edge-sovereignty-and-zero-trust-compaction.md`). As of 2026-11-09 the code below uses the vocabulary of `ontologies/sql-ast.ttl` and the signatures in `src/duckdb_eval.rs`; the snippets are illustrative (`rust,ignore`-class), not compiled doctests.
 
 ---
 
@@ -62,18 +62,16 @@ conn.execute_batch(r#"
 "#)?;
 
 // Ingest high-frequency telemetry events locally without network roundtrips
-let mut appender = conn.appender("telemetry_ring_buffer")?;
-for i in 0..10_000 {
-    appender.append_row([
-        format!("EVT-{i}"),
-        "PUMP-TURBINE-01".to_string(),
-        142.5 + (i as f64 * 0.001),
-        38.2,
-        "2026-10-21 14:00:00".to_string(),
-    ])?;
-}
-appender.flush()?;
+conn.execute_batch(r#"
+    INSERT INTO telemetry_ring_buffer
+    SELECT 'EVT-' || i, 'PUMP-TURBINE-01', 142.5 + i * 0.001, 38.2,
+           TIMESTAMP '2026-10-21 14:00:00'
+    FROM range(10000) t(i);
+"#)?;
 ```
+
+(A frozen-duckdb `Appender` also works for row-at-a-time ingest; the bulk
+`INSERT ... SELECT` form above keeps the example free of per-row API detail.)
 
 ---
 
@@ -84,25 +82,29 @@ Define the analytical reduction query as a formal RDF AST adhering to `ontologie
 ```turtle
 @prefix sql: <http://graphlaw.org/sql#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:  <http://example.org/> .
 
-:edge_compaction_query a sql:SelectQuery ;
-    sql:selectClause [
-        sql:columns (
-            [ sql:column "device_id" ]
-            [ sql:aggregate "COUNT" ; sql:argument "event_id" ; sql:alias "total_samples" ]
-            [ sql:aggregate "AVG"   ; sql:argument "vibration_hz" ; sql:alias "mean_vibration" ]
-            [ sql:aggregate "MAX"   ; sql:argument "temp_celsius" ; sql:alias "peak_temp" ]
-        )
-    ] ;
-    sql:fromClause [ sql:tableName "telemetry_ring_buffer" ] ;
+ex:edge_compaction_query a sql:SelectStatement ;
+    sql:statementIndex 0 ;
+    sql:fromTable [ sql:tableName "telemetry_ring_buffer" ] ;
+    sql:selectList (
+        [ sql:columnName "device_id" ]
+        [ sql:aliasName "total_samples" ; sql:expression [
+            sql:function <http://graphlaw.org/functions#COUNT> ;
+            sql:argument [ sql:columnName "event_id" ] ] ]
+        [ sql:aliasName "mean_vibration" ; sql:expression [
+            sql:function <http://graphlaw.org/functions#AVG> ;
+            sql:argument [ sql:columnName "vibration_hz" ] ] ]
+        [ sql:aliasName "peak_temp" ; sql:expression [
+            sql:function <http://graphlaw.org/functions#MAX> ;
+            sql:argument [ sql:columnName "temp_celsius" ] ] ]
+    ) ;
     sql:whereClause [
-        sql:condition [
-            sql:leftColumn "temp_celsius" ;
-            sql:operator ">=" ;
-            sql:rightParam "$1"
-        ]
+        sql:operator sql:GreaterThanOrEq ;
+        sql:leftOperand [ sql:columnName "temp_celsius" ] ;
+        sql:rightOperand [ sql:literalValue "30.0"^^xsd:double ]
     ] ;
-    sql:groupByClause [ sql:columns ( "device_id" ) ] .
+    sql:groupBy ( [ sql:columnName "device_id" ] ) .
 ```
 
 ---
@@ -112,7 +114,7 @@ Define the analytical reduction query as a formal RDF AST adhering to `ontologie
 The SHACL gate runs inside `compile_turtle`: the Turtle source is validated
 against `ontologies/sql-ast.ttl` + `ggen/sql-dialect/statement_classes.ttl`
 before any SQL reaches the engine, and parameter literals come from the AST
-itself (`sql:rightParam`), not a separate parameter vector:
+itself (`sql:literalValue`), not a separate parameter vector:
 
 ```rust
 use graphlaw::sql_ast::compile_turtle;
@@ -129,7 +131,7 @@ let receipt = engine.eval_ast_query(
 )?;
 
 println!("Compacted 10,000 raw events into {} triples", receipt.result_triples.len());
-println!("Receipt BLAKE3 Hash: {:?}", receipt.query_hash);
+println!("Receipt BLAKE3 Hash: {}", hex::encode(receipt.query_hash));
 ```
 
 ---
@@ -139,8 +141,8 @@ println!("Receipt BLAKE3 Hash: {:?}", receipt.query_hash);
 Bridge the returned tabular metrics into deductive state triples and assert verifiable transitions:
 
 ```rust
-// Materialize only the verified summary triples (10,000 raw events -> 4 triples)
-// Upstream sync payload is under 1 KB instead of multi-megabyte raw logs.
+// Materialize only the verified summary triples (10,000 raw events -> one
+// grouped row). The payload size is workload-dependent; this one is a few hundred bytes.
 let sync_payload = format!(
     r#"
     @prefix dev: <http://fleet.internal/terms#> .
@@ -152,7 +154,7 @@ let sync_payload = format!(
         dev:peakTemp 38.2 ;
         gl:auditReceipt "{}" .
     "#,
-    receipt.query_hash
+    hex::encode(receipt.query_hash)
 );
 ```
 
@@ -162,7 +164,7 @@ let sync_payload = format!(
 
 When operating in denied, degraded, intermittent, or limited (DDIL) connectivity environments, GraphLaw guarantees **fail-closed security**:
 
-1. **Typed Pre-Flight Refusals**: Malformed or non-conforming ASTs are stopped at the SHACL gate (`AstError::ShaclViolation` carrying a stable `[REFUSAL-nn]` code, see `docs/refusals.md`) before any SQL touches the DuckDB execution engine. `sql:whereClause` is optional, not mandatory.
+1. **Typed Pre-Flight Refusals**: Malformed or non-conforming ASTs are stopped at the SHACL gate (a typed `AstError` carrying a stable `[REFUSAL-nn]` code, see `docs/refusals.md`) before any SQL touches the DuckDB execution engine. `sql:whereClause` is optional on a SELECT; it is mandatory on UPDATE/DELETE (REFUSAL-05).
 2. **Safety Invariants**: Out-of-spec physical measurements (e.g., thermal limits or cumulative excursion durations) trigger automatic quarantine rules in PurRDF, locking actuators locally without requiring an upstream network coordinator.
 
 ---
@@ -180,8 +182,9 @@ epoch and flushes frozen-duckdb's prepared-statement cache after successful
 execution only, so a failed statement never invalidates. The SPSC evidentiary
 ring (`src/evidence_ring.rs`) and batch-chained query ledger
 (`src/query_ledger.rs`) are Phase-2 surfaces behind the `evidentiary-ring`
-Cargo feature (default off; P28-SIL PRD). Honest caveat: prepared statements
+Cargo feature (default off). Honest caveat: prepared statements
 are cached per connection in an LRU pinned to 256
-(`set_prepared_statement_cache_capacity(256)` at construction); plans are
+(`PREPARED_STATEMENT_CACHE_CAPACITY`, applied at construction via
+`set_prepared_statement_cache_capacity`); plans are
 flushed on any stored-data mutation so no stale plan survives a schema or
 data change.

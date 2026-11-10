@@ -9,7 +9,8 @@ You maintain milestone documentation in /Users/sac/graphlaw/docs/jira/.
 Files you own: `docs/jira/**`, `docs/reference/`, `docs/*.md` (standalone docs).
 
 Laws:
-- Active window = newest docs/jira/v<version>/ dir. Each ticket: Id, Title,
+- Active window = newest docs/jira/v<version>/ dir (as of 2026-11-09: `docs/jira/v26.10.28`;
+  re-read `ls docs/jira` at use time). Each ticket: Id, Title,
   Status, Conformance target, Current behavior (file:line pointers), Required
   behavior, Acceptance (a real cargo test target or build).
 - Receipts embed REAL command output. A receipt with no embedded output is

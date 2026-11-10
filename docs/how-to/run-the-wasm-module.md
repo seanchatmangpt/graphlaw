@@ -10,13 +10,21 @@ glue. Reference: [abi-reference](../abi-reference.md) ·
 ```sh
 rustup target add wasm32-wasip1        # once per toolchain
 WASI_SDK_PATH="/opt/wasi-sdk" \
+CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling" \
 cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 # -> target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
 ```
 
+`WASI_SDK_PATH` is a wasi-sdk root (CI installs wasi-sdk 34 at `/opt/wasi-sdk`; the
+local workstation has it at `/Users/sac/wasi-sdks/wasi-sdk-34`). The EH
+target-feature is required at link time (without it:
+`undefined _Unwind_GetWasmLPadContext`). Full recipe and pin flow: `docs/WASM.md`.
+As of 2026-11-09 the crate is `26.10.28` on Rust 1.98.
+
 `wasm32-unknown-unknown` is not a supported module target (it requires a JavaScript
-host); the standard clock/RNG paths are supplied by the `vendor/` cfg patches, so
-building for WASI outside this workspace is a compile error by design.
+host); the WASI clock gate lives in the rev-pinned purrdf fork (branch
+`graphlaw-carried`, `Cargo.toml` `purrdf` dependency), so building for a
+non-WASI wasm target is a compile error by design.
 
 ## Runners
 
@@ -29,9 +37,9 @@ eval-envelope auto-detect, `{"ok":true,"result":...}` reply envelope).
 | `graphlaw-run-eh` | wasmtime 48 (`wasm_exceptions` enabled) | the DuckDB-linked artifact | `cargo build --features runner-eh --bin graphlaw-run-eh` |
 
 `graphlaw-run-eh` is gated by the `runner-eh` feature (`[[bin]]`
-`required-features`, root `Cargo.toml:75`/`:96` feature row, `:116-119` bin
-block). The wasmi-based `graphlaw-run` binary and its `runner` feature were
-retired 2026-10-24 (`docs/jira/v26.10.23/ADR-wasmi-retirement.md`): the EH
+`required-features`, root `Cargo.toml` feature row `runner-eh = ["dep:wasmtime",
+"dep:wasmtime-wasi"]` and the `name = "graphlaw-run-eh"` bin block). The wasmi-based `graphlaw-run` binary and its `runner` feature were
+retired 2026-10-24 (`docs/adr/ADR-wasmi-retirement.md`): the EH
 runner is a protocol superset with the same exit-code contract, so consumers
 see no wire change. Only
 `wasi_snapshot_preview1` imports are accepted; anything else is
@@ -46,17 +54,19 @@ trap, 90 EOF mid-frame, 91 stdin read error, 92 frame length above
 `MAX_REQUEST_BYTES`, 93 malformed envelope, 94 non-JSON
 module response, 95 (invalid module), 96
 (instantiation/link failure), 97 (guest ABI fault), 98 (guest fuel
-exhaustion). Malformed input never panics
+exhaustion), 99 (guest epoch deadline expired; the watchdog is disarmed unless
+`--epoch-ticks` arms it). Malformed input never panics
 a runner; every failure is a typed one-line stderr diagnostic plus its stable
 exit code.
 
 Artifact identity: `--wasm <path>`, else `GRAPHLAW_WASM`, else the working-tree
 build; `--expect-blake3` verifies loaded bytes before serving (mismatch is exit
-84, never a silent serve). The DuckDB-linked artifact class is roughly 58 MB;
-its current registry pin is `58a44095…` (58,124,612 B, shipped with tag
-`v26.10.22`).
+84, never a silent serve). The DuckDB-linked artifact class is roughly 63 MB;
+as of 2026-11-09 its current pin is `c92caeb6…c1b9c` (62,909,537 B, `priv/graphlaw.wasm`,
+`registry/ARTIFACTS.blake3`). Re-read the pin from `priv/graphlaw.wasm.blake3` at
+use time; per-release digests live in each GitHub release's assets.
 
-## New surfaces (v26.10.22)
+## Session, sequence and document surfaces (landed v26.10.22)
 
 The DuckDB-linked artifact served by `graphlaw-run-eh` carries the
 session, sequence, and document surfaces that the retired legacy
@@ -115,7 +125,7 @@ error, never a trap.
 | plan_actions | `MAX_PLAN_ACTIONS` | 1,000 | each action replayed + re-canonicalized |
 | atoms_per_field | `MAX_ATOMS_PER_FIELD` | 10,000 | N-Triples lines per pre/add/del/goal field |
 | policy_entries | `MAX_POLICY_ENTRIES` | 100,000 | FOND policy entries |
-| n3_iterations | `law::N3_MAX_ITERATIONS` | 4,000 | purrdf-n3 max_iterations cap (its default is 1,000,000) |
+| n3_iterations | `law::N3_MAX_ITERATIONS` | 4,000,000 | purrdf-n3 max_iterations cap (`src/law.rs`; its own default is 1,000,000) |
 
 All consts are `pub` in `graphlaw::abi` / `graphlaw::law`; caps are checked before
 parsing or heavy work.
@@ -130,9 +140,10 @@ cargo test --test wasm_abi
 
 builds the module itself and drives `capabilities`, `sniff`, `parse`, `convert`,
 `canonical`, `sparql`, `shacl`, `shex`, `n3`, `entail`, `datalog`, `hooks`, `law`,
-`policy` through a real wasi runtime (18 tests, verified 2026-10-10:
-`18 passed; 0 failed`). That receipt predates the wasmi retirement
-(2026-10-24, `docs/jira/v26.10.23/ADR-wasmi-retirement.md`) and belongs to the
+`policy` through a real wasi runtime (`tests/wasm_abi.rs` carries 25 `#[test]`
+functions as of 2026-11-09; the last recorded run, 2026-10-10, was
+`18 passed; 0 failed` and is stale — re-run before citing a count). That receipt predates the wasmi retirement
+(2026-10-24, `docs/adr/ADR-wasmi-retirement.md`) and belongs to the
 legacy
 pre-DuckDB artifact court (`tests/wasm_abi.rs`) — the retired wasmi runner's
 historical domain, not

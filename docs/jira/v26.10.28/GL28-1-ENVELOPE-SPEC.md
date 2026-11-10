@@ -1,8 +1,8 @@
-All sources read. Here is the spec.
-
----
-
 # SPEC — GL28-1: OCEL 2.0 event envelope emitted by `lib/beam4pm_graphlaw_bridge.ex`
+
+**Status: ALIVE** (register: GL28-BACKLOG.md GL28-1; closed cd69757 — legs (a)+(b)+(c)
+with session receipts; §2 `pe:sourceDigest` row amended d8fce72). Spec text below is the
+design authority for the landed `BeamPM.GraphlawBridge`.
 
 ## 0. Source of truth (verified line numbers)
 

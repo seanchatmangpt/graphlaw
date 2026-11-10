@@ -1,7 +1,9 @@
 # Design: FIBO banking validation via pm4pytest — court matrix
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 Status: DESIGN (courts landing this wave under
-[SQLRDF-21](../SQLRDF-21.md)). Nothing in this file is a landed receipt;
+SQLRDF-21). Nothing in this file is a landed receipt;
 acceptance (f) of SQLRDF-21 is the matrix run green.
 
 ## Goal

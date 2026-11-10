@@ -9,7 +9,7 @@ change rather than as silent drift.
 Schema id: `graphlaw.capability-registry/1`. The schema is frozen for v26.9.29; changes are
 additive only. `ABI_VERSION` stays `1`.
 
-Status of this page: written against the v26.9.29 registry contract. The emitter
+Status of this page: re-verified 2026-11-09 against crate 26.10.28 (registry contract introduced in v26.9.29). The emitter
 (`src/registry/definitions.rs`, `src/bin/graphlaw_registry.rs`), the `registry/` directory and the
 registry-vs-dispatch tests (`tests/registry_dispatch.rs`, `tests/registry_artifacts.rs`,
 `tests/op_examples.rs`) are present and green on the current tree:

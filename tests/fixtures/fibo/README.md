@@ -45,6 +45,25 @@ financial safety claim.
 | `policy_high_value.n3` | N3 policy rules R1 (micros), R2 (FIBO decimal), R3 (admitted FX) |
 | `shapes.ttl` | SHACL: one currency, one decimal, one integer micros per amount |
 
+### Wasm court-matrix fixtures (SQL-in-RDF)
+
+Consumed by `tests/wasm_fibo_fixtures_eh.rs` (TC-FIBO-01..03), `tests/wasm_duckdb_lifecycle_eh.rs`
+(`tc05`) and `tests/wasm_fibo_egress_eh.rs` (`tc08`), which run them through the in-wasm DuckDB
+harness (env-gated: `GRAPHLAW_WASM`, `GRAPHLAW_RUN_EH`). They are SQL AST documents (`sql:` vocabulary),
+not FIBO instance data.
+
+| file | role |
+|---|---|
+| `tc01_create.ttl` | CREATE TABLE `fibo_accounts` |
+| `tc01_insert.ttl` | INSERT a balance row |
+| `tc02_update_bounded.ttl` | bounded UPDATE (has a WHERE) |
+| `tc03_delete_unbounded.ttl` | unbounded DELETE, refused (REFUSAL-05, `docs/refusals.md`) |
+| `tc05_select_sum.ttl` | SELECT SUM(balance) |
+| `tc08_copy.ttl` | COPY egress (path rewritten by the court) |
+
+Consumers of the instance files: `tests/chicago_fibo.rs` (generated) and
+`tests/dvp_settlement_court.rs`.
+
 Money is integer micros (`fin:amountMicros`) beside the FIBO decimal (`cur:hasAmount`); the two
 must agree and the cases check both rules at the boundary.
 
@@ -56,6 +75,7 @@ must agree and the cases check both rules at the boundary.
 - Amounts beyond i64 were observed to work in N3 (`9223372036854775808` derives high value) but
   that is an observation, not a specified behaviour, and no case asserts it.
 - Boundary variants and small graphs live inline in `b.ttl`; only larger graphs are files here.
+- Pin status: these fixtures carry no manifest pin; the FIBO commit above is provenance text.
 
 ## See Also
 

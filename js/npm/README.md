@@ -89,21 +89,22 @@ an `{ ok, error }` result instead of throwing.
 
 ## Publish state
 
-**Publish state** (verified 2026-10-24): the latest published version on npm is
+**Publish state** (re-read 2026-11-09 with `npm view @seanchatmangpt/graphlaw dist-tags`:
+`{ latest: '26.10.14' }`): the latest published version on npm is
 `26.10.14` (published pre-OIDC). The sources in this directory are version
 `26.10.28`; that version is packed and CI-validated (`publish-npm` run
 40084544193, validate-and-pack GREEN) but its publish is typed-blocked on the
-one-time npm Trusted Publisher configuration (E404,
-`docs/jira/v26.10.23/PUBLISH-STATUS.md`) — `npm i` today gets `26.10.14`.
+one-time npm Trusted Publisher configuration (E404; tracked as the operator-gated
+GL28-12 leg in `docs/jira/v26.10.28/RECEIPTS.md` and `GL28-BACKLOG.md`) — `npm i`
+today gets `26.10.14`.
 
-**Checkout build state** (executed 2026-10-29): `js/npm/wasm/graphlaw.wasm` hashes to
+**Checkout build state** (re-read 2026-11-09): `js/npm/wasm/graphlaw.wasm`, `priv/graphlaw.wasm`,
+`src/generated/artifact-meta.ts` and the built `dist-nodejs/generated/artifact-meta.js` all carry
 blake3 `c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c`
-(62,909,537 B — the 2026-10-29 GL28-13 relink) while the built `dist-nodejs/` still
-carries the pre-relink pin `c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c`;
-`createClient()` on that dist throws `GraphlawIntegrityError` (witnessed: expected
-`c38b1fdb…`, actual `c92caeb6…`) until `npm run build` re-pins. Published tarballs are
-unaffected: `prepublishOnly` rebuilds, and the pin is regenerated from the artifact on
-every build, so pin and bytes always ship together.
+(62,909,537 B — the 2026-10-29 GL28-13 relink), so the pin and bytes agree in this checkout.
+An earlier (2026-10-29) read saw `dist-nodejs/` still on the pre-relink pin `c38b1fdb…`; that
+state is gone. Published tarballs are unaffected either way: `prepublishOnly` rebuilds, and the
+pin is regenerated from the artifact on every build, so pin and bytes always ship together.
 
 ## Parse and SPARQL
 
@@ -188,7 +189,7 @@ const res = await callRaw({ op: 'sniff', text: 'PREFIX : <http://ex/> :s :p :o .
 
 - **Node >= 20** — the `node` export condition resolves to `dist-nodejs/`, which
   instantiates the WASM module with zero-dependency WASI preview1 stubs (the cdylib
-  needs only 7 trivial imports, served in-package — no `node:wasi`, no shim packages,
+  needs 28 `wasi_snapshot_preview1` imports, served in-package — no `node:wasi`, no shim packages,
   no native addons, no postinstall).
 - **Browser / bundler** — both the `browser` and `default` conditions resolve to
   `dist-web/`, which serves the module via `fetch` with the same zero-dependency
@@ -232,7 +233,7 @@ pin surfaces including this generated file — `src/generated/artifact-meta.ts`;
 the digest is re-pinned on every
 `npm run build`). The host for these bytes is the wasmtime-48 EH runner
 (`graphlaw-run-eh`); the wasmi runner was retired 2026-10-24
-(`docs/jira/v26.10.23/ADR-wasmi-retirement.md`). A SQL-in-RDF document
+(`docs/adr/ADR-wasmi-retirement.md`). A SQL-in-RDF document
 parsed as `sql` returns the same dataset id as the same bytes parsed as
 Turtle.
 

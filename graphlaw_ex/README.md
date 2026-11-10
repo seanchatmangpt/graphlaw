@@ -1,5 +1,9 @@
 # graphlaw_ex
 
+As of 2026-11-09 this README was verified against `mix.exs` (version `0.1.0`,
+`wasmex ~> 0.15.1`, `jason`, `telemetry`), `lib/`, `priv/graphlaw/MANIFEST.json`
+(graphlaw `26.10.28`, ABI 1) and `test/`.
+
 BEAM bridge for the graphlaw WASM law kernel — the deterministic turnstile
 boundary for Smalt. The BEAM side holds only the wasm byte-slice; the bridge
 owns bytes in and out over ABI version 1; the host owns authority, standing
@@ -23,19 +27,29 @@ BEAM caller
 GraphlawEx (GenServer) ---> packet-4 frame ---> wasm module (digest-pinned artifact)
     |                                              |
     v                                              v
-{:ok, response_map}  <--- ok: true          {:error, {:refused, error_map}}
-                            (typed refusal raised inside the module)
+{:ok, response_map}  <--- response JSON      {:error, %GraphlawEx.Refusal{}}
+  (read response["ok"];                      (host-side typed refusal: framing,
+   an engine refusal is ok: false)            digest, limits, kill-switch, ...)
 ```
 
 The BEAM holds only the wasm byte-slice; the bridge owns bytes in/out; the
 host owns authority, standing, refusals.
 
-- `lib/graphlaw_ex.ex` — a long-lived `GraphlawEx.Host` GenServer holding one
-  serialized wasm instance (not instantiate-per-turn), with recycle-on-fault
-  and a compiled-module cache; exposes `admit/2` and `stop/1`; speaks ABI
-  version 1 (`gl_alloc` / `gl_call` / `gl_free`) with packet-4 framing.
-- `lib/graphlaw_ex/application.ex` — supervision tree, `GraphlawEx` as a
-  named child, opt-in auto-start.
+- `lib/graphlaw_ex.ex` — the facade: `start_link/1`, `admit/3`, `stop/1`, plus
+  the 14 typed capability verbs delegated to `GraphlawEx.Capability.API`
+  (`capabilities`, `sniff`, `parse`, `convert`, `canonical`, `sparql`, `shacl`,
+  `shex`, `n3`, `entail`, `datalog`, `hooks`, `law`, `policy`, each with a `!`
+  twin).
+- `lib/graphlaw_ex/host.ex` — `GraphlawEx.Host`, one serialized wasm instance
+  (`gl_alloc` / `gl_call` / `gl_free`, packet-4 framing), recycle-on-fault,
+  `:saturated` shedding; `pool.ex` runs N hosts behind one name.
+- `lib/graphlaw_ex/engine_load.ex` + `wasm_config.ex` — load boundary: sha256
+  pin from the manifest, WASI import allowlist, required exports, compile
+  cached on `:persistent_term`.
+- `lib/graphlaw_ex/abi.ex` (pure codec), `refusal.ex` (closed typed-refusal
+  table), `telemetry.ex` (admit spans), `authority.ex` (GL28-7 presentation
+  pre-gate), `kill_switch.ex` (GL28-6 signed revocation).
+- `lib/graphlaw_ex/application.ex` — supervision tree, opt-in auto-start.
 
 ## Install
 
@@ -59,10 +73,12 @@ the pin is located and checked.
 
 | Option | Where | Default | Meaning |
 |---|---|---|---|
-| `:wasm_path` | start option → `:graphlaw_ex, :wasm_path` app env | `priv/graphlaw/graphlaw.wasm` | Filesystem path of the graphlaw wasm artifact. A missing or unreadable file is a typed `{:error, {:wasm_load_failed, path, :enoent}}` from `start_link/1`, never a linked-process exit. |
+| `:wasm_path` | start option, then `GRAPHLAW_WASM_PATH` env, then `:graphlaw_ex, :wasm_path` app env (`GraphlawEx.WasmConfig.wasm_path/1`) | `priv/graphlaw/graphlaw.wasm` | Filesystem path of the graphlaw wasm artifact. A missing or unreadable file is a typed `{:error, {:wasm_load_failed, path, :enoent}}` from `start_link/1`, never a linked-process exit. |
+| `:expected_sha256` | start option | manifest pin | Digest the artifact must match. `:unpinned` is the explicit opt-out; an explicit `:wasm_path` that differs from the vendored path is treated as `:unpinned`, while an env/app-config path stays pinned. |
 | `:auto_start` | `:graphlaw_ex, :auto_start` app env | `false` | When `true`, the supervision tree starts `GraphlawEx` as a named child. Opt-in so depending on the library never instantiates wasm implicitly and never races a caller's own instance. |
 
 Digest pin security property: the pin in `priv/graphlaw/MANIFEST.json`
+(enforced on load via `artifact.sha256`; `artifact.blake3` is the published identity)
 (`artifact.blake3`
 `c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c`,
 `artifact.sha256`
@@ -98,21 +114,20 @@ honest = %{
 {:ok, %{"ok" => true, "nquads" => nquads, "receipts" => receipts}} =
   GraphlawEx.admit(Jason.encode!(honest))
 
-# Tampered: unknown op is refused inside the module.
-{:error, {:refused, %{"kind" => "Unsupported", "message" => msg}}} =
+# Tampered: an unknown op is refused inside the module. At the transport layer
+# that is still {:ok, response}; classify it by response["ok"].
+{:ok, %{"ok" => false, "error" => %{"kind" => "Unsupported"}}} =
   GraphlawEx.admit(Jason.encode!(%{"op" => "definitely-not-an-op"}))
 
 GraphlawEx.stop()
 ```
 
-`admit/2` replies `{:ok, response_map}` with the decoded JSON response, or a
-typed error:
-
-- `{:error, {:refused, error_map}}` — the kernel answered `ok: false` (a
-  typed refusal inside the module, e.g. an unknown op).
-- `{:error, {:abi_trap, reason}}` — an export call trapped/failed.
-- `{:error, {:abi_frame, term}}` — malformed response framing (null buffer,
-  truncated response, non-UTF-8, non-JSON).
+`admit/3` replies `{:ok, response_map}` with the decoded JSON response (an
+engine-side refusal is `{:ok, %{"ok" => false, ...}}`), or
+`{:error, %GraphlawEx.Refusal{}}` for host-side typed refusals (invalid
+encoding, over-cap payload, trap, malformed framing, kill-switch, saturation).
+The older `{:error, {:refused, _}}` / `{:abi_trap, _}` / `{:abi_frame, _}`
+tuples are gone.
 
 Walk the same flow interactively in `graphlaw_ex.livemd`.
 
@@ -124,22 +139,23 @@ mix deps.get
 PRIV_WASM=$PWD/priv/graphlaw/graphlaw.wasm mix test
 ```
 
-With the artifact present the instantiation court loads the real module and
-admits through the real ABI (last run: `2 tests, 0 failures`, 8.6 s). Without
-it the court prints a loud typed skip (`[SKIP] ... A loud skip is not a
-pass.`) — a skip is never a pass, and the artifact-missing `start_link` court
-still runs because it asserts the typed failure. Chicago discipline: the real
-wasm artifact is the collaborator; no mocks, no sleeps.
+`mix test` runs the engine courts against the vendored artifact by default;
+`PRIV_WASM` overrides the artifact path and `GRAPHLAW_REQUIRE_ENGINE=1` (set by
+`.github/workflows/elixir.yml`) turns a missing artifact into a failure. As of
+2026-11-09 `test/` declares 149 `test "..."` cases across 13 files; that is a
+static count, this pass did not run `mix test` (the earlier "2 tests, 0 failures,
+8.6 s" line was from an older, smaller suite and is retired). Chicago
+discipline: the real wasm artifact is the collaborator; no mocks, no sleeps.
 
 ## Loud-skip semantics
 
-- Artifact absent → `[SKIP]` with the path and how to fix it (`PRIV_WASM`).
-  Exit status still green only because nothing was claimed — the skip is
-  printed, never swallowed.
-- Artifact digest drift → out of scope for the bridge today: the bridge
-  checks existence and ABI exports, not the blake3. Pin verification is the
-  operator's step above; digest enforcement inside the bridge is tracked by
-  the lib surface.
+- Artifact absent (without `GRAPHLAW_REQUIRE_ENGINE=1`) → `[SKIP]` with the
+  path and how to fix it (`PRIV_WASM`). The skip is printed, never swallowed,
+  and is not a pass.
+- Artifact absent with `GRAPHLAW_REQUIRE_ENGINE=1` → the court flunks.
+- Artifact digest drift → enforced: `start_link/1` returns
+  `{:error, {:wasm_digest_mismatch, ...}}` and `GraphlawEx.EngineLoad` checks the
+  sha256 pin before any bytes reach the compiler.
 
 ## See Also
 

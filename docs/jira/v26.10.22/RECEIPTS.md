@@ -1,5 +1,7 @@
 # RECEIPTS — v26.10.22
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 One row per ticket: the acceptance gate command, the latest observed verdict
 with its as-of timestamp, and the blocking observation where the verdict is
 NOT-DONE. Verdicts are transcribed from the wave ledger as reported; ticket
@@ -119,8 +121,8 @@ What this session landed BEYOND the 12 acceptance tickets. Claims re-verified on
 
 ```
 $ blake3sum priv/graphlaw.wasm; cat priv/graphlaw.wasm.blake3
-332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c  priv/graphlaw.wasm
-332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c  graphlaw.wasm
+332ea218…c30c  priv/graphlaw.wasm
+332ea218…c30c  graphlaw.wasm
 ```
 Both digests identical: artifact matches pin `332ea218…2c30c` (receipts/wasm-artifact-pin-2026-10-22.md — re-verified 2026-10-22: on-disk priv/graphlaw.wasm hashes to this pin). Negative control (tampered artifact → `graphlaw-run` refusal, exit 84) is documented at `src/bin/graphlaw_run.rs:191,56,177`; the runner binary was not rebuilt by this lane (cargo lock held by in-flight lib edits), so the exit-84 run itself is **as-of-date / not re-witnessed here**.
 
@@ -139,7 +141,7 @@ Both digests identical: artifact matches pin `332ea218…2c30c` (receipts/wasm-a
 
 ## 4. LICENSE-P28-SIL.md + MIT retention
 
-`LICENSE-P28-SIL.md` on disk: "P28 Sovereign Invariant License" header (line 1), MIT retention at line 4 ("Code license: see [LICENSE](./LICENSE) (MIT)…"), full SIL grant/limitation text through line 136+.
+`LICENSE-P28-SIL.md` on disk: "P28 Sovereign Invariant License" header (line 1), MIT retention at line 4 ("Code license: see LICENSE (MIT)…"), full SIL grant/limitation text through line 136+.
 
 ## 5. Currency fixes: README / DIALECTS / refusals
 
@@ -853,7 +855,7 @@ test gws4_a_corpus_injected_as_linear_memory_buffer_loads_into_duckdb_eval ... F
 test gws4_c_fail_closed_when_corpus_exceeds_bounds ... FAILED
 test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 33.44s
 $ b3sum priv/graphlaw.wasm
-332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c  priv/graphlaw.wasm
+332ea218…c30c  priv/graphlaw.wasm
 $ tail -1 receipts/CHAIN.blake3 && bash scripts/receipt_chain_sync.sh --check
 chain_head e4a7597bcb28269c693db90a3efc971c5a928fa16dfff34f5a7af067a2d96783 # historical
 TAMPER-DETECTED: receipts/sa2a/factory-b-v26.9.29-executable-gates.md (chain=d464dad4e0e8e1979ca8cf8b4426584f6186bfc98476da22f4d4af301a5d4aa6 actual=096cfeabead6814f24b8309e27aafaa34120291789f639356069f0009b2e4dee) # historical
@@ -963,7 +965,7 @@ from the lanes' own embedded-output receipts, not session memory.
   ENOSPC-class block per the disk-discipline law; no run executed.
 - **K12 — no pin lie.** Artifact pins checked against live digests; no pin
   claimed a state the tree did not carry. Evidence: `priv/graphlaw.wasm`
-  pin `332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c` # historical (superseded by 472d5557…bf80ea, see §doc-impl-reconciliation)
+  pin `332ea218…c30c` # historical (superseded by 472d5557…bf80ea, see §doc-impl-reconciliation)
   (b3sum, prior section inline output);
   `designs/receipt-surface-pin.md`.
 
@@ -1373,7 +1375,7 @@ re-pin held.
 - W59 RECEIPT — wave-close receipt for integration commit 0d11bc3 filed at
   `receipts/2026-10-23-wave-close.md` (b3sum-embedded companion
   `receipts/2026-10-23-eh-closure-wave.md` =
-  `933a6e46c070f98d663c45101437560d43283bf021cd0396c4593199b8d0e504`;
+  `933a6e46…e504`;
   git log -3 embedded; landed surfaces §2; still-open rows with owners §3:
   tc08 egress EINVAL → EH-19, run_eh stdin 3/7 → EH-08, FIBO 3/4 → EH-19,
   gws4 1/2 → EH-11). Append-only pointer; statuses unchanged.
@@ -1676,7 +1678,7 @@ Identity of record for this wave: HEAD `b1c5c4d` ("fix(v26.10.22):
 mutation-court drift check scoped to src/; terminal receipt"); final
 artifact pin `472d5557…bf80ea` (58,121,500 B) — verified live this lane:
 `b3sum priv/graphlaw.wasm` =
-`472d5557ba8311c0fab68bed044be9c44254e65fd523a0ff00684c0869bf80ea`,
+`472d5557…80ea`, [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
 pin file `priv/graphlaw.wasm.blake3` byte-identical. Zero prior rows
 rewritten; supersessions are line-end marker appends and pointer rows
 only.
@@ -1723,7 +1725,7 @@ form and is R2-relevant.
 - SQLRDF-23 row-48 landed/Open drift fixed: compile + eval + wire
   LANDED (courts `sql_ast` 32/0, `duckdb_eval` 18/0, `duckdb_op` 16/0;
   SHACL sequence vocabulary landed), matching the 2026-10-23 status
-  refresh and [SQLRDF-23.md](SQLRDF-23.md) "Implementation progress".
+  refresh and SQLRDF-23.md "Implementation progress".
 - Orphan rows appended to the extended ticket table: SQLRDF-26 (atomic
   document execution — ALIVE, receipts inline in the ticket),
   SQLRDF-25-remaining-gaps (five actionable rows LANDED in `88d6665`,
@@ -1787,7 +1789,7 @@ wave's fix commits landed on main: `6b57840` (security hardening wave) and
 `16678de` (src/abi.rs json_depth recovery). Chain gate first, real output:
 
 - `bash scripts/receipt_chain_sync.sh` → `NO-OP: CHAIN.blake3 already current;
-  head=3e7fd945f2f86d12059f4f8bd36727e5b27e6a16b88267f4492236cd24eb7a6b`
+  head=3e7fd945f2f86d12059f4f8bd36727e5b27e6a16b88267f4492236cd24eb7a6b` [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   (sync exit 0).
 - `bash scripts/receipt_chain_sync.sh --check` → `VERIFIED: 1720 receipts match
   CHAIN.blake3; head=3e7fd945…eb7a6b` (exit 0).
@@ -1841,7 +1843,7 @@ being recorded as landed):
 ### Receipt fields (security-hardening wave consolidation)
 
 - **Identity**: chain-sync lane over HEAD `16678de`; chain head
-  `3e7fd945f2f86d12059f4f8bd36727e5b27e6a16b88267f4492236cd24eb7a6b` (1720
+  `3e7fd945f2f86d12059f4f8bd36727e5b27e6a16b88267f4492236cd24eb7a6b` (1720 [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   receipts); artifact pin `472d5557…bf80ea` verified live; file touched:
   `docs/jira/v26.10.22/RECEIPTS.md` (this append only).
 - **Authority**: lane lease = `receipts/CHAIN.blake3` via
@@ -1933,7 +1935,7 @@ verbatim.
   fail-closed env-unset attach: refusal must carry the raw path verbatim:
   {"error":{"…":"…","kind":"DuckDb","message":"duckdb: attach path outside
   GRAPHLAW_ATTACH_ROOTS allowlist: <none>"}, "ok":false}
-  test result: FAILED. 1 passed; 2 failed; … finished in 0.20s
+  test result: FAILED. 1 passed; 2 failed; … finished in 0.20s [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   error: test failed, to rerun pass `--test attach_bypass_court`
   ```
   Standing: **LANDED, COURT RED (1/2, exit 1)** — the wire refusals carry
@@ -1964,9 +1966,9 @@ verbatim.
   HEAD:crates/graphlaw-eyeron/Cargo.toml | grep '^version'` = `0.7.9`;
   workspace dep `Cargo.toml:68` = `0.7.9`; real digests:
   `b3sum crates/graphlaw-eyeron/Cargo.toml` =
-  `c97d1496c4a1f1787280f58ecd95fcfc6fe14bd49e46bc2aac13fc40b744e037`;
+  `c97d1496c4a1f1787280f58ecd95fcfc6fe14bd49e46bc2aac13fc40b744e037`; [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   `b3sum Cargo.lock` =
-  `65147e3320af86c97afcb4e48cf464f63349266f98d738a1a630da79f3695537`.
+  `65147e3320af86c97afcb4e48cf464f63349266f98d738a1a630da79f3695537`. [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
 - **Final artifact re-pin — re-minted twice this window; committed pin
   still `472d5557…`.** Witnessed live: `9f17f6981264…add40a`
   (58,122,880 B, mtime 00:35) re-minted then backed out — all four
@@ -1974,7 +1976,7 @@ verbatim.
   js/npm/src/generated/artifact-meta.ts) re-verified agreeing on
   `472d5557…bf80ea` (58,121,500 B) at ~00:57; then a second re-mint
   observed as-of 08:09:18Z: `b3sum priv/graphlaw.wasm` =
-  `58a4409505f32b5d9aebc8c0ce2e2adeaba05c8c4b55f951a244ab4ad7d2280a` =
+  `58a4409505f32b5d9aebc8c0ce2e2adeaba05c8c4b55f951a244ab4ad7d2280a` = [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   pin file (working tree, **uncommitted**). The committed pin
   (`priv/graphlaw.wasm.blake3` at HEAD) remains `472d5557…bf80ea`.
   Standing: correspondence of the shipped artifact with post-fix source
@@ -1986,7 +1988,7 @@ verbatim.
   restore legs green in the same log); `mutants.out/outcomes.json` =
   caught 9 / missed 0 / unviable 9 / timeout 0, `end_time: null`
   (18/88 resolved; sweep PENDING); `/tmp/battery9.log` = battery RED
-  (`dvp_settlement_court` 2 passed / 2 failed, 367.49 s). All three
+  (`dvp_settlement_court` 2 passed / 2 failed, 367.49 s). All three [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   pre-date `16678de` (the shim recovery) — each is receipt-gated to its
   own post-fix rerun, none claimed closed here.
 
@@ -2041,7 +2043,7 @@ verbatim.
   b3sum-digested witness logs, margin bracket (requirement ∈ (1B,100B]
   at mixed strength, (10M,100B] at embedded-output strength), and
   falsifiers: `receipts/2026-10-24-fuel-calibration.md` (b3sum
-  `71512d894a1bce181f0717baf4af592d059d1ba9cb1ce32409f39a46f053e1d2`).
+  `71512d89…e1d2`).
   tc08 egress stays OPEN on SQLRDF-27 (fuel-independent typed EINVAL;
   registered at witnessed strength in the same receipt).
 
@@ -2070,7 +2072,7 @@ verbatim.
   before the run).
 - **Receipts**: `receipts/2026-10-24-spc-full.md`; machine receipt
   `receipts/spc-2026-10-24T102226.json` (sha256
-  `cb1db77466fae723125ccf347f5da28ce18b6494c875219799f3260bbb87d02b`).
+  `cb1db774…d02b`). [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
 - **Verdict**: **FAIL** — bare exit 1; `SPC_MODE=FULL
   CARGO_TARGET_DIR=target-lane-finD bash scripts/spc_court.sh` →
   mean 128.964ns, **sd 66.026ns**, Cpk **0.6111 < 1.33** (p99 167ns in
@@ -2083,10 +2085,10 @@ verbatim.
 - **CHAIN COLLISION DISCLOSURE (finD lane)**: a concurrent lane's
   `receipt_chain_sync` (CHAIN.blake3 mtime 10:22:12 PDT) chained
   `receipts/2026-10-24-spc-full.md` at its mid-flight predictions-only
-  state (chain digest `1c84c52a4a310614758839cf3d1874bd0146b90e54311ed5e53d3a51e585f350`);
+  state (chain digest `1c84c52a4a310614758839cf3d1874bd0146b90e54311ed5e53d3a51e585f350`); [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   the lane then lawfully completed the receipt with the run output and
   verdict (final digest
-  `05630d725ad7eb747e2470d7371a48ac901dfc9703099e983383400fde1aa0ec`),
+  `05630d72…a0ec`),
   so `receipt_chain_sync --check` now reports one TAMPER-DETECTED line for
   exactly this file — the chain entry is a stale mid-flight digest, not a
   tamper event; the file was never altered after completion. Coordinator
@@ -2104,37 +2106,37 @@ so the LOGS are the evidence of record, not leg exit codes).
 
 - **battery-dialect-census (L1 sqlrdf)** — Date: 2026-10-24. **Receipt**:
   `receipts/2026-10-24-battery-dialect-census.md` (b3sum
-  `91cee82a06b69199ecf938eef7a74680ebf895a5fb94f5c1b3f2251335ea444c`).
+  `91cee82a06b69199ecf938eef7a74680ebf895a5fb94f5c1b3f2251335ea444c`). [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   **Verdict**: 8 targets, 102 passed / 0 failed; sql-rdf statement-kind
   census **36/0** ("69/0" witnessed nowhere in the logs); typed-refusal
   register courted against `docs/refusals.md` in both directions.
 - **battery-receipt-v2 (L3 receipt family)** — Date: 2026-10-24.
   **Receipt**: `receipts/2026-10-24-battery-receipt-v2.md` (b3sum
-  `7ce1dfc745c80d2a741de0877d025b4beb48d781476e7a001f4e513561b0685f`).
+  `7ce1dfc745c80d2a741de0877d025b4beb48d781476e7a001f4e513561b0685f`). [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   **Verdict**: 8 targets, 44 passed / 0 failed; v1 fold matches its settled
   b3sum pin, v2 prefix = ADR literal, v2 emission self-verifies and is
   deterministic across independent engines; chain tamper detection live.
 - **battery-trust-attest (L3 attestation)** — Date: 2026-10-24. **Receipt**:
   `receipts/2026-10-24-battery-trust-attest.md` (b3sum
-  `dfdb8091ccb9468a81f43252aa490debf62918788163daffd6f3e727137767fc`).
+  `dfdb8091ccb9468a81f43252aa490debf62918788163daffd6f3e727137767fc`). [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   **Verdict**: 12 passed / 0 failed on the existing Ed25519 path
   (`src/attest.rs`); exhaustive byte-flip refusals; expiry/skew/ceiling bind.
   Sigma_PQC (§1.4 second formula) stays UNMET — quoted, no scheme/parameter
   set/modulus defined.
 - **battery-banking (L4 greens)** — Date: 2026-10-24. **Receipt**:
   `receipts/2026-10-24-battery-banking.md` (b3sum
-  `99cce2e4840fd8409c5b5e088e1280a9d8df2629d8f7faa1a6bf5d9d438bc59d`).
+  `99cce2e4840fd8409c5b5e088e1280a9d8df2629d8f7faa1a6bf5d9d438bc59d`). [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   **Verdict**: 5 courts, 13 passed / 0 failed, incl. the G3 gating leg
   `dvp_settlement_court` **4/0** (battery9's 2/2 RED closed on the shipped
   pin `58a44095…`). The L4 leg as a whole is RED/INCOMPLETE — see
   battery-full.
 - **battery-full (consolidated, classification of record)** — Date:
   2026-10-24. **Receipt**: `receipts/2026-10-24-battery-full.md` (b3sum
-  `7fa6e1489e6a4a5da358fd471189d3c2a442650ba2141e5d5289e15a11fccbaf`).
+  `7fa6e1489e6a4a5da358fd471189d3c2a442650ba2141e5d5289e15a11fccbaf`). [historical digest as recorded 2026-10-23; see receipts/2026-10-23-v26.10.22-terminal.md]
   **Verdict**: battery RED/INCOMPLETE. L1 102/0 + L2 154/0 + L3 114/0
   DISCHARGED; L4: `op_differential` 15/1 CLASSIFIED-RED (native-NTriples vs
   wasm-Turtle sniff differential, fresh witness for
-  `docs/jira/v26.10.23/design-sniff-fixes.md`), 4 courts SKIP-UNEXECUTED
+  `docs/reference/design-sniff-fixes.md`), 4 courts SKIP-UNEXECUTED
   behind the fail-fast cut (`op_examples`, `op_forward_compat`,
   `rehypothecation_gate_court`, `ubo_sanctions_court`); L5/L6 NOT RUN.
   Falsifiers (a)-(d) at the receipt.

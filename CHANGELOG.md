@@ -8,6 +8,18 @@ Versioning policy (stated once, applies to every entry): the N3 engine is purrdf
 rev-pinned in `Cargo.toml`); the workspace stays on calendar versioning; graphlaw does
 not publish to crates.io — distribution is this repository and GitHub releases.
 
+## [Unreleased]
+
+### Changed
+
+- **docs:** archived superseded milestone docs/receipts (the v26.10.22–v26.10.26
+  `docs/jira/` windows, the pre-v26.10.28 `receipts/*.md` witnesses, generated
+  `docs/reference-generated/`, thesis/whitepaper material) and refreshed the living docs
+  (README, CONTRIBUTING, SECURITY, MIGRATION, GOALS, RECEIPTS-INDEX, CLAUDE.md) to the
+  26.10.28 tree: Rust 1.98, wasm pin `c92caeb6…` (62,909,537 B), 15 dispatched ops,
+  frozen-duckdb 2.0.2. Archived files are recoverable from git history; file paths cited
+  in older entries below that no longer exist in the tree refer to that history.
+
 ## [26.10.28] - 2026-10-28
 
 ### Changed

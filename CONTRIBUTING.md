@@ -1,6 +1,6 @@
 # Contributing
 
-Rust 1.96 (pinned by `rust-toolchain.toml`). Rules: normal branches, merge only (never rebase,
+Rust 1.98 (pinned by `rust-toolchain.toml`). Rules: normal branches, merge only (never rebase,
 force-push, or `git reset --hard`); tests use real collaborators, not mocks. Multi-line commit
 messages go through `git commit -F <file>`, never inline `-m`. Concurrent agents work one
 canonical checkout with disjoint file-ownership lanes (no worktrees/clones; build isolation via

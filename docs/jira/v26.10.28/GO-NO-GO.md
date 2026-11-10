@@ -22,16 +22,16 @@ named; UNVERIFIED is never rounded up.
 | `cargo test --test abi_manifest_court` | 10/10 passed, exit 0 | ALIVE (session run) |
 | budget cliff court (truth-synced to fork counters) | 10/10 passed, exit 0 | ALIVE (session run) |
 | `wasm_native_differential` | 2/2 passed, exit 0 (premise re-authored: ONE-unit law — the wasm artifact DOES advertise frozen-duckdb) | ALIVE (session run) |
-| `wasm_size_court` | 4/4 passed, exit 0 (ceiling 64 → 80 MiB via SCAR; artifact measured 74,097,211 B) | ALIVE (session run) |
+| `wasm_size_court` | 4/4 passed, exit 0 (ceiling 64 → 80 MiB via SCAR; artifact measured 74,097,211 B; superseded by the GL28-13 relink 95cd3df: 62,909,537 B, ceiling 128 MB policy) | ALIVE (session run) |
 | `cargo test --test duckdb_statement_kinds` | 8/8 passed, exit 0 (35 kinds) | ALIVE (session run) |
 | `cargo test --test sql_rdf_dialect` | 36/36 passed, exit 0 | ALIVE (session run) |
 | capabilities digest court | 6/6 passed after `graphlaw-registry --write` repin, exit 0 | ALIVE (session run) |
 | graphlaw_ex artifact instantiation (wasmex 0.15.1) | artifact loaded in 7.4s; admit → `{:error, :abi_not_wired}` | ALIVE (session run) |
 | WASI import audit | 28/28 `wasi_snapshot_preview1`; no host-module imports | ALIVE (session run) |
 | wasm build ladder (`cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`, WASI_SDK_PATH + EH target-feature) | OK, 5m22s; blake3 `c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c` (release re-mint; `348c97fd…` superseded) | ALIVE (session run) |
-| `mix test` (graphlaw_ex, full suite) | first run UNVERIFIED → wasmex 0.15 API fix applied; artifact instantiation ALIVE; full re-run PENDING | PENDING (re-run) |
-| full `cargo test` suite (post-fix re-run) | not yet executed this session | PENDING |
-| `bash scripts/mutation_court.sh` | not yet executed this session | PENDING |
+| `mix test` (graphlaw_ex, full suite) | first run UNVERIFIED → wasmex 0.15 API fix applied; artifact instantiation ALIVE; full re-run since: graphlaw_ex 133 passed (RECEIPTS.md "GL28-1 legs (b)+(c)", cd69757) | ALIVE (later receipt) |
+| full `cargo test` suite (post-fix re-run) | no full-suite receipt in this window dir (per-court counts above stand); not claimed | UNVERIFIED |
+| `bash scripts/mutation_court.sh` | executed: 28 enumerated / 19 caught / 9 unviable / 0 missed (`receipts/2026-10-29-mutation-court-v261028.md`, 66fc0e2) | ALIVE (receipt) |
 | `bash scripts/spc_court.sh` | exit 0 — two receipts re-read at write time: Cpk **6.0979** (`receipts/spc-2026-10-28T165319.json`) and **14.4149** (`receipts/spc-2026-10-28T171756.json`), gate 1.33, p99 125/118 ns, tail_fraction 0.0, 999 samples each | ALIVE (SPC receipt) |
 | graphlaw_ex packet-4 stdio court (wasmex 0.15.1) | admit + tampered-refuse **2/2 passed**, typed fail-closed start | ALIVE (session run) |
 | `cargo test --test trust_attest` | **12/12 passed, exit 0** (acceptance rerun) | ALIVE (session run) |
@@ -52,9 +52,9 @@ named; UNVERIFIED is never rounded up.
 | Field | Value |
 | --- | --- |
 | **POSTURE** | ****GO** — all six work orders met; WO-2 closed by the mutation-court receipt (`receipts/2026-10-29-mutation-court-v261028.md`: 19 caught / 9 unviable / 0 missed)** |
-| **DATE** | 2026-10-28 (flipped at write time from the NO-GO carry) |
-| **Basis** | 5 of 6 work orders are GO on this-session receipts; only WO-2 remains. WO-1 GO: SPC gate exit 0 with Cpk **6.0979** (receipt `receipts/spc-2026-10-28T165319.json`, re-read at write time — p99 125 ns, tail_fraction 0.0), size court 4/4 at the 80 MiB SCAR ceiling, differential 2/2. WO-3 GO: `trust_attest` 12/12 exit 0 on the acceptance rerun. WO-4 GO (carried): 35/35 statement kinds. WO-5 GO: digest repin + capabilities_digest 6/6; receipt surface emission-witnessed on disk. WO-6 GO: packet-4 admit + tampered-refuse 2/2 via wasmex 0.15.1 with typed fail-closed start; WASI 28/28, zero host imports; fork @ 2223f894. **WO-2 closed**: mutation court receipt `receipts/2026-10-29-mutation-court-v261028.md` — 19 caught / 9 unviable / 0 missed; gates witnessed to flip. All six work orders GO. |
-| **GO condition** | The coordinator's solo `bash scripts/mutation_court.sh` exit 0, receipted with embedded output, flips WO-2 — and with it the whole window — to GO. The window posture is **GO**. |
+| **DATE** | 2026-10-28 written; flipped to GO 2026-10-29 (f1321ca, c070392); re-read 2026-11-09 |
+| **Basis** | All six work orders GO. WO-1 GO: SPC gate exit 0 with Cpk **6.0979** (receipt `receipts/spc-2026-10-28T165319.json`, re-read at write time — p99 125 ns, tail_fraction 0.0), size court 4/4 at the 80 MiB SCAR ceiling, differential 2/2. WO-3 GO: `trust_attest` 12/12 exit 0 on the acceptance rerun. WO-4 GO (carried): 35/35 statement kinds. WO-5 GO: digest repin + capabilities_digest 6/6; receipt surface emission-witnessed on disk. WO-6 GO: packet-4 admit + tampered-refuse 2/2 via wasmex 0.15.1 with typed fail-closed start; WASI 28/28, zero host imports; fork @ 2223f894. **WO-2 closed (was the sole open gate)**: mutation court receipt `receipts/2026-10-29-mutation-court-v261028.md` — 19 caught / 9 unviable / 0 missed; gates witnessed to flip. All six work orders GO. |
+| **GO condition** | MET — the mutation-court receipt flipped WO-2 and the window to GO. |
 | **Vacating falsifier** | A re-run contradicting any §0 count (e.g. a capabilities-digest or SPC regression) is a divergence append, never laundered, and reopens the affected §A row regardless of this verdict. |
 
 ## C. Receipt fields
@@ -72,6 +72,6 @@ named; UNVERIFIED is never rounded up.
 ## D. See Also
 
 - `/Users/sac/graphlaw/docs/jira/v26.10.28/WORK-ORDERS.md`
-- `/Users/sac/graphlaw/docs/jira/v26.10.24/GO-NO-GO-v26.10.24.md` (format parent)
+- `/Users/sac/graphlaw/docs/jira/v26.10.28/RECEIPTS.md` (embedded command output)
 - `/Users/sac/graphlaw/docs/jira/v26.10.28/QFD-HOUSE-OF-QUALITY.md`
 - `/Users/sac/graphlaw/docs/jira/v26.10.28/VOC-CTQ-TURNSTILE.md`

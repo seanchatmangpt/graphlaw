@@ -1,5 +1,7 @@
 # Design: Doc Staleness Gate (`scripts/doc_staleness_gate.sh`)
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 Lane: L35 · 2026-10-22 · Status: implemented (exit codes proven below)
 Core-team critique point 5: staleness checking this session was
 periodic-forensic (`stale-claims-audit.md` is a one-time lane artifact). This

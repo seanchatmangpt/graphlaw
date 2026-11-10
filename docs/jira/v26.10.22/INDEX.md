@@ -1,5 +1,7 @@
 # SQL-in-RDF tickets — v26.10.22
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 Status of every ticket: as recorded in the dispatch-era tables below
 (kept as-written; this index is append-only), with the **closeout standing
 of all 32 rows recorded in the [WRAP section](#wrap--v261022-closeout-2026-10-24)
@@ -9,7 +11,7 @@ exceptions: SQLRDF-08 (withdrawn: DuckDB is inside the wasm unit), SQLRDF-27
 (Closed 2026-10-23, receipt-gated on FIBO 4/0 + lifecycle 3/0 — see
 RECEIPTS.md "2026-10-23 ledger truth-sync"), SQLRDF-26 (ALIVE — atomic
 document execution landed, verification receipts inline in
-[SQLRDF-26.md](SQLRDF-26.md)). The CanonArrow ADR
+SQLRDF-26 (ticket file archived)). The CanonArrow ADR
 ([ADR-canonarrow-dual-witness-egress.md](ADR-canonarrow-dual-witness-egress.md))
 is absorbed into the v26.10.22 release boundary — the 26.10.23 moniker is
 deferred.
@@ -35,31 +37,6 @@ Compiler files the tickets point at:
 
 | Id | Title | Status | Gap | Ticket |
 | --- | --- | --- | --- | --- |
-| SQLRDF-01 | Normative vocabulary | Open | was: Section 3.1 and 3.3 names absent → now present in [`ontologies/sql-ast.ttl`](../../../ontologies/sql-ast.ttl) (legacy aliases retained in the alias window); compiler-side hop closed — re-executed 33/0 exit 0 (receipts/[sql-rdf-dialect-2026-10-22.md](../../../receipts/sql-rdf-dialect-2026-10-22.md); grew from the legacy 25/0 as the court file grew) | [SQLRDF-01](SQLRDF-01.md) |
-| SQLRDF-02 | Closed-world SHACL from section 4 | Open | was: no `statementIndex`, projection-list, operator-token, or `rdf:List` shapes → shapes now landed in [`ontologies/sql-ast.ttl`](../../../ontologies/sql-ast.ttl) (`sql:StatementBaseShape`, `sql:SelectStatementShape`, `sql:BinaryExpressionShape`, `sql:statementIndex`); compiler-side hop (`REFUSAL-01` on missing index) closed — dialect re-executed 33/0 exit 0 (receipts/[sql-rdf-dialect-2026-10-22.md](../../../receipts/sql-rdf-dialect-2026-10-22.md)) + conformance 7/0 (receipts/[sql-rdf-conformance-2026-10-22.md](../../../receipts/sql-rdf-conformance-2026-10-22.md)) | [SQLRDF-02](SQLRDF-02.md) |
-| SQLRDF-03 | Clause compiler for having, orderBy, and sql:from | Open | was: `HAVING`, `ORDER BY`, schema-qualified `sql:from`, and scope IRIs unread → closed by compiler support in [`src/sql_ast.rs`](../../../src/sql_ast.rs), courted by `cargo test --test sql_rdf_dialect` (33/0 final, 2026-10-22, exit 0) plus the HAVING court | [SQLRDF-03](SQLRDF-03.md) |
-| SQLRDF-04 | Section 7 analytical MERGE | Open | was: merge was a one-row template, not the section 7.1 parameterized statement → closed by the parameterized MERGE compiler in [`src/sql_ast.rs`](../../../src/sql_ast.rs) / [`src/duckdb_eval.rs`](../../../src/duckdb_eval.rs), courted by `cargo test --test chicago_validation` (9/9) plus the receipt courts | [SQLRDF-04](SQLRDF-04.md) |
-| SQLRDF-05 | Expression-level graphs for the other admitted classes | Open | was: the remaining admitted classes compiled as fixed templates → closed by expression-level graphs in [`src/sql_statement_kinds.rs`](../../../src/sql_statement_kinds.rs) (env-grammar classes), courted 6/0 exit 0 in [`tests/duckdb_statement_kinds.rs`](../../../tests/duckdb_statement_kinds.rs) — the `.gram` environmental exception cleared (receipts/[duckdb-statement-kinds-2026-10-22.md](../../../receipts/duckdb-statement-kinds-2026-10-22.md)) | [SQLRDF-05](SQLRDF-05.md) |
-| SQLRDF-06 | REFUSAL-02 for ConnectStatement and DisconnectStatement | Open | was: compile refused both classes without the stable `REFUSAL-02` code → closed by the register-aligned typed refusal carrier in [`src/sql_ast.rs`](../../../src/sql_ast.rs) / [`docs/refusals.md`](../../refusals.md), courted by the REFUSAL-02 branches in [`tests/sql_rdf_dialect.rs`](../../../tests/sql_rdf_dialect.rs) | [SQLRDF-06](SQLRDF-06.md) |
-| SQLRDF-07 | REFUSAL-03 scope integrity | Open | was: aggregates and `sql:ProcessScope` in the select list were not refused → closed by select-list scope integrity in [`src/sql_ast.rs`](../../../src/sql_ast.rs), courted by `cargo test --test sql_rdf_dialect` (9/9) plus the evasion set and join courts | [SQLRDF-07](SQLRDF-07.md) |
-| SQLRDF-08 | REFUSAL-04 on the wasm build | Withdrawn | The required behavior (refuse every `sql` document on wasm, `default-features = false`) contradicts the one-unit law. `REFUSAL-04` is the non-document-backed builtin reader. SQL-in-RDF admits through `compile_turtle` inside the module. | [SQLRDF-08](SQLRDF-08.md) |
-| SQLRDF-09 | Admitted-statement receipt | Open | was: the execution hash covered SQL text and parameters, not the canonical AST graph → closed by the formula hash over the canonical AST graph in [`src/duckdb_eval.rs`](../../../src/duckdb_eval.rs), witnessed by the formula receipt and courted by `cargo test --test sql_rdf_dialect` (33/0 final, 2026-10-22, exit 0) | [SQLRDF-09](SQLRDF-09.md) |
-| SQLRDF-10 | Section 1.4 post-quantum identity is unmet | Open | was: `Σ_PQC` had no conformance note → closed by the conformance note filed in [`docs/refusals.md`](../../refusals.md) (§1.4 identity), courted 10/0 in the attestation courts | [SQLRDF-10](SQLRDF-10.md) |
-| SQLRDF-11 | Chicago extension court through compiled AST graphs | Open | was: section 6.2 checks ran as raw SQL and could skip when unsigned extensions were off → closed by §6.2 courts running compiled AST graphs over real frozen-duckdb, courted by [`tests/chicago_validation.rs`](../../../tests/chicago_validation.rs) | [SQLRDF-11](SQLRDF-11.md) |
-| SQLRDF-12 | File the conformance text | Open | was: the pasted Recommendation had no stable path in the tree → closed by [`docs/reference/sql-rdf-rec.md`](../../reference/sql-rdf-rec.md) plus the citation gates in this window's tickets | [SQLRDF-12](SQLRDF-12.md) |
-| SQLRDF-13 | Validation-scoped RDFS closure for §4 sh:class constraints | Open (follow-up, not in v26.10.22 acceptance) | `sh:class sql:Expression`/`sql:ASTNode` withheld at `ontologies/sql-ast.ttl:315-330` (asserted-data-only validation) | [SQLRDF-13](SQLRDF-13.md) |
-| SQLRDF-14 | §3.1 letter conformance — re-parent the 35 PEG leaf classes under the six family classes | Open (follow-up, not in v26.10.22 acceptance) | The 35 PEG leaves generate flat under `sql:Statement` with no family ancestor | [SQLRDF-14](SQLRDF-14.md) |
-| SQLRDF-15 | §6.2 tpch setup divergence — retire the sf=0.01 hand-patch into the generator + register | Open (follow-up, not in v26.10.22 acceptance) | Hand-patch in `ggen/sql-dialect/sql_extensions.rs:22-26` disagrees with `extract_statements.py:31`; the 0-row sf=0 witness is contradicted by upstream dbgen.cpp, so the divergence is unadjudicated (frozen pin sources absent) | [SQLRDF-15](SQLRDF-15.md) |
-| SQLRDF-16 | Moonshot backlog — the 1000× ERRC horizon (thesis Part II) | Open (follow-up, BLOCKED-BY: v26.10.22 integration commit) | Eight moonshots (E1/E2/E3/R1/R2/A1/C1/C2) registered with falsifiers + dependency order E1→A1→E2→E3, R1→C1, R2→C2; thesis at [THESIS.md](THESIS.md) (verbatim body pending — dispatch did not carry the prose) | [SQLRDF-16](SQLRDF-16.md) |
-| SQLRDF-17 | ABI duckdb exec accepts raw SQL text (C2 hole P1) | Open (follow-up, BLOCKED-BY: v26.10.22 integration commit) | `src/duckdb_op.rs:198-219` accepts `ast.text` as raw SQL (legacy `(None,None)` hash arm at `src/duckdb_eval.rs:183-188`); dialect sniff misroutes bare SQL to Sparql (`src/dialect/sniff.rs:128` `sniff`, no `BareSql` class); `raw_connection()` is `pub` (`src/duckdb_eval.rs:155`) — spin-out of SQLRDF-16 row C2 | [SQLRDF-17](SQLRDF-17.md) |
-| SQLRDF-18 | P28-SIL program — substrate + zero-overhead execution architecture | Open (successor program, BLOCKED-BY: v26.10.22 integration commit except LICENSE.md + TC-LEGAL-01 + baseline measurement, which proceed now) | PRD "GraphLaw Substrate & P28-SIL Zero-Overhead Execution Architecture" v1.0.0 filed verbatim at [PRD-P28-SIL.md](PRD-P28-SIL.md); TC-LEGAL-01/02 courts landed (3/0); TC-MOCK-00 gate landed; Phase 3 residue closed (corpus 14+/0 inline flips + shape_mutation_court.sh); Phase 4 license packaged (LICENSE-P28-SIL.md); Phase 2 skeleton implemented (ring+ledger+join courts green); Phase 1 designed (designs/PHASE1-generated-gate.md), BLOCKED-BY E1→A1→E2; TC-HOT full-corpus receipt governs: p99 209 ns PASS durable; variance 26.91% and SPC Cpk legs open (RECEIPTS.md §(f), designs/tc-hot-full-receipt.md); §3.1 builds on landed R1 canon-once (`src/sql_ast.rs:2141`) | [SQLRDF-18](SQLRDF-18.md) |
-| SQLRDF-19 | CI feature-matrix gaps — untested build cells | Open (follow-up, BLOCKED-BY: v26.10.22 integration commit) | PR CI runs one native combo (`pack-tools,abi,wasi-patched-deps`, ci.yml:29/37); `--all-features` (ring, runner) is release-only (release.yml:85); untested cells: `runner` bin zero coverage, ring-without-duckdb, ring+duckdb seam, `--no-default-features`, pairwise off-default cells | [SQLRDF-19](SQLRDF-19.md) |
-| SQLRDF-20 | BEAM hot-upgrade protocol — artifact swap under the supervisor, with its own court | Open (follow-up, BLOCKED-BY: v26.10.22 integration commit + SQLRDF-19) | Upgrade is a versioned release event (digest re-pin + ARTIFACTS row + changelog before first admission); evidentiary continuity via host-side ring/ledger; required court: `--expect-blake3` pin + admission-table version in first post-upgrade ledger batch + receipt chain across the boundary ([SQLRDF-20.md](SQLRDF-20.md)) | [SQLRDF-20](SQLRDF-20.md) |
-| SQLRDF-21 | Sovereign in-WASM DuckDB execution (EH wall closed) | Open (courts landing this wave) | `duckdb` ABI op is host-side (`src/duckdb_op.rs:74-82` per-call in-memory connections, raw-SQL exec arm `src/duckdb_op.rs:198-219`); required: in-module dispatch with no cfg gate, full-lifecycle court under wasmtime 48 + `wasm_exceptions`, WHERE-less UPDATE/DELETE `REFUSAL-05` pre-engine with DB byte-identical, MERGE mutating + epoch-bump court, artifact re-pin with witnessed receipt, pm4pytest FIBO matrix green ([designs/fibo-pm4py-court-matrix.md](designs/fibo-pm4py-court-matrix.md)) | [SQLRDF-21](SQLRDF-21.md) |
-| SQLRDF-22 | FIBO-matrix compiler gaps — DECIMAL, COPY egress policy, multi-row INSERT, batch vocabulary, ATTACH path validation, egress digests | Open | Six audited gaps: no DECIMAL column type (`src/sql_ast.rs:1723-1735` allowlist; `xsd:decimal` quoted by `lit()` `src/sql_ast.rs:1420-1437`), COPY TO destination hardcoded (`src/sql_ast.rs:1948`, expression form `:1524` but no options/policy), single-row INSERT shapes (`statement_classes.ttl:145-160`), one statement per document (`src/sql_ast.rs:1380-1407`), scalar ATTACH hardcodes `:memory:` (`:2008`, expression form `:1673-1678` no path validation), `ExecutionReceipt` has no artifact-digest field (`src/duckdb_eval.rs:134-156`); each lands typed vocabulary or a documented typed refusal with a court; egress digest receipt-carried ([SQLRDF-22.md](SQLRDF-22.md)) | [SQLRDF-22](SQLRDF-22.md) |
-| SQLRDF-23 | Statement sequences (G5) — multi-statement documents with ordered, receipted batch execution | Open (compile + eval + wire LANDED 2026-10-23; courts `sql_ast` 32/0, `duckdb_eval` 18/0, `duckdb_op` 16/0; SHACL sequence vocabulary landed — ticket stays Open until the court plan (a)-(f) closes) | Landed: compile half in `src/sql_ast.rs:1343` (`compile_turtle_document`), eval + wire landed per the 2026-10-23 status refresh below. Verified design at [designs/statement-sequence-design.md](designs/statement-sequence-design.md): closes the silent multi-root pick (`src/sql_ast.rs:1376-1409`) with `sql:StatementSequence`/`sql:statements` vocabulary, `compile_turtle_document` (single-root back-compat bit-for-bit), domain-separated `doc_hash`, `BatchReceipt` with `failed_at` partial-commit semantics, per-member cache law, new `INDEX_SEQUENCE_DISORDER`/`SEQUENCE_EMPTY`/`MIXED_DOCUMENT_ROOTS` MalformedAst arms, court plan (a)-(f) | [SQLRDF-23](SQLRDF-23.md) |
-| PRD-P28-SIL | Operator PRD — GraphLaw Substrate & P28-SIL Zero-Overhead Execution Architecture v1.0.0 (operative PRD for the successor program) | Open | Filed 2026-10-22 verbatim (126 lines, v1.0.0, supersedes the earlier skeleton) at [PRD-P28-SIL.md](PRD-P28-SIL.md); no re-dispatch needed | [PRD-P28-SIL](PRD-P28-SIL.md) |
-| DISSERTATION | Operator dissertation — "Admitted Computation: The Canonical Graph as the Sole Substrate for Relational Execution" (verbatim, chapters 1–10 + abstract) | Open (filed; artifact mapping below) | Filed verbatim at [DISSERTATION.md](DISSERTATION.md). Chapter→program-artifact map: Ch1 introduction → this window's program frame; Ch2 admission calculus → [`ontologies/sql-ast.ttl`](../../../ontologies/sql-ast.ttl) + [`src/sql_ast.rs`](../../../src/sql_ast.rs); Ch3 receipt algebra → SQLRDF-09 (landed: canonical-AST-graph formula hash, [`src/duckdb_eval.rs`](../../../src/duckdb_eval.rs)); Ch4 one-description → designs E1/A1/E2; Ch5 executable conformance → design [E3-conformance.md](designs/E3-conformance.md) (rung skeleton); Ch6 content-addressed + evidentiary → designs [C1-cache.md](designs/C1-cache.md) + [P28-SIL-specs.md](designs/P28-SIL-specs.md); Ch7 single door → SQLRDF-17 / design [C2 hole P1](SQLRDF-17.md); Ch8 courts methodology → this window's court practice (RECEIPTS.md + mutation_court); Ch9 limitations → Σ_PQC / epoch / federation disclosures (SQLRDF-10 conformance note, SQLRDF-13..15 follow-ups); Ch10 conclusion → v26.10.22 acceptance boundary | [DISSERTATION](DISSERTATION.md) |
 
 ## Lanes
 
@@ -161,7 +138,7 @@ Verified on disk; per-lane receipts in [RECEIPTS.md](RECEIPTS.md)
   (`designs/tc-hot-01-errc-receipt.md`: 10M p99 209 ns inside 250, refusal
   p99 42 ns PASS, variance 26.91% FAIL, SPC Cpk 0.001 FAIL).
   The full instrument-by-instrument gathering is
-  [designs/benchmark-census.md](designs/benchmark-census.md): six SPC
+  designs/benchmark-census.md: six SPC
   JSON receipts, all FAIL, highest Cpk 0.555. Prose that still quotes
   cpk −0.0018 and p99 375 ns for `receipts/spc-2026-10-22.json` is
   describing bytes that file no longer holds (current object: Cpk
@@ -217,7 +194,7 @@ Verified on disk; per-lane receipts in [RECEIPTS.md](RECEIPTS.md)
 
 ### Architecture doc
 
-- [`docs/ARCHITECTURE.md`](../../../docs/ARCHITECTURE.md) — admission-law flow
+- `docs/ARCHITECTURE.md` — admission-law flow
   with verified file:line anchors, grouped module map, invariants, wasm
   unit state. Status: **CURRENT** (landed 2026-10-22, lane L104).
 
@@ -234,13 +211,10 @@ Deliverables under
   proven (sha256 digests, README "Determinism invariant").
 - `ontology/` — 7 SHACL shapes, 2 N3 rules, benign/mutated decimal
   twins, `gen_shapes.py`.
-- [COURT-SPEC.md](mega/tc-mega-fibo-01/COURT-SPEC.md) — CTQ status
   census at spec time: 1 WITNESSED (M2 count class) / 7 UNVERIFIED
   (M1, M3, M4, M5, M7, M8, M9) / 1 REFUTED (M6).
-- [PILLARS-AUDIT.md](mega/tc-mega-fibo-01/PILLARS-AUDIT.md) — pillar
   audit; U5 records the wasm artifact not linking (`rust-lld
   -lduckdb`).
-- [IMPLEMENTATION-PLAN.md](mega/tc-mega-fibo-01/IMPLEMENTATION-PLAN.md)
   — 17 work orders (WO-01..WO-17), 6 NEW-MECHANISM class.
 
 Critical dependency: WO-10 (wasm client sim, serves M7) is blocked on
@@ -261,19 +235,7 @@ the `m-wave-verdicts` and N-lane rows below.
 
 | Record | What it is | Status |
 |---|---|---|
-| [designs/eh-runner-decision-memo.md](../../archive/designs-2026-10-23/eh-runner-decision-memo.md) | EH runner decision memo (+ L126 amendment): DuckDB wasm artifact carries a Tag section wasmi cannot host; recommends a route, decision required | DECISION REQUIRED (A1 refuted by amendment) |
-| [designs/a1prime-trytable-recipe.md](designs/a1prime-trytable-recipe.md) | A1' rebuild recipe: emsdk try_table/new-style wasm EH flags for a uniformly new-EH artifact hostable by V8 + modern wasmtime | DESIGN (read-only recipe, nothing landed) |
-| [designs/dual-artifact-policy-design.md](designs/dual-artifact-policy-design.md) | Route C dual-artifact policy: legacy EH engine artifact + PURE-tier pre-duckdb module for the wasmi court tier; supersedes the memo route pick | DESIGN (nothing landed) |
-| [designs/wasm-link-root-cause.md](designs/wasm-link-root-cause.md) | WASM-LINK-RC consolidated receipt: four-hop root cause of the `-lduckdb` link failure and the EH consequence chain | DOCUMENTED |
-| [designs/integration-gonogo.md](designs/integration-gonogo.md) | Integration GO/NO-GO board re-executing unreceipted gates; companion to the commit manifest | CURRENT (board as-of 2026-10-22) |
-| [designs/commit-manifest.md](designs/commit-manifest.md) | Commit manifest: 218-entry working set split into 8 dependency-ordered buckets | CURRENT (pre-commit prep) |
-| [designs/commit-drafts-validation.md](designs/commit-drafts-validation.md) | Validation of the 8 commit drafts against `git status` at use time; 3 corrections applied | PASS (with corrections) |
-| [designs/post-commit-runbook.md](designs/post-commit-runbook.md) | Post-commit runbook: coordinator-executed gate sequence after the wave commit, every step receipt-cited | CONSOLIDATION (not yet executed) |
-| [designs/mutation-court-full-receipt.md](designs/mutation-court-full-receipt.md) | Full mutation-court run on the dirty wave tree: typed refusal exit 6 MUTATION-COURT-DIRTY-TREE — the gate fired as designed | TYPED REFUSAL (gate non-vacuous) |
-| [designs/precommit-acceptance-receipt.md](designs/precommit-acceptance-receipt.md) | Pre-commit acceptance run of the 8-court sql-rdf set in an isolated target dir; per-target counts embedded | PASS (composite re-run per target) |
-| [designs/pure-artifact-witness.md](designs/pure-artifact-witness.md) | PURE-tier packet-4 frame witness (N15): beam4pm artifact BLAKE3-matches `8b4f4bc8…`; no rebuilds or pin changes | WITNESSED |
-| [designs/m-wave-verdicts.md](designs/m-wave-verdicts.md) | M-lane verdict receipts (M2/M6/M9/M10/M11 OUT; M3/M12 FILED; M4 OUT->FILED by L149: `designs/m4-wasm-boundary-receipt.md`) transcribed from lane command output | CURRENT (coordinator-filed) |
-| [designs/stale-wasi-sweep.md](designs/stale-wasi-sweep.md) | Read-only stale WASI/frozen-duckdb reference sweep with exclusions honored | CURRENT (sweep report) |
+| designs/eh-runner-decision-memo.md | EH runner decision memo (+ L126 amendment): DuckDB wasm artifact carries a Tag section wasmi cannot host; recommends a route, decision required | DECISION REQUIRED (A1 refuted by amendment) |
 
 ### Session design records — post-L165 (2026-10-22, lane L170)
 
@@ -287,18 +249,9 @@ file has since landed (L165 recorded it as not-landed) — indexed below.
 
 | Record | What it is | Status |
 |---|---|---|
-| [designs/m4-wasm-boundary-receipt.md](designs/m4-wasm-boundary-receipt.md) | M4 wasm-boundary verdict receipt (closes the M4 OUT->FILED flip noted in m-wave-verdicts) | FILED (L149) |
-| [designs/p7-final-regen-prestage.md](../../archive/designs-2026-10-23/p7-final-regen-prestage.md) | P7 pre-stage: final registry regen procedure, queued on the GO/NO-GO board row 47 | PRE-STAGE (not yet executed) |
-| [designs/mutation-court-full-receipt.md](designs/mutation-court-full-receipt.md) | In-file amendments: N1 verification + blocked-until-commit; L151 mutant-scope freshness re-verification (corrects N1's "124" count) | AMENDED (L151) |
-| [designs/OPERATOR-DECISIONS.md](designs/OPERATOR-DECISIONS.md) | Consolidated operator decision register: question, evidence, options, recommendation per entry; nothing decided by the lane | DECISION REGISTER (open) |
-| [designs/laundering-count-reconcile.md](designs/laundering-count-reconcile.md) | Reconciles GO/NO-GO row 1 "laundering 11/11" against the M2/L147 witness at 23/0 | RECONCILED |
+| designs/p7-final-regen-prestage.md | P7 pre-stage: final registry regen procedure, queued on the GO/NO-GO board row 47 | PRE-STAGE (not yet executed) |
 | [designs/staleness-76-triage.md](designs/staleness-76-triage.md) | Staleness-gate residual triage: live count 91 (not 76); rule split R2=48/R3=15/R4=28 | TRIAGED |
-| [designs/g2-repin-prep.md](designs/g2-repin-prep.md) | G2 AXIOM-IMMUTABILITY re-pin prep: read-only prep, writes only `courts/code-partition/axioms.blake3.next` | PREP (runbook step 3) |
-| [designs/tc-hot-full-receipt.md](designs/tc-hot-full-receipt.md) | "Durable corpus relocation (L159)" section: TC-HOT corpus moved to a durable path with reattempt leg L118 | AMENDED (L159) |
-| [designs/registry-drift-scope.md](designs/registry-drift-scope.md) | Registry drift scope receipt: court run with embedded exits/digests bounding registry drift | RECEIPTED |
-| [designs/repin-staging-gap.md](../../archive/designs-2026-10-23/repin-staging-gap.md) | Re-pin staging gap: wasi-sdk-34 vs emsdk-built staging; nothing re-pinned, every claim receipt-cited | GAP DOCUMENTED |
-| [designs/spc-red-remediation-design.md](designs/spc-red-remediation-design.md) | SPC red remediation design for `spc_court.sh`/`tc_hot_01.rs`; design only, gate code untouched by the lane | DESIGN (nothing landed) |
-| [designs/wasmi-eh-research.md](designs/wasmi-eh-research.md) | wasmi exception-handling research feeding the ENGINE-tier host decision (wasmi EH support, wasmtime 48 new-EH) | RESEARCH (landed since L165) |
+| designs/repin-staging-gap.md | Re-pin staging gap: wasi-sdk-34 vs emsdk-built staging; nothing re-pinned, every claim receipt-cited | GAP DOCUMENTED |
 
 ### Session design records — post-L170 (2026-10-22, lane L171)
 
@@ -308,11 +261,6 @@ Each row verified present on disk via `ls -lt` + `test -f` before filing
 
 | Record | What it is | Status |
 |---|---|---|
-| [designs/eyeron-switchover-fixforward.md](designs/eyeron-switchover-fixforward.md) | N25 receipt: `cargo check -p graphlaw-eyeron` exit 0, 0 errors — the 31-error parser split freeze was already fixed forward by the switchover lane; remaining `*_split/` staging dirs intentionally unwired | FIX-FORWARD RECEIPT (0-error census) |
-| [designs/receipt-surface-post-switchover.md](designs/receipt-surface-post-switchover.md) | N27 analysis: receipt-surface FILES pins hard-code only 2 of 5 compiler files (`src/registry/emit_json.rs:73-92`) → ~35.8% of the compiler surface unpinned; 5-entry FILES expansion PROPOSED-NOT-APPLIED (src not quiescent during analysis) | PROPOSAL (code change not applied) |
-| [designs/switchover-provenance-census.md](designs/switchover-provenance-census.md) | N26 census: all 8 split trees WIRED (facade `mod`/`pub use` evidence per tree); executor of the wiring UNDETERMINED — no logged actor in the session transcript corpus; working tree NOT commit-ready as-manifested | CENSUS (executor UNDETERMINED — unlogged-actor question open) |
-| [designs/s1-surface-analysis-verify.md](designs/s1-surface-analysis-verify.md) | S1 skeptic verification of N27: 35.8% pin-gap arithmetic re-derived from `wc -c` (exit 0); FILES pins + registry JSON rows + `tests/registry_artifacts.rs:890/907` confirms `files.len() == 2` — all N27 cites verified | CONFIRMED (skeptic pass) |
-| [designs/s7-chain-board-check.md](designs/s7-chain-board-check.md) | S7 witness: `receipt_chain_sync.sh --check` 22/22 VERIFIED, exit 0, head `5931264f…` (chain grew 14 receipts from N14's baseline without breaking the fold); GO/NO-GO board re-read at ~20:05 — 17 READY items | VERIFIED (22/22, exit 0) |
 
 ### Session design records — post-L171 (2026-10-22, lane L174)
 
@@ -326,9 +274,7 @@ outputs found under `designs/` in this batch.
 
 | Record | What it is | Status |
 |---|---|---|
-| [designs/s2-provenance-census-verify.md](designs/s2-provenance-census-verify.md) | S2 skeptic verification of N26: independently re-derived all-8-trees-wired (facade `mod`/`pub use` evidence), zero writes to split dirs in the wiring window via its own jsonl sweep; abi/ops and reasoner/builtins are nested dirs (12 files, not 8 flat); out-of-band actor not identified — advises do NOT commit until the unlogged writer is found | CONFIRMED with corrections (actor question open) |
-| [designs/s4-spc-design-verify.md](designs/s4-spc-design-verify.md) | S4 skeptic verification of `spc-red-remediation-design.md` (L169): 5 receipts re-parsed, p999=292 shelf CONFIRMED in 4 runs (stronger than claimed), 3 arithmetic corrections, composite tail-magnitude loophole found; measurement model stands, gate needs one more term before implementation | PARTIAL (design confirmed; composite gate loophole) |
-| [designs/surface-six-entry-patch.md](../../archive/designs-2026-10-23/surface-six-entry-patch.md) | L172 staged patch expanding `src/registry/emit_json.rs` FILES const from 2 to 6 entries (closes the S1-confirmed 35.8% pin gap); DO-NOT-APPLY until quiescent window, sequenced after green compile and BEFORE any `graphlaw-registry --write` | STAGED (deferred, not applied) |
+| designs/surface-six-entry-patch.md | L172 staged patch expanding `src/registry/emit_json.rs` FILES const from 2 to 6 entries (closes the S1-confirmed 35.8% pin gap); DO-NOT-APPLY until quiescent window, sequenced after green compile and BEFORE any `graphlaw-registry --write` | STAGED (deferred, not applied) |
 
 ### V-L20 integration verification (2026-10-22, lane V-L20)
 
@@ -366,8 +312,8 @@ lane; nothing committed.
 ### Operator brief — file splits, agent admission, three partitions (2026-10-22)
 
 The brief is filed, reconciled to `wc -l` on this tree, in
-[designs/core-team-decomposition.md](designs/core-team-decomposition.md) and
-[designs/deterministic-agent-admission.md](designs/deterministic-agent-admission.md).
+designs/core-team-decomposition.md and
+designs/deterministic-agent-admission.md.
 The moonshot catalog rows are in [designs/INDEX.md](designs/INDEX.md).
 
 Eight trees are `mod`-wired. Parents stayed `foo.rs` with children in
@@ -378,7 +324,6 @@ field order and the SQL receipt formula were not edited.
 |---|---|---|
 | Reasoner | `limits.rs`, `builtins/{list,log,math,string}.rs`, `solve_context.rs` (dead draft) | `unify.rs`, `tabled.rs`, `BuiltinPredicate`, replacing the long `solve_backward_goal` parameters. `reasoner.rs` is still 4248 lines and still allows `clippy::too_many_arguments`. `builtins/mod.rs` is 946. |
 | Parser | `cursor.rs` (438), `grammar.rs` (1500), entry points in `parser.rs` (342) | Further cut of `grammar.rs` |
-| SQL AST | `sql_ast/{ast,refusals,serializer}.rs` | Prep-lane reader/dataset/compile cut, `src/sql/` rename, `builder.rs`. [sql-ast-decomposition.md](designs/sql-ast-decomposition.md) |
 | Receipt chain | `frame.rs`, `record.rs`, `store.rs`; epoch and validator stayed in the parent | — |
 | Registry | `definitions.rs`, `emit_json.rs`, `emit_ttl.rs`; parent is the 130-line façade | Surface digest not re-run for this filing. `tests/registry_hash_invariance.rs` does not exist. |
 | ABI | `ops/{meta,parse_convert,query_engines,governance}.rs` | `lease.rs` is a module comment. `LeaseContext` is not compiled and no op admits it up front. |
@@ -396,12 +341,12 @@ ontology, no semantic-ticket graph, and no receipt issued for a source edit.
 The measured partition court remains the N21 receipt: G3 FAIL, 44 unadmitted
 projection leaks, handwritten/derived ratio 1.1425. Those leak paths still
 name the deleted `*_split` folders; the path map is the switchover note in
-[code-partition-census.md](designs/code-partition-census.md). The ratio has
+code-partition-census.md. The ratio has
 not inverted. G5 prints it and does not call it a pass.
 
 ### Session lithography (2026-10-22)
 
-Filed at [designs/session-lithography.md](designs/session-lithography.md).
+Filed at designs/session-lithography.md.
 A restart loads the Lithography section of `CLAUDE.md` and
 `.claude/hooks/lithography_card.py` (`SessionStart`:
 `startup|resume|clear|compact`).
@@ -434,11 +379,7 @@ sync's link set and is superseded by this count. Top-level files present on
 disk but not named anywhere
 above:
 
-- [`_LANES.md`](_LANES.md) — lane lease map for this window
 - [`CHARTER-DFLSS.md`](CHARTER-DFLSS.md) — DFLSS charter
-- [`DFLSS-DOSSIER.md`](DFLSS-DOSSIER.md) — DFLSS dossier (Define/Measure/Explore/Develop/Implement records)
-- [`RELEASE-NOTES-26.10.22.md`](RELEASE-NOTES-26.10.22.md) — release notes (v26.10.22; the `RELEASE-NOTES-DRAFT-26.10.21.md` name this row carried at the 2026-10-22 sync does not exist on disk — citation repaired 2026-10-24, closeout lane)
-- [`RUST-4-PHASE2-HARDENING.md`](RUST-4-PHASE2-HARDENING.md) — Rust phase-2 hardening ticket
 
 (`DISSERTATION.md`, `PRD-P28-SIL.md`, `RECEIPTS.md`, `THESIS.md`,
 `SQLRDF-01..20.md`, `mega/`, and `designs/` are indexed above.)
@@ -452,80 +393,13 @@ re-adjudicated here — see [designs/RECEIPTS.md](designs/RECEIPTS.md) and
 
 | Record | H1 (verbatim) |
 | --- | --- |
-| [A1-scope-as-type.md](designs/A1-scope-as-type.md) | A1 — scope-as-type via entailment closure (= SQLRDF-13 implementation plan) |
-| [advisory-update-receipt.md](designs/advisory-update-receipt.md) | Advisory Update Receipt — Lane L103 (L63 residual) |
-| [c4-architecture.md](designs/c4-architecture.md) | C4 Architecture Documentation — Deterministic Agent Governance Platform |
-| [c4-reconciliation.md](designs/c4-reconciliation.md) | C4 reconciliation: c4-architecture.md vs. repo state |
-| [cargo-deny-receipt.md](designs/cargo-deny-receipt.md) | cargo-deny Receipt (RUST-8, lane L63) |
-| [claude-md-ladder-receipt.md](designs/claude-md-ladder-receipt.md) | CLAUDE.md Ladder Receipt — Lane L50 |
-| [claude-policy-commit-note.md](../../archive/designs-2026-10-23/claude-policy-commit-note.md) | .claude/ Commit Policy — GO/NO-GO Operator Decision 3 |
-| [clippy-zero-receipt.md](designs/clippy-zero-receipt.md) | Clippy-zero receipt — lane L130 |
-| [code-first-refusals.md](designs/code-first-refusals.md) | Code-first refusals & binary-first serialization — P29-RFL (design record) |
-| [commit-receipt-provenance-gap.md](../../archive/designs-2026-10-23/commit-receipt-provenance-gap.md) | Commit receipt — staged provenance-gap section (lane L176) |
-| [cpk-correction.md](designs/cpk-correction.md) | Cpk capability analysis — corrected (DFLSS Measure-lane A record) |
-| [ctq-traceability.md](designs/ctq-traceability.md) | CTQ → Court Traceability Matrix (DFLSS Define-lane A record) |
-| [defect-pareto-verified.md](designs/defect-pareto-verified.md) | Defect Pareto — witnessed vs charter (DFLSS Define-lane B record) |
-| [E1-alias-elimination.md](designs/E1-alias-elimination.md) | E1 — alias-window elimination (design record) |
-| [E2-shapes-reader.md](designs/E2-shapes-reader.md) | E2 Design — Generate the Property-Path Reader from the SHACL Shapes |
-| [eyeron-pin-reconciliation.md](designs/eyeron-pin-reconciliation.md) | Eyeron Pin Reconciliation (L59) |
+| claude-policy-commit-note.md | .claude/ Commit Policy — GO/NO-GO Operator Decision 3 |
+| commit-receipt-provenance-gap.md | Commit receipt — staged provenance-gap section (lane L176) |
 | [gate-rule-changes-receipt.md](designs/gate-rule-changes-receipt.md) | Receipt: doc_staleness_gate rule changes (L168) |
-| [ggen-pack-drift.md](designs/ggen-pack-drift.md) | ggen/sql-dialect pack vs sql-rdf compiler — drift report |
-| [ggen-pack-reconciliation.md](designs/ggen-pack-reconciliation.md) | ggen/sql-dialect pack drift — reconciliation plan (L61) |
-| [ggen-toml-tempath-proposal.md](designs/ggen-toml-tempath-proposal.md) | Proposal: normalize wasm/ggen.toml paths (L160) |
-| [graphlaw-admission-blueprint.md](designs/graphlaw-admission-blueprint.md) | graphlaw Admission Blueprint — CONSTRUCT-OPERATIONAL-BLUEPRINT |
-| [graphlaw-run-live-receipt.md](designs/graphlaw-run-live-receipt.md) | graphlaw-run Live Execution Receipt (lane L115) |
-| [gws4-postlink-receipt.md](designs/gws4-postlink-receipt.md) | gws4 post-link receipt — L116 |
-| [hot-path-baseline.md](designs/hot-path-baseline.md) | Hot-path measured baseline (DMEDI Measure) |
-| [js-test-receipt.md](designs/js-test-receipt.md) | JS Test Receipt — L107 |
-| [link-green-receipts.md](designs/link-green-receipts.md) | Link-green receipt set (coordinator-filed from lane reports) |
-| [m12-staleness-receipt.md](designs/m12-staleness-receipt.md) | M12 — doc_staleness_gate Receipt |
-| [m3-shapes-receipt.md](designs/m3-shapes-receipt.md) | M3 Shapes No-Drift Receipt |
-| [merge-fixture-fix-receipt.md](designs/merge-fixture-fix-receipt.md) | Merge Fixture Fix Receipt (L127) |
-| [merge-shapes-receipt.md](designs/merge-shapes-receipt.md) | MERGE Shape Coverage Receipt (Lane L123) |
-| [n28-testhost-eh-fix.md](designs/n28-testhost-eh-fix.md) | N28 — test-host exceptions gate: diagnosis receipt |
-| [p28-sil-capability-audit.md](designs/p28-sil-capability-audit.md) | P28-SIL v2.1.0 capability audit — consolidated record (12 lanes) |
-| [pce-baseline.md](designs/pce-baseline.md) | PCE baseline — charter "<2.8%" REFUTED at the measured operating point |
-| [peg-kinds-claim-receipt.md](designs/peg-kinds-claim-receipt.md) | Receipt: L60 — "35 PEG statement kinds" claim audit |
-| [R2-capability-routes.md](../../archive/designs-2026-10-23/R2-capability-routes.md) | R2 — capability route table (design record) |
-| [receipt-surface-pin.md](designs/receipt-surface-pin.md) | Receipt-surface digest pin (P28-SIL §4 circumvention witness) |
-| [receipts-chain-audit.md](designs/receipts-chain-audit.md) | Receipts chain audit — lane L31 |
+| R2-capability-routes.md | R2 — capability route table (design record) |
 | [rules-pruner-design.md](designs/rules-pruner-design.md) | C23 Harness Pruner — Design (L34) |
-| [rust-core-audit.md](designs/rust-core-audit.md) | Rust core-team audit — consolidated record (8 lanes, post-v26.10.22) |
-| [s10-index-rows-verify.md](designs/s10-index-rows-verify.md) | S10 skeptic — adversarial verification of L174's 3 INDEX rows |
-| [s11-bench-restore-verify.md](designs/s11-bench-restore-verify.md) | S11 skeptic verification — N22 restore claim, benches/tc_hot_02.rs |
-| [s13-spc-amendment-verify.md](designs/s13-spc-amendment-verify.md) | S13 skeptic — verification of Amendment 1 vs s4-spc-design-verify.md |
-| [s14-provenance-note-verify.md](designs/s14-provenance-note-verify.md) | s14-provenance-note-verify — skeptic verification of L176's staged provenance-gap note |
-| [s15-manifest-refresh-verify.md](designs/s15-manifest-refresh-verify.md) | S15 — Skeptic verification of commit-manifest refresh #3 (L173) |
-| [s16-census-receipt-verify.md](designs/s16-census-receipt-verify.md) | S16 — skeptic census of L110's sweep-post-link receipt |
-| [s17-new-designs-verify.md](designs/s17-new-designs-verify.md) | S17 — provenance verification of two unassigned design records |
-| [s8-unlogged-writer-watch.md](designs/s8-unlogged-writer-watch.md) | S8 — Unlogged Writer Watch (observation lane) |
-| [s9-patch-verify.md](designs/s9-patch-verify.md) | S9 patch verify — L172 staged 6-entry surface patch (skeptic, read-only) |
-| [shapes-rec-drift.md](designs/shapes-rec-drift.md) | Shapes ↔ Rec §4 Drift Report (Lane L33) |
-| [shapes-rec-reconciliation.md](designs/shapes-rec-reconciliation.md) | Shapes ↔ Rec §4 Reconciliation Plan (Lane L55) |
-| [SKEPTIC-thesis-review.md](designs/SKEPTIC-thesis-review.md) | Skeptic review — moonshot thesis (design record) |
-| [smalt-pairing-receipt.md](designs/smalt-pairing-receipt.md) | Smalt-Graphlaw Pairing Receipt (Lane L121) |
-| [spc-append-only-fix.md](designs/spc-append-only-fix.md) | L111: spc_court.sh append-only receipts (L108 structural finding, fixed) |
-| [spc-mktemp-fix.md](designs/spc-mktemp-fix.md) | SPC Court mktemp Robustness Fix — L57 Receipt |
-| [spof-scan.md](designs/spof-scan.md) | SPOF scan — consolidated record (8 lanes, v26.10.22) |
 | [stale-claims-audit.md](designs/stale-claims-audit.md) | Stale-claims audit — v26.10.22 (skeptic lane, read-only) |
-| [sweep-post-link.md](designs/sweep-post-link.md) | Sweep post-link: L110 witness of the wasm tier flip |
-| [t1-mutation-full-receipt.md](designs/t1-mutation-full-receipt.md) | T1 Full Mutation-Court Receipt - PARTIAL (DISK-BLOCKED) |
 | [t4-refusal-reaudit.md](designs/t4-refusal-reaudit.md) | T4 refusal-register re-audit (post-switchover drift check) |
-| [tc-hot-baseline.md](designs/tc-hot-baseline.md) | TC-HOT-01 baseline receipt (lane L20) |
-| [TC-HOT-benchmarks.md](designs/TC-HOT-benchmarks.md) | TC-HOT-01/02 benchmark harness design (design record) |
-| [TC-MUT-01-mapping.md](designs/TC-MUT-01-mapping.md) | TC-MUT-01 / TC-MOCK-00 mapping (design record) |
-| [twenty-agent-scaling-thesis.md](designs/twenty-agent-scaling-thesis.md) | The Leverage Gap — 20 Parallel Instances Under a Deterministic Substrate |
-| [v2030-fs-boundary-shapes.md](designs/v2030-fs-boundary-shapes.md) | V2030-FS-BOUNDARY-SHAPES receipt (Lane V2030-2, Vision-2030 step 2) |
-| [v2030-receipt-pipeline.md](designs/v2030-receipt-pipeline.md) | Vision-2030 Step 3 — Receipt Pipeline Deployment (V2030-3) |
-| [v2030-zero-copy-protocol.md](designs/v2030-zero-copy-protocol.md) | Vision-2030 Step 1 — Zero-Copy Shared-Memory Protocol Design |
-| [vecgen-v1-backmigration.md](designs/vecgen-v1-backmigration.md) | vecgen-v1-backmigration — lane N17 receipt |
-| [vl18-registry-regen.md](designs/vl18-registry-regen.md) | V-L18 — independent registry regen post-switchover |
-| [vl4-mutation-receipt.md](designs/vl4-mutation-receipt.md) | V-L4 Mutation Court Receipt |
-| [wasi-sdk-reproducibility.md](designs/wasi-sdk-reproducibility.md) | wasi-sdk reproducibility: scripts/build_wasi_duckdb.sh (L109) |
-| [wasm-duckdb-op-wired.md](designs/wasm-duckdb-op-wired.md) | wasm duckdb op wired — receipt (L125) |
-| [wasm-repin-receipt.md](designs/wasm-repin-receipt.md) | Wasm re-pin attempt — receipt (L122) |
-| [wo01-admission-run.md](designs/wo01-admission-run.md) | WO-01 — full-shape-corpus admission run (lane WO-01) |
-| [wo03-rss-probe.md](designs/wo03-rss-probe.md) | WO-03 RSS Expansion Probe |
 
 ### Index re-sync — lane R4 (2026-10-22)
 
@@ -533,17 +407,17 @@ Re-synced against disk (D3 discipline: `ls` + `head -1` per file before
 filing). Artifacts landed since the D3 sync that were not named anywhere
 above:
 
-**Archive** ([docs/archive/](../../../docs/archive/README.md)) — moved by the
+**Archive** (docs/archive/) — moved by the
 coordinator (`git mv`), historical narrative and receipts retired out of the
 live tree:
 
-- [`THESIS.md`](../../../docs/archive/THESIS.md) — moonshot thesis (verbatim body), moved from `docs/THESIS.md`
-- [`UNIFIED_DISSERTATION.md`](../../../docs/archive/UNIFIED_DISSERTATION.md) — earlier unified dissertation draft, moved from `docs/UNIFIED_DISSERTATION.md`
-- [`EXTRACTION.md`](../../../docs/archive/EXTRACTION.md) — GraphLaw extraction receipt
-- [`branch-disposition.md`](../../../docs/archive/branch-disposition.md) — branch disposition record
-- [`receipt-2026-10-09-receipt-chain-and-refuse-hooks.md`](../../../docs/archive/receipt-2026-10-09-receipt-chain-and-refuse-hooks.md) — session receipt: receipt-chain port + refuse hooks (2026-10-09)
-- [`receipt-2026-10-10-publish-dod.md`](../../../docs/archive/receipt-2026-10-10-publish-dod.md) — v26.10.10 publish Definition-of-Done receipt (skeleton)
-- [`README.md`](../../../docs/archive/README.md) — archive readme
+- `THESIS.md` — moonshot thesis (verbatim body), moved from `docs/THESIS.md`
+- `UNIFIED_DISSERTATION.md` — earlier unified dissertation draft, moved from `docs/UNIFIED_DISSERTATION.md`
+- `EXTRACTION.md` — GraphLaw extraction receipt
+- `branch-disposition.md` — branch disposition record
+- `receipt-2026-10-09-receipt-chain-and-refuse-hooks.md` — session receipt: receipt-chain port + refuse hooks (2026-10-09)
+- `receipt-2026-10-10-publish-dod.md` — v26.10.10 publish Definition-of-Done receipt (skeleton)
+- `README.md` — archive readme
 
 **New gate scripts** (`scripts/`, census was 5 at wave 3, now 19):
 
@@ -583,20 +457,15 @@ live tree:
 - [`MIGRATION.md`](../../../MIGRATION.md) — migration guide 26.9.28 → 26.10.22
 - [`SECURITY.md`](../../../SECURITY.md) — security policy (supported versions)
 - [`CONTRIBUTING.md`](../../../CONTRIBUTING.md) — contributing guide (Rust 1.96 pinned, merge-only)
-- [`SPLIT-NOTES.md`](../../../SPLIT-NOTES.md) — Lane L46 phase-4 extraction notes (UNWIRED by directive)
-| SQLRDF-25 | Dialect expansion — window functions, QUALIFY, star modifiers, CTEs, PIVOT/UNPIVOT, composite literals, JSON operators | Open | Seven verified gaps, no AST terms/compile targets in [`src/sql_ast.rs`](../../../src/sql_ast.rs) (engine natively supports all; wasm artifact already executes them): window OVER/frames, QUALIFY, `* EXCLUDE/REPLACE` + `COLUMNS('regex')`, WITH/RECURSIVE CTEs, PIVOT/UNPIVOT, struct/map/list literals + slicing, JSON `->`/`->>`. REFUTED (already implemented, not re-asked): EXPLAIN/PRAGMA/SET/INSTALL/LOAD (`src/sql_ast.rs:1854-1932`, renderers :2250-2312, `LOAD icu` witnessed in-wasm), MERGE INTO (§7 shapes, extract_merge_statement, epoch + upsert courts), statement sequences (SQLRDF-23 landed). Per gap: ggen dialect shapes + sql_ast compile targets + SHACL admission + real-readback courts with anti-vacuity twins; engine and admission law untouched ([SQLRDF-25.md](SQLRDF-25.md)) | [SQLRDF-25](SQLRDF-25.md) |
-| SQLRDF-28 | Mutation-court coverage gap — `abi.rs` response builders + `spec_of` survive | Open | 11 surviving mutants from `mutants.out/missed.txt` (2026-10-23 run), all in `src/abi.rs`, all outside the release-gate set (registry/dispatch mutants caught): `limit_response`/`missing_buffer_response`/`unknown_buffer_response` bodies replaced by `vec![]`/`vec![0]`/`vec![1]` survive (no exact-bytes/shape court on the wire responses), and in `spec_of` the deleted `Some(Value::String(_))` arm (`:271`) and `s.is_object()`→`true` guard (`:270`) survive. Proposed: `tests/abi_response_builders_court.rs` asserting exact JSON error kind/message/details of each builder + typed refusal and no-over-refusal on the `spec_of` paths. Acceptance: rerun of `scripts/mutation_court.sh` moves all 11 to `caught.txt` ([SQLRDF-28.md](SQLRDF-28.md)) — post-release, non-gating | [SQLRDF-28](SQLRDF-28.md) |
-| SQLRDF-26 | Atomic document execution mode | ALIVE | `sql:atomic true` on the `sql:StatementSequence` root (wire `"atomic": true`) selects atomic execution: BEGIN → per-member spine order → COMMIT, or ROLLBACK + typed `BatchMemberFailed` with `failed_at` and partial receipt `status:"aborted"`/`state_delta:0`; default absent = SQLRDF-23 best-effort pipeline path (byte-identical when absent). New append-only REFUSAL-01 arm `ATOMIC_LITERAL` (46) — non-boolean `sql:atomic` literal refuses typed at compile. Wire gains `status`/`state_delta` (`#[serde(default)]`, SQLRDF-23 wire JSON unchanged). Verification receipts inline in the ticket | [SQLRDF-26](SQLRDF-26.md) |
+- `SPLIT-NOTES.md` — Lane L46 phase-4 extraction notes (UNWIRED by directive)
 | SQLRDF-25-RG | SQLRDF-25 remaining deferred gaps ledger (star modifiers, COLUMNS, PIVOT/UNPIVOT, composite literals, JSON operators) | Open (rows 1-5 LANDED in `88d6665`) | Five actionable rows split from the parent's open rows; rows 1-5 court-witnessed in commit `88d6665`: pivot 3/3, star_modifier 4/4, columns_projection 4/4, json_operator 2/2, composite_literal 4/4 (17 passed / 0 failed, exit 0; arms 48-52 folded; shapes pinned `ontologies/sql-ast.ttl` blake3 `e4ee5661…39297b`) — receipt `receipts/2026-10-23-sqlrdf25-close.md`. Open rungs not witnessed there: wasm one-unit court, shape mutation court | [SQLRDF-25-remaining-gaps](SQLRDF-25-remaining-gaps.md) |
 | ADR-CANONARROW | Canonical Arrow IPC dual-witness columnar egress (operator-approved 2026-10-23) | Absorbed into the v26.10.22 release boundary (26.10.23 moniker deferred) | Native in-WASM Arrow IPC streams + versioned `receipt_v2` dual-witness envelope (`receipt_v1` verifiers untouched; `R_receipt_v2 = BLAKE3("GLAW_RECEIPT_V2" ∥ H_query ∥ H_pre ∥ H_post ∥ H_triples ∥ H_columnar ∥ epoch)`); projection-order preservation; guest view-pinning. Landed leg: receipt_v2 court 6/6 (W60) with corrected goldens; CHAIN re-baseline documented (terminal receipt §3, `receipts/2026-10-23-chain-rebaseline-note.md`) | [ADR-canonarrow-dual-witness-egress](ADR-canonarrow-dual-witness-egress.md) |
-| SQLRDF-24 | Artifact trap: `uninitialized element` on first `gl_call` (indirect-call vtable) | Open | DuckDB-linked artifact (46,015,267 B; 46,069,809 B new-EH, Tag×1) traps on FIRST `gl_call` with `wasm trap: uninitialized element` — `call_indirect` through a vtable slot read from linear memory inside the `__cxa_thread_atexit` destructor-list runner (old-artifact func 68925, new ~68950), reached from the wasi-libc `gl_*` export epilogue (dtors + stdio flush); `Table[0]` permanently null, op-agnostic; V8 and wasmtime both trap → in-module defect; exonerated: EH-flavor mixing, LTO (false/cgu16/thin), stack size, V8 hosting; in flight: dtor-list memory dump host + gc-sections probe (`-C link-dead-code`, `--no-gc-sections`; gc-sections dropping table entries while the data-segment vtable survives = leading mechanism hypothesis); acceptance (a)-(d) in [SQLRDF-24.md](SQLRDF-24.md); no artifact re-pin until (b) | [SQLRDF-24](SQLRDF-24.md) |
-| SQLRDF-27 | tc08 COPY-egress EINVAL — musl↔wasi-libc fcntl ABI mismatch in the cached sysroot | **Closed** (2026-10-23, receipt-gated: FIBO 4/0 + lifecycle 3/0 on the wrap-enabled artifact `4d9083af…`/superseded by final pin `472d5557…bf80ea`; owed non-gating: host-contract rung + anti-vacuity inversion) | libduckdb.a emits musl fcntl words (`O_RDONLY=0`, `O_CREAT=0o100`) but resolves to wasi-libc `openat` expecting bits 25-28 (`O_RDONLY=0x04000000`-class); bit-scan probe: every flags word without bits 25-28 → EINVAL, stat unaffected. Fix: `__wrap_open`/`__wrap_openat` translation stub in `/Users/sac/frozen-duckdb/crates/frozen-duckdb-sys/wasi_posix.c` + raw-lld link args (`--wrap=open,--wrap=openat`, `--whole-archive -lduckdb_wasi_posix`); caveat: dep build-script `cargo:rustc-link-arg` does NOT reach the cdylib — apply via RUSTFLAGS on the graphlaw-wasm link. Close condition: FIBO 4/0 + lifecycle 3/0 on the wrap-enabled artifact ([SQLRDF-27.md](SQLRDF-27.md)) | [SQLRDF-27](SQLRDF-27.md) |
 
 ### Status refresh 2026-10-23 (EH-closure wave)
 
 Per-ticket standing as of the EH-closure wave. Receipts:
 [RECEIPTS.md](RECEIPTS.md) lines 1169-1340 and the wave receipt
-[receipts/2026-10-23-eh-closure-wave.md](../../../receipts/2026-10-23-eh-closure-wave.md).
+receipts/2026-10-23-eh-closure-wave.md.
 
 - **SQLRDF-21** — implementation essentially complete: gates removed,
   wasmtime host, session surface, doc sequences wired. Op courts 16/0.
@@ -640,9 +509,9 @@ Every table cell above stays as-filed (this index is append-only; prior
 sections were never rewritten and none is rewritten now) — the WRAP table
 below is the authoritative per-ticket end-state, each row citing its
 receipt path. Ground ledger (G1 DISCHARGED / G2-G3 REMAINING / G4 SPLIT):
-[GO-NO-GO-v26.10.22.md](../v26.10.23/GO-NO-GO-v26.10.22.md) §A (v5).
+GO-NO-GO-v26.10.22.md §A (v5).
 OD-4 memo filed + OD-6 anomaly recorded:
-[designs/OPERATOR-DECISIONS.md](designs/OPERATOR-DECISIONS.md) — both
+designs/OPERATOR-DECISIONS.md — both
 DECISION lines left BLANK for the operator (runbook S3/S4:
 `docs/jira/v26.10.23/OPERATOR-RUNBOOK-v26.10.22-PUBLISH.md`). Residuals
 hand off to the v26.10.23 window: mutation-court verdict (G2), FULL battery
@@ -684,7 +553,6 @@ the honest count governs.
 | SQLRDF-23 | Open | **Deferred** (rule) | Rule: Closed iff court plan (a)-(f) closes. Observed: compile+eval+wire LANDED with courts (`sql_ast` 32/0, `duckdb_eval` 18/0, `duckdb_op` 16/0; RECEIPTS.md:1723-1726) but mutation-court inversions for (b)/(f) still pending and the last suite run was DISK-BLOCKED (SQLRDF-23.md "Implementation progress") → DEFAULT DEFERRED |
 | SQLRDF-24 | Open | **Closed** (rule met) | Rule: trap root-caused + fixed + artifact links/executes/pins. Evidence: CONFIRMED + FIXED (atexit member swap + reactor-contract completion), re-pin superseded the hold, lifecycle 3/3 — `receipts/2026-10-23-eh-closure-wave.md` §8; RECEIPTS.md:1516-1521; shipped pin `58a44095` 4-surface |
 | SQLRDF-25 | Open | **Deferred** | Rows 1-5 landed in `88d6665` (17/0, `receipts/2026-10-23-sqlrdf25-close.md`) but window OVER/frames, QUALIFY, CTEs not witnessed landed; remainder tracked in SQLRDF-25-RG |
-| SQLRDF-26 | ALIVE | **Closed** | Atomic document execution landed, verification receipts inline in [SQLRDF-26.md](SQLRDF-26.md) |
 | SQLRDF-27 | Closed 2026-10-23 | **Closed** (no change) | Close condition met (`receipts/2026-10-23-sqlrdf27-verdict.md` + lifecycle amendment); owed rungs = GO-NO-GO G4/R-1, not this ticket |
 | SQLRDF-28 | Open | **Deferred** | Acceptance = mutation rerun moves all 11 survivors to caught; kill court landed 10/0 (`b499fb7`, `tests/abi_response_builders_court.rs`) but the sweep has no completed verdict (ENOSPC; GO-NO-GO G2) — closes with the G2 receipt |
 | PRD-P28-SIL | Open | **program no-flip** | Filed verbatim as the operative PRD for the successor program; the register rows are the flip surface, not this filing row |

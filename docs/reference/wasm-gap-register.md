@@ -1,32 +1,41 @@
 # Wasm Gap Register
 
-Consolidated gap register for milestone v26.10.23, derived from
-`docs/jira/v26.10.23/ROADMAP.md` and the approved plan
-`~/.claude/plans/here-is-the-voice-golden-bengio.md`. Status is as of
-register authoring (pre-Wave A); flips are receipt-gated — a row flips
-only on a landed receipt.
+Consolidated gap register for milestone v26.10.23 (original source
+`docs/jira/v26.10.23/ROADMAP.md`, archived; recover with
+`git show 095ce07:docs/jira/v26.10.23/ROADMAP.md`).
 
-| ID | Description | Evidence locus | Wave | Status | Closing witness |
+**As of 2026-11-09**: the table below was refreshed against the tree on disk
+(HEAD `095ce07`). Flips remain receipt-gated — a row flips only on a landed
+receipt; the flip log below is the history of record. Source documents and
+receipts cited in this register that were archived out of the tree remain
+recoverable from git: `git show 095ce07:<path>` (for example
+`git show 095ce07:receipts/2026-10-24-wasmi-retirement-deletion.md`). The
+legacy `graphlaw-run` wasmi host was retired and its source no longer exists; `src/bin/graphlaw_run_eh.rs` is the sole runner.
+
+| ID | Description | Evidence locus (as of 2026-11-09) | Wave | Status | Closing witness |
 |---|---|---|---|---|---|
-| G1 | receipt_v2 has no emission site | attest.rs:704 | D | OPEN | Twin A; v2 e2e court |
-| G2 | CanonArrow DCE'd in-wasm | egress/arrow.rs | D | OPEN | Twin B; pinned-view; FIBO |
-| G3 | conftest hardcode; no env honor | conftest.py:35 | B | OPEN | pytest, env set AND unset |
-| G4 | read_frame unbounded alloc | run_eh.rs:336-350 | C | OPEN | bound court: exit 92 |
-| G5 | WALL vs MAX_REQUEST drift | abi.rs:48; abi_meta:29 | C | OPEN | limits table; assert |
-| G6 | benches unreceipted | no receipts/ files | E | PENDING | bench vs REQ budgets |
-| G7 | abi builders uncovered | src/abi.rs | B | OPEN | builders court; mut rerun |
-| G8 | sniff literal/IRI gaps | sniff.rs:252-279 | C | OPEN | twins; corpus_conformance |
-| D1 | WASI inventory absent | SECURITY.md | A | OPEN | count receipt; gate |
-| D2 | 256 MiB doc errors | WASM.md:206 | A + C | OPEN | delta; pointer rows |
-| D3 | GWS stale; INDEX orphans | docs/wasm-duckdb-integration.md:45-60 (wave item register; PENDING-GWS-1/4/7/8 tokens at 49-56) | A | OPEN | appends; GWS-2/3 flip |
-| D4 | witnesses not durable | terminal receipt 2 | A | OPEN | rerun on 472d5557 |
-| BB1 | blackbox pins wasmi | tests_py blackbox | F | OPEN | host flip; tree -i |
+| G1 | receipt_v2 had no emission site | `src/attest.rs:722` (`receipt_v2`); courts `tests/receipt_v2_court.rs`, `tests/receipt_v2_emission_court.rs` | D | CLOSED | 2026-10-24 consolidation entry (flip log) |
+| G2 | CanonArrow DCE'd in-wasm | `src/egress/arrow.rs`, `src/egress/collector.rs`; no `egress_arrow` op in `src/` or `tests/` (grep 2026-11-09: only `tests/wasm_fibo_egress_eh.rs` exists) | D | OPEN | Twin B; pinned-view; FIBO |
+| G3 | conftest hardcode; no env honor | `tests_py/conftest.py` (builds `graphlaw-run-eh` via `--features runner-eh`) | B | CLOSED | step-2 green witness (flip log) |
+| G4 | read_frame unbounded alloc | `src/bin/graphlaw_run_eh.rs:477` (`read_frame`); court `tests/wasm_frame_bound_court.rs` | C | CLOSED | 2026-10-24 03:20 flip (8/0 then; 4 EH `#[test]` fns today) |
+| G5 | WALL vs MAX_REQUEST drift | `src/abi.rs:48` (`MAX_REQUEST_BYTES`), `:73` (`MAX_OUTSTANDING_ALLOC_BYTES`); `src/bin/graphlaw_run_eh.rs:43` const assert; `tests/abi_manifest_court.rs` | C | CLOSED | flip log 2026-10-24 13:5x |
+| G6 | benches unreceipted | `benches/reports/shacl_boundary_cliff.md`, `benches/reports/sub50ms_statutory_courts.md` (2026-10-26 run figures) | E | PARTIAL | reports landed; bench vs REQ budgets verdict not receipted here |
+| G7 | abi builders uncovered | `src/abi.rs`; `tests/abi_response_builders_court.rs`; mutation sweep receipt `2026-10-29-mutation-court-v261028` (28 mutants, 19 caught, 9 unviable, 0 missed, suite includes the builders court) | B | PARTIAL | the 204-mutant solo verdict named in the 2026-10-24 entry is not cited; the 28-mutant sweep is the latest on file |
+| G8 | sniff literal/IRI gaps | `src/dialect/sniff.rs` (`HEAD_BUDGET` :25, `line_terms` :163, `bare_sql` :33); courts `tests/sniff_court.rs`, `tests/op_differential.rs` | C | PARTIAL | fixes landed; post-fix native-vs-wasm differential not re-witnessed this pass (UNVERIFIED) |
+| D1 | WASI inventory absent | `SECURITY.md` ("Imported WASI capability inventory") | A | CLOSED | flip log 2026-10-24 13:5x |
+| D2 | 256 MiB doc errors | `docs/WASM.md` (16 MiB request cap + outstanding cap) | A + C | CLOSED | flip log 2026-10-24 13:5x |
+| D3 | GWS stale; INDEX orphans | `docs/wasm-duckdb-integration.md` (archived; `git show 095ce07:docs/wasm-duckdb-integration.md`) | A | OPEN | locus archived; PENDING-GWS-1/4/7/8 tokens were open at archive |
+| D4 | witnesses not durable | dialect-census receipts archived (`git show 095ce07:receipts/2026-10-24-dialect-sql-rdf.md` etc.) | A | OPEN | fuzz / memory-wall / exit-code classes re-run on the final artifact |
+| BB1 | blackbox pins wasmi | `tests_py/test_blackbox_ops.py` (host flipped to `graphlaw-run-eh`) | F | CLOSED | wasmi-retirement receipts (flip log) |
 | UU1 | unknown-unknown smoke | audit, deferred | E | PENDING | battery re-run |
-| W08 | differential no receipt | common/mod.rs:20 | C | OPEN | differential receipt |
-| SEC1 | ATTACH allowlist bypass: whitespace-only leading-token classifier skipped the allowlist on comment-camouflaged ATTACH (`/* */`, `--`, `/*!*/`) | duckdb_op.rs `leading_sql_token` (:235) + `enforce_attach_policy_with` (:437 as of read); seam courts `src/duckdb_op.rs::tests`; wire court `tests/attach_bypass_court.rs` | SEC | OPEN | green-court receipt for the hardened classifier (W15 `2026-10-23-eh-closure-wave.md:59` predates the hardening) |
-| INC1 | tree-revert incident: verified security fixes destroyed in-tree (~00:48-00:56 Oct 24), re-landed as `679299d` + `907e663` | GO-NO-GO-v26.10.22.md §1.1-1.2 (v3, incident note) | SEC | OPEN | re-land + green courts + incident note (re-land and note witnessed; green courts receipt pending) |
+| W08 | differential no receipt | `tests/common/mod.rs`, `tests/wasm_native_differential.rs` | C | OPEN | differential receipt |
+| SEC1 | ATTACH allowlist bypass (comment-camouflaged ATTACH) | `src/duckdb_op.rs` `leading_sql_token` (:289) + `enforce_attach_policy_with` (:491); wire court `tests/attach_bypass_court.rs` | SEC | CLOSED | 2026-10-24 03:20 flip (3/0) |
+| INC1 | tree-revert incident, re-landed `679299d` + `907e663` | incident note archived with GO-NO-GO-v26.10.22 (`git show 095ce07:docs/jira/v26.10.23/GO-NO-GO-v26.10.22.md` §1.1-1.2) | SEC | CLOSED | 2026-10-24 03:20 flip (triad complete) |
 
-Row count: 17 (G1-G8, D1-D4, BB1, UU1, W08, SEC1, INC1).
+Row count: 17 (G1-G8, D1-D4, BB1, UU1, W08, SEC1, INC1). As of 2026-11-09:
+CLOSED 9 (G1, G3, G4, G5, D1, D2, BB1, SEC1, INC1), PARTIAL 3 (G6, G7, G8),
+OPEN 4 (G2, D3, D4, W08), PENDING 1 (UU1). Locus line numbers were re-read from
+disk on that date; court counts are `#[test]` fn counts, not new runs.
 
 Behavioral-audit deferred witness classes: G1 = emission-site court (Twin
 A), G2 = columnar-bytes twins (Twin B + pinned-view), G3 = env-matrix
@@ -34,6 +43,11 @@ pytest (set/unset), BB1 = host-flip green + absence-from-graph witness,
 UU1 = full-battery re-run, W08 = run+receipt against the pinned artifact.
 
 ## Flip log
+
+The flip log is append-only history. Its `receipts/...`, `docs/jira/v26.10.23/...`
+and `docs/wasm-duckdb-integration.md` cites point at files archived out of the
+tree; read them with `git show 095ce07:<path>`. Its line cites for the retired
+wasmi host no longer resolve (source deleted).
 
 ### 2026-10-24 — security-wave landing observed; flips held on the receipt gate (register lane, write lease = this file only)
 
@@ -55,9 +69,9 @@ exact pending gate:
   `graphlaw::abi::MAX_REQUEST_BYTES` (no local duplicate), coherence asserts
   vs the 64 MiB wall, exit-92 rows in both `code()` tables, len+cap
   diagnostics, mirrored `read_frame` bodies. Loci (as of read):
-  `src/bin/graphlaw_run.rs:105,123,152,176,484-491`;
+  (the retired wasmi host's loci omitted)
   `src/bin/graphlaw_run_eh.rs:40,70,97,123-125,407-420`. Design:
-  `docs/jira/v26.10.23/design-read-frame-bound.md` (SPEC now implemented).
+  `docs/reference/design-read-frame-bound.md` (SPEC now implemented).
   Pending gate: a receipt embedding `tests/wasm_frame_bound_court.rs` output
   (at-cap admitted end to end / cap+1 → exit 92 / 0xFFFFFFFF → exit 92 with
   length+cap+no-reply, zero-len → exit 0, both hosts). The court file is

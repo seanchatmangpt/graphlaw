@@ -76,32 +76,32 @@ unadvertised: it stays off the hashed 14-op table in
 `contracts/abi-manifest.json`. The hosting runtime is wasmtime 48
 (`graphlaw-run-eh`, feature `runner-eh`) with `wasm_exceptions` enabled;
 it is the sole packet-4 stdio runner — the wasmi-based `graphlaw-run` was
-retired 2026-10-24 (`docs/jira/v26.10.23/ADR-wasmi-retirement.md`; it
+retired 2026-10-24 (`docs/adr/ADR-wasmi-retirement.md`; it
 rejected the DuckDB-linked artifact — `exceptions proposal not enabled` —
 and the EH runner is a wire-superset with the same exit-code contract).
 
 ### Sandbox qualification: what the EH host does and does not contain
 
 `graphlaw-run-eh` (wasmtime 48) fail-closes imports to
-`wasi_snapshot_preview1` (`src/bin/graphlaw_run_eh.rs:222-231`) and
+`wasi_snapshot_preview1` (`src/bin/graphlaw_run_eh.rs`) and
 preopens no directories. It provides: a request-frame bound — a frame
 prefix above `MAX_REQUEST_BYTES` is refused with exit 92 before any body
 allocation (`read_frame`, court `tests/wasm_frame_bound_court.rs` 8/0,
 gap-register G4 CLOSED `docs/reference/wasm-gap-register.md` 03:20 flip);
 per-request fuel metering — 100B wasmtime fuel units per request, a guest
 that exhausts it gets typed exit 98, never an unbounded hang
-(`FUEL_PER_REQUEST`, `src/bin/graphlaw_run_eh.rs:46`; calibration ladder
-10M red → 1B red → 100B green, `receipts/2026-10-24-fuel-calibration.md`);
+(`FUEL_PER_REQUEST`, `src/bin/graphlaw_run_eh.rs`; calibration ladder
+10M red → 1B red → 100B green);
 and a sterile environment — the WASI context carries no `inherit_env` /
 `env` / `envs` call at all, so the guest sees an empty environment
-(`src/bin/graphlaw_run_eh.rs:292-300`; court
+(`src/bin/graphlaw_run_eh.rs`; court
 `tests/wasm_env_isolation_court.rs` 3/0, gap-register 03:20 entry). It
 arms an epoch deadline but the epoch cannot fire: no watchdog calls
 `Engine::increment_epoch`, so the deadline never advances
 (`src/bin/graphlaw_run_eh.rs:306`; hosts needing a wall-clock bound must
 drive `increment_epoch` themselves). It does NOT provide: a linear-memory
 ceiling (the 64 MiB `WALL_BYTES` caps the request frame
-only, `src/bin/graphlaw_run_eh.rs:28`).
+only, `src/bin/graphlaw_run_eh.rs`).
 `GRAPHLAW_ATTACH_ROOTS` is a host
 library control and is not enforced inside the sandbox — preopening a
 directory for the runner bypasses the attach allowlist entirely
@@ -127,17 +127,10 @@ verified live on all four pin surfaces
 `js/npm/src/generated/artifact-meta.ts`, and a live `b3sum` of
 `priv/graphlaw.wasm`; the `registry/ARTIFACTS.blake3` wasm row re-pin is
 coordinator-hatch — see the GL28-13 report).
-Historical pins (prior generations, superseded): the 26.10.26 L2-WASM
-re-mint `430da572…` (60,893,336 B, superseded same-day at the migrated
-sql_ast surface), the 26.10.23 four-surface settle pin `58a44095…d2280a`
-(58,124,612 B; final-tree-audit check 2,
-`docs/jira/v26.10.23/final-tree-audit.md`), the EH-closure settle pin
-`fa155830…` (57,781,384 B), the tag-section-0 pin `f149433c…` (7,104,147 B),
-and the DuckDB-linked lane link witness `9d299ed8…` (45,162,366 B, 2026-10-22).
-The smalt
-sandbox's 64 MiB linear-memory wall
-(`/Users/sac/smalt/docs/jira/v26.10.21/WASM-SANDBOX-SPEC.md`) is the
-ceiling this module was measured against.
+Superseded pins are listed once, under "Pin currency" below. The smalt
+sandbox's 64 MiB linear-memory wall (spec in the sibling `smalt` repo,
+`docs/jira/v26.10.21/WASM-SANDBOX-SPEC.md`; not vendored here) is the ceiling
+this module was measured against.
 
 Refusal surface unchanged by this: `REFUSAL-04` is the non-document-backed
 builtin SQL-eval refusal (`docs/refusals.md`); SQL-in-RDF admits and compiles
@@ -170,32 +163,27 @@ after `cargo clean -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`,
 same target dir and machine, produced identical bytes. Not verified across
 separate target dirs or machines.
 
-### Pin currency (on-disk pins, wasm row minted 2026-10-29)
+### Pin currency (re-read 2026-11-09 against the tree)
 
-The on-disk pins read `c92caeb6…c1b9c` (62,909,537 B), the shipped
-new-EH DuckDB-linked mint from the 2026-10-29 GL28-13 relink
-(`priv/graphlaw.wasm.blake3` sidecar, rewritten from the real build;
-`js/npm/src/generated/artifact-meta.ts` re-pinned by the sanctioned
-`js/npm/scripts/build.mjs` flow; the `registry/ARTIFACTS.blake3` wasm row
-re-pin is coordinator-hatch — the graphlaw-registry bin does not manage that
-row, and hand edits there are LITHO-REFUSED). This
-section is refreshed by the re-pin procedure in the upgrade checklist,
-never hand-written from a guess. Historical pins (prior generations,
-each superseded): the 2026-10-28 v26.10.28 release re-mint
-`c38b1fdb…6fda2c` (74,097,211 B, shim-less build);
-the 2026-10-26 X2 re-pin `0858a760…a5ddd2f1`
-(60,895,924 B); the 2026-10-26 L2-WASM re-mint `430da572…` (60,893,336 B);
-the 26.10.23 four-surface settle pin `58a44095…d2280a` (58,124,612 B);
-the EH-closure settle pin
-`fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`
-(57,781,384 B); the pre-26.10.22 workspace pin
-`74ec3c8d6cdb3db1ff1869ac8b2454c2cf94d08f2a211b0b7d2af2c36b08a7a5`
-(7,098,370 B);
-`332ea2188fafb465666e71407e8f940c5b60a15184e6ad6567bb4f723fe2c30c`
-(6,793,617 B). Pin identity is not reproducibility: the
-reproducible-SDK rebuild receipt (byte-identical rebuild from declared
-inputs on a second target dir/machine) remains a GWS-2 deliverable and is
-**pending**.
+The `wasm` row of `registry/ARTIFACTS.blake3` reads
+`c92caeb6…1b9c`
+(62,909,537 B), crate 26.10.28 (`Cargo.toml`, `wasm/Cargo.toml`), toolchain
+`rust-toolchain.toml` 1.98.0. The `priv/graphlaw.wasm.blake3` sidecar carries
+the same digest (the 2026-10-29 GL28-13 relink, new-EH DuckDB-linked);
+`js/npm/src/generated/artifact-meta.ts` is re-pinned by the sanctioned
+`js/npm/scripts/build.mjs` flow. The graphlaw-registry bin does not manage the
+wasm row; hand edits there are LITHO-REFUSED. This section is refreshed by the
+re-pin procedure in the upgrade checklist, never hand-written from a guess.
+
+Superseded pins (each listed with its supersession reason in the `# historical
+pin` comment lines of `registry/ARTIFACTS.blake3`, which is the single
+register): `0858a760…` (60,895,924 B, 2026-10-28 purrdf fork-swap rebuild),
+`348c97fd…` / `c38b1fdb…` (74,097,211 B, v26.10.28 release re-mint and its
+shim-less relink), `430da572…` (60,893,336 B), `58a44095…` (58,124,612 B),
+`f149433c…` (7,104,147 B, tag section 0), and earlier workspace pins. Pin
+identity is not reproducibility: the reproducible-SDK rebuild receipt
+(byte-identical rebuild from declared inputs on a second target dir/machine)
+remains a GWS-2 deliverable and is **pending**.
 
 ## Unknown-unknown status (G13, v26.10.20)
 
@@ -255,7 +243,7 @@ Protocol (all integers are wasm `i32`/`i64`):
    exceeded. The 16 MiB request and 16 MiB outstanding caps are uniform
    across targets: the generated `abi_meta` mirrors them
    (`wasm/src/abi_meta.rs:20` request, `wasm/src/abi_meta.rs:29`
-   outstanding) and `wasm/src/lib.rs:32-33` asserts the equality at
+   outstanding) and `wasm/src/lib.rs` asserts the equality at
    compile time, so native and wasm builds present one limit set.
 2. `gl_call(ptr, len) -> packed` — runs the request and consumes (frees) the
    request buffer. `packed = (out_ptr << 32) | out_len`.
@@ -303,7 +291,7 @@ Run in order; each step gates the next:
    caveat, now moot: wasmi 2.0.0 rejected the DuckDB-linked new-EH
    artifact, which is why the wasmi runner was retired 2026-10-24 — the
    current artifact's host (and the sole packet-4 stdio runner) is
-   `graphlaw-run-eh` (wasmtime 48), `docs/jira/v26.10.23/ADR-wasmi-retirement.md`.
+   `graphlaw-run-eh` (wasmtime 48), `docs/adr/ADR-wasmi-retirement.md`.
 6. `cargo test --test abi_manifest_court` — manifest regenerates
    byte-identical (or additive-only) against the new version.
 7. Update the pin section of [wasm-integration.md](wasm-integration.md).

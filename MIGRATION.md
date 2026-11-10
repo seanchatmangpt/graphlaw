@@ -1,9 +1,9 @@
 # Migration to library-backed GraphLaw
 
-This document migrates `graphlaw` **26.9.28 → 26.10.22** (workspace calendar
+This document migrates `graphlaw` **26.9.28 → 26.10.28** (workspace calendar
 version). Each section header below carries the version pair it applies to;
 a section without a version pair applies to the whole 26.9.28 → 26.10.22
-move.
+move (the 26.10.22 → 26.10.28 section is at the end).
 
 v26.9.28 intentionally removes the historical implementation API. Migrate by
 using the authoritative surfaces re-exported by `graphlaw`.
@@ -94,7 +94,7 @@ structs are not an admitted path.
 ## Op-15 `duckdb` is host-only in the wasm artifact (26.10.22)
 
 The `duckdb` ABI op is now compiled only for non-wasm targets: the dispatch arm
-is `#[cfg(not(target_arch = "wasm32"))]`-gated (`src/abi.rs:334-335`), and
+is `#[cfg(not(target_arch = "wasm32"))]`-gated (`src/abi.rs`; the `duckdb` arm is now unconditional at `src/abi.rs:333`), and
 `duckdb_op`/`duckdb_eval`/SQL builtins are documented host-only
 (`src/lib.rs:246-257`). The wasm module still admits and compiles SQL-in-RDF
 through `compile_turtle` unchanged; what is absent inside wasm is the
@@ -116,7 +116,7 @@ artifact anyway, the typed refusal you will see is:
 { "kind": "Unsupported", "message": "unknown op `duckdb`" }
 ```
 
-(produced by the fallthrough arm at `src/abi.rs:336`:
+(produced by the fallthrough arm at `src/abi.rs:334`:
 `other => Err(bad(format!("unknown op \`{other}\`")))` with
 `RefusalKind::Unsupported`, `src/abi.rs:174-180`). This is a typed refusal,
 not a crash or trap. Do not string-match the message at the edge — match on
@@ -142,7 +142,7 @@ Migration: qualify the `ON` condition to at least one target column, e.g.
 
 ## EH closure and in-module `duckdb` promotion (26.10.22, SQLRDF-21)
 
-Reference: `docs/jira/v26.10.22/SQLRDF-21.md`. The exception-handling wall is
+Reference: SQLRDF-21 (archived; see git history and `docs/jira/v26.10.28/RECEIPTS.md`). The exception-handling wall is
 closed: the archive rebuild carries `-mllvm -wasm-use-legacy-eh=0` (new-EH
 `try_table`/`throw` artifact), hosted by wasmtime 48 with `wasm_exceptions`;
 wasmi 2.0.0 cannot host it (no exceptions-proposal support). The `duckdb` op
@@ -156,7 +156,7 @@ What consumers must change:
    artifact uses new EH; wasmi cannot host it. If you drove the module
    through the wasmi-based `graphlaw-run` runner: that binary (and its
    `runner` cargo feature) was retired 2026-10-24
-   (`docs/jira/v26.10.23/ADR-wasmi-retirement.md`); the
+   (`docs/adr/ADR-wasmi-retirement.md`); the
    wasmtime-48-based `graphlaw-run-eh` binary (cargo feature `runner-eh`) or
    a wasmtime 48 host with `wasm_exceptions` enabled is the replacement —
    it is a wire-superset with the same exit-code contract.
@@ -175,3 +175,32 @@ What consumers must change:
    target-column refusal (REFUSAL-03 arm 7) still applies, and MERGE is now
    classified mutating (execution bumps the epoch counter). WHERE-less
    UPDATE/DELETE refuse `REFUSAL-05` and require BOTH where-predicates.
+
+## purrdf fork swap, vendor removal, 1.98 toolchain (26.10.22 -> 26.10.28)
+
+Source of truth: `CHANGELOG.md` `[26.10.28]` and `docs/jira/v26.10.28/RECEIPTS.md`.
+
+1. **purrdf is git-sourced from the fork.** The purrdf family (`purrdf`,
+   `purrdf-columnar`, and all transitives) resolves from
+   [seanchatmangpt/purrdf](https://github.com/seanchatmangpt/purrdf) at rev
+   `2223f8945e19eb9aed750fe038b0fa833bd17c83` (`Cargo.toml`, `Cargo.lock`:
+   purrdf 3.0.1). It is the sole purrdf source: there is no crates.io fallback.
+2. **`vendor/` is gone.** `vendor/` (purrdf, purrdf-n3, purrdf-sparql-eval,
+   purrdf-testkit), `[patch.crates-io]`, the `wasi-patched-deps` feature, `build.rs`
+   and the patch-guard courts are deleted. The WASI clock gate and the P01
+   proof-checker hardening live in the fork at the pinned rev. Consumers that
+   enabled `wasi-patched-deps` must drop the feature; building wasm needs no
+   patching: `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`.
+3. **No crates.io publish.** graphlaw depends on a git rev, so the crate cannot
+   publish; distribution is this repository and GitHub release assets
+   (v26.10.28).
+4. **Toolchain 1.98.0.** `rust-toolchain.toml` pins 1.98.0 (was 1.96.0); the fork
+   declares MSRV 1.98 and cargo refuses older toolchains at resolution. All CI
+   workflow pins moved with it.
+5. **Result-row sieve.** DuckDB eval result sets are capped at
+   `DEFAULT_ROW_ENVELOPE = 64`; larger results refuse typed
+   `EvaluatorError::RowEnvelopeExceeded` (use `eval_ast_query_bounded` /
+   `eval_ast_document_bounded` to set the envelope explicitly).
+6. **Artifact pin.** The wasm pin is now `c92caeb6…` (62,909,537 B); re-read
+   `priv/graphlaw.wasm.blake3` / `registry/ARTIFACTS.blake3`, never a remembered
+   digest.

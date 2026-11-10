@@ -1,5 +1,7 @@
 # C23 Harness Pruner — Design (L34)
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 Status: DESIGN (no code in this lane)
 Inputs: `~/.claude/rules/*.md` (18 files), `/Users/sac/graphlaw/CLAUDE.md`,
 `/Users/sac/graphlaw/.claude/hooks/*.py`, `/Users/sac/graphlaw/.claude/settings.json`.

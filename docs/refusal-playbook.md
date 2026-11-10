@@ -12,7 +12,8 @@ scope boundary, §1.4 receipt law, §5 refusal taxonomy).
 
 ## Troubleshooting table (symptom → refusal → cause → fix)
 
-Verbatim messages from the 2026-10-22 probe run (exit 0, 13/13 MATCH). Where a
+Verbatim messages from the 2026-11-09 probe re-run (exit 0, 12/12 MATCH; all 12 captured
+messages byte-identical to the 2026-10-22 table, so no drift). Where a
 message embeds document-specific IRIs, `<IRI>` / `<col>` / `<n>` marks the
 user-supplied part.
 
@@ -90,29 +91,30 @@ disclosed: examples/ was outside the stated file-ownership list; it is the
 probe vehicle the task asked for).
 
 ```
-$ cargo run --example refusal_probe
+$ CARGO_TARGET_DIR=/Users/sac/graphlaw/a lane-local CARGO_TARGET_DIR cargo run --example refusal_probe
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6m 14s
+     Running `a lane-local CARGO_TARGET_DIR/debug/examples/refusal_probe`
 === REFUSAL-01 missing statementIndex ===
 SHACL AST structural violation: [REFUSAL-01] MalformedAstRefusal:statement http://example.org/queries#Q is missing required sql:statementIndex (section 4 StatementBaseShape)
 [exit-class MATCH]
 ...
-=== ReceiptError canonicalization refused (malformed Turtle) ===
-Receipt generation error: AST graph parse refused: RdfDiagnostic { severity: Error, code: "native-codec-parse", message: "SPARQL lex error at byte 19: empty language tag", ... }
+=== direct validate_ast_shacl (missing index, no context fix-up) ===
+SHACL AST structural violation: Node <<http://x>>: [REFUSAL-01] MalformedAstRefusal: a SelectStatement MUST contain exactly one projection list (sql:select, or legacy alias sql:selectList — never zero, never both; an empty rdf:nil list is ne (+1 more violations)
 [exit-class MATCH]
-...
+
 ALL REFUSAL PROBES MATCHED
-EXIT=0
+exit=0
 ```
 
-13/13 probes MATCH, exit code 0. Every message in the table above is copied
-from this run. Reproduce with:
+12/12 probes MATCH (12 `[exit-class MATCH]` lines), exit code 0, as of 2026-11-09. Every
+message in the table above equals the corresponding message from this run (P10 is the
+`RdfDiagnostic` Debug dump, truncated in the excerpt above). Probe source:
+`examples/refusal_probe.rs` (renamed from `l85_refusal_probe.rs`, lane L96). Reproduce with:
 
 ```
 cargo run --example refusal_probe   # exit 0 iff every probe fires its expected refusal class
 ```
 
-Environment note: the first attempt with a fresh lane target dir
-(`CARGO_TARGET_DIR=target-lane85`) failed to build the dependency
-`frozen-duckdb-sys` (build-script compile error, pre-existing state of the
-`/Users/sac/frozen-duckdb` working tree, not this repo). The probe was run
-against the shared `target/` build cache instead; disclosed per the
-compile-freeze disclosure rule.
+Environment note: the 2026-10-22 run used the shared `target/` cache because a fresh lane
+target dir failed to build `frozen-duckdb-sys` at that time; the 2026-11-09 run built cleanly
+in a fresh `a lane-local CARGO_TARGET_DIR` root.

@@ -140,3 +140,7 @@ each log's retro-tail comment, so the retention-time digests in the tables above
 refer to the pre-tail bytes — byte-exactness of the retention event is unchanged).
 battery-L4 is honestly cited at EXIT=101: its log contains real failing result
 lines; it was retained as the red leg of that battery, not a green one.
+
+Superseding note (2026-11-09): retention status re-verified from `ls receipts/logs` — 11 files
+present (the 6 battery/rung logs, 4 `mc-*` inventory txt files, 1 doc_staleness selfcheck log); none
+removed since retention. Citation lines above are unaltered; this note is append-only.

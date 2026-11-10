@@ -2,9 +2,11 @@
 
 Why the graphlaw wasm module spent a wave unhostable by any runtime, and
 how it closed. This is an explanation, not a runbook — the build recipe
-lives in `docs/WASM.md`, the ticket in
-`docs/jira/v26.10.22/SQLRDF-24.md`, and the wave ledger in
-`docs/jira/v26.10.22/RECEIPTS.md`.
+lives in `docs/WASM.md`, the hosting retirement decision in
+`docs/adr/ADR-wasmi-retirement.md`, and the runner contract in
+`docs/reference/runner-exit-codes.md`. As of 2026-11-09 the pinned artifact is
+blake3 `c92caeb6…c1b9c` (62,909,537 B, `registry/ARTIFACTS.blake3`); the figures
+below are the closure-wave witnesses and are historical.
 
 ## Two generations of wasm exception handling
 
@@ -36,8 +38,7 @@ host refused, each for its own reason:
 | node 26 (V8) | unhostable | tolerates legacy but *rejects mixed* legacy+new EH modules |
 | wasmtime 48 | unhostable | legacy dropped: "legacy_exceptions feature required"; flag gone |
 
-This is the "unhostable by any runtime" period recorded in the EH-runner
-decision memo (`designs/eh-runner-decision-memo.md`): wasmi has no EH
+This is the "unhostable by any runtime" period of the closure wave: wasmi has no EH
 knob at all, wasmtime 48 accepts only new EH, and V8 — the only engine
 that tolerated legacy — refused the particular mix our link produced.
 No mainstream Rust runtime executed legacy EH. The module linked,
@@ -51,9 +52,9 @@ removing the tolerance requirement: a **uniform new-EH rebuild**
 dependency, including the frozen-duckdb archive — wave row W1) produces
 a module that V8 and modern wasmtime both accept. The pinned host became
 wasmtime 48 with `wasm_exceptions` enabled (`graphlaw-run-eh`, feature
-`runner-eh`). wasmi 2.0 stays only for the legacy pre-duckdb artifact
-courts; it still cannot host the engine module, and that is now a
-documented posture rather than a defect.
+`runner-eh`, `src/bin/graphlaw_run_eh.rs`). wasmi 2.0 could not host the engine
+module and was retired on 2026-10-24 (`docs/adr/ADR-wasmi-retirement.md`);
+`graphlaw-run-eh` is the sole packet-4 stdio runner.
 
 ## The false leads worth recording
 
@@ -91,7 +92,8 @@ exoneration matrix is the epistemically valuable residue:
 ## The actual fix stack
 
 The closure took four coordinated pieces (witnessed in
-`receipts/2026-10-23-eh-closure-wave.md`, sections 7-8):
+the 2026-10-23 EH closure wave receipts, sections 7-8, since retired from the
+tree — the figures below are quoted, not re-measured):
 
 1. **Uniform new-EH rebuild.** Every C++ archive — frozen-duckdb
    (`libduckdb.a`, 88,161,726 B), libunwind candidate B
@@ -122,41 +124,34 @@ The closure took four coordinated pieces (witnessed in
 
 The canonical re-pin followed only after qualification:
 `priv/graphlaw.wasm` blake3
-`fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107`, # historical — interim pin superseded by 58a44095…d2280a
-57,781,384 B, Tag(13)×1, wasm_audit PASS, lifecycle courts 3/3 GREEN.
+`fa155830…d107` (historical
+interim pin, since superseded; the live pin is in `priv/graphlaw.wasm.blake3` and
+`registry/ARTIFACTS.blake3`), 57,781,384 B, Tag(13)×1, wasm_audit PASS, lifecycle
+courts 3/3 GREEN.
 
-## Why wasmi still cannot host, and the pin court posture
+## Why wasmi was retired, and the pin posture
 
 wasmi 2.0.0's validator rejects the Tag section and its `Config` has no
-exceptions setter — this is upstream design, not configuration. The
-engine module (new-EH, DuckDB-linked) therefore has exactly one Rust
-host: wasmtime 48 with `wasm_exceptions`. wasmi remains the host for the
-**legacy pre-duckdb artifact courts** — the small pure-Rust generation
-(~6.8 MB, no tag section) — under the dual-artifact policy. The two
-tiers are permanent, not transitional: the engine tier requires EH
-because DuckDB C++ uses exceptions; the court tier requires wasmi
-because those courts assert on the pre-duckdb generation.
+exceptions setter — upstream design, not configuration. The engine module
+(new-EH, DuckDB-linked) therefore has exactly one Rust host: wasmtime 48 with
+`wasm_exceptions`. The earlier dual-tier posture (wasmi for a pre-duckdb court
+artifact) was ended by the ERRC-Eliminate decision recorded in
+`docs/adr/ADR-wasmi-retirement.md` (Implemented 2026-10-24): the wasmi runner
+source, dev-dependencies, and profile blocks are gone, and the same courts run
+against `graphlaw-run-eh`.
 
-The corresponding posture on the host side is that the artifact pin and
-the host capability are judged together: a re-pin is witnessed (digest,
-size, tag count, validation exit) only against a host that actually runs
-the lifecycle courts, and a host that cannot validate the artifact
-(wasmi) is documented as a tier boundary rather than patched around.
-That is why the incident receipt for the mid-wave staging wipe
-(`receipts/2026-10-23-staging-wipe-incident.md`) mattered beyond its
-operational impact — an unreceipted destructive transition on the
-staging the pin is minted from would have left the pin standing on a
-substrate nobody could attest to. The law it produced (staging
-transitions are receipted and coordinator-owned; lanes never mutate
-`~/.frozen-duckdb`) is the same discipline the pin court enforces.
+The artifact pin and the host capability are judged together: a re-pin is
+witnessed (digest, size, tag count, validation exit) only against a host that
+actually runs the lifecycle courts. The mid-wave staging wipe of 2026-10-23 mattered
+beyond its operational impact — an unreceipted destructive transition on the
+staging the pin is minted from would have left the pin standing on a substrate nobody
+could attest to. The law it produced (staging transitions are receipted and
+coordinator-owned; lanes never mutate `~/.frozen-duckdb`) is the same discipline
+the pin court enforces.
 
 ## See Also
 
 - `docs/WASM.md` — the build recipe and current hosting statement
-- `docs/jira/v26.10.22/SQLRDF-24.md` — the trap ticket, exoneration
-  matrix, and root-cause convergence
-- `docs/jira/v26.10.22/designs/eh-runner-decision-memo.md` — the hosting
-  matrix and route decision
-- `receipts/2026-10-23-eh-closure-wave.md` — the witnessed closure
-- `receipts/2026-10-23-staging-wipe-incident.md` — the staging incident
-  and its law
+- `docs/adr/ADR-wasmi-retirement.md` — why the wasmi path was removed
+- `docs/reference/runner-exit-codes.md` — the `graphlaw-run-eh` exit-code contract
+- `docs/reference/wasm-gap-register.md` — open and closed wasm-boundary gaps

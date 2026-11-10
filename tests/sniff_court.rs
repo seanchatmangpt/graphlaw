@@ -1,4 +1,4 @@
-//! Sniff-layer court for `docs/jira/v26.10.23/design-sniff-fixes.md` (G8 class).
+//! Sniff-layer court for `docs/reference/design-sniff-fixes.md` (G8 class).
 //!
 //! One `#[test]` per design row; real `sniff()` on real bytes; no mocks.
 //! Flip discipline: FLIP rows must fail when their documented inversion is

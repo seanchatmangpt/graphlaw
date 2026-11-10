@@ -1,5 +1,7 @@
 # Staleness-gate residual triage (lane L157)
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 - **Gate**: `scripts/doc_staleness_gate.sh`, run 2026-10-22, exit 1.
 - **Live count at triage time: 91 findings, not 76** — the dispatch's 76 is stale
   (gate rules or docs moved since the count was taken). The live list is triaged here.

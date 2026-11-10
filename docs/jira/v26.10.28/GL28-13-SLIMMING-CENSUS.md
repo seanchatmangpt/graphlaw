@@ -1,7 +1,14 @@
 # GL28-13 — WASM Slimming Census (74,097,211 B artifact)
 
+**Status: CLOSED at 95cd3df** (2026-10-29): the ICU-root-removal relink measured
+62,909,537 B (sha256 `62cd95d4…`, blake3 `c92caeb6…`); ceilings re-anchored to the
+128 MB policy. Lever 2 (`-Oz` MinSizeRel libduckdb.a) INVERTED (92,795,430 vs
+88,161,726 B). Receipt: RECEIPTS.md "GL28-13 stage 2". The census body below is
+historical, as measured on the 74,097,211 B artifact; its 64 MiB-gate projection
+was superseded by the measured relink.
+
 All evidence from wasm-objdump on priv/graphlaw.wasm plus the build graph
-(Cargo.toml:80 — frozen-duckdb is a non-optional dependency linked into the
+(Cargo.toml line 80 — frozen-duckdb is a non-optional dependency linked into the
 one unit on every target).
 
 ## Section budget

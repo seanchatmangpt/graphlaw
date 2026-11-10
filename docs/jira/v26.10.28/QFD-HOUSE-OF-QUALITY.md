@@ -55,18 +55,18 @@ Legend: `●` strong, `○` moderate, blank = none.
 
 | CTQ | Target | Current standing | Evidence basis |
 | --- | --- | --- | --- |
-| 1.1 | ≤1000 reductions/call or pooled isolation | UNVERIFIED | wasm build not yet run this session; no reduction-budget witness |
-| 1.2 | Cpk ≥ 1.67 heap-delta | UNVERIFIED | `spc_court.sh` not run this session (P28-SIL program exists) |
-| 1.3 | p99 ≤ 1.2 ms | UNVERIFIED | no latency rung run this session |
-| 2.1 | 0 false admissions | PARTIAL | chicago_validation 8/8 ALIVE @ 2223f894; mutation court not yet run — anti-vacuity unwitnessed |
-| 2.2 | verify per evaluation | PARTIAL | proof_pipeline 12/12 + trust/attest surface ALIVE @ 2223f894; per-evaluation pinning not re-demonstrated |
-| 3.1 | ANSI SQL over RDF via embedded DuckDB | PARTIAL | conformance 12/12 ALIVE @ 2223f894 |
-| 3.2 | 35/35 statement kinds | PARTIAL | census 13/13 ALIVE @ 2223f894; `duckdb_statement_kinds` not re-run this session |
-| 4.1 | 100% append-only receipts | UNVERIFIED | no receipt-emission census run this session |
-| 4.2 | traceability to axioms + leases | UNVERIFIED | no traceability sweep run this session |
-| 5.1 | `mix` green in-tree | UNVERIFIED | graphlaw_ex scaffold exists; `mix` never run |
-| 5.2 | 0 host imports | UNVERIFIED | depends on a wasm build (not yet run) |
+| 1.1 | ≤1000 reductions/call or pooled isolation | ALIVE | budget cliff court 10/10, wasm build exit 0 (WORK-ORDERS.md WO-1) |
+| 1.2 | Cpk ≥ 1.67 heap-delta | PARTIAL | `spc_court.sh` exit 0, Cpk 6.0979 / 14.4149 on the receipt-fold latency leg (spc-2026-10-28T165319/T171756.json); a heap-delta-specific Cpk is not separately witnessed |
+| 1.3 | p99 ≤ 1.2 ms | ALIVE | p99 125/118 ns embedded in the SPC receipts (hot-path fold leg only) |
+| 2.1 | 0 false admissions | ALIVE | chicago_validation 12/12 @ 2223f894; mutation court 19 caught / 9 unviable / 0 missed (66fc0e2, `receipts/2026-10-29-mutation-court-v261028.md`) |
+| 2.2 | verify per evaluation | ALIVE | proof_pipeline 5/5, `trust_attest` 12/12 exit 0 (WO-3) |
+| 3.1 | ANSI SQL over RDF via embedded DuckDB | ALIVE | conformance 12/12, `sql_rdf_dialect` 36/36 (WO-3) |
+| 3.2 | 35/35 statement kinds | ALIVE | `duckdb_statement_kinds` 8/8 covering 35 kinds; census 13/13 (WO-4) |
+| 4.1 | 100% append-only receipts | ALIVE | capabilities digest 6/6 after repin; per-Edit transition receipts on disk (WO-5) |
+| 4.2 | traceability to axioms + leases | ALIVE | abi_manifest_court 10/10; digest repin witnessed (WO-5) |
+| 5.1 | `mix` green in-tree | ALIVE | graphlaw_ex suite 133 passed (RECEIPTS.md "GL28-1 legs (b)+(c)"); default `mix test` runs the engine courts (43ea53e) |
+| 5.2 | 0 host imports | ALIVE | WASI audit 28/28 `wasi_snapshot_preview1`, zero host imports; packet-4 admit/tamper 2/2 (WO-6) |
 | 5.3 | rev-pinned fork source | ALIVE | purrdf fork swap @ 2223f894: `cargo check` 0 errors |
 
-A standing above is as-of 2026-10-28 session receipts; it moves only on a
+Standings above refreshed 2026-11-09 from WORK-ORDERS.md / RECEIPTS.md (original 2026-10-28 write: UNVERIFIED/PARTIAL pre-closing-wave); it moves only on a
 new command + exit. Full per-CTQ commands in [WORK-ORDERS.md](WORK-ORDERS.md).

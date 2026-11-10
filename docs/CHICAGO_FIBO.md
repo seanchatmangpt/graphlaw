@@ -34,11 +34,16 @@ terms the fixtures need are used, not the full ontology.
 `tests/fixtures/fibo/`: `README.md` (provenance), `tx_usd_25m.ttl`, `tx_usd_25m_masterM2.ttl`,
 `tx_eur_20m.ttl`, `tx_eur_20m_rate_1_05.ttl`, `dvp_securities.ttl`,
 `dvp_securities_failed.ttl`, `delegation.ttl`, `policy_high_value.n3`, `shapes.ttl`.
-Boundary variants are inline in the case file, which is the single source.
+Boundary variants are inline in the case file, which is the single source. The same directory
+also holds `tc01_*`..`tc08_*` SQL-in-RDF fixtures, which belong to the sql-rdf courts, not
+this one.
 
 ## Case classes
 
-Ordinals 500 to 999, case ids prefixed `fibo_`. All five kinds are present (gated). Each negative names a positive twin in its case title; that
+Ordinals 500 to 999, case ids prefixed `fibo_`. All five kinds are present (gated). As of
+2026-11-09, `tests/chicago_fibo.rs` declares `EXPECTED_CASE_COUNT = 59` (8 positive, 16
+negative, 4 invariance, 7 cross-authority, 24 boundary-mutation, counted from `// kind:`
+headers). Each negative names a positive twin in its case title; that
 pairing is a review convention, not a generator gate.
 
 | kind | what it establishes |
@@ -54,7 +59,7 @@ one.
 
 ## Commands
 
-    ggen sync run
+    ggen sync run   # from the pack repository; no court ggen.toml exists in this checkout
     cargo test --all-features --test chicago_fibo
 
 Also part of the wave:

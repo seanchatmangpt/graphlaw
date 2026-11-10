@@ -3,7 +3,10 @@
 - **Id**: GL28-2
 - **Title**: Smalt local-cloud integration — deterministic wire protocol,
   admission-only commit gate, wire-parity court
-- **Status**: DRAWN (spec only; nothing built)
+- **Status**: PARTIAL (updated 2026-11-09) — spec filed; smalt-side gate landed per RECEIPTS.md
+  "Window close-out" (gate config 3cc3f35f, router seams 28f9dcbe, gate module + 6-court file
+  a33622d1, smalt compile gate exit 0). NOT landed: kernel-side `receipt_blake3` mint at
+  `src/abi/ops/governance.rs` (see GL28-BACKLOG.md GL28-2); register is authoritative.
 - **Conformance target**: byte-identical receipt hashes through both ingress
   paths (direct graphlaw_ex and Smalt-routed); zero state mutation on any
   refusal; every refusal is typed and stable-coded.

@@ -73,10 +73,11 @@ An unbound SPARQL cell is JSON `null`. SHACL result fields are different: `focus
 
 ## Ops
 
-Fourteen ops, in registry order. A fifteenth, `duckdb` (frozen-duckdb
-analytical eval, `src/duckdb_op.rs`), is dispatched by the module
-(`src/abi.rs`) but omitted from the 14-op registry table until an explicit
-digest bump — see [the Op-15 design](wasm-duckdb-op15-design.md). Absence
+Fifteen ops (`src/abi.rs` dispatch). Ops 1-14 are the registry table, in
+registry order. The fifteenth, `duckdb` (frozen-duckdb analytical eval,
+`src/duckdb_op.rs`), is dispatched by the module on every target but is
+unadvertised: it is absent from `capabilities.ops` and off the hashed 14-op
+table in `contracts/abi-manifest.json` by digest-stability choice. Absence
 from `capabilities` is not a refusal; the op still dispatches.
 
 ### 1. `capabilities`
@@ -195,6 +196,18 @@ Lease request fields (all optional; give at most one of `signed_lease` and `leas
 Request: `problem`*, `policy`* (each a JSON object/array or a JSON string). Strong-cyclic
 admission of a FOND policy. Response: `initial_states`, `reachable`, `goal_states`, `entries`
 (list of `[state, action]`), `ntriples`. Refusals: `PolicyRefused`.
+
+### 15. `duckdb`
+
+Module-owned, unadvertised op (`"duckdb" => crate::duckdb_op::dispatch(v)`,
+`src/abi.rs`). Cursor-streamed analytical eval over frozen-duckdb; `exec`
+mode takes `views`, `query_ast` and an `ast.turtle` Turtle AST document
+(compiled via `compile_turtle`; raw SQL text is a typed SQLRDF-17 refusal)
+and returns `{"ok":true,"receipt","query_hash","rows_emitted","cursor","more"}`.
+`max_rows` is the result-row envelope (absent: 64; `0` refused); an overrun is
+a typed `ResourceLimit` refusal (`limit: "duckdb_result_rows"`). ATTACH is
+fail-closed unless `GRAPHLAW_ATTACH_ROOTS` allows the path. Full wire
+contract: the module doc of `src/duckdb_op.rs`.
 
 ## Not in the ABI
 

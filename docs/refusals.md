@@ -236,7 +236,7 @@ here, for example blank nodes in plan atoms, or a malformed ABI request), `Resou
 `TierMismatch` (the document belongs to the other semantic tier, R04: e.g. N3 logic given to an
 RDF parser — see `src/tier.rs`),
 `DuckDb` (the DuckDB substrate failed; op `duckdb` — dispatched inside the wasm unit on every target as of the 2026-10-23 promotion; receipt: `receipts/2026-10-23-eh-closure-wave.md` §4/§8).
-`BareSql` (SNIFF-01, `docs/jira/v26.10.23/design-sniff-fixes.md` fix 4; registered 2026-10-24 — append-only, never renumbered): the document is bare SQL — a leading SQL keyword (`SELECT`/`INSERT`/`UPDATE`, `DELETE FROM`, `CREATE TABLE`) plus a SQL clause keyword (`FROM`/`INTO`/`SET`/`VALUES`) and none of the SPARQL markers (`WHERE`, `FILTER`, graph-pattern `{`, `a` type token, `sql:` vocabulary). Typed refusal at routing (`src/dialect/sniff.rs::bare_sql`) instead of admitting the text as `Dialect::Sparql` and failing SPARQL parse with a generic engine error. Court: `tests/sniff_court.rs` rows 4/4b (flip: delete the `BareSql` arm from `sniff()`), guards 4c/4d (the arm must not capture SPARQL).
+`BareSql` (SNIFF-01, `docs/reference/design-sniff-fixes.md` fix 4; registered 2026-10-24 — append-only, never renumbered): the document is bare SQL — a leading SQL keyword (`SELECT`/`INSERT`/`UPDATE`, `DELETE FROM`, `CREATE TABLE`) plus a SQL clause keyword (`FROM`/`INTO`/`SET`/`VALUES`) and none of the SPARQL markers (`WHERE`, `FILTER`, graph-pattern `{`, `a` type token, `sql:` vocabulary). Typed refusal at routing (`src/dialect/sniff.rs::bare_sql`) instead of admitting the text as `Dialect::Sparql` and failing SPARQL parse with a generic engine error. Court: `tests/sniff_court.rs` rows 4/4b (flip: delete the `BareSql` arm from `sniff()`), guards 4c/4d (the arm must not capture SPARQL).
 Source of truth: `src/dialect/refusal.rs` `RefusalKind` (9 arms enumerated above; the N3 `Fuse` arm's register row landed 2026-10-24, lane E16 — see the appended N3 inference-fuse section).
 
 ## Lease reasons (`LeaseRefused.reason`)
@@ -293,6 +293,32 @@ Elixir-side kinds instead of collapsing into a generic refusal. Existing codes
 in this register are unchanged; this entry records the mapping so the Elixir
 surface and the codes above stay legible against each other. Recovery for each
 condition follows the row for the underlying kernel refusal.
+
+## Appended re-audit and egress status (2026-11-09, lane C) — appended, never renumbered
+
+Probe re-run 2026-11-09: `CARGO_TARGET_DIR=a lane-local CARGO_TARGET_DIR cargo run --example refusal_probe` ->
+12 `[exit-class MATCH]`, `ALL REFUSAL PROBES MATCHED`, exit 0; every captured message is
+byte-identical to the 2026-10-22 capture (see [refusal-playbook.md](refusal-playbook.md)).
+Anchor drift versus the T4 re-audit paragraph above (re-read on disk 2026-11-09; the T4 line
+numbers are historical): `RefusalCode::LiteralNotInt = 36` is now at
+`src/sql_ast/refusals.rs:237` (LiteralNotFloat = 37 at 240); `refusal_arm::JOIN_TYPE_IRI = 37`
+at `:64`; `REFUSAL_04_CAPABILITY_REFUSAL` at `src/tier.rs:26`; the `NoCanonicalGraph` Display
+arm at `src/duckdb_eval.rs:272` (variant at `:225`). Unchanged: constants at
+`src/sql_ast/refusals.rs:9-11`, `pub use refusals::*` at `src/sql_ast.rs:24`, the literal
+`REFUSAL-04` marker at `src/rules/builtins.rs`, `AttestError` `#[non_exhaustive]` at
+`src/attest.rs`.
+
+Egress typed errors — NO stable code minted. `src/egress/arrow.rs` `ArrowEgressHeaderError`
+(`BadMagic`, `BadSchemaVersion`, `BadFlags`, `BadPayloadOffset`, `BadTotalLen`,
+`ReservedNotZero`; flagged at `src/egress/arrow.rs`) and `src/egress/collector.rs`
+`CanonArrowCollectorError` (`ColumnIndexOutOfRange`, `CellTypeMismatch`, `RaggedRows`,
+`Overflow`; flagged at `:172`) are plain Rust enums: neither carries a `RefusalCode`, a
+`[REFUSAL-nn]` marker, nor an ABI `details.code` (grep of `src/` and `tests/` finds no use
+outside those two files). The collector's Display strings use the stable `canonarrow:`
+prefix. Both source comments defer registration until the egress path is wired into the ABI;
+this register therefore claims no egress code yet. When the egress op lands
+(`docs/jira/v26.10.22/ADR-canonarrow-dual-witness-egress.md`), append the family here with
+receipts.
 
 ## See Also
 

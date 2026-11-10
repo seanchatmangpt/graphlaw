@@ -1,7 +1,5 @@
 # Dialects
 
-See also: [ARD-26.10.25-DIALECTS](file:///Users/sac/graphlaw/docs/ARD-26.10.25-DIALECTS.md) for the full architectural review on the Sovereign Lattice, formal semantics, and projection mechanics.
-
 How GraphLaw routes RDF and logic syntaxes to upstream engines, what each
 dialect supports, and what is permanently out of scope. Source of truth:
 `src/dialect.rs`; the wire op table: `src/registry.rs`.
@@ -350,7 +348,7 @@ over-declaring turns typed refusals into silent expectations.
 ## Consumer admission matrix (ggen-engine `load_declared`)
 
 The ggen-engine fact-input path (`crates/ggen-engine/src/graph.rs`,
-`load_declared`) admits declared dialects as of v26.10.20: `turtle`,
+`load_declared`) admits declared dialects (re-read against the sibling `ggen` checkout 2026-11-09; first landed v26.10.20): `turtle`,
 `ntriples`, `nquads`, `trig`, `rdf-xml`/`rdfxml`, `json-ld`/`jsonld`. RDF/XML
 and JSON-LD are first-class — JSON-LD admission runs the same remote-context
 guard as GraphLaw (`jsonld_has_remote_context`, guard pattern copied from

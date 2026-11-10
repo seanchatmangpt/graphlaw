@@ -11,9 +11,12 @@ Byte-identical pinned copies of the marketplace pack
 - `queries/crosswalk.rq` — canonical projection (51+6+18+2 = 77 rows).
 
 `manifest.blake3` is the pin of record. Regenerate pins by re-copying from
-the pack and re-running `shasum -a 256` over the same file set. The drift
+the pack and re-running `b3sum` (BLAKE3, `<hash>  ./<path>` lines) over the same file set; the court
+recomputes with `blake3` and refuses drifted pins. The drift
 meta-test (`refusal_crosswalk_pin_matches_live_sibling` in
 `tests/refusal_crosswalk_differential.rs`) compares pin vs the live sibling
 and BLOCKS (skips) when the sibling checkout is absent.
 
-Court: `tests/refusal_crosswalk_differential.rs`.
+Court: `tests/refusal_crosswalk_differential.rs` (reads `gates/*.rq`, `queries/crosswalk.rq` and
+`ontology.ttl` from this dir; `tests/insa_law_order.rs` and `tests/no_mock_markers.rs` mention
+the path only).

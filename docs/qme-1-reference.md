@@ -1,5 +1,8 @@
 # QME-1 ecosystem reference
 
+As of 2026-11-09: the pinned spec SHA below is cited, not re-verified against
+the remote. The statements below are repository-local claims about this repo's role.
+
 Canonical specification: `seanchatmangpt/chatman-ecosystem@88b276f71e2c8e606553942cb721bceb6836a87e`
 
 This repository participates in QME-1 as **semantic law-state and reasoning**.

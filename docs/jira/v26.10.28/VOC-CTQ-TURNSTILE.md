@@ -65,3 +65,10 @@ cites a CTQ id here.
 Must-be features are entry conditions, never selling points; a must-be gap is
 a BLOCKED standing on any dependent work order. Delighters are claimed only
 with a receipt — an unreceipted delighter is UNVERIFIED, never ALIVE.
+
+## Standing pointer (2026-11-09)
+
+This file defines CTQs only and carries no standing. Current per-CTQ standing
+lives in [WORK-ORDERS.md](WORK-ORDERS.md) (WO-1..WO-7) and the QFD "Current
+standing" column, both refreshed 2026-11-09; window posture is GO
+([GO-NO-GO.md](GO-NO-GO.md)).

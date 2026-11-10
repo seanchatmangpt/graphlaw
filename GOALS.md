@@ -13,7 +13,7 @@
 
 - PurRDF 3.0.1 (git-sourced: [seanchatmangpt/purrdf](https://github.com/seanchatmangpt/purrdf), rev-pinned): RDF 1.2, SPARQL 1.1/1.2, SHACL, ShEx 2.1, Datalog, RDF/RDFS/OWL-RL entailment, RDF events.
 - purrdf::n3 3.0.1 (purrdf crates/n3 in the [seanchatmangpt/purrdf](https://github.com/seanchatmangpt/purrdf) fork): Notation3 parsing, reasoning, built-ins, resource limits and proofs.
-- DuckDB 2.0 (`frozen-duckdb 2.0.0-dev`): Vectorized columnar execution, Arrow C ABI integration, Parquet scanning, zone-map filtering, SIMD aggregations.
+- DuckDB 2.0 (`frozen-duckdb 2.0.2`, per `Cargo.toml`/`Cargo.lock`): Vectorized columnar execution, Arrow C ABI integration, Parquet scanning, zone-map filtering, SIMD aggregations.
 
 ## Non-goals
 

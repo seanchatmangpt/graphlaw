@@ -5,12 +5,20 @@ package version always equals the crates.io `graphlaw` version it wraps; release
 entries are condensed from the root CHANGELOG, filtered to what a JS consumer
 sees.
 
+## [26.10.28] - 2026-10-29
+
+Sources in this directory are version `26.10.28` (`package.json`). The shipped
+artifact is the GL28-13 ICU-drop relink (BLAKE3 `c92caeb6…`, 62,909,537 B;
+re-read 2026-11-09: `b3sum` of `wasm/graphlaw.wasm` equals `priv/graphlaw.wasm`
+and `WASM_BLAKE3`). Not yet published to npm (see below).
+
 ## [26.10.22] - 2026-10-24
 
 Version `26.10.22` of the workspace line; the npm tarball is packed and
 CI-validated (`publish-npm` run 40084544193, validate-and-pack GREEN) with the
 npm publish typed-blocked on the one-time Trusted Publisher configuration
-(status: `docs/jira/v26.10.23/PUBLISH-STATUS.md`).
+(status as of 2026-11-09: npm `latest` is still `26.10.14`; the publish leg is
+GL28-12 in `docs/jira/v26.10.28/RECEIPTS.md`).
 
 ### Added
 
@@ -34,9 +42,9 @@ npm publish typed-blocked on the one-time Trusted Publisher configuration
 
 ### Added
 
-- Initial JavaScript/TypeScript distribution: npm package `graphlaw` wrapping
+- Initial JavaScript/TypeScript distribution: npm package `@seanchatmangpt/graphlaw` wrapping
   the pinned wasm32-wasip1 artifact.
-- Typed client for all 14 ops, plus a `graphlaw/raw` passthrough surface.
+- Typed client for all 14 ops, plus a `@seanchatmangpt/graphlaw/raw` passthrough surface.
 - Types generated from `registry/capability-registry.json`.
 - Vitest golden-vector test suite over `registry/op-examples.json`.
 

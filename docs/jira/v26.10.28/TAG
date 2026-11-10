@@ -16,3 +16,15 @@ completed	success	release: v26.10.28 — purrdf fork swap + graphlaw_ex BEAM tur
 ```
 
 npm / Hex dry-runs: in flight at time of writing (PENDING receipt).
+
+Update (2026-11-09 docs-triage, re-read from git/gh at this time):
+
+- `v26.10.28` is an annotated tag: tag object `1e72b4c`, peeling to
+  `82814ac` (`git tag -l v26.10.28 --format='%(objectname:short)
+  %(*objectname:short)'` -> `1e72b4c 82814ac`). The Commit line above stands.
+- GitHub release `v26.10.28` exists, marked Latest, published
+  2026-10-29T01:05:20Z (`gh release list`).
+- The npm / Hex dry-runs line above is superseded: no npm publish receipt
+  exists; `@seanchatmangpt/graphlaw` stays at 26.10.14 on the registry until
+  the Trusted Publisher mapping + rerun A3 (GL28-12 in GL28-BACKLOG.md).
+  Cross-repo push receipt: RECEIPTS.md "Window close-out" (320e2e5).

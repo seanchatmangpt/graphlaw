@@ -1,11 +1,11 @@
 //! Frame-bound court for the packet-4 stdio runners (R3,
-//! docs/jira/v26.10.23/design-read-frame-bound.md). Black-box subprocess
+//! docs/reference/design-read-frame-bound.md). Black-box subprocess
 //! court in the pattern of tests/graphlaw_run_eh_court.rs: spawns the real
 //! binaries, feeds hand-built packet-4 frames over real pipes, asserts on
 //! exit codes, stderr text, and WHO consumed the body bytes (timing).
 //!
 //! Contract under court (graphlaw-run-eh — the sole packet-4 runner since the
-//! wasmi retirement, docs/jira/v26.10.23/ADR-wasmi-retirement.md):
+//! wasmi retirement, docs/adr/ADR-wasmi-retirement.md):
 //! - a frame length prefix > `graphlaw::abi::MAX_REQUEST_BYTES` (16 MiB) is
 //!   refused from the prefix ALONE: exit 92, stderr names length AND cap,
 //!   zero body bytes read, no reply frame written — the leg holds the child's
@@ -399,7 +399,7 @@ fn assert_reply(stdout: &[u8], context: &str) {
 
 // ---- graphlaw-run-eh (wasmtime host; src/bin/graphlaw_run_eh.rs — spec side).
 // The graphlaw-run (wasmi host) legs were retired with the runner on
-// 2026-10-24 per docs/jira/v26.10.23/ADR-wasmi-retirement.md; these EH twins
+// 2026-10-24 per docs/adr/ADR-wasmi-retirement.md; these EH twins
 // carry the same frame-bound contract.
 
 /// EH twin of the zero-length leg.

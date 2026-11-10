@@ -24,7 +24,9 @@ Collaborators are real. There are no mocks; assertions are on final response sta
 ## Case classes
 
 Every court contains at least one case of each of five kinds (gated). Negatives outnumber
-positives (40 vs 12); a positive twin per negative is not gated or claimed. Ordinals: this court owns 1 to 499 (financial court owns 500 to 999). Case ids use the
+positives (40 vs 12, re-counted from `tests/chicago_cross_authority.rs` `// kind:` headers
+on 2026-11-09: 12 positive, 40 negative, 5 invariance, 8 cross-authority, 4
+boundary-mutation = 69 = `EXPECTED_CASE_COUNT`); a positive twin per negative is not gated or claimed. Ordinals: this court owns 1 to 499 (financial court owns 500 to 999). Case ids use the
 `xa_` prefix.
 
 | kind | what it establishes |
@@ -46,7 +48,10 @@ assert result fields such as `/id` and `/facts`. Error message strings are not a
 
 ## Commands
 
-Generate (coordinator step, from `/Users/sac/graphlaw`):
+Generate (coordinator step). The case ontology and `chicago-graphlaw-court-pack` are not
+in this checkout: as of 2026-11-09 the only `ggen.toml` files here are `wasm/ggen.toml` and
+`ggen/sql-dialect/ggen.toml`, so the generated test file is regenerated from the pack
+repository, never patched here:
 
     ggen sync run
 

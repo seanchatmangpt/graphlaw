@@ -12,7 +12,8 @@ Reference: [abi-reference](../abi-reference.md) · [refusals](../refusals.md).
 npm i @seanchatmangpt/graphlaw
 ```
 
-Node >= 20 is required for the Node entry point (`engines.node: ">=20"`).
+Node >= 20 is required for the Node entry point (`engines.node: ">=20"` in
+`js/npm/package.json`; package version `26.10.28` as of 2026-11-09).
 The package ships `dist-nodejs/`, `dist-web/`, and `dist-bundler/` builds selected
 by package `exports` conditions.
 
@@ -112,18 +113,23 @@ const json = await callRawJson('{"op":"capabilities"}');
   package.
 - **Browser / bundler**: `browser` and `default` export conditions map to
   `dist-web/` and `dist-bundler/` builds for browsers and bundlers.
-- **WASI**: no external WASI runtime or shim package is needed. The wasm
-  module imports only 7 trivial `wasi_snapshot_preview1` functions, satisfied
-  by a zero-dependency self-contained stub set (empty `environ`, `sched_yield`
-  no-op, `random_get` via `node:crypto` entropy, `fd_write` discard,
-  `clock_time_get` via a `performance.now` monotonic clock, `proc_exit` typed
-  throw) — identical on Node and browsers.
+- **WASI**: no external WASI runtime or shim package is needed. The DuckDB-linked
+  wasm module imports 28 `wasi_snapshot_preview1` functions
+  (`js/npm/src/wasi-stubs.ts`), all satisfied by a zero-dependency self-contained
+  stub set: the live surfaces are an empty `environ`, a `sched_yield` no-op,
+  `random_get` via `node:crypto` entropy, `fd_write` discard, `clock_time_get`
+  via a `performance.now` monotonic clock, and a typed-throw `proc_exit`; every
+  fd-numbered call fails closed with `EBADF`, every path call with `ENOENT`, and
+  `poll_oneoff` with `ENOSYS` (there is no filesystem behind the kernel) —
+  identical on Node and browsers.
 - **Integrity**: at load, the artifact's BLAKE3 is computed with
   `crypto.subtle` and compared against the pinned digest in
-  `generated/artifact-meta.js`; a mismatch throws `GraphlawIntegrityError`
-  with `expected`/`actual` digests before any code runs. For local
-  development with a rebuilt artifact, `initGraphlaw({ skipShaCheck: true })`
-  bypasses the check — dev only, you are trusting the bytes.
+  `js/npm/src/generated/artifact-meta.ts` (`WASM_BLAKE3`, currently
+  `c92caeb6…c1b9c`, equal to `priv/graphlaw.wasm.blake3`); a mismatch throws
+  `GraphlawIntegrityError` with `expected`/`actual` digests before any code runs.
+  For local development with a rebuilt artifact, the init option
+  `skipDigestCheck: true` (`js/npm/src/init.ts`) bypasses the check — dev only,
+  you are trusting the bytes.
 
 ## Limits
 

@@ -1,5 +1,7 @@
 # C1 — H_query content-addressed eval cache (design record)
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 Condensed from the C1 spec lane (full design in wave transcript). Maps to
 SQLRDF-16 row C1; depends on R1 (canon-once) + E1 (alias-variant
 canonicalization would make the key unstable across vocabulary).

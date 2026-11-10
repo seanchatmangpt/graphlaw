@@ -40,8 +40,8 @@ rely on, how deprecations work, and how the minimum supported Rust version moves
 
 ## MSRV policy
 
-`rust-version` in `Cargo.toml` is 1.96. It is raised only in a minor release, and every raise gets
-a CHANGELOG line ("MSRV: 1.96 -> 1.9x"). CI builds on the pinned toolchain in
+`rust-version` in `Cargo.toml` is 1.98. It is raised only in a minor release, and every raise gets
+a CHANGELOG line ("MSRV: 1.98 -> 1.9x"). CI builds on the pinned toolchain in
 `rust-toolchain.toml`.
 
 ## ABI_VERSION contract
@@ -91,7 +91,7 @@ crate versions move on independent axes:
   `pin-source=<older>` than the crate version, the release is blocked until
   a rebuild produces a fresh digest at the released source state. The current
   pin digest is
-  `fa1558306690493249b176ec312a4f01e97798937e05cd49f2946d61a7e6d107` # historical — interim pin superseded by 58a44095…d2280a
+  `fa155830…d107` # historical — interim pin superseded by 58a44095…d2280a
   (57,781,384 B, tag section count 1, re-pinned 2026-10-23); the legacy
   `f149433c…` (7,104,147 B, tag section count 0) is historical. See
   [WASM.md](WASM.md).
@@ -101,7 +101,7 @@ crate versions move on independent axes:
 - `cargo-semver-checks` is the intended mechanical gate and is wired to CI: job `semver` in
   `.github/workflows/ci.yml` runs `obi1kenobi/cargo-semver-checks-action@v2` (pinned) with
   `package: graphlaw` on every push and PR.
-- Missing-docs status: `#![deny(missing_docs)]` is active at crate root (`src/lib.rs:33`), so an
+- Missing-docs status: `#![deny(missing_docs)]` is active at crate root (`src/lib.rs`), so an
   undocumented public item is a compile error, not a warning.
 - `graphlaw-registry --check` keeps the committed registry files equal to the Rust table.
 - `cargo deny check` and `cargo audit` gate the dependency tree (`deny.toml`).

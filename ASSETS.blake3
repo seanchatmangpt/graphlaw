@@ -1,5 +1,5 @@
 # blake3  bytes  dialect  path   (regenerate: UPDATE_ASSET_MANIFEST=1)
-42bd46930a2ed7e63a0ed68b1a387eaa8ed55528e9c88494d0d147c741cb3c52  4089  -  innovation/README.md
+276783d3fe1d39a20dd66eca2be9bf7f55e86bb5489a652967761a05dbc00695  4388  -  innovation/README.md
 7d24ec6550fb859168f1612b44aaa00fa6d6404e8badd80e44cbc417eca5601a  4965  N3  innovation/blue-ocean-triz.n3
 c9c46c33e2779fa30d91f738bec7d44b08998846fb4c49dbe4280385d3df7df0  1125  Turtle  innovation/candidate.shacl.ttl
 a9d5f9d7ca97b9d97b9065b9fd99d531a4c36a8c82492ca64531332e2fde602e  1449  ShExJ  innovation/candidate.shex.json

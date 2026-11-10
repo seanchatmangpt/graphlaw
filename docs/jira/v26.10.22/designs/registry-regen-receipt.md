@@ -1,5 +1,7 @@
 # Registry Regen Receipt — Lane L73 (L21 finding C9)
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 - Date: 2026-10-22
 - Subject: `/Users/sac/graphlaw` @ main (post-615dbfa working tree)
 - Flow: `cargo run --features abi --bin graphlaw-registry -- --write`
@@ -12,7 +14,7 @@
 |---|---|---|
 | registry | `blake3:7db561aa315e86f3f21022697276ef3382b808ea1bcef4e4245159b755f819b4` | `blake3:4cd56fd50675c0aa9cc95c0444ed8e378e40a270fc52fe859ffe4aaa83b7091f` | (historical)
 | receipt-surface | `blake3:78ebb149bb6712049fabbefc8b17cb72dcb6461b66422e1ea04e106e2b63f96e` | `blake3:0cc02ca4100542f68de431eacf4e5d0dac5d51fdd96887b2bf2b2cbebcd3669d` | (historical)
-| surface | `blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9` | unchanged |
+| surface | `blake3:da96e137…9ee9` | unchanged |
 
 L21 cited drift to `5d31d472…`; at run time the live digest was already
 `4cd56fd5…` — the src moved again between L21's observation and this regen.

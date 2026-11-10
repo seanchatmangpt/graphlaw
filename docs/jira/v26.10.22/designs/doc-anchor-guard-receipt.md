@@ -1,5 +1,7 @@
 # Doc anchor guard — receipt (Lane M01, 2026-10-22)
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 Defect class (witnessed 3x this session): prose cites `path:NNN` anchors that
 no longer resolve to a plausible symbol line after edits (ARCHITECTURE.md
 `:2051` -> `:1031` drift class).

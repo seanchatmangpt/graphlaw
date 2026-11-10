@@ -30,3 +30,9 @@ done
 
 then feed the printed JSON to a fixture-reader variant of `rdflib_rows`. The
 live-subprocess path is preferred (Chicago: real collaborator).
+
+## Maintenance
+
+Re-verified 2026-11-09 against `tests/strata_gate_differential.rs` (five packs: hash, valve,
+ledger, tx, governance). This README is pinned in `manifest.blake3` (BLAKE3, `b3sum`): after
+any edit, re-pin line 1 with `b3sum README.md` or `pinned_fixtures_match_manifest` fails.

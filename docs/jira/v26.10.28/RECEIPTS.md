@@ -590,3 +590,56 @@ registry_artifacts 22/0 **with GRAPHLAW_REQUIRE_WASM_PIN=1** (stale-pin
 check witnessed flipping 21/1 -> 22/0 on the row landing);
 wasm_audit.sh PASS (1 Tag section = engine link proven); host contract
 graphlaw-wasm 10/0. Integration: `cargo check` clean; commit 09bafd2.
+
+## Docs-triage wave — v26.10.28 window refresh (2026-11-09)
+
+Standing: PASS for the edits below (files re-read after write); the repo-wide
+`scripts/doc_staleness_gate.sh` is NOT green (pre-existing findings, see the gate
+output). This block appends only; no earlier text in this file was altered.
+
+Lane G updated every kept file in this window to current truth, verified from
+`git log`, `git tag`, `gh`, and the tree before writing:
+
+- INDEX.md: rewritten (13 files + provenance/ with 2 files; standing re-read).
+- WORK-ORDERS.md: header + WO-1 relink note + WO-2 section (ALIVE on the mutation
+  court receipt, 66fc0e2) + GL28 addendum; now 6 ALIVE + 1 PARTIAL.
+- GO-NO-GO.md: posture GO (c070392, f1321ca); mutation-court row ALIVE; the
+  format-parent link to the v26.10.24 GO-NO-GO (being deleted) was dropped.
+- GL28-BACKLOG.md: statuses synced (GL28-1 ALIVE cd69757, GL28-6/-7 4d2ffd0,
+  GL28-13 CLOSED 95cd3df, GL28-14 14df7b9, GL28-9 CLOSED, GL28-2 PARTIAL); folded
+  in the PRIOR-ART-FIRST lane contract, GL28-6/-7 court specs, the GL28-2 lane table
+  with census, and the still-open parked items from the v26.10.26 PARKED file.
+- GL28-13-SLIMMING-CENSUS.md: CLOSED header added, body kept historical.
+- GL28-1/-2/-4 specs: status headers; QFD standing column refreshed; VOC pointer;
+  VISION-2028-C4.md facts block (62,909,537 B post-relink); provenance/README.md
+  (tarball is untracked and removed in be4e2a5; replay-only); TAG append note.
+- Folded then slated for coordinator deletion: VISION-2028-EXECUTION.md,
+  GL28-6-KILLSWITCH-DESIGN.md, GL28-7-AUTHORITY-PORT-DESIGN.md,
+  GL28-2-IMPLEMENTATION.md, and the v26.10.26 PARKED file. References to them in
+  the window files other than this file were removed or repointed; earlier
+  receipt blocks above still name them as historical text.
+
+Commands run by this lane (real output):
+
+```
+$ git tag -l v26.10.28 --format="%(refname:short) %(objectname:short) %(*objectname:short)"
+v26.10.28 1e72b4c 82814ac
+$ git ls-files docs/jira/v26.10.28/provenance
+docs/jira/v26.10.28/provenance/Cargo.lock.pre-swap
+docs/jira/v26.10.28/provenance/README.md
+$ ls docs/jira/v26.10.28
+GL28-1-ENVELOPE-SPEC.md GL28-13-SLIMMING-CENSUS.md GL28-2-IMPLEMENTATION.md GL28-2-SMALT-WIRE-SPEC.md GL28-4-EXPORTER-SPEC.md GL28-6-KILLSWITCH-DESIGN.md GL28-7-AUTHORITY-PORT-DESIGN.md GL28-BACKLOG.md GO-NO-GO.md INDEX.md provenance QFD-HOUSE-OF-QUALITY.md RECEIPTS.md TAG VISION-2028-C4.md VISION-2028-EXECUTION.md VOC-CTQ-TURNSTILE.md WORK-ORDERS.md 
+$ ls -l priv/graphlaw.wasm
+62909537 priv/graphlaw.wasm
+$ grep -n eyeron tests/differential.rs; echo rc=$?
+rc=1
+$ bash scripts/doc_staleness_gate.sh   # before edits
+exit=1; 232 findings repo-wide; window files: 12 R2 + 28 R4 + 26 R5 = 66
+$ bash scripts/doc_staleness_gate.sh   # after edits
+exit=1; 213 findings repo-wide (tail line: a pre-existing R5 hit in the wasm-duckdb op15 design doc)
+window findings outside this file: 0
+window findings inside this file (append-only, all pre-existing): 47
+```
+
+Not run by this lane: any cargo test, the mutation court, the n3 corpus court
+(its parked-item status stays UNVERIFIED), and any npm/Hex publish.

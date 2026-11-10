@@ -1,7 +1,10 @@
 # WORK-ORDERS
 
 Per-CTQ work orders for v26.10.28, with HONEST standing from the
-2026-10-28 session receipts. Standing vocabulary:
+2026-10-28 session receipts, refreshed 2026-11-09: **6 ALIVE + 1 PARTIAL**
+(WO-1,2,3,4,5,6 ALIVE; WO-7 PARTIAL). WO-2 flipped to ALIVE on
+`receipts/2026-10-29-mutation-court-v261028.md` (66fc0e2; c070392/f1321ca
+flipped the window to GO). Standing vocabulary:
 
 - **ALIVE** — ran this session; command + exit cited.
 - **PARTIAL** — some witnesses ALIVE, named gaps remain.
@@ -23,7 +26,7 @@ purrdf fork swap @ 2223f894 — ALIVE witnesses:
 | census (`n3_limit_census_court`, trait `ReasonerLimitCensus` in `src/law.rs`, at-cap sentinels) | 13/13 passed |
 | budget cliff court (truth-synced to fork counters) | 10/10 passed |
 | `wasm_native_differential` | 2/2 passed |
-| `wasm_size_court` | 4/4 passed (ceiling raised 64 → 80 MiB via SCAR; artifact measured 74,097,211 B) |
+| `wasm_size_court` | 4/4 passed (ceiling raised 64 → 80 MiB via SCAR; artifact measured 74,097,211 B) — superseded: GL28-13 relink 95cd3df, 62,909,537 B, ceiling re-anchored to 128 MB policy |
 | `cargo test --test duckdb_statement_kinds` | 8/8 passed (35 kinds) |
 | `cargo test --test sql_rdf_dialect` | 36/36 passed |
 | capabilities digest (after `graphlaw-registry --write` repin) | 6/6 passed |
@@ -39,7 +42,8 @@ purrdf fork swap @ 2223f894 — ALIVE witnesses:
   witness); `wasm_native_differential` 2/2 (premise re-authored under the
   ONE-unit law — the wasm artifact DOES advertise frozen-duckdb);
   `wasm_size_court` 4/4 at the 80 MiB SCAR ceiling (artifact
-  74,097,211 B). SPC gate landed:
+  74,097,211 B at v26.10.28; after the GL28-13 relink 95cd3df the artifact is
+  62,909,537 B, blake3 `c92caeb6…`, ceiling 128 MB policy, court 4/4 re-run). SPC gate landed:
   `bash scripts/spc_court.sh` exit 0 — **two independent receipts**
   (re-read from the JSON files on disk): `receipts/spc-2026-10-28T165319.json`
   (bench `tc_hot_01`, clone_path leg, mean 109.485 ns, stddev 7.681 ns,
@@ -56,10 +60,13 @@ purrdf fork swap @ 2223f894 — ALIVE witnesses:
 
 - **Required**: 0 false admissions; anti-vacuity: gates flip on mutation.
 - **Current (ALIVE)**: chicago_validation 12/12 @ 2223f894 (acceptance rerun).
-- **Gap**: `bash scripts/mutation_court.sh` not yet run this session — the
-  gates are unwitnessed as non-vacuous.
-- **Acceptance**: mutation court exit 0 (run solo, serialized against all
-  lanes; `--force` only on a dirty tree per CLAUDE.md).
+- **Current (ALIVE, mutation court)**: `receipts/2026-10-29-mutation-court-v261028.md`
+  (66fc0e2) — cargo-mutants sweep under `scripts/mutation_court.sh --force`:
+  **28 enumerated, 19 caught, 9 unviable, 0 missed**; re-read at window close-out
+  (RECEIPTS.md, 320e2e5). An inversion left in `src/abi.rs` by a killed attempt was
+  restored in d94cdba (incident receipt f9695dc).
+- **Gap**: none.
+- **Acceptance**: met — mutation court 0 missed; gates witnessed to flip.
 
 ## WO-3 — CTQ 2.2/3.1 proof + SQL-over-RDF — ALIVE
 
@@ -116,9 +123,9 @@ purrdf fork swap @ 2223f894 — ALIVE witnesses:
   WASI import allowlist at the new 28-import surface, vendored artifact
   verified ALIVE, digest-rule-aware scripts, ggen regeneration, compile gate.
 - **Current (ALIVE)**: pins bumped — `priv/graphlaw/MANIFEST.json`
-  (`graphlaw_version` 26.10.28, `abi_version` 1), `README.md:76,205,213,277`,
-  `CITATION.cff:15`, `REPRODUCE.md:18`, `usage-rules.md:8-9`, engine pin
-  `v26.10.28` / sha256 `34fd4ada7ffe57f3f07de14232f8faacab67ef78a4d9afc3a12e79d78f865d08`
+  (`graphlaw_version` 26.10.28, `abi_version` 1), ash_graphlaw README.md lines 76,205,213,277,
+  CITATION.cff line 15, REPRODUCE.md line 18, usage-rules.md lines 8-9, engine pin
+  `v26.10.28` / sha256 (historical pre-relink pin) `34fd4ada7ffe57f3f07de14232f8faacab67ef78a4d9afc3a12e79d78f865d08`
   (byte-match: `shasum -a 256 priv/graphlaw/graphlaw.wasm` == manifest
   `artifact.sha256`, witnessed in RECEIPTS.md). Registry digest
   `blake3:6e1103673508ade20f2276e93c7c948dd4f7c31689a25a325fac4a308856035d`
@@ -127,7 +134,7 @@ purrdf fork swap @ 2223f894 — ALIVE witnesses:
   `capability/api.ex:10` — ggen regen landed. Scripts are digest-rule-aware:
   `scripts/generate_capability_cards.py:67-89` (blake3 `registry_blake3` with
   sha256 legacy fallback, typed `REFUSED(registry_digest_key_absent)` /
-  `REFUSED(registry_digest_mismatch)`), `scripts/import_registry.sh:17` DIGEST
+  `REFUSED(registry_digest_mismatch)`), ash_graphlaw `scripts/import_registry.sh` line 17 DIGEST
   RULE. Compile gate: exit 0 (lane-reported this wave; not re-run at append
   time).
 - **Gap**: parity court and the full ash_graphlaw suite are **PENDING at
@@ -157,16 +164,16 @@ is [`GL28-BACKLOG.md`](GL28-BACKLOG.md) — one status per GL28-n lives
 there (design authority stays with the per-ticket spec files). The WO↔GL28
 bridges that remain load-bearing here:
 
-- **GL28-9 = WO-2** (mutation court solo run): the window stands
-  GO-except-WO-2 until the coordinator's solo `bash scripts/mutation_court.sh`
-  exit 0 lands in RECEIPTS.md. No mutation-court receipt exists in
-  `receipts/` (re-checked at this consolidation).
+- **GL28-9 = WO-2** (mutation court solo run): CLOSED — receipt
+  `receipts/2026-10-29-mutation-court-v261028.md` (19 caught / 9 unviable / 0 missed);
+  window posture GO (c070392).
 - **GL28-10 = WO-7** (ash_graphlaw adoption): parity court + full suite
-  pending per WO-7 above.
+  still PARTIAL per WO-7 above (ash_graphlaw 55c1bc3 pushed; parity court pins 26.10.28).
 - npm publish: **NOT executed — no receipt exists.** The npm package
   already exists on the registry at 26.10.14; the fix is the Trusted
   Publisher mapping + rerun A3 (`receipts/2026-10-24-npm-attempt-ledger.md`),
   tracked as GL28-12 in the register.
 
 DESIGN is not LANDED; a filed design doc is a candidate, not an executed
-transition. Implementation lanes in flight carry no receipt here yet.
+transition. GL28-1 (ALIVE cd69757), GL28-6/-7 (LANDED 4d2ffd0), GL28-13 (CLOSED
+95cd3df) and GL28-14 (landed 14df7b9) carry receipts in the register.

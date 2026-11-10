@@ -1,5 +1,7 @@
 # Cold-path query-receipt ledger (design record)
 
+> **As of 2026-11-09:** historical record of the v26.10.22 window; body kept as written. Superseded as the active window by [v26.10.28](../../v26.10.28/INDEX.md). Sibling files archived out of this directory are recoverable from git history; links to them were removed.
+
 Condensed from the cold-ledger spec lane (PRD §3.2.2; companion to C1-cache).
 No SPSC ring exists in src/ yet — this fixes the descriptor format the ring
 will carry plus the ledger contract behind it.

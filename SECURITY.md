@@ -4,20 +4,19 @@
 
 | version | supported |
 |---|---|
-| 26.10.26 (latest released) | yes — the current workspace release line on `main` |
-| 26.10.22 (crates.io; no GitHub tag) | yes |
-| 26.10.21 (crates.io; no GitHub tag) | yes |
-| v26.10.13 (newest published GitHub release / crate) | yes |
-| 26.10.14 – 26.10.20 | intermediate workspace versions; fixed forward on `main`, no per-version patches |
+| 26.10.28 (current workspace release line; GitHub release v26.10.28) | yes — the current workspace release line on `main` |
+| 26.10.22 – 26.10.26 | prior workspace versions; fixed forward on `main`, no per-version patches |
+| 26.10.14 – 26.10.21 | intermediate workspace versions; fixed forward on `main`, no per-version patches |
+| v26.10.13 and earlier published releases / crates | no |
 | `main` (development) | fixes land on `main` only; no backports, no LTS branches |
 | all earlier published releases | no |
 
 There is no long-term-support policy: only the current release line receives security
 fixes, and `main` is fixed forward. The version string is gated to the workspace version
 (`tests/docs_release_claims.rs::doc_version_lines_match_workspace_version`), so this table
-moves with every workspace bump; published artifacts may lag the workspace line (as of
-this writing the newest published release is still v26.10.13 — this note is refreshed at
-publish time, not per-commit). Pin your own dependency versions accordingly.
+moves with every workspace bump; published artifacts may lag the workspace line (the npm package
+is still at 26.10.14, see README "Publish state"; graphlaw does not publish to crates.io — this
+note is refreshed at publish time, not per-commit). Pin your own dependency versions accordingly.
 
 ## Reporting a vulnerability
 
@@ -42,7 +41,7 @@ Egress specifics in scope:
   receipt. It is a known, lawful egress hole; prefer the expression form
   (`docs/how-to/egress-and-attach-policy.md`, "Scalar-fallback caveat").
 
-## Known limits (as of the current `git log`)
+## Known limits (as of 2026-11-09, v26.10.28)
 
 - Plain receipts (`receipt::record` / `receipt::require`) prove presence only: a receipt is a
   content-addressed record, and anyone who can write a state can record one. Authenticated use needs
@@ -81,15 +80,15 @@ What the bundled EH runner (`src/bin/graphlaw_run_eh.rs`, feature `runner-eh`) d
   `src/bin/graphlaw_run_eh.rs:46`); exhaustion is a typed exit 98, never a
   raw trap or an unbounded hang. The budget was calibrated against the
   pinned artifact on a red→red→green ladder (10M red, 1B red, 100B green;
-  `receipts/2026-10-24-fuel-calibration.md`).
+  `git history, `receipts/2026-10-24-fuel-calibration.md` removed from the tree).
 
 ### Imported WASI capability inventory
 
 The shipped artifact (`priv/graphlaw.wasm`, b3sum
-`0858a760f9df87c66cdc01a04f6f4ce15926f400cb974b67a7d14513a5ddd2f1`,
-60,895,924 B — the live pin, 4-surface verified) imports 28 functions, all
+`c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c`,
+62,909,537 B — the live pin) imports 28 functions, all
 `wasi_snapshot_preview1`. Re-witnessed on this exact pin with
-`wasm-objdump -x priv/graphlaw.wasm` on 2026-10-26 (`Import[28]`; all 28
+`wasm-objdump -x priv/graphlaw.wasm` on 2026-11-09 (`Import[28]`; all 28
 names below match the live section, no non-WASI import modules):
 
 `random_get`, `environ_get`, `environ_sizes_get`, `clock_time_get`,

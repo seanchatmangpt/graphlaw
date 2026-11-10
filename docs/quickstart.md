@@ -1,6 +1,6 @@
 # GraphLaw quickstart
 
-Admit a plan over an RDF state and get a content-addressed receipt chain. Needs Rust 1.96+.
+Admit a plan over an RDF state and get a content-addressed receipt chain. Needs Rust 1.98+.
 The runnable source is `examples/quickstart_plan.rs`.
 
 ## The core

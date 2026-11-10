@@ -47,3 +47,29 @@ If actuation outcome cannot be reconstructed after crash/restart, standing is UN
 ## Candidate / authority boundary
 
 Qualification manufactures evidence and standing only. Candidate != Truth != Authority != DO != Standing.
+
+## Executable binding (re-read against `src/qualification.rs`, 2026-11-09)
+
+The algebra above is implemented by four public items in `src/qualification.rs`; the module
+header states it manufactures evidence and bounded standing only, never authority.
+
+- `Standing` enum: `Unqualified`, `Observed`, `Attacked`, `Qualified`, `Refused`, `Unknown`
+  (the lattice states plus the two non-lattice outcomes).
+- `evaluate(Observation) -> Standing` folds seven booleans (`attempt_observed`,
+  `violation_observed`, `independent_observer`, `postconditions_satisfied`,
+  `durable_evidence`, `crash_observed`, `crash_reconciled`). Order of decision: no attempt ->
+  `Unknown`; violation observed -> `Refused`; missing independent observer, postconditions, or
+  durable evidence -> `Unknown`; crash observed and not reconciled -> `Unknown`; otherwise
+  `Qualified`. Boundary: `evaluate` never returns `Unqualified`, `Observed`, or `Attacked`;
+  those three lattice rungs exist as enum values but are not produced by this function.
+- `generate_falsifier(law, seed)` implements the mutation dimensions named under mechanical
+  falsifier generation: `replace_with_distinct_digest`, `substitute_collaborator`,
+  `alter_replay_digest`, `omit_attempt`, `swap_required_pair`,
+  `raise_authority_above_ceiling`, `couple_observer_to_actuator`,
+  `drop_reconciliation_evidence`, `set_above_limit`; any other mutation name is a typed
+  `Err`. Output always carries `authority: NONE`, `consequence: EVIDENCE_ONLY`.
+- `compose_courts(parent, child)` returns the set union of parent and child `courts` and
+  errors when the child does not list the parent in `inherits`. It enforces the
+  no-silent-removal half of Composition; the "stricter postconditions" half is not computed
+  here.
+- `temporal_rule_holds(events, rule)` checks one strict `a<b` precedence rule.

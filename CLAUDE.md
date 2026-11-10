@@ -3,7 +3,9 @@
 Rust law-admission kernel: RDF/SHACL graphs admit through one executable law
 (`src/law.rs`), project to SQL/DuckDB (`src/sql_ast.rs`, `src/duckdb_eval.rs`),
 sign receipts (Ed25519, `src/attest.rs`), and run the same artifact on host and
-wasm (`wasm/`, `graphlaw-run-eh` wasmtime packet-4 stdio runner).
+wasm (`wasm/`, `graphlaw-run-eh` wasmtime packet-4 stdio runner). Version 26.10.28,
+Rust 1.98.0 (`rust-toolchain.toml`), frozen-duckdb 2.0.2, purrdf 3.0.1 git-sourced at a
+pinned rev.
 
 ## Agents
 
@@ -75,11 +77,13 @@ cannot exit 1 is the failure.
   n3 hardening live there); no vendored copies, no crates.io fallback
 - `docs/refusals.md` — the typed refusal register (REFUSAL-01..04 etc.),
   every refusal has a stable code + trigger + recovery; flips are receipt-gated
-- `docs/jira/v<version>/` — active milestone window (newest dir); tickets,
-  receipts, INDEX.md
-- `receipts/` — durable receipts (per-file blake3 digests; inter-receipt chaining
-  is a pending decision — the chain rule lives in `src/receipt_chain.rs` for
-  in-memory OCEL frames, not yet serialized into `receipts/`)
+- `docs/jira/v<version>/` — active milestone window (newest dir; currently
+  `docs/jira/v26.10.28/`: INDEX.md, GL28-BACKLOG.md, RECEIPTS.md). Older windows
+  were archived out of the tree 2026-11-09; recover from git history.
+- `receipts/` — durable receipts (per-file blake3 digests; `receipts/CHAIN.blake3`
+  is the sidecar chain written by `scripts/receipt_chain_sync.sh`, re-run after
+  any receipts/ change; the in-memory OCEL frame chain rule lives in
+  `src/receipt_chain.rs`). Index: `RECEIPTS-INDEX.md`.
 
 ## Generated artifacts (never hand-edit)
 

@@ -9,7 +9,7 @@ Goal-oriented guide for two controlled egress surfaces: `COPY ... TO`
 
 Compile a `sql:CopyStatement` from the graph, not from a path literal
 floating in prose. The compiler arm
-(`src/sql_ast.rs:1791`, expression form) reads:
+(the `"CopyStatement"` arm in `src/sql_ast.rs`, expression form) reads:
 
 ```turtle
 @prefix sql: <http://graphlaw.org/sql#> .
@@ -22,13 +22,13 @@ floating in prose. The compiler arm
 ```
 
 `sql:fileFormat` is closed: `CSV` | `PARQUET` | `JSON`. Anything else is a
-typed `UnsupportedTerm` compile refusal (`src/sql_ast.rs:1798-1800`).
+typed `UnsupportedTerm` compile refusal (`AstError::UnsupportedTerm` in the same arm).
 
 ## COPY TO: the digest rides in the receipt
 
 A successful `COPY ... TO` streams the exported file through BLAKE3 and
 carries the hex digest plus byte count on the `ExecutionReceipt` — never on
-stdout (`src/duckdb_eval.rs:307-316`, computed at `:1466-1488`):
+stdout (`src/duckdb_eval.rs#ExecutionReceipt`; the fields `artifact_digest_hex`, `artifact_bytes`, `artifact_warning`):
 
 | field | meaning |
 |---|---|
@@ -36,7 +36,7 @@ stdout (`src/duckdb_eval.rs:307-316`, computed at `:1466-1488`):
 | `artifact_bytes` | byte count of the same file |
 | `artifact_warning` | typed reason when the file could not be read/hashed |
 
-Two laws (SQLRDF-22 G3, `src/duckdb_eval.rs:276-284`):
+Two laws (SQLRDF-22 G3, documented on `src/duckdb_eval.rs#ExecutionReceipt`):
 
 - `query_hash` does NOT fold the artifact fields — one replay identity per
   admitted statement, independent of where (or whether) bytes were
@@ -49,7 +49,7 @@ Two laws (SQLRDF-22 G3, `src/duckdb_eval.rs:276-284`):
 cargo test --lib g3_copy
 ```
 
-Witnessed 2026-10-23, real file + real frozen-duckdb, independent
+Witnessed 2026-10-23 (historical; re-run the command above before citing for a later tree), real file + real frozen-duckdb, independent
 `std::fs` read + BLAKE3 compare:
 
 ```text
@@ -64,16 +64,16 @@ finished in 0.43s
 
 If a `sql:CopyStatement` carries no `sql:copyOperation` graph, the legacy
 scalar template renders the destination itself — the path is hardcoded to
-`/tmp/graphlaw-rdf-<table>.csv` (`src/sql_ast.rs:2255-2258`). That is a
+`/tmp/graphlaw-rdf-<table>.csv` (the scalar `"CopyStatement"` render arm in `src/sql_ast.rs`). That is a
 lawful but unaddressed egress target. Prefer the expression form so the
 path, format, and digest are all under your control and on the receipt.
 The same asymmetry exists for ATTACH: the scalar `AttachStatement` arm
-hardcodes `ATTACH ':memory:' AS <alias>` (`src/sql_ast.rs:2317`) — it
+hardcodes `ATTACH ':memory:' AS <alias>` (the scalar `"AttachStatement"` render arm in `src/sql_ast.rs`) — it
 cannot reach a file-backed database at all.
 
 ## ATTACH: allowlist policy
 
-Compile the expression form (`src/sql_ast.rs:1940`):
+Compile the expression form (the `"AttachStatement"` arm in `src/sql_ast.rs`):
 
 ```turtle
 <urn:attach:a1> a sql:AttachStatement ;
@@ -84,8 +84,9 @@ Compile the expression form (`src/sql_ast.rs:1940`):
 ```
 
 Before the engine sees the statement, `enforce_attach_policy` runs
-(`src/duckdb_op.rs:228`, pure seam `:235`; call sites `:400` single
-statement and `:491` per document member):
+(`src/duckdb_op.rs#enforce_attach_policy`, pure seam
+`enforce_attach_policy_with`; called for the single-statement path and for each
+document member in `exec_document_on`):
 
 - env `GRAPHLAW_ATTACH_ROOTS` is colon-separated absolute roots; it is the
   only attach surface.
@@ -101,24 +102,29 @@ statement and `:491` per document member):
 
 ## ATTACH policy vs the wasm sandbox: read this before preopening
 
-`enforce_attach_policy` is a HOST-side seam. It runs in `src/duckdb_op.rs`,
-in the same process that links frozen-duckdb natively — it never runs
-inside the wasm module. Two consequences:
+`enforce_attach_policy` lives in `src/duckdb_op.rs`, which is part of the
+`graphlaw` crate that the single `graphlaw-wasm` module links (the module
+dispatches `duckdb` itself, `docs/WASM.md`). So the policy runs inside the
+guest too, with these consequences (as of 2026-11-09):
 
-1. **Preopening a directory bypasses the allowlist.** If you preopen a
-   directory into the guest's WASI context (`preopen_dir` in your own
-   host embedding), the guest can open any file under it directly —
-   including a DuckDB database file — with no `GRAPHLAW_ATTACH_ROOTS`
-   check, no canonicalize, no refusal. The allowlist constrains the
-   ATTACH statement path, not WASI filesystem rights.
-2. **The runner sets no metering or memory ceiling.** `graphlaw-run-eh`
-   does no fuel/epoch metering, enforces no linear-memory limit, and
-   passes the full host env via `inherit_env()`
-   (`src/bin/graphlaw_run_eh.rs:236`). The import allowlist and 64 MiB
-   request wall are the only containment — see SECURITY.md "EH host
-   sandbox" for the full not-provided list. Do not treat the sandbox
-   claims in [WASM](../WASM.md) as a substitute for the attach policy;
-   they are weaker and different.
+1. **The sandbox environment is empty.** `graphlaw-run-eh` builds a sterile WASI
+   context with no `inherit_env` / `env` call, so `GRAPHLAW_ATTACH_ROOTS` is unset
+   in the guest and every in-guest ATTACH is refused fail-closed
+   (`tests/wasm_env_isolation_court.rs`; SECURITY.md "EH host sandbox").
+2. **The allowlist is not a WASI filesystem right.** The runner preopens no
+   directory, so a guest cannot reach host files at all. If YOUR host embedding
+   preopens a directory (`preopen_dir`), the guest can open files under it
+   directly — including a DuckDB database file — and the allowlist constrains only
+   the ATTACH statement path, not WASI rights. Setting the env in your own
+   embedding is how you would admit roots in-guest; that is an embedder decision
+   the shipped runner does not make.
+3. **Resource containment is real but narrow.** `graphlaw-run-eh` runs each
+   request under a fuel budget (`FUEL_PER_REQUEST`, exhaustion exits 98) and an
+   epoch watchdog (exit 99 on a stalled guest, `--epoch-ticks` re-arms), bounds
+   frame prefixes by `MAX_REQUEST_BYTES` (exit 92), and caps the request frame at
+   `WALL_BYTES` (64 MiB). It sets **no linear-memory ceiling**. See SECURITY.md
+   "EH host sandbox" for the full provided / not-provided list; do not treat the
+   [WASM](../WASM.md) sandbox claims as a substitute for the attach policy.
 
 ## Worked examples (host-witnessed)
 
@@ -141,13 +147,14 @@ test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 89 filtered out;
 finished in 0.88s
 ```
 
-Full policy module count (13/0) is receipted in
-`docs/jira/v26.10.22/RECEIPTS.md` (row W15).
+The policy seam is also pinned over the public wire by
+`tests/attach_bypass_court.rs` (comment-camouflaged ATTACH, env unset, admitted form
+executes). Re-run both before citing counts for a later tree.
 
 ## Driving it through graphlaw-run-eh
 
 The wire recipe is the standard packet-4 frame
-(`src/bin/graphlaw_run_eh.rs:341`): 4-byte big-endian length prefix, then
+(`read_frame` in `src/bin/graphlaw_run_eh.rs`): 4-byte big-endian length prefix, then
 the JSON request — `{"op":"duckdb","mode":"exec","document":true,
 "query_ast":"<iri>","ast":{"turtle":"<Turtle AST document>"},
 "subject_prefix":"...","vocab_prefix":"..."}` — reply is
@@ -156,18 +163,19 @@ member in `members` (`docs/DIALECTS.md` "Document sequences"). A COPY
 member's `artifact_digest_hex`/`artifact_bytes` appear in its member
 receipt; verify the digest against an independent BLAKE3 of the file.
 
-Status: the in-runner execution step is PENDING, not witnessed. The
-DuckDB-linked artifact traps on first `gl_call`
-(`__cxa_thread_atexit` dtor runner, wasi-libc atexit walker) — SQLRDF-24,
-receipts W30/W56 in `docs/jira/v26.10.22/RECEIPTS.md`. Until that lands,
-host-side courts above are the witnessed rung; a loud PENDING is not a
-pass.
+Status: the former first-`gl_call` trap of the DuckDB-linked artifact (SQLRDF-24,
+`__cxa_thread_atexit` / wasi-libc atexit walker) is closed by the uniform new-EH
+rebuild (`docs/explanation/eh-closure-story.md`). In-runner DuckDB execution,
+including COPY egress, is exercised by the env-gated courts
+`tests/wasm_duckdb_lifecycle_eh.rs` and `tests/wasm_fibo_egress_eh.rs` (they
+loud-skip without `GRAPHLAW_WASM`; a loud SKIP is not a pass).
 
 ## Status claims, re-read at use time
 
-- SQLRDF-22 (COPY egress policy, ATTACH validation, egress digests): row
-  in `docs/jira/v26.10.22/INDEX.md`; G1/G3/G4/G6 LANDED with courts, G5
-  filed forward as SQLRDF-23.
+- SQLRDF-22 (COPY egress policy, ATTACH validation, egress digests): G1/G3/G4/G6
+  landed with courts (above), G5 filed forward as SQLRDF-23 (document
+  sequences, `document-sequences.md`). Standing is not stored here — re-read it
+  from the register (`docs/jira/v26.10.22/INDEX.md`) at use time.
 - Verify with: `cargo test --lib g3_copy` and `cargo test --lib attach`.
 
 ## See Also
