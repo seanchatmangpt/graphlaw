@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "29be64bea59e36f6b9a13ef3f047f9dda8ba5da3d9d52cdff927e8bb03bd631a",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-11-12T172855Z-Write-29be64be.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/.claude/plans/what-the-fuck-are-shimmering-codd.md",
+  "timestamp_utc": "2026-11-12T172855Z",
+  "tool": "Write",
+  "type": "transition-receipt"
+}

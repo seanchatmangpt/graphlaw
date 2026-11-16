@@ -1,0 +1,15 @@
+{
+  "gaps": {
+    "limit:hooks_max_firings": "no cheap hook pack drives 10000 firings; needs a dedicated amplification pack",
+    "limit:hooks_max_rounds": "needs a hook pack whose firings feed each other for >64 rounds",
+    "limit:hooks_max_state_quads": "needs a hook pack deriving >1M quads (heavy)",
+    "limit:max_outstanding_alloc_bytes": "wasm allocator bound; not reachable from a request under the 16 MiB frame cap without guest-side instrumentation",
+    "limit:n3_max_backward_depth": "needs a recursive backward-chaining N3 program deeper than 32",
+    "limit:n3_max_backward_solutions_per_goal": "needs a goal with >1024 backward solutions",
+    "limit:n3_max_derived_facts": "needs an N3 program deriving >500000 facts (heavy)",
+    "limit:n3_max_iterations": "needs a >4M-iteration N3 fixpoint (heavy)",
+    "limit:n3_max_match_steps": "needs >200000 match steps in one rule (heavy)",
+    "limit:n3_max_total_bytes": "268435456 B exceeds the 16 MiB request cap; unreachable through the ABI",
+    "limit:n3_max_total_steps": "needs >50M total N3 steps (heavy)"
+  }
+}
