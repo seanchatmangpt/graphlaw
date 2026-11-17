@@ -25,6 +25,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   # NOT locally reproducible end to end: it tags/releases via GH_TOKEN. The
@@ -108,6 +109,14 @@ jobs:
             dist/capability-registry.ttl dist/capability-registry.ttl.blake3 \
             dist/op-examples.json dist/op-examples.json.blake3 \
             --target "$(git rev-parse HEAD)" --generate-notes --title "graphlaw $v"
+
+      # A tag created with GITHUB_TOKEN does not fire publish-npm.yml's on:push:tags
+      # trigger (GitHub suppresses it); workflow_dispatch is the exempt path.
+      - name: Dispatch npm publish for the new tag
+        if: steps.plan.outputs.work == 'yes'
+        run: |
+          set -euo pipefail
+          gh workflow run publish-npm.yml --ref "v${{ steps.plan.outputs.graphlaw }}"
 
       - name: No crates.io publication (policy witness)
         run: |
