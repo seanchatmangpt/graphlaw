@@ -263,5 +263,8 @@ pub mod evidence_ring;
 pub mod query_cache;
 /// SQL builtins; they call `duckdb_eval`.
 pub mod rules;
+/// PCCf server admission leaf (`admit_pccf`). Stratified SRL only; not a
+/// [`law::Step`] variant. Client verify is `pccf-verifier-wasm`, not this wasm.
+pub mod pccf;
 pub mod sql_ast;
 pub mod sql_statement_kinds;
