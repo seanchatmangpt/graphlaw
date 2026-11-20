@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 use std::hint::black_box;
 use std::time::Instant;
 
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 const OP_EXAMPLES: &str = include_str!("../registry/op-examples.json");
 
@@ -147,8 +147,8 @@ fn load_positive_controls() -> BTreeMap<String, Leg> {
         assert_eq!(request["op"], *op, "{id}: request.op");
         let request_bytes = serde_json::to_vec(request).expect("request serializes");
         // Smoke once: positive control must succeed before we time it.
-        let resp: Value = serde_json::from_slice(&graphlaw::abi::call(&request_bytes))
-            .expect("response JSON");
+        let resp: Value =
+            serde_json::from_slice(&graphlaw::abi::call(&request_bytes)).expect("response JSON");
         assert_eq!(
             resp["ok"], true,
             "positive control `{id}` must be ok before timing: {resp}"
@@ -212,8 +212,7 @@ fn duckdb_exec_req(session: &str, turtle: &str, query_ast: &str) -> Value {
 
 fn call_ok(req: &Value) -> Value {
     let bytes = serde_json::to_vec(req).expect("req");
-    let resp: Value =
-        serde_json::from_slice(&graphlaw::abi::call(&bytes)).expect("response JSON");
+    let resp: Value = serde_json::from_slice(&graphlaw::abi::call(&bytes)).expect("response JSON");
     assert_eq!(resp["ok"], true, "request must succeed: {req} → {resp}");
     resp
 }
@@ -227,9 +226,21 @@ fn duckdb_legs() -> Vec<Leg> {
     // the timing loop, not as a silent NaN.
     let smoke = format!("cap-bench-smoke-{}", std::process::id());
     call_ok(&json!({"op": "duckdb", "mode": "open", "session": smoke}));
-    call_ok(&duckdb_exec_req(&smoke, duckdb_create_turtle(), "urn:create"));
-    call_ok(&duckdb_exec_req(&smoke, duckdb_insert_turtle(), "urn:insert"));
-    let sel = call_ok(&duckdb_exec_req(&smoke, duckdb_select_turtle(), "urn:select"));
+    call_ok(&duckdb_exec_req(
+        &smoke,
+        duckdb_create_turtle(),
+        "urn:create",
+    ));
+    call_ok(&duckdb_exec_req(
+        &smoke,
+        duckdb_insert_turtle(),
+        "urn:insert",
+    ));
+    let sel = call_ok(&duckdb_exec_req(
+        &smoke,
+        duckdb_select_turtle(),
+        "urn:select",
+    ));
     let cur = sel["cursor"].as_str().expect("cursor").to_string();
     call_ok(&json!({"op": "duckdb", "mode": "stream", "cursor": cur, "max_rows": 10}));
     call_ok(&json!({"op": "duckdb", "mode": "close", "session": smoke}));
@@ -375,13 +386,11 @@ fn main() {
 
     println!("=== GraphLaw capability-surface benchmark ===");
     println!("[MACHINE] {}", machine_line());
+    println!("[PLAN] warmup={warmup} iters/batch={batch} batches={batches} (min-of-batches)");
+    println!("[CMD] CARGO_TARGET_DIR=target-cap-bench cargo bench --bench capability_surface");
     println!(
-        "[PLAN] warmup={warmup} iters/batch={batch} batches={batches} (min-of-batches)"
+        "[SOURCE] registry/op-examples.json positive_control ok + duckdb open/exec/stream/close"
     );
-    println!(
-        "[CMD] CARGO_TARGET_DIR=target-cap-bench cargo bench --bench capability_surface"
-    );
-    println!("[SOURCE] registry/op-examples.json positive_control ok + duckdb open/exec/stream/close");
 
     let controls = load_positive_controls();
     let mut legs: Vec<Leg> = REGISTRY_OPS
