@@ -1,0 +1,161 @@
+{
+  "fastest": "sniff.turtle",
+  "graphlaw_version": "26.10.28",
+  "legs": [
+    {
+      "id": "capabilities.default",
+      "ns_per_op": 11015.36,
+      "ok": true,
+      "op": "capabilities",
+      "request_bytes": 21
+    },
+    {
+      "id": "sniff.turtle",
+      "ns_per_op": 2077.96,
+      "ok": true,
+      "op": "sniff",
+      "request_bytes": 63
+    },
+    {
+      "id": "parse.turtle",
+      "ns_per_op": 23018.04,
+      "ok": true,
+      "op": "parse",
+      "request_bytes": 118
+    },
+    {
+      "id": "convert.turtle",
+      "ns_per_op": 25692.279999999995,
+      "ok": true,
+      "op": "convert",
+      "request_bytes": 134
+    },
+    {
+      "id": "canonical.flat",
+      "ns_per_op": 24762.76,
+      "ok": true,
+      "op": "canonical",
+      "request_bytes": 131
+    },
+    {
+      "id": "sparql.select",
+      "ns_per_op": 105920.8,
+      "ok": true,
+      "op": "sparql",
+      "request_bytes": 201
+    },
+    {
+      "id": "shacl.conforming",
+      "ns_per_op": 129001.84000000001,
+      "ok": true,
+      "op": "shacl",
+      "request_bytes": 317
+    },
+    {
+      "id": "shex.shexc",
+      "ns_per_op": 27250.88,
+      "ok": true,
+      "op": "shex",
+      "request_bytes": 237
+    },
+    {
+      "id": "n3.reason",
+      "ns_per_op": 9558.080000000002,
+      "ok": true,
+      "op": "n3",
+      "request_bytes": 97
+    },
+    {
+      "id": "entail.simple",
+      "ns_per_op": 43302.76,
+      "ok": true,
+      "op": "entail",
+      "request_bytes": 187
+    },
+    {
+      "id": "datalog.ancestor",
+      "ns_per_op": 63151.68,
+      "ok": true,
+      "op": "datalog",
+      "request_bytes": 304
+    },
+    {
+      "id": "hooks.inline-pack",
+      "ns_per_op": 891145.68,
+      "ok": true,
+      "op": "hooks",
+      "request_bytes": 540
+    },
+    {
+      "id": "law.shacl-n3",
+      "ns_per_op": 226310.40000000002,
+      "ok": true,
+      "op": "law",
+      "request_bytes": 400
+    },
+    {
+      "id": "policy.accepted",
+      "ns_per_op": 15020.72,
+      "ok": true,
+      "op": "policy",
+      "request_bytes": 418
+    },
+    {
+      "id": "duckdb.open",
+      "ns_per_op": 11594843.040000001,
+      "ok": true,
+      "op": "duckdb",
+      "request_bytes": 58
+    },
+    {
+      "id": "duckdb.exec.create",
+      "ns_per_op": 14115942.56,
+      "ok": true,
+      "op": "duckdb",
+      "request_bytes": 386
+    },
+    {
+      "id": "duckdb.stream.page",
+      "ns_per_op": 7115.96,
+      "ok": true,
+      "op": "duckdb",
+      "request_bytes": 121
+    },
+    {
+      "id": "duckdb.close.session",
+      "ns_per_op": 1364813.08,
+      "ok": true,
+      "op": "duckdb",
+      "request_bytes": 62
+    }
+  ],
+  "machine": "x86_64 / linux / 4 cores / rustc 1.98.0 (88d9e12ae 2026-08-18)",
+  "plan": {
+    "batches": 10,
+    "iters_per_batch": 25,
+    "method": "min-of-batches",
+    "warmup": 5
+  },
+  "rank": [
+    "sniff.turtle",
+    "duckdb.stream.page",
+    "n3.reason",
+    "capabilities.default",
+    "policy.accepted",
+    "parse.turtle",
+    "canonical.flat",
+    "convert.turtle",
+    "shex.shexc",
+    "entail.simple",
+    "datalog.ancestor",
+    "sparql.select",
+    "shacl.conforming",
+    "law.shacl-n3",
+    "hooks.inline-pack",
+    "duckdb.close.session",
+    "duckdb.open",
+    "duckdb.exec.create"
+  ],
+  "schema": "graphlaw.capability-surface-bench/1",
+  "slowest": "duckdb.exec.create"
+}
