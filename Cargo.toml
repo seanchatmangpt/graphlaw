@@ -175,6 +175,13 @@ harness = false
 name = "sieve_cliff"
 harness = false
 
+[[bench]]
+# Capability-surface census: every registry ABI op (positive-control
+# op-examples) plus duckdb open/exec/stream/close, timed via real abi::call.
+name = "capability_surface"
+harness = false
+required-features = ["abi"]
+
 # docs.rs feature pin: frozen-duckdb-sys has a DOCS_RS branch that skips native
 # builds, so the native toolchain docs.rs uses is fine — the feature set is what
 # needs pinning. (graphlaw does not publish to crates.io; this table is kept for
