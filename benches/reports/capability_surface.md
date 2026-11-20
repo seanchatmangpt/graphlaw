@@ -22,11 +22,14 @@ graphlaw `26.10.28` · plan `warmup=5 iters/batch=25 batches=10` (min-of-batches
 
 **COVERED 18 legs (14 registry ops + 4 duckdb modes); all ok.**  
 Fastest: `sniff.turtle` **2 078 ns/op**.  
-Slowest: `duckdb.exec.create` **14 115 943 ns/op** (~14.1 µs).  
+Slowest: `duckdb.exec.create` **14 115 943 ns/op** (~14.1 ms).  
 Span: **6793×**.
 
 DuckDB mode legs time only the mode call; session open / table seed / close
 sit outside the stopwatch.
+
+Industry reading (CTQs, statutory ceilings, peer bands):  
+[`docs/reference/capability-surface-industry-context.md`](../../docs/reference/capability-surface-industry-context.md).
 
 ## Rank (fastest → slowest)
 
