@@ -1,0 +1,30 @@
+{
+  "kind": "solutions",
+  "ok": true,
+  "rows": [
+    [
+      {
+        "type": "uri",
+        "value": "https://x/a"
+      },
+      {
+        "type": "uri",
+        "value": "https://x/b"
+      }
+    ],
+    [
+      {
+        "type": "uri",
+        "value": "https://x/b"
+      },
+      {
+        "type": "uri",
+        "value": "https://x/c"
+      }
+    ]
+  ],
+  "variables": [
+    "s",
+    "o"
+  ]
+}

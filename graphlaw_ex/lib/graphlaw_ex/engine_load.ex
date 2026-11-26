@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sean Chatman <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
 defmodule GraphlawEx.EngineLoad do
   @moduledoc """
   The load boundary for the GraphLaw WASM engine.
@@ -13,25 +16,30 @@ defmodule GraphlawEx.EngineLoad do
     2. import surface: every import must be a function in the manifest's closed
        `wasi_snapshot_preview1` allowlist (`GraphlawEx.WasmConfig.import_allowlist/0`),
        by module, name and type (`:wasm_import_surface_mismatch`)
-    3. required exports `required_exports/0` (`:wasm_digest_mismatch` is not used
-       here — a missing export surfaces as `:malformed_response`'s sibling code
-       `:wasm_import_surface_mismatch`... see `check_exports/1`)
+    3. required exports `required_exports/0`: a missing export is refused as
+       `:wasm_import_surface_mismatch` (the code table is closed; see
+       `check_exports/1`)
     4. compile (`wasmex` raises/returns; untyped failure is a crash of `admit/2`,
        which is why the pin and the surface run first)
 
-  Only a fully admitted module is cached (`:persistent_term`, keyed by
-  `{sha256, fuel?}`); `purge_cache/0` drops the cache.
+  Only a fully admitted module is cached (via `GraphlawEx.EngineLoad.SingleFlight`,
+  `:persistent_term`, keyed by `{:engine, sha256, fuel?}`, node-local, at most 32
+  entries with oldest-first eviction); concurrent cold-start callers for one key
+  compile once. `purge_cache/0` drops the cache.
 
   Telemetry: `[:graphlaw_ex, :engine, :admit]` with metadata `outcome`, `code`,
-  `wasm_sha256`.
+  `wasm_sha256`; `[:graphlaw_ex, :engine, :compile]` once per actual compile.
   """
 
+  alias GraphlawEx.EngineLoad.Blake3
+  alias GraphlawEx.EngineLoad.SingleFlight
   alias GraphlawEx.Refusal
   alias GraphlawEx.WasmConfig
 
   @import_module "wasi_snapshot_preview1"
   @required_exports ["gl_alloc", "gl_call", "gl_free", "memory"]
   @event [:graphlaw_ex, :engine, :admit]
+  @compile_event [:graphlaw_ex, :engine, :compile]
 
   @typedoc "An admitted engine. `engine`/`module` are handed to the host for instantiation."
   @type admitted :: %{
@@ -62,10 +70,13 @@ defmodule GraphlawEx.EngineLoad do
     fuel? = Keyword.get(opts, :fuel?, true)
     expected = expected(opts)
 
+    # The pin is judged per caller BEFORE the flight, so a coalesced waiter
+    # with a different pin never inherits the leader's admission.
     result =
-      case :persistent_term.get(cache_key(digest, fuel?), nil) do
-        %{} = entry -> with :ok <- check_digest(digest, expected), do: {:ok, entry}
-        nil -> compile_and_admit(digest, bytes, fuel?, expected)
+      with :ok <- check_digest(digest, expected) do
+        SingleFlight.fetch_or_compile(cache_key(digest, fuel?), fn ->
+          compile_and_surface(digest, bytes, fuel?)
+        end)
       end
 
     emit(digest, result)
@@ -78,22 +89,54 @@ defmodule GraphlawEx.EngineLoad do
     {:error, refusal}
   end
 
+  @doc """
+  Verifies `bytes` against the pinned BLAKE3 (`GraphlawEx.WasmConfig.expected_blake3/1`).
+  Any mismatch, including a 1-byte mutation, or a missing pin is
+  `{:error, {:REFUSED_ARTIFACT_INTEGRITY, details}}`.
+  """
+  @spec verify_artifact(binary(), keyword()) ::
+          :ok | {:error, {:REFUSED_ARTIFACT_INTEGRITY, map()}}
+  def verify_artifact(bytes, opts \\ []) when is_binary(bytes) do
+    case WasmConfig.expected_blake3(opts) do
+      :unpinned ->
+        :ok
+
+      nil ->
+        {:error, {:REFUSED_ARTIFACT_INTEGRITY, %{expected: nil, actual: nil, reason: :no_pin}}}
+
+      expected ->
+        case Blake3.hash_hex(bytes) do
+          ^expected -> :ok
+          actual -> {:error, {:REFUSED_ARTIFACT_INTEGRITY, %{expected: expected, actual: actual}}}
+        end
+    end
+  end
+
+  @doc """
+  Boot sequence: sha256 pin + surface admission (compiles the `Wasmex.Module`
+  once, cached by `admit/2`). Returns the admitted engine. The former boot-time
+  `:atomics` gate and `boot_module/0` were dead (no reader) and are removed.
+
+  The BLAKE3 artifact check (`verify_artifact/2`) is deliberately NOT part of
+  boot: it is a publish/CI-time gate (`mix graphlaw_ex.verify`), so downstream
+  consumers never pay for it at startup. Runtime integrity is the sha256 pin.
+  """
+  @spec boot(binary(), keyword()) ::
+          {:ok, admitted()} | {:error, {:REFUSED_ARTIFACT_INTEGRITY, map()} | Refusal.t()}
+  def boot(bytes, opts \\ []) when is_binary(bytes) do
+    admit(bytes, Keyword.take(opts, [:expected_sha256, :fuel?]))
+  end
+
   @doc "Drops every cached compiled module."
   @spec purge_cache() :: :ok
-  def purge_cache do
-    for {{__MODULE__, :compiled, _, _} = key, _} <- :persistent_term.get() do
-      :persistent_term.erase(key)
-    end
-
-    :ok
-  end
+  def purge_cache, do: SingleFlight.purge()
 
   @doc "Whether an admitted module for `{sha256, fuel?}` is cached on this node."
   @spec cached?(String.t(), boolean()) :: boolean()
   def cached?(digest, fuel? \\ true),
-    do: :persistent_term.get(cache_key(digest, fuel?), nil) != nil
+    do: SingleFlight.cached(cache_key(digest, fuel?)) != :error
 
-  defp cache_key(digest, fuel?), do: {__MODULE__, :compiled, digest, fuel?}
+  defp cache_key(digest, fuel?), do: {:engine, digest, fuel?}
 
   defp expected(opts) do
     case Keyword.fetch(opts, :expected_sha256) do
@@ -107,20 +150,23 @@ defmodule GraphlawEx.EngineLoad do
   # knows which bytes it wants. With `:unpinned` (the caller chose the bytes)
   # the surface diagnosis is the only check that remains. Only bytes that pass
   # every check are cached.
-  defp compile_and_admit(digest, bytes, fuel?, expected) do
-    with :ok <- check_digest(digest, expected) do
-      compile_and_surface(digest, bytes, fuel?)
-    end
-  end
-
   defp compile_and_surface(digest, bytes, fuel?) do
+    :telemetry.execute(@compile_event, %{}, %{wasm_sha256: digest, fuel?: fuel?})
+
     with {:ok, engine, module} <- compile(bytes, fuel?),
          imports = Wasmex.Module.imports(module),
          exports = Wasmex.Module.exports(module),
          :ok <- check_imports(imports),
          :ok <- check_exports(exports) do
-      entry = %{wasm_sha256: digest, imports: imports, exports: exports, engine: engine, module: module}
-      :persistent_term.put(cache_key(digest, fuel?), entry)
+      entry = %{
+        wasm_sha256: digest,
+        imports: imports,
+        exports: exports,
+        engine: engine,
+        module: module
+      }
+
+      # The single flight publishes the entry (bounded cache); no put here.
       {:ok, entry}
     end
   end
@@ -163,9 +209,13 @@ defmodule GraphlawEx.EngineLoad do
 
   defp invalid(reason) do
     Refusal.new(:invalid_json, "engine bytes did not compile as a WebAssembly module", %{
-      reason: inspect(reason, limit: 5)
+      reason: inspect(reason, limit: 5, printable_limit: 200),
+      type: reason_type(reason)
     })
   end
+
+  defp reason_type(%module{}), do: inspect(module)
+  defp reason_type(reason) when is_binary(reason), do: "binary"
 
   defp check_imports(imports) do
     case WasmConfig.import_allowlist() do
@@ -210,7 +260,12 @@ defmodule GraphlawEx.EngineLoad do
     Refusal.new(
       :wasm_import_surface_mismatch,
       "no import allowlist is available (MANIFEST.json host_abi.imports unusable); refusing every engine",
-      %{unexpected: [], unexpected_functions: [], allowed: [@import_module], reason: "allowlist_unavailable"}
+      %{
+        unexpected: [],
+        unexpected_functions: [],
+        allowed: [@import_module],
+        reason: "allowlist_unavailable"
+      }
     )
   end
 
@@ -224,15 +279,31 @@ defmodule GraphlawEx.EngineLoad do
       :ok
     else
       {:error,
-       Refusal.new(:wasm_import_surface_mismatch, "engine lacks required exports: #{Enum.join(missing, ", ")}", %{
-         missing: missing,
-         required: @required_exports
-       })}
+       Refusal.new(
+         :wasm_import_surface_mismatch,
+         "engine lacks required exports: #{Enum.join(missing, ", ")}",
+         %{
+           missing: missing,
+           required: @required_exports
+         }
+       )}
     end
   end
 
   defp check_digest(_digest, :unpinned), do: :ok
   defp check_digest(digest, digest) when is_binary(digest), do: :ok
+
+  # No pin resolved at all (nil): distinct from a mismatch. The refusal code
+  # table is closed, so the code stays :wasm_digest_mismatch and the typed
+  # `reason: :no_pin` detail (with no `:expected` key) tells the cases apart.
+  defp check_digest(digest, nil) do
+    {:error,
+     Refusal.new(
+       :wasm_digest_mismatch,
+       "no sha256 pin is configured; pass a hex pin or expected_sha256: :unpinned",
+       %{reason: :no_pin, actual: digest}
+     )}
+  end
 
   defp check_digest(digest, expected) do
     {:error,

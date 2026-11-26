@@ -954,3 +954,21 @@ fn sa2a_run12_portability_corpus_executes_through_real_wasi() {
         }
     }
 }
+
+/// The wasm module's advertised op table equals the registry op list, in order.
+#[cfg(feature = "abi")]
+#[test]
+fn wasm_ops_table_equals_registry_op_names() {
+    let r = ok(json!({"op": "capabilities"}));
+    let wasm_ops: Vec<String> = r["ops"]
+        .as_array()
+        .expect("capabilities.ops array")
+        .iter()
+        .map(|o| o.as_str().expect("op name string").to_string())
+        .collect();
+    let registry: Vec<String> = graphlaw::registry::op_names()
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+    assert_eq!(wasm_ops, registry, "wasm ops table drifted from registry op_names()");
+}

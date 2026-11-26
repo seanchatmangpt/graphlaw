@@ -15,6 +15,13 @@
 //! 3. host reads `out_len` bytes at `out_ptr` (UTF-8 JSON), then
 //!    `gl_free(out_ptr, out_len)`.
 //!
+//! Trap policy: the wasm profile builds with `panic = "abort"`, so any panic
+//! is a guest trap, not a JSON refusal. Trap-as-crash is deliberate: a trap
+//! means a bug in this module (never a host input -- request paths return
+//! typed `Refused` JSON), the host must treat the instance as dead, discard
+//! it, and instantiate a fresh one. No state is salvaged from a trapped
+//! instance.
+//!
 //! A response is always JSON and never empty. The generated shell's
 //! empty-response substitution branch is therefore dead code in this crate.
 #![deny(missing_docs)]
@@ -80,9 +87,13 @@ mod duckdb_static_extensions {
     #[cfg(target_arch = "wasm32")]
     #[used]
     #[unsafe(link_section = ".init_array")]
-    static REGISTER: unsafe extern "C" fn() -> i32 = {
-        unsafe extern "C" fn run() -> i32 {
-            graphlaw_wasm_register_static_extensions()
+    static REGISTER: unsafe extern "C" fn() = {
+        // `.init_array` entries are `void (*)(void)`; a nonzero registration
+        // status is fatal (abort traps under panic = "abort").
+        unsafe extern "C" fn run() {
+            if graphlaw_wasm_register_static_extensions() != 0 {
+                std::process::abort();
+            }
         }
         run
     };
@@ -100,6 +111,25 @@ mod duckdb_static_extensions {
     // contract. libc's atexit.c.obj is not pulled once these four symbols
     // resolve from here (verified: zero undefined refs to them inside
     // libc.a; crt1-command.o references none).
+    //
+    // FRAGILITY NOTE / ALTERNATIVE: overriding libc symbols by name depends on
+    // wasm-ld resolving these definitions before libc.a's atexit.c.obj and on
+    // rustc's command_export wrapper shape; a toolchain or wasi-sdk change can
+    // break it silently. The structural alternative is the reactor execution
+    // model (no `command_export` wrappers, no `__wasm_call_dtors` after each
+    // export), e.g. `-C link-arg=--no-entry` with wasi-libc's reactor crt
+    // (`-mexec-model=reactor`), after which these four shims can be deleted.
+    // Not adopted: reactor linking cannot be verified without a full build.
+    // Verification (artifact-level, run after ANY toolchain bump): build the
+    // wasm profile artifact per CLAUDE.md "Commands" (wasm32-wasip1, profile
+    // wasm, EH target-feature), then run the wasm contract tests with
+    // GRAPHLAW_WASM=<abs graphlaw_wasm.wasm> plus the packet-4 courts
+    // (GRAPHLAW_RUN_EH): two consecutive `gl_call` frames running DuckDB SQL
+    // must both succeed (a poisoned `__funcs_on_exit` traps on the second).
+    // Build-time probe: the artifact must export
+    // `graphlaw_wasm_register_static_extensions` and import no
+    // `__cxa_atexit` (`wasm-tools print <wasm> | grep cxa_atexit`).
+    #[cfg(target_arch = "wasm32")]
     #[unsafe(no_mangle)]
     pub extern "C" fn __cxa_atexit(
         _func: unsafe extern "C" fn(*mut c_void),
@@ -109,12 +139,15 @@ mod duckdb_static_extensions {
         0
     }
 
+    #[cfg(target_arch = "wasm32")]
     #[unsafe(no_mangle)]
     pub extern "C" fn __cxa_finalize(_d: *mut c_void) {}
 
+    #[cfg(target_arch = "wasm32")]
     #[unsafe(no_mangle)]
     pub extern "C" fn __funcs_on_exit() {}
 
+    #[cfg(target_arch = "wasm32")]
     #[unsafe(no_mangle)]
     pub extern "C" fn atexit(_func: unsafe extern "C" fn()) -> i32 {
         0

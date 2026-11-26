@@ -42,6 +42,7 @@ impl QueryLedger {
     pub fn open(dir: impl AsRef<Path>) -> Result<Self, LedgerError> {
         let dir = dir.as_ref();
         fs::create_dir_all(dir)?;
+        recover_orphans(dir)?;
         let state = verify_dir(dir)?;
         Ok(QueryLedger {
             dir: dir.to_path_buf(),
@@ -53,7 +54,7 @@ impl QueryLedger {
             buf: Vec::new(),
             buf_first_seq: state.next_seq,
             buf_opened_ms: now_ms(),
-            aggs: state.aggs.clone(),
+            aggs: state.aggs,
             last_flush_error: None,
         })
     }
@@ -125,58 +126,64 @@ impl QueryLedger {
         if self.buf.is_empty() {
             return Ok(());
         }
-        let records = std::mem::take(&mut self.buf);
+        // chain.json is the single atomic commit point. Nothing in memory
+        // advances until it is durable; on any failure before that the
+        // records return to the buffer (no loss, no half-advanced state).
         let first_seq = self.buf_first_seq;
-        let count = records.len() as u32;
+        let count = self.buf.len() as u32;
         let parent = self.parent.clone();
-        let body = encode_batch(&parent, first_seq, count, &records);
+        let body = encode_batch(&parent, first_seq, count, &self.buf);
         let digest = digest_of(body.as_bytes());
         let path = self.dir.join(format!("{digest}.json"));
         if !path.exists() {
-            atomic_write(&path, body.as_bytes())?;
+            atomic_write_nodirsync(&path, body.as_bytes())?;
         }
-        // .agg sidecar, keyed to the batch digest (not self-addressed — but
-        // F8 promotes it to tamper-EVIDENT: its BLAKE3 is written into the
-        // CHAIN index below, and verify() checks it, so the spot-re-fold is
-        // no longer the only tamper check).
-        let agg = fold_batch(&digest, &records);
+        // .agg sidecar, keyed to the batch digest (F8: its BLAKE3 is written
+        // into the CHAIN index below, and verify() checks it).
+        let agg = fold_batch(&digest, &self.buf);
         let agg_path = self.dir.join(format!("{digest}.agg"));
-        if !agg_path.exists() {
-            atomic_write(&agg_path, encode_agg(&agg).as_bytes())?;
+        let agg_bytes = encode_agg(&agg);
+        let agg_digest = if agg_path.exists() {
+            // Idempotent re-flush: digest the bytes actually on disk.
+            sync_dir(&self.dir)?;
+            digest_of(&fs::read(&agg_path)?)
+        } else {
+            atomic_write_nodirsync(&agg_path, agg_bytes.as_bytes())?;
+            // One directory fsync covers both data files before the commit point.
+            sync_dir(&self.dir)?;
+            digest_of(agg_bytes.as_bytes())
+        };
+        let prev_agg = self.aggs.insert(digest.clone(), agg_digest);
+        let tail = if self.tail == GENESIS {
+            digest.clone()
+        } else {
+            self.tail.clone()
+        };
+        let next_seq = first_seq + u64::from(count);
+        let batches = self.batches + 1;
+        // COMMIT POINT.
+        if let Err(e) = write_chain_file(&self.dir, &digest, &tail, batches, next_seq, &self.aggs)
+        {
+            match prev_agg {
+                Some(v) => {
+                    self.aggs.insert(digest, v);
+                }
+                None => {
+                    self.aggs.remove(&digest);
+                }
+            }
+            return Err(e);
         }
-        // Digest the bytes actually on disk (idempotent re-flush keeps the
-        // recorded digest faithful to the persisted sidecar).
-        let agg_digest = digest_of(&fs::read(&agg_path)?);
-        self.aggs.insert(digest.clone(), agg_digest);
-        // Advance the chain.
+        // Durable: advance memory.
+        self.buf.clear();
         self.parent = digest.clone();
         self.head = digest;
-        if self.tail == GENESIS {
-            self.tail = self.head.clone();
-        }
-        self.batches += 1;
-        self.next_seq = first_seq + u64::from(count);
-        self.buf_first_seq = self.next_seq;
+        self.tail = tail;
+        self.batches = batches;
+        self.next_seq = next_seq;
+        self.buf_first_seq = next_seq;
         self.buf_opened_ms = now_ms();
-        self.write_chain()
-    }
-
-    fn write_chain(&self) -> Result<(), LedgerError> {
-        let mut body = format!(
-            "{{\"head\":{},\"tail\":{},\"batches\":{},\"next_seq\":{},\"aggs\":{{",
-            esc(&self.head),
-            esc(&self.tail),
-            self.batches,
-            self.next_seq
-        );
-        for (i, (batch, agg)) in self.aggs.iter().enumerate() {
-            if i > 0 {
-                body.push(',');
-            }
-            body.push_str(&format!("{},{}", esc(batch), esc(agg)));
-        }
-        body.push_str("}}");
-        atomic_write(&self.dir.join("chain.json"), body.as_bytes())
+        Ok(())
     }
 
     /// Current chain state.
@@ -522,8 +529,9 @@ fn verify_dir(dir: &Path) -> Result<ChainState, LedgerError> {
     }
     // F8: every recorded .agg digest must match the sidecar bytes on disk —
     // the sidecar is tamper-EVIDENT against the CHAIN, not spot-check-only.
+    let known: std::collections::HashSet<&str> = batches.iter().map(|b| b.digest.as_str()).collect();
     for (batch, agg_digest) in &st.aggs {
-        if !batches.iter().any(|b| &b.digest == batch) {
+        if !known.contains(batch.as_str()) {
             return Err(LedgerError::ChainIndex {
                 detail: format!("CHAIN records an agg digest for unknown batch {batch}"),
             });
@@ -552,7 +560,102 @@ fn verify_dir(dir: &Path) -> Result<ChainState, LedgerError> {
     })
 }
 
-fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), LedgerError> {
+fn write_chain_file(
+    dir: &Path,
+    head: &str,
+    tail: &str,
+    batches: u64,
+    next_seq: u64,
+    aggs: &BTreeMap<String, String>,
+) -> Result<(), LedgerError> {
+    // NOTE: the aggs index makes this rewrite O(batches) per flush (O(N^2)
+    // total). Bounding it would change the chain.json format and the
+    // verify_dir agreement semantics, so it is documented, not changed.
+    let mut body = format!(
+        "{{\"head\":{},\"tail\":{},\"batches\":{},\"next_seq\":{},\"aggs\":{{",
+        esc(head),
+        esc(tail),
+        batches,
+        next_seq
+    );
+    for (i, (batch, agg)) in aggs.iter().enumerate() {
+        if i > 0 {
+            body.push(',');
+        }
+        body.push_str(&esc(batch));
+        body.push(',');
+        body.push_str(&esc(agg));
+    }
+    body.push_str("}}");
+    atomic_write(&dir.join("chain.json"), body.as_bytes())
+}
+
+/// Crash recovery. A crash between the batch-file writes and the chain.json
+/// commit leaves batch/agg files not covered by chain.json. Such an orphan
+/// names chain.json's head as its parent. Quarantine (move to `quarantine/`,
+/// never delete) every orphan chain hanging off the committed head. Parent
+/// ambiguity (two files claiming one parent = fork / double genesis) is left
+/// in place for `verify_dir` to refuse. Batches that verify are quarantined
+/// too: their descriptors are re-disclosed via the producer gap marker, and
+/// only chain.json may admit a batch.
+fn recover_orphans(dir: &Path) -> Result<(), LedgerError> {
+    let head = read_chain_state(dir)?.head;
+    let mut by_parent: BTreeMap<String, Vec<String>> = BTreeMap::new();
+    for (digest, path) in list_batch_files(dir)? {
+        let bytes = fs::read(&path)?;
+        if digest_of(&bytes) != digest {
+            continue; // corruption: verify_dir refuses it
+        }
+        if let Ok((parent, ..)) = parse_batch(&bytes, &format!("{digest}.json")) {
+            by_parent.entry(parent).or_default().push(digest);
+        }
+    }
+    let mut frontier = head;
+    let mut moved = Vec::new();
+    while let Some(kids) = by_parent.get(&frontier) {
+        if kids.len() != 1 {
+            break;
+        }
+        moved.push(kids[0].clone());
+        frontier = kids[0].clone();
+    }
+    if moved.is_empty() {
+        return Ok(());
+    }
+    let q = dir.join("quarantine");
+    fs::create_dir_all(&q)?;
+    for d in &moved {
+        for ext in ["json", "agg"] {
+            let src = dir.join(format!("{d}.{ext}"));
+            if !src.exists() {
+                continue;
+            }
+            let mut dst = q.join(format!("{d}.{ext}"));
+            let mut n = 1;
+            while dst.exists() {
+                dst = q.join(format!("{d}.{ext}.{n}"));
+                n += 1;
+            }
+            fs::rename(&src, &dst)?;
+        }
+    }
+    sync_dir(&q)?;
+    sync_dir(dir)
+}
+
+fn sync_dir(dir: &Path) -> Result<(), LedgerError> {
+    #[cfg(unix)]
+    {
+        fs::File::open(dir)?.sync_all()?;
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = dir;
+    }
+    Ok(())
+}
+
+fn write_tmp_and_rename(path: &Path, bytes: &[u8]) -> Result<(), LedgerError> {
     let tmp = path.with_extension("tmp");
     {
         let mut f = fs::File::create(&tmp)?;
@@ -561,4 +664,19 @@ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), LedgerError> {
     }
     fs::rename(&tmp, path)?;
     Ok(())
+}
+
+/// Durable write: file fsync, rename, then parent-directory fsync.
+fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), LedgerError> {
+    write_tmp_and_rename(path, bytes)?;
+    if let Some(parent) = path.parent() {
+        sync_dir(parent)?;
+    }
+    Ok(())
+}
+
+/// As `atomic_write` but the caller issues the directory fsync once for a
+/// group of files.
+fn atomic_write_nodirsync(path: &Path, bytes: &[u8]) -> Result<(), LedgerError> {
+    write_tmp_and_rename(path, bytes)
 }

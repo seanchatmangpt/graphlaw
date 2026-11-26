@@ -62,18 +62,40 @@ defmodule GraphlawEx.Capability.Decode do
   Resolves the response variant named by `map[tag_field]` among `tags`: the matching tag as an
   atom, or `{:unknown, tag}` (`""` when the tag is absent or not a string).
   """
-  @spec variant(term(), String.t() | nil, [String.t()]) :: atom() | {:unknown, String.t()}
+  @spec variant(term(), String.t() | nil, [String.t()] | %{optional(String.t()) => atom()}) ::
+          atom() | {:unknown, String.t()}
   def variant(%{} = map, tag_field, tags) when is_binary(tag_field) and is_list(tags) do
+    # Membership check against the caller's closed list: no per-call map, and an atom is
+    # only minted for a tag that IS in that list (wire data never mints atoms).
     case Map.get(map, tag_field) do
       tag when is_binary(tag) ->
-        if tag in tags, do: String.to_atom(tag), else: {:unknown, tag}
+        if tag in tags, do: existing_atom(tag), else: {:unknown, tag}
 
       _ ->
         {:unknown, ""}
     end
   end
 
+  def variant(%{} = map, tag_field, %{} = tag_map) when is_binary(tag_field) do
+    case Map.get(map, tag_field) do
+      tag when is_binary(tag) -> Map.get(tag_map, tag, {:unknown, tag})
+      _ -> {:unknown, ""}
+    end
+  end
+
   def variant(_map, _tag_field, _tags), do: {:unknown, ""}
+
+  @doc """
+  Precomputes the `tag => atom` map for `variant/3`. `tags` come from the closed registry
+  vocabulary (never wire data), so minting their atoms is bounded; hot callers build this once
+  (module attribute) and pass the map.
+  """
+  @spec tag_map([String.t()]) :: %{String.t() => atom()}
+  def tag_map(tags) when is_list(tags) do
+    # Closed registry vocabulary only (caller-supplied literals, never wire data), so the atom
+    # set is bounded. Non-binary entries are skipped rather than raising.
+    for tag <- tags, is_binary(tag), into: %{}, do: {tag, existing_atom(tag)}
+  end
 
   @doc "Reads `name` from a response map and decodes it per `type`; `nil` when absent."
   @spec get(term(), String.t(), String.t() | nil) :: term()
@@ -84,4 +106,8 @@ defmodule GraphlawEx.Capability.Decode do
   defp type_name(value) when is_binary(value), do: "string"
   defp type_name(nil), do: "null"
   defp type_name(_), do: "other"
+
+  # Only ever called with a tag that is a member of the caller's closed vocabulary
+  # (registry literals, never wire data), so the atom set is bounded by that list.
+  defp existing_atom(tag) when is_binary(tag), do: :erlang.binary_to_atom(tag, :utf8)
 end

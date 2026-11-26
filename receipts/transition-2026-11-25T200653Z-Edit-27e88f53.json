@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "27e88f5332cce7a2cc3a2ba7b7a041b525246ae7b134639a840fb99a7b9ac6f7",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-11-25T200653Z-Edit-27e88f53.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/ggen-marketplace/packs/rust-wasi-wasmex-pack/README.md",
+  "timestamp_utc": "2026-11-25T200653Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

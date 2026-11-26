@@ -1,10 +1,36 @@
 # release-publish.md
 
-Operator runbook for releasing and publishing graphlaw. Mechanism verified
-against `.github/workflows/release.yml` (116 lines) and
-`.github/workflows/publish-npm.yml` (215 lines) at the tree of 2026-11-09
-(crate and `js/npm/package.json` both `26.10.28`, Rust toolchain 1.98.0);
-every step cites file:line.
+Operator runbook for releasing and publishing graphlaw. Crate version `26.11.25`
+(`Cargo.toml:3`), Rust toolchain 1.98.0. The npm sections further down were written against
+`26.10.28` line numbers and are not re-verified for 26.11.25; JS/npm is deferred to
+v26.11.26. Every step cites file:line.
+
+## v26.11.25 flow (wasm Release asset, Hex without wasm, hold-for-go)
+
+Goal: ship the crate release assets and the Elixir wrapper without bundling the wasm in Hex.
+
+Prerequisites: `gh` authenticated; Hex credentials on the workstation; the current value of
+repo variable `RELEASE_HOLD` known.
+
+1. **Hold.** While `RELEASE_HOLD=true` the release workflow skips tag and publish
+   (`.github/workflows/release.yml:13-15,63-67`). Keep it set until the operator says go.
+2. **Go.** Unset or delete `RELEASE_HOLD`, then merge the version bump to main or re-run the
+   workflow (`release.yml:17-20`). The plan step needs no existing `v<version>` tag.
+3. **Release asset.** The job builds the wasm (`--profile wasm`, wasi-sdk 34, EH flag) and
+   creates GitHub release `v<version>` with `graphlaw.wasm`, registry json/ttl and
+   `op-examples.json`, each with a `.blake3` (`release.yml:88-110`).
+4. **Hex without wasm.** `graphlaw_ex/mix.exs:99-101` lists `files:` with the pin files
+   (`MANIFEST.json`, `.blake3`, `.sha256`) and no `graphlaw.wasm`; the 8 MB Hex limit is the
+   reason (`graphlaw_ex/README.md:67-68`). Size check: `mix hex.build` step at
+   `.github/workflows/elixir.yml:152-157`.
+5. **Consumer side.** `mix graphlaw_ex.fetch` downloads the Release asset for the package
+   version and verifies sha256 and BLAKE3; `GRAPHLAW_WASM_PATH=<abs path>` stages a local
+   file with no network (air-gapped)
+   (`graphlaw_ex/lib/mix/tasks/graphlaw_ex.fetch.ex:7-22`).
+
+Verify: `gh release view v<version>` lists the eight wasm/registry assets;
+`mix graphlaw_ex.fetch && mix graphlaw_ex.doctor` succeeds on a clean cache. Not run by this
+edit.
 
 ## Name resolution (settled 2026-10-24)
 
@@ -115,3 +141,9 @@ and no naming fix is owed. Configure the Trusted Publisher on
   Node 22's bundled npm (`.github/workflows/publish-npm.yml:64-67`). Do not
   "fix" the validate job by moving the upgrade there — it is only required
   for OIDC publish, not validate.
+
+## See Also
+
+- [run-the-wasm-module.md](run-the-wasm-module.md)
+- [../WASM.md](../WASM.md)
+- [../../SECURITY.md](../../SECURITY.md)

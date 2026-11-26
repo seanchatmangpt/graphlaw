@@ -376,8 +376,8 @@ ex:C a sql:CreateStatement ;
                 receipt.contains(&hash[..16]),
                 "receipt IRI mints from the query hash: {r}"
             );
-            assert!(r["cursor"].as_str().is_some_and(|c| !c.is_empty()), "{r}");
-            (r, "receipt (IRI); query_hash (blake3); rows_emitted; cursor; more")
+            assert!(r["cursor"].is_null(), "0-row exec mints no cursor: {r}");
+            (r, "receipt (IRI); query_hash (blake3); rows_emitted; cursor (null for 0-row); more")
         }
         other => panic!("no minimal valid request authored for op `{other}`"),
     }
@@ -433,7 +433,10 @@ fn every_authority_row_is_exercised_on_the_wire() {
             // Audit-field presence: the audit column names fields that MUST
             // be in the response.
             for need in audit.split("; ").map(str::trim) {
-                let key = need.split_whitespace().next().unwrap_or(need);
+                let key = need
+                    .split_whitespace()
+                    .next()
+                    .unwrap_or_else(|| panic!("empty audit-field entry in audit: {audit}"));
                 let key = key.trim_end_matches("[]");
                 assert!(
                     r.get(key).is_some(),
@@ -582,6 +585,7 @@ fn refusal_probes_speak_the_typed_vocabulary() {
         ("law unverified lease", json!({
             "op": "law",
             "data": {"text": at("a"), "dialect": "ntriples"},
+            "steps": [{"step": "rdfs"}],
             "lease": {"id": "L1", "holder": "wire-court", "ceiling": "construct",
                       "scope": ["derive:rdfs"], "expires_unix": 9_999_999_999u64},
         }), "Unsupported", Some("UnverifiedLeaseRefused")),

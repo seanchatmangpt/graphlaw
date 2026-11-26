@@ -221,10 +221,7 @@ ex:C a sql:CreateStatement ;
         "receipt echoes the admitted ATTACH: {out}"
     );
     assert_eq!(out["rows_emitted"], 0, "{out}");
-    assert!(
-        out["cursor"].as_str().is_some_and(|c| !c.is_empty()),
-        "cursor minted: {out}"
-    );
+    assert!(out["cursor"].is_null(), "0-row exec mints no cursor: {out}");
     assert!(
         out["receipt"]
             .as_str()

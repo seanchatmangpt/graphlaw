@@ -2,7 +2,8 @@ use purrdf::{SparqlEngine, SparqlRequest, SparqlResult};
 use serde_json::{Value, json};
 
 use super::super::{
-    Fail, MAX_DATALOG_FACTS, MAX_DATALOG_RULES, Res, bad, check_limit, limit, nquads_of, opt_str,
+    Fail, MAX_DATALOG_DERIVED_FACTS, MAX_DATALOG_FACTS, MAX_DATALOG_JOIN_STEPS,
+    MAX_DATALOG_OUTPUT_BYTES, MAX_DATALOG_RULES, Res, bad, check_limit, limit, nquads_of, opt_str,
     state_field, str_field, term_json,
 };
 use crate::dialect::{Dialect, Engine, Refusal, RefusalKind};
@@ -42,7 +43,9 @@ pub(in crate::abi) fn op_shacl(v: &Value) -> Res<Value> {
     // recurses (see law.rs Step::AdmitShacl for the same guard, rendered
     // there as a SHACL result); here it surfaces as the typed ResourceLimit
     // refusal.
-    if let Err(over) = crate::shacl_guard::check_shape_limits(shapes_text) {
+    if let Err(over) = crate::shacl_guard::check_shape_limits_with_base(shapes_text, opt_str(v, "base"))
+        .or_else(|e| if e.is_parse_failure() { Ok(()) } else { Err(e) })
+    {
         return Err(limit(
             over.limit_name(),
             over.observed(),
@@ -165,10 +168,11 @@ fn unsurface(s: &str) -> String {
         .to_string()
 }
 
+
 pub(in crate::abi) fn op_datalog(v: &Value) -> Res<Value> {
     use crate::datalog::{
         clause::DlClause,
-        seminaive::{compile, evaluate},
+        seminaive::{BudgetResource, EvalError, EvalOptions, compile, evaluate_guarded},
         store::RelationStore,
     };
     let dl = |e: &dyn std::fmt::Debug| Refusal {
@@ -212,12 +216,39 @@ pub(in crate::abi) fn op_datalog(v: &Value) -> Res<Value> {
             RelationStore::DEFAULT_GRAPH,
         );
     }
-    let ev = evaluate(&exe, facts).map_err(|e| dl(&e))?;
+    let options = EvalOptions::default()
+        .with_max_stored_facts(MAX_DATALOG_DERIVED_FACTS as u64)
+        .with_max_join_steps(MAX_DATALOG_JOIN_STEPS);
+    let ev = evaluate_guarded(
+        &exe,
+        facts,
+        &purrdf::datalog::guard::NoGuards,
+        &options,
+        None,
+    )
+    .map_err(|e| match e {
+        EvalError::BudgetExhausted { resource, report } => {
+            let name = match resource {
+                BudgetResource::JoinSteps => "datalog_join_steps",
+                BudgetResource::StoredFacts => "datalog_derived_facts",
+                _ => "datalog_budget",
+            };
+            let cl = |x: u64| usize::try_from(x).unwrap_or(usize::MAX);
+            limit(
+                name,
+                cl(resource.observed(report)),
+                cl(resource.limit(report)),
+            )
+        }
+        other => dl(&other).into(),
+    })?;
     let all = ev.facts().facts_sorted();
-    let nquads: String = all
-        .iter()
-        .map(|f| format!("{} {} {} .\n", f.subject, f.predicate, f.object))
-        .collect();
+    let mut nquads = String::new();
+    for f in &all {
+        use std::fmt::Write as _;
+        let _ = writeln!(nquads, "{} {} {} .", f.subject, f.predicate, f.object);
+        check_limit("datalog_output_bytes", nquads.len(), MAX_DATALOG_OUTPUT_BYTES)?;
+    }
     Ok(json!({
         "count": all.len(),
         "facts": all.iter().map(|f| json!([unsurface(&f.subject), unsurface(&f.predicate), unsurface(&f.object)])).collect::<Vec<_>>(),

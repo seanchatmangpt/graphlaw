@@ -63,6 +63,33 @@ pub fn evaluate(observation: Observation) -> Standing {
     Standing::Qualified
 }
 
+/// Lattice rung of one observation: [`evaluate`]'s verdict refined so the
+/// intermediate rungs are reachable. `evaluate` is unchanged (it stays the
+/// admission fold and never returns the three lower rungs).
+///
+/// - no attempt, independent observer present: [`Standing::Observed`]
+/// - no attempt, no observer: [`Standing::Unqualified`]
+/// - attempt made, evidence incomplete, no unreconciled crash:
+///   [`Standing::Attacked`]
+/// - attempt made, unreconciled crash: [`Standing::Unknown`]
+/// - otherwise exactly `evaluate`'s `Qualified` / `Refused`.
+pub fn rung(observation: Observation) -> Standing {
+    match evaluate(observation) {
+        Standing::Unknown if !observation.attempt_observed => {
+            if observation.independent_observer {
+                Standing::Observed
+            } else {
+                Standing::Unqualified
+            }
+        }
+        Standing::Unknown if observation.crash_observed && !observation.crash_reconciled => {
+            Standing::Unknown
+        }
+        Standing::Unknown => Standing::Attacked,
+        other => other,
+    }
+}
+
 fn required_str<'a>(value: &'a Value, key: &str) -> Result<&'a str, String> {
     value
         .get(key)
@@ -189,11 +216,100 @@ pub fn compose_courts(parent: &Value, child: &Value) -> Result<BTreeSet<String>,
 }
 
 /// Check one OCEL-style strict precedence rule such as `prepare<actuate`.
+///
+/// Semantics (per-`after`-event, 1:1 pairing): scanning left to right, every
+/// occurrence of `after` must consume one earlier, not-yet-consumed occurrence
+/// of `before`. So `["prepare","actuate","actuate"]` fails (the second
+/// `actuate` has no `prepare` of its own) and `["actuate","prepare"]` fails.
+/// The rule also requires at least one `after` occurrence (a rule that never
+/// fires is not evidence) and refuses the degenerate `a<a` and any rule
+/// without a single `<`. Unconsumed trailing `before` events are allowed.
 pub fn temporal_rule_holds(events: &[&str], rule: &str) -> bool {
     let Some((before, after)) = rule.split_once('<') else {
         return false;
     };
-    let before_index = events.iter().position(|event| *event == before);
-    let after_index = events.iter().position(|event| *event == after);
-    matches!((before_index, after_index), (Some(left), Some(right)) if left < right)
+    if before == after {
+        return false;
+    }
+    let mut pending = 0usize;
+    let mut fired = false;
+    for event in events {
+        if *event == before {
+            pending += 1;
+        } else if *event == after {
+            if pending == 0 {
+                return false;
+            }
+            pending -= 1;
+            fired = true;
+        }
+    }
+    fired
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn full() -> Observation {
+        Observation {
+            attempt_observed: true,
+            violation_observed: false,
+            independent_observer: true,
+            postconditions_satisfied: true,
+            durable_evidence: true,
+            crash_observed: false,
+            crash_reconciled: false,
+        }
+    }
+
+    #[test]
+    fn rung_reaches_every_lattice_state() {
+        let none = Observation {
+            attempt_observed: false,
+            independent_observer: false,
+            ..full()
+        };
+        assert_eq!(rung(none), Standing::Unqualified);
+        assert_eq!(
+            rung(Observation {
+                independent_observer: true,
+                ..none
+            }),
+            Standing::Observed
+        );
+        assert_eq!(
+            rung(Observation {
+                durable_evidence: false,
+                ..full()
+            }),
+            Standing::Attacked
+        );
+        assert_eq!(
+            rung(Observation {
+                crash_observed: true,
+                ..full()
+            }),
+            Standing::Unknown
+        );
+        assert_eq!(rung(full()), Standing::Qualified);
+        assert_eq!(
+            rung(Observation {
+                violation_observed: true,
+                ..full()
+            }),
+            Standing::Refused
+        );
+    }
+
+    #[test]
+    fn temporal_rule_is_enforced_per_after_event() {
+        assert!(temporal_rule_holds(&["p", "a", "p", "a"], "p<a"));
+        assert!(temporal_rule_holds(&["p", "p", "a"], "p<a"));
+        assert!(!temporal_rule_holds(&["p", "a", "a"], "p<a"), "second a has no p");
+        assert!(!temporal_rule_holds(&["a", "p"], "p<a"));
+        assert!(!temporal_rule_holds(&["p"], "p<a"), "rule never fires");
+        assert!(!temporal_rule_holds(&["p", "a"], "p"));
+        assert!(!temporal_rule_holds(&["p", "p"], "p<p"));
+    }
 }

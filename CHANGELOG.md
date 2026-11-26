@@ -10,6 +10,7 @@ not publish to crates.io — distribution is this repository and GitHub releases
 
 ## [Unreleased]
 
+
 ### Changed
 
 - **docs:** archived superseded milestone docs/receipts (the v26.10.22–v26.10.26
@@ -19,6 +20,61 @@ not publish to crates.io — distribution is this repository and GitHub releases
   26.10.28 tree: Rust 1.98, wasm pin `c92caeb6…` (62,909,537 B), 15 dispatched ops,
   frozen-duckdb 2.0.2. Archived files are recoverable from git history; file paths cited
   in older entries below that no longer exist in the tree refer to that history.
+
+## [26.11.25] - 2026-11-25
+
+### Added
+
+- **abi:** process-wide lease policy: `abi::set_lease_policy(LeasePolicy::Required)` or a
+  request field `"lease_policy": "required"` refuses lease-less requests with `LeaseRequired`
+  before any step runs (`src/abi/lease.rs:12-39,109`; re-exported at `src/abi.rs:48`).
+- **elixir:** `config :graphlaw_ex, :lease_policy` defaults to `:required`
+  (`graphlaw_ex/config/config.exs:3`); the test env sets `:none_allowed`
+  (`graphlaw_ex/config/test.exs:5`).
+- **refusals:** `RECEIPT-IRI-INVALID` (`src/receipt.rs:34`), `LeaseRequired`, and
+  `hook-refused` (`src/hooks.rs:341`) registered in `docs/refusals.md`.
+- **elixir:** `mix graphlaw_ex.fetch` and `GRAPHLAW_WASM_PATH` (air-gapped override) supply
+  the wasm module, which is excluded from the Hex tarball
+  (`graphlaw_ex/lib/graphlaw_ex.ex:12`, `graphlaw_ex/lib/graphlaw_ex/wasm_config.ex:8-13`).
+- **elixir:** `GraphlawEx.KillSwitch.Server` is a supervised child when `:kill_switch_path`
+  is set (`graphlaw_ex/lib/graphlaw_ex/application.ex:18,84`).
+
+### Changed
+
+- **abi:** `op_datalog` is bounded by `datalog_derived_facts` (200000),
+  `datalog_join_steps` (50000000) and `datalog_output_bytes` (8 MiB)
+  (`src/abi/ops/query_engines.rs:232-250`, `src/registry/emit_json.rs:190-192`).
+- **api:** the wildcard re-exports are dropped; `lib.rs` re-exports explicit item lists
+  (`src/lib.rs:118-166`). Geo, text, retrieval, gts and validate items are reachable via
+  `graphlaw::purrdf` (`src/lib.rs:112`). See MIGRATION.md.
+- **query-ledger:** crash-safe batch flush; batches that fail verification move to
+  `quarantine/` (`src/query_ledger/storage.rs:579-609`).
+- **abi_bin:** v2 is experimental and unwired; deletion criterion v26.11.26 if no consumer
+  exists (`src/abi_bin.rs:3-7`).
+
+### Fixed
+
+- **hooks:** see Security (forged firing markers).
+
+### Security
+
+- **hooks:** `Effect::Refuse` hooks always evaluate; a caller-supplied `kh:Firing` marker
+  can no longer pre-suppress them (`src/hooks.rs:318-320`).
+- **elixir:** a wasm path from the environment or application config stays pinned to
+  `priv/graphlaw/MANIFEST.json`; only an explicit `opts[:wasm_path]` or `:unpinned` opts out
+  (`graphlaw_ex/lib/graphlaw_ex/wasm_config.ex:21-32`).
+- **datalog:** unbounded derivation, join and output growth refused with typed limits
+  (see Changed).
+- **receipt:** `receipt::record` refuses a child IRI with N-Triples-forbidden characters
+  before building triple text, closing triple injection (`docs/refusals.md:48`).
+- **shacl:** the guard parses shapes with the same function as `parse_shapes`; a parse failure
+  is `Unparseable`, no longer `Ok`, so the parser differential that skipped every cap is
+  closed (`src/shacl_guard.rs:263-270`).
+
+### Deferred to v26.11.26
+
+js/npm, python, Ash.Query IR, NimblePool, streaming hooks, `receipt.rs` builder append,
+`max_rows` enforcement inside the worker.
 
 ## [26.10.28] - 2026-10-28
 

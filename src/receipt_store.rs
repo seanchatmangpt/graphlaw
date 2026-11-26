@@ -14,6 +14,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::attest::{AttestError, Attestation, TrustedKeys, verify_receipt};
 use crate::law::Receipt;
@@ -67,6 +68,11 @@ pub enum StoreError {
         /// Why the attestation was refused.
         error: AttestError,
     },
+    /// A different attestation already exists for this receipt digest.
+    SignatureConflict {
+        /// The `<digest>.sig` file that already holds different bytes.
+        file: String,
+    },
     /// The stored receipts do not form one linear parent -> child chain.
     BrokenChain {
         /// Description of where the chain breaks.
@@ -91,6 +97,9 @@ impl fmt::Display for StoreError {
             StoreError::Unattested { file } => write!(f, "receipt `{file}` has no attestation"),
             StoreError::Attestation { file, error } => {
                 write!(f, "receipt `{file}` attestation refused: {error}")
+            }
+            StoreError::SignatureConflict { file } => {
+                write!(f, "receipt attestation `{file}` already exists with different bytes")
             }
             StoreError::BrokenChain { detail } => write!(f, "receipt chain broken: {detail}"),
         }
@@ -132,7 +141,13 @@ pub struct ReceiptStore {
 }
 
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
+    const T: &[u8; 16] = b"0123456789abcdef";
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for &b in bytes {
+        s.push(T[(b >> 4) as usize] as char);
+        s.push(T[(b & 15) as usize] as char);
+    }
+    s
 }
 
 fn digest_of(bytes: &[u8]) -> String {
@@ -244,7 +259,19 @@ impl Cur<'_> {
     }
 
     fn key(&mut self, name: &str) -> Option<()> {
-        self.eat(&format!("\"{name}\":"))
+        let n = name.as_bytes();
+        let rest = self.b.get(self.i..)?;
+        if rest.len() >= n.len() + 3
+            && rest[0] == b'"'
+            && &rest[1..1 + n.len()] == n
+            && rest[1 + n.len()] == b'"'
+            && rest[2 + n.len()] == b':'
+        {
+            self.i += n.len() + 3;
+            Some(())
+        } else {
+            None
+        }
     }
 }
 
@@ -326,6 +353,110 @@ fn decode(bytes: &[u8]) -> Option<Receipt> {
     })
 }
 
+static TMP_SEQ: AtomicU64 = AtomicU64::new(0);
+
+/// Write `bytes` to a unique temp name, fsync it, rename to `<digest>.<ext>`,
+/// then fsync the parent directory.
+fn publish(dir: &Path, digest: &str, ext: &str, bytes: &[u8]) -> Result<(), StoreError> {
+    use std::io::Write;
+    let seq = TMP_SEQ.fetch_add(1, Ordering::SeqCst);
+    let tmp = dir.join(format!(".tmp-{digest}-{ext}-{}-{seq}", std::process::id()));
+    let dest = dir.join(format!("{digest}.{ext}"));
+    {
+        let mut f = fs::File::create(&tmp)?;
+        f.write_all(bytes)?;
+        f.sync_all()?;
+    }
+    fs::rename(&tmp, &dest)?;
+    fs::File::open(dir)?.sync_all()?;
+    Ok(())
+}
+
+/// Publish `<digest>.<ext>` only if it does not exist yet: the temp file is
+/// hard-linked to the destination (`link(2)` fails with `AlreadyExists` instead of
+/// replacing). `Ok(true)` when this call created it, `Ok(false)` when a file was
+/// already there (left untouched).
+fn publish_new(dir: &Path, digest: &str, ext: &str, bytes: &[u8]) -> Result<bool, StoreError> {
+    use std::io::Write;
+    let seq = TMP_SEQ.fetch_add(1, Ordering::SeqCst);
+    let tmp = dir.join(format!(".tmp-{digest}-{ext}-{}-{seq}", std::process::id()));
+    let dest = dir.join(format!("{digest}.{ext}"));
+    {
+        let mut f = fs::File::create(&tmp)?;
+        f.write_all(bytes)?;
+        f.sync_all()?;
+    }
+    let linked = fs::hard_link(&tmp, &dest);
+    let _ = fs::remove_file(&tmp);
+    match linked {
+        Ok(()) => {
+            fs::File::open(dir)?.sync_all()?;
+            Ok(true)
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => Ok(false),
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Read `path`; `None` when it does not exist.
+fn read_existing(path: &Path) -> Result<Option<Vec<u8>>, StoreError> {
+    match fs::read(path) {
+        Ok(b) => Ok(Some(b)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// [`publish`] unless `<digest>.<ext>` already holds exactly `bytes` (true no-op:
+/// no temp file, no rename, no fsync). A file with different bytes is replaced.
+fn publish_idempotent(
+    dir: &Path,
+    digest: &str,
+    ext: &str,
+    bytes: &[u8],
+) -> Result<(), StoreError> {
+    if read_existing(&dir.join(format!("{digest}.{ext}")))?.as_deref() == Some(bytes) {
+        return Ok(());
+    }
+    publish(dir, digest, ext, bytes)
+}
+
+/// Orphaned `.tmp-*` files younger than this are presumed to belong to a live
+/// writer (possibly in another process) and are left alone by [`ReceiptStore::open`].
+const TMP_GRACE: std::time::Duration = std::time::Duration::from_secs(30);
+
+fn sweep_dir(dir: &Path, min_age: std::time::Duration) -> Result<usize, StoreError> {
+    let mut removed = 0;
+    for e in fs::read_dir(dir)? {
+        let e = e?;
+        if !e.file_name().to_string_lossy().starts_with(".tmp-") {
+            continue;
+        }
+        // A live writer may rename/remove its temp between read_dir and stat.
+        let meta = match e.metadata() {
+            Ok(m) => m,
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(err) => return Err(err.into()),
+        };
+        if !meta.is_file() {
+            continue;
+        }
+        let age = meta
+            .modified()
+            .ok()
+            .and_then(|m| m.elapsed().ok())
+            .unwrap_or_default();
+        if age >= min_age {
+            match fs::remove_file(e.path()) {
+                Ok(()) => removed += 1,
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+                Err(err) => return Err(err.into()),
+            }
+        }
+    }
+    Ok(removed)
+}
+
 fn check_subject(s: &str) -> Result<(), StoreError> {
     let ok = !s.is_empty()
         && s != "."
@@ -343,9 +474,27 @@ impl ReceiptStore {
     /// Open (creating if needed) a store rooted at `dir`.
     pub fn open(dir: impl AsRef<Path>) -> Result<Self, StoreError> {
         fs::create_dir_all(dir.as_ref())?;
-        Ok(Self {
+        let store = Self {
             dir: dir.as_ref().to_path_buf(),
-        })
+        };
+        store.sweep_orphans(TMP_GRACE)?;
+        Ok(store)
+    }
+
+    /// Remove orphaned `.tmp-*` files (left by a crash between create and rename)
+    /// at least `min_age` old, across the store root and every subject directory.
+    /// [`ReceiptStore::open`] calls this with a 30 s grace so an in-flight writer
+    /// in another process is not disturbed; pass `Duration::ZERO` only when no
+    /// writer is live. Returns the number of files removed.
+    pub fn sweep_orphans(&self, min_age: std::time::Duration) -> Result<usize, StoreError> {
+        let mut removed = sweep_dir(&self.dir, min_age)?;
+        for e in fs::read_dir(&self.dir)? {
+            let e = e?;
+            if e.file_type()?.is_dir() {
+                removed += sweep_dir(&e.path(), min_age)?;
+            }
+        }
+        Ok(removed)
     }
 
     fn subject_dir(&self, subject: &str) -> Result<PathBuf, StoreError> {
@@ -353,33 +502,52 @@ impl ReceiptStore {
         Ok(self.dir.join(subject))
     }
 
-    /// Store `receipt` under `subject`; returns its digest. Atomic (temp + rename), idempotent.
+    /// Store `receipt` under `subject`; returns its digest. Atomic (temp + rename);
+    /// a true no-op when the file already holds identical bytes.
     pub fn put(&self, receipt: &Receipt, subject_sha: &str) -> Result<String, StoreError> {
         let sd = self.subject_dir(subject_sha)?;
         fs::create_dir_all(&sd)?;
         let body = encode(receipt);
         let digest = digest_of(body.as_bytes());
-        let dest = sd.join(format!("{digest}.json"));
-        let tmp = sd.join(format!(".tmp-{digest}-{}", std::process::id()));
-        fs::write(&tmp, body.as_bytes())?;
-        fs::rename(&tmp, &dest)?;
+        publish_idempotent(&sd, &digest, "json", body.as_bytes())?;
         Ok(digest)
     }
 
     /// [`ReceiptStore::put`] plus the receipt's attestation, stored beside it as
-    /// `<digest>.sig` (canonical attestation JSON). Returns the receipt digest.
+    /// `<digest>.sig` (canonical attestation JSON). The `.sig` is durable before
+    /// the `.json` becomes visible, so a `.json` is never observed without its
+    /// `.sig`. Returns the receipt digest.
     pub fn put_signed(
         &self,
         receipt: &Receipt,
         subject_sha: &str,
         attestation: &Attestation,
     ) -> Result<String, StoreError> {
-        let digest = self.put(receipt, subject_sha)?;
         let sd = self.subject_dir(subject_sha)?;
-        let dest = sd.join(format!("{digest}.sig"));
-        let tmp = sd.join(format!(".tmp-{digest}-sig-{}", std::process::id()));
-        fs::write(&tmp, attestation.to_json().as_bytes())?;
-        fs::rename(&tmp, &dest)?;
+        fs::create_dir_all(&sd)?;
+        let body = encode(receipt);
+        let digest = digest_of(body.as_bytes());
+        let sig = attestation.to_json();
+        match read_existing(&sd.join(format!("{digest}.sig")))? {
+            Some(existing) if existing == sig.as_bytes() => {}
+            Some(_) => {
+                return Err(StoreError::SignatureConflict {
+                    file: format!("{digest}.sig"),
+                });
+            }
+            None => {
+                // Exclusive create: a racing writer with a different attestation
+                // loses with SignatureConflict instead of being overwritten.
+                if !publish_new(&sd, &digest, "sig", sig.as_bytes())? {
+                    let file = format!("{digest}.sig");
+                    match read_existing(&sd.join(&file))? {
+                        Some(existing) if existing == sig.as_bytes() => {}
+                        _ => return Err(StoreError::SignatureConflict { file }),
+                    }
+                }
+            }
+        }
+        publish_idempotent(&sd, &digest, "json", body.as_bytes())?;
         Ok(digest)
     }
 
@@ -433,6 +601,20 @@ impl ReceiptStore {
     /// Re-read every receipt for `subject`, recompute digests, and check they form one
     /// linear `parent -> child` chain. Returns the receipts in chain order.
     pub fn verify(&self, subject_sha: &str) -> Result<Vec<Receipt>, StoreError> {
+        chain(self.load(subject_sha)?)
+    }
+
+    /// Like [`ReceiptStore::verify`] but only the chain reachable from `head` (a
+    /// state hash that is some receipt's `parent` or `child`) must be linear:
+    /// returns the receipts after `head` in order. A fork elsewhere (e.g. an
+    /// abandoned retry branch before `head`) does not poison the subject; a fork
+    /// on the path from `head` still refuses. Every stored file is still
+    /// integrity-checked (digest, canonical form).
+    pub fn verify_from(&self, subject_sha: &str, head: &str) -> Result<Vec<Receipt>, StoreError> {
+        chain_from(self.load(subject_sha)?, head)
+    }
+
+    fn load(&self, subject_sha: &str) -> Result<Vec<Receipt>, StoreError> {
         let sd = self.subject_dir(subject_sha)?;
         let mut rs = Vec::new();
         for d in self.list(subject_sha)? {
@@ -452,8 +634,42 @@ impl ReceiptStore {
             }
             rs.push(r);
         }
-        chain(rs)
+        Ok(rs)
     }
+}
+
+fn chain_from(rs: Vec<Receipt>, head: &str) -> Result<Vec<Receipt>, StoreError> {
+    let broken = |d: String| StoreError::BrokenChain { detail: d };
+    if !rs.iter().any(|r| r.parent == head || r.child == head) {
+        return Err(broken(format!("head `{head}` not found in stored receipts")));
+    }
+    let mut by_parent: BTreeMap<&str, Vec<usize>> = BTreeMap::new();
+    for (i, r) in rs.iter().enumerate() {
+        by_parent.entry(r.parent.as_str()).or_default().push(i);
+    }
+    let mut idx = Vec::new();
+    let mut seen = std::collections::BTreeSet::new();
+    let mut cur = head.to_string();
+    loop {
+        let next: &[usize] = by_parent.get(cur.as_str()).map_or(&[], |v| v.as_slice());
+        match next {
+            [] => break,
+            [i] => {
+                let r = &rs[*i];
+                if !seen.insert(r.child.as_str()) {
+                    return Err(broken("cycle".to_string()));
+                }
+                idx.push(*i);
+                cur = r.child.clone();
+            }
+            _ => {
+                return Err(broken(format!(
+                    "two receipts share parent `{cur}` (fork) on the path from head"
+                )));
+            }
+        }
+    }
+    Ok(idx.into_iter().map(|i| rs[i].clone()).collect())
 }
 
 fn chain(rs: Vec<Receipt>) -> Result<Vec<Receipt>, StoreError> {
@@ -494,4 +710,15 @@ fn chain(rs: Vec<Receipt>) -> Result<Vec<Receipt>, StoreError> {
         return Err(broken("receipts do not form one linear chain"));
     }
     Ok(order.into_iter().map(|i| rs[i].clone()).collect())
+}
+
+#[cfg(test)]
+mod hex_table_tests {
+    #[test]
+    fn hex_matches_format_reference() {
+        let bytes: Vec<u8> = (0..=255u8).collect();
+        let reference: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+        assert_eq!(super::hex(&bytes), reference);
+        assert_eq!(super::hex(&[]), "");
+    }
 }

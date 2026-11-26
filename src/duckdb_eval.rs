@@ -147,9 +147,10 @@ impl From<TermValue> for SerTerm {
     }
 }
 
-impl From<SerTerm> for TermValue {
-    fn from(t: SerTerm) -> Self {
-        match t {
+impl TryFrom<SerTerm> for TermValue {
+    type Error = String;
+    fn try_from(t: SerTerm) -> Result<Self, String> {
+        Ok(match t {
             SerTerm::Iri(v) => TermValue::Iri(v),
             SerTerm::Blank { label, scope } => TermValue::Blank {
                 label,
@@ -164,18 +165,24 @@ impl From<SerTerm> for TermValue {
                 lexical_form,
                 datatype,
                 language,
-                direction: direction.map(|d| match d.as_str() {
-                    "Ltr" => purrdf::RdfTextDirection::Ltr,
-                    "Rtl" => purrdf::RdfTextDirection::Rtl,
-                    other => unreachable!("SerTerm direction token '{other}' is not a valid RdfTextDirection — SerTerm is constructed only via From<TermValue>"),
-                }),
+                direction: match direction.as_deref() {
+                    None => None,
+                    Some("Ltr") => Some(purrdf::RdfTextDirection::Ltr),
+                    Some("Rtl") => Some(purrdf::RdfTextDirection::Rtl),
+                    Some(other) => {
+                        return Err(format!(
+                            "[REFUSAL-01] MalformedAstRefusal: RdfTriple object direction token '{}' is not Ltr or Rtl",
+                            other.chars().take(32).collect::<String>()
+                        ));
+                    }
+                },
             },
             SerTerm::Triple { s, p, o } => TermValue::Triple {
-                s: purrdf::TermBox::new(TermValue::from(*s)),
-                p: purrdf::TermBox::new(TermValue::from(*p)),
-                o: purrdf::TermBox::new(TermValue::from(*o)),
+                s: purrdf::TermBox::new(TermValue::try_from(*s)?),
+                p: purrdf::TermBox::new(TermValue::try_from(*p)?),
+                o: purrdf::TermBox::new(TermValue::try_from(*o)?),
             },
-        }
+        })
     }
 }
 
@@ -198,10 +205,12 @@ impl<'de> serde::Deserialize<'de> for RdfTriple {
             predicate: String,
             object: SerTerm,
         }
-        Wire::deserialize(d).map(|w| RdfTriple {
+        let w = Wire::deserialize(d)?;
+        let object = TermValue::try_from(w.object).map_err(serde::de::Error::custom)?;
+        Ok(RdfTriple {
             subject: w.subject,
             predicate: w.predicate,
-            object: TermValue::from(w.object),
+            object,
         })
     }
 }

@@ -1,6 +1,6 @@
 # API stability
 
-GraphLaw's workspace version is 26.10.28 (latest released); the capability-registry
+GraphLaw's workspace version is 26.11.25 (`Cargo.toml`); the capability-registry
 schema `graphlaw.capability-registry/1` and `ABI_VERSION = 1` were frozen at v26.9.29 and
 remain additive-only. This page states what downstream crates and JSON-ABI hosts may
 rely on, how deprecations work, and how the minimum supported Rust version moves.
@@ -8,10 +8,16 @@ rely on, how deprecations work, and how the minimum supported Rust version moves
 ## What is stable
 
 - **Public types and functions** in `graphlaw::{abi_manifest, attest, datalog, dialect,
-  duckdb_eval, duckdb_op, entailment, evidence_ring, events, hooks, law, n3, plan, policy,
-  qualification, query_cache, query_ledger, receipt, receipt_chain, receipt_store, rdf, rules,
-  registry, shacl, shacl_guard, shex, smon, sparql, sql_ast, sql_statement_kinds, tier}` and, with
-  `--features abi`, `graphlaw::abi`. Removing or changing the signature
+  duckdb_eval, duckdb_op, egress, entailment, evidence_ring, events, hooks, law, n3, pccf, plan,
+  policy, proof_lease, qualification, query_cache, query_ledger, receipt, receipt_chain,
+  receipt_store, rdf, rules, registry, shacl, shacl_guard, shex, smon, sparql, sql_ast,
+  sql_statement_kinds, tier}` and, with `--features abi`, `graphlaw::abi` (module list from
+  `src/lib.rs:76-254`; `abi`, `abi_manifest`, `qualification`, `registry` need feature `abi`,
+  `smon` needs `pack-tools`, `evidence_ring` needs `evidentiary-ring` and a non-wasm target;
+  `pccf` is a stub, `admit_pccf` returns `NotImplemented`). Crate-root items:
+  `LawState`, `ReceiptRecord`, `ReceiptValidator`.
+  Lease policy API (`abi::LeasePolicy`, `abi::set_lease_policy`, `abi::lease_policy`,
+  `src/abi.rs:48`) is part of the `abi` surface. Removing or changing the signature
   of any of them requires a semver-major release (`26.x` calendar versions: a change of the
   first component or an explicit CHANGELOG "Breaking" entry).
 - **Growable enums are `#[non_exhaustive]`**: `Step`, `Dialect`, `Engine`, `RefusalKind`,
@@ -27,9 +33,17 @@ rely on, how deprecations work, and how the minimum supported Rust version moves
   `PlanRefused`, `ReceiptRequired`, `LeaseRefused`) and the stable `as_str()` names of
   `LeaseReason` and `ReceiptReason` never change meaning. New codes may be added; hosts must treat
   an unknown code as a refusal.
-- **Re-exports** `graphlaw::purrdf`, `graphlaw::n3`, and `graphlaw::duckdb_eval` (with
-  `frozen_duckdb`) are escape hatches; their API is that of the pinned upstream version
-  (`purrdf =2.0.2`, `frozen-duckdb 2.0.2`).
+- **Removed: `graphlaw::abi_bin`** (experimental echo-only framing) is archived under
+  `docs/archive/abi-bin-v2/`; it is not part of the crate.
+- **Hidden op**: ABI op `duckdb` (op 15) dispatches on every target but is absent from the
+  registry's 14 ops and from `surface_blake3`; the 14-op table is the stable surface.
+- **Re-exports**: `graphlaw::purrdf` and `graphlaw::purrdf_columnar` are whole-crate escape
+  hatches (`src/lib.rs:112-115`); `graphlaw::duckdb_eval` (with `frozen_duckdb`) likewise.
+  Their API is that of the pinned upstream (`purrdf` git rev `2223f89` in `Cargo.toml:50`,
+  `frozen-duckdb 2.0.2`).
+  The modules `rdf`, `sparql`, `shacl`, `shex`, `datalog`, `entailment`, `events` and `n3`
+  re-export explicit item lists from purrdf (`src/lib.rs:115-166`); the lists are the surface,
+  nothing outside them is promised, and `rdf` is documented unstable.
 
 ## Deprecation policy
 

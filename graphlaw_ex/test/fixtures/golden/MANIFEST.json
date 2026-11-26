@@ -1,0 +1,12 @@
+{
+  "provenance_note": "native_canonical.json, native_sparql.json and id.blake3 are native-minted (cargo run --example golden_mint -- <golden_dir>); data.ttl and query.rq are inputs; canonical.nq and bindings.json are hand-derived reference text. blake3 fields are null because no hash tool was available to derive them: UNVERIFIED.",
+  "files": [
+    {"name": "data.ttl", "origin": "input", "blake3": null},
+    {"name": "query.rq", "origin": "input", "blake3": null},
+    {"name": "canonical.nq", "origin": "hand-derived", "blake3": null},
+    {"name": "bindings.json", "origin": "hand-derived", "blake3": null},
+    {"name": "native_canonical.json", "origin": "native-minted", "blake3": null},
+    {"name": "native_sparql.json", "origin": "native-minted", "blake3": null},
+    {"name": "id.blake3", "origin": "native-minted", "blake3": null}
+  ]
+}

@@ -4,7 +4,8 @@
 
 | version | supported |
 |---|---|
-| 26.10.28 (current workspace release line; GitHub release v26.10.28) | yes — the current workspace release line on `main` |
+| 26.11.25 (current workspace release line) | yes — the current workspace release line on `main` |
+| 26.10.28 | prior workspace version; fixed forward on `main`, no per-version patches |
 | 26.10.22 – 26.10.26 | prior workspace versions; fixed forward on `main`, no per-version patches |
 | 26.10.14 – 26.10.21 | intermediate workspace versions; fixed forward on `main`, no per-version patches |
 | v26.10.13 and earlier published releases / crates | no |
@@ -41,7 +42,7 @@ Egress specifics in scope:
   receipt. It is a known, lawful egress hole; prefer the expression form
   (`docs/how-to/egress-and-attach-policy.md`, "Scalar-fallback caveat").
 
-## Known limits (as of 2026-11-09, v26.10.28)
+## Known limits (as of 2026-11-09, v26.10.28; 26.11.25 fixes are in CHANGELOG.md "Security")
 
 - Plain receipts (`receipt::record` / `receipt::require`) prove presence only: a receipt is a
   content-addressed record, and anyone who can write a state can record one. Authenticated use needs
@@ -85,10 +86,10 @@ What the bundled EH runner (`src/bin/graphlaw_run_eh.rs`, feature `runner-eh`) d
 ### Imported WASI capability inventory
 
 The shipped artifact (`priv/graphlaw.wasm`, b3sum
-`c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c`,
-62,909,537 B — the live pin) imports 28 functions, all
+`66369e37ad71d8c19817951565aad669379aa9b97ef5dacf7dda403f304cb117`,
+62,910,295 B — the live pin) imports 28 functions, all
 `wasi_snapshot_preview1`. Re-witnessed on this exact pin with
-`wasm-objdump -x priv/graphlaw.wasm` on 2026-11-09 (`Import[28]`; all 28
+`wasm-objdump -x priv/graphlaw.wasm` on 2026-11-25 (`Import[28]`; all 28
 names below match the live section, no non-WASI import modules):
 
 `random_get`, `environ_get`, `environ_sizes_get`, `clock_time_get`,

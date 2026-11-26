@@ -1,0 +1,463 @@
+//! **EXPERIMENTAL / UNWIRED.** Hidden from public docs. No WASM export, host
+//! runner, graphlaw_ex binding, script, or doc consumes this module; only
+//! `tests/abi_bin_court.rs` exercises it. The dispatcher is echo-only. It is
+//! not part of the supported protocol surface (packet-N stdio remains the ABI).
+//!
+//! Deletion criterion: if no consumer exists by v26.11.26, delete this module,
+//! its `pub mod` line in `src/lib.rs`, and `tests/abi_bin_court.rs`.
+//!
+//! Fixed-header binary ABI v2 recognizer, encoder, and dispatcher.
+//!
+//! Frame layout (all integers little-endian):
+//!
+//! 1. **64-byte fixed header**:
+//!    - `0..4`: `magic: [u8; 4]` = `[0x89, b'G', b'L', b'B']`
+//!    - `4..6`: `abi_version: u16` = `2`
+//!    - `6..8`: `opcode: u16` (closed [`Opcode`] enum)
+//!    - `8..12`: `flags: u32` (unknown bits refused)
+//!    - `12..14`: `section_count: u16` (`<= 16`)
+//!    - `14..16`: `reserved: u16` (must be `0`)
+//!    - `16..48`: `ontology_hash: [u8; 32]`
+//!    - `48..56`: `payload_bytes: u64`
+//!    - `56..64`: `reserved2: u64` (must be `0`)
+//! 2. **Section table**: `section_count` entries of 16 bytes ([`SectionDesc`]):
+//!    - `0..2`: `kind: u16`
+//!    - `2..4`: `flags: u16` (unknown bits refused)
+//!    - `4..8`: `offset: u32` (byte offset relative to payload start)
+//!    - `8..12`: `len: u32` (byte length of section payload)
+//!    - `12..16`: `reserved: u32` (must be `0`)
+//! 3. **Payload**: `payload_bytes` raw bytes.
+//! 4. **Trailer**: 32-byte BLAKE3 digest over `frame[0..frame.len() - 32]`.
+//!
+//! Any structural, version, flag, reserved-field, bounds, overlap, or digest
+//! violation fails closed with a `0xE5xx` refusal code.
+
+/// Fixed 4-byte magic prefix (`\x89GLB`).
+pub const MAGIC: [u8; 4] = [0x89, b'G', b'L', b'B'];
+
+/// Supported binary ABI version.
+pub const ABI_VERSION: u16 = 2;
+
+/// Fixed header size in bytes.
+pub const HEADER_LEN: usize = 64;
+
+/// Fixed section descriptor size in bytes.
+pub const SECTION_DESC_LEN: usize = 16;
+
+/// Trailing BLAKE3 digest size in bytes.
+pub const TRAILER_LEN: usize = 32;
+
+/// Maximum number of sections permitted in a single frame.
+pub const MAX_SECTIONS: u16 = 16;
+
+/// Header flag indicating the frame is a response.
+pub const FLAG_RESPONSE: u32 = 0x0000_0001;
+
+/// Header flag indicating a receipt section is attached.
+pub const FLAG_HAS_RECEIPT: u32 = 0x0000_0002;
+
+/// Bitmask of all recognized header flags.
+pub const KNOWN_HEADER_FLAGS: u32 = FLAG_RESPONSE | FLAG_HAS_RECEIPT;
+
+/// Bitmask of all recognized section flags.
+pub const KNOWN_SECTION_FLAGS: u16 = 0x0001;
+
+/// Refusal code: frame is shorter than the minimum header + trailer size or
+/// truncated before the declared section table / payload / trailer.
+pub const REFUSE_TRUNCATED: u16 = 0xE501;
+
+/// Refusal code: magic bytes do not match [`MAGIC`].
+pub const REFUSE_BAD_MAGIC: u16 = 0xE502;
+
+/// Refusal code: `abi_version` is not [`ABI_VERSION`].
+pub const REFUSE_BAD_VERSION: u16 = 0xE503;
+
+/// Refusal code: `opcode` is not a member of the closed [`Opcode`] enum.
+pub const REFUSE_UNKNOWN_OPCODE: u16 = 0xE504;
+
+/// Refusal code: `flags` contains unknown bits outside [`KNOWN_HEADER_FLAGS`].
+pub const REFUSE_UNKNOWN_FLAGS: u16 = 0xE505;
+
+/// Refusal code: `section_count` exceeds [`MAX_SECTIONS`].
+pub const REFUSE_TOO_MANY_SECTIONS: u16 = 0xE506;
+
+/// Refusal code: header `reserved` or `reserved2` is non-zero.
+pub const REFUSE_NONZERO_RESERVED: u16 = 0xE507;
+
+/// Refusal code: frame length does not match `HEADER_LEN + section_table + payload_bytes + TRAILER_LEN`.
+pub const REFUSE_PAYLOAD_LENGTH_MISMATCH: u16 = 0xE508;
+
+/// Refusal code: a section descriptor's `reserved` field is non-zero.
+pub const REFUSE_SECTION_RESERVED_NONZERO: u16 = 0xE509;
+
+/// Refusal code: a section descriptor's `offset + len` exceeds `payload_bytes`.
+pub const REFUSE_SECTION_OUT_OF_BOUNDS: u16 = 0xE50A;
+
+/// Refusal code: two section descriptors overlap in the payload region.
+pub const REFUSE_SECTION_OVERLAP: u16 = 0xE50B;
+
+/// Refusal code: trailing 32-byte BLAKE3 digest does not match `frame[0..len-32]`.
+pub const REFUSE_BAD_DIGEST: u16 = 0xE50C;
+
+/// Refusal code: a section descriptor's `flags` contains unknown bits.
+pub const REFUSE_UNKNOWN_SECTION_FLAGS: u16 = 0xE50D;
+
+/// Closed set of binary ABI v2 opcodes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u16)]
+pub enum Opcode {
+    /// Liveness / echo probe.
+    Ping = 0x0001,
+    /// Generic law-state dispatch.
+    Dispatch = 0x0002,
+    /// SPARQL / SQL-in-RDF query request.
+    Query = 0x0003,
+    /// SHACL / ShEx validation request.
+    Validate = 0x0004,
+    /// Entailment / N3 derivation request.
+    Derive = 0x0005,
+    /// Receipt verification request.
+    VerifyReceipt = 0x0006,
+    /// Successful response frame.
+    Response = 0x8000,
+    /// Fail-closed refusal response frame.
+    Refusal = 0x8001,
+}
+
+impl Opcode {
+    /// Decode a raw `u16` into a closed [`Opcode`], refusing unknown values.
+    pub fn from_u16(raw: u16) -> Result<Self, u16> {
+        match raw {
+            0x0001 => Ok(Self::Ping),
+            0x0002 => Ok(Self::Dispatch),
+            0x0003 => Ok(Self::Query),
+            0x0004 => Ok(Self::Validate),
+            0x0005 => Ok(Self::Derive),
+            0x0006 => Ok(Self::VerifyReceipt),
+            0x8000 => Ok(Self::Response),
+            0x8001 => Ok(Self::Refusal),
+            _ => Err(REFUSE_UNKNOWN_OPCODE),
+        }
+    }
+}
+
+/// Decoded 64-byte fixed header.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FrameHeader {
+    /// ABI version (always [`ABI_VERSION`]).
+    pub abi_version: u16,
+    /// Closed opcode.
+    pub opcode: Opcode,
+    /// Validated header flags.
+    pub flags: u32,
+    /// Number of section descriptors (`<= MAX_SECTIONS`).
+    pub section_count: u16,
+    /// 32-byte ontology content hash.
+    pub ontology_hash: [u8; 32],
+    /// Byte length of the raw payload region.
+    pub payload_bytes: u64,
+}
+
+/// Decoded 16-byte section descriptor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SectionDesc {
+    /// Application-defined section kind tag.
+    pub kind: u16,
+    /// Validated section flags.
+    pub flags: u16,
+    /// Byte offset relative to the start of the payload region.
+    pub offset: u32,
+    /// Byte length of the section slice.
+    pub len: u32,
+}
+
+/// A validated section descriptor paired with its borrowed payload slice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RecognizedSection<'a> {
+    /// Section descriptor metadata.
+    pub desc: SectionDesc,
+    /// Borrowed payload bytes for this section.
+    pub data: &'a [u8],
+}
+
+/// A fully recognized, digest-verified binary ABI v2 frame.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RecognizedFrame<'a> {
+    /// Decoded 64-byte header.
+    pub header: FrameHeader,
+    /// Validated, non-overlapping sections with borrowed payload slices.
+    pub sections: Vec<RecognizedSection<'a>>,
+    /// Full raw payload region.
+    pub payload: &'a [u8],
+    /// Verified trailing 32-byte BLAKE3 digest.
+    pub digest: [u8; 32],
+}
+
+/// Recognize and validate a binary ABI v2 frame.
+///
+/// Fails closed with a `0xE5xx` refusal code on any header, section, bounds,
+/// overlap, or BLAKE3 digest violation.
+pub fn recognize_frame(frame: &[u8]) -> Result<RecognizedFrame<'_>, u16> {
+    if frame.len() < HEADER_LEN + TRAILER_LEN {
+        return Err(REFUSE_TRUNCATED);
+    }
+
+    if frame[0..4] != MAGIC {
+        return Err(REFUSE_BAD_MAGIC);
+    }
+
+    let abi_version = u16::from_le_bytes([frame[4], frame[5]]);
+    if abi_version != ABI_VERSION {
+        return Err(REFUSE_BAD_VERSION);
+    }
+
+    let raw_opcode = u16::from_le_bytes([frame[6], frame[7]]);
+    let opcode = Opcode::from_u16(raw_opcode)?;
+
+    let flags = u32::from_le_bytes([frame[8], frame[9], frame[10], frame[11]]);
+    if flags & !KNOWN_HEADER_FLAGS != 0 {
+        return Err(REFUSE_UNKNOWN_FLAGS);
+    }
+
+    let section_count = u16::from_le_bytes([frame[12], frame[13]]);
+    if section_count > MAX_SECTIONS {
+        return Err(REFUSE_TOO_MANY_SECTIONS);
+    }
+
+    let reserved = u16::from_le_bytes([frame[14], frame[15]]);
+    if reserved != 0 {
+        return Err(REFUSE_NONZERO_RESERVED);
+    }
+
+    let mut ontology_hash = [0u8; 32];
+    ontology_hash.copy_from_slice(&frame[16..48]);
+
+    let payload_bytes = u64::from_le_bytes([
+        frame[48], frame[49], frame[50], frame[51], frame[52], frame[53], frame[54], frame[55],
+    ]);
+
+    let reserved2 = u64::from_le_bytes([
+        frame[56], frame[57], frame[58], frame[59], frame[60], frame[61], frame[62], frame[63],
+    ]);
+    if reserved2 != 0 {
+        return Err(REFUSE_NONZERO_RESERVED);
+    }
+
+    let section_table_len = (section_count as usize) * SECTION_DESC_LEN;
+    let payload_len_usize =
+        usize::try_from(payload_bytes).map_err(|_| REFUSE_PAYLOAD_LENGTH_MISMATCH)?;
+    let expected_len = HEADER_LEN
+        .checked_add(section_table_len)
+        .and_then(|n| n.checked_add(payload_len_usize))
+        .and_then(|n| n.checked_add(TRAILER_LEN))
+        .ok_or(REFUSE_PAYLOAD_LENGTH_MISMATCH)?;
+
+    if frame.len() < expected_len {
+        return Err(REFUSE_TRUNCATED);
+    }
+    if frame.len() != expected_len {
+        return Err(REFUSE_PAYLOAD_LENGTH_MISMATCH);
+    }
+
+    // Verify trailing 32-byte BLAKE3 digest over frame[0..len-32].
+    let body_end = frame.len() - TRAILER_LEN;
+    let computed = blake3::hash(&frame[..body_end]);
+    let mut digest = [0u8; 32];
+    digest.copy_from_slice(&frame[body_end..]);
+    if computed.as_bytes() != &digest {
+        return Err(REFUSE_BAD_DIGEST);
+    }
+
+    let payload_start = HEADER_LEN + section_table_len;
+    let payload = &frame[payload_start..body_end];
+
+    let mut sections = Vec::with_capacity(section_count as usize);
+    let mut ranges: Vec<(u64, u64)> = Vec::with_capacity(section_count as usize);
+
+    for i in 0..(section_count as usize) {
+        let base = HEADER_LEN + i * SECTION_DESC_LEN;
+        let kind = u16::from_le_bytes([frame[base], frame[base + 1]]);
+        let sec_flags = u16::from_le_bytes([frame[base + 2], frame[base + 3]]);
+        if sec_flags & !KNOWN_SECTION_FLAGS != 0 {
+            return Err(REFUSE_UNKNOWN_SECTION_FLAGS);
+        }
+        let offset = u32::from_le_bytes([
+            frame[base + 4],
+            frame[base + 5],
+            frame[base + 6],
+            frame[base + 7],
+        ]);
+        let len = u32::from_le_bytes([
+            frame[base + 8],
+            frame[base + 9],
+            frame[base + 10],
+            frame[base + 11],
+        ]);
+        let sec_reserved = u32::from_le_bytes([
+            frame[base + 12],
+            frame[base + 13],
+            frame[base + 14],
+            frame[base + 15],
+        ]);
+        if sec_reserved != 0 {
+            return Err(REFUSE_SECTION_RESERVED_NONZERO);
+        }
+
+        let start = u64::from(offset);
+        let end = start
+            .checked_add(u64::from(len))
+            .ok_or(REFUSE_SECTION_OUT_OF_BOUNDS)?;
+        if end > payload_bytes {
+            return Err(REFUSE_SECTION_OUT_OF_BOUNDS);
+        }
+
+        // Check pairwise non-overlap for non-empty ranges.
+        if start < end {
+            for &(prev_start, prev_end) in &ranges {
+                if start < prev_end && prev_start < end {
+                    return Err(REFUSE_SECTION_OVERLAP);
+                }
+            }
+            ranges.push((start, end));
+        }
+
+        let data = &payload[(offset as usize)..(offset as usize + len as usize)];
+        sections.push(RecognizedSection {
+            desc: SectionDesc {
+                kind,
+                flags: sec_flags,
+                offset,
+                len,
+            },
+            data,
+        });
+    }
+
+    Ok(RecognizedFrame {
+        header: FrameHeader {
+            abi_version,
+            opcode,
+            flags,
+            section_count,
+            ontology_hash,
+            payload_bytes,
+        },
+        sections,
+        payload,
+        digest,
+    })
+}
+
+/// Encode a binary ABI v2 frame with a trailing BLAKE3 digest.
+///
+/// Each section tuple is `(kind, flags, payload_slice)`.
+pub fn encode_frame(
+    opcode: Opcode,
+    flags: u32,
+    ontology_hash: [u8; 32],
+    sections: &[(u16, u16, &[u8])],
+) -> Result<Vec<u8>, u16> {
+    if flags & !KNOWN_HEADER_FLAGS != 0 {
+        return Err(REFUSE_UNKNOWN_FLAGS);
+    }
+    if sections.len() > MAX_SECTIONS as usize {
+        return Err(REFUSE_TOO_MANY_SECTIONS);
+    }
+
+    let mut payload_bytes: u64 = 0;
+    for &(_, sec_flags, data) in sections {
+        if sec_flags & !KNOWN_SECTION_FLAGS != 0 {
+            return Err(REFUSE_UNKNOWN_SECTION_FLAGS);
+        }
+        payload_bytes = payload_bytes
+            .checked_add(data.len() as u64)
+            .ok_or(REFUSE_PAYLOAD_LENGTH_MISMATCH)?;
+    }
+
+    let total_len = HEADER_LEN + sections.len() * SECTION_DESC_LEN + (payload_bytes as usize) + TRAILER_LEN;
+    let mut out = Vec::with_capacity(total_len);
+
+    // 64-byte header
+    out.extend_from_slice(&MAGIC);
+    out.extend_from_slice(&ABI_VERSION.to_le_bytes());
+    out.extend_from_slice(&(opcode as u16).to_le_bytes());
+    out.extend_from_slice(&flags.to_le_bytes());
+    out.extend_from_slice(&(sections.len() as u16).to_le_bytes());
+    out.extend_from_slice(&0u16.to_le_bytes()); // reserved
+    out.extend_from_slice(&ontology_hash);
+    out.extend_from_slice(&payload_bytes.to_le_bytes());
+    out.extend_from_slice(&0u64.to_le_bytes()); // reserved2
+
+    // Section descriptors
+    let mut cursor: u32 = 0;
+    for &(kind, sec_flags, data) in sections {
+        let len = u32::try_from(data.len()).map_err(|_| REFUSE_SECTION_OUT_OF_BOUNDS)?;
+        out.extend_from_slice(&kind.to_le_bytes());
+        out.extend_from_slice(&sec_flags.to_le_bytes());
+        out.extend_from_slice(&cursor.to_le_bytes());
+        out.extend_from_slice(&len.to_le_bytes());
+        out.extend_from_slice(&0u32.to_le_bytes()); // reserved
+        cursor = cursor.checked_add(len).ok_or(REFUSE_SECTION_OUT_OF_BOUNDS)?;
+    }
+
+    // Payload
+    for &(_, _, data) in sections {
+        out.extend_from_slice(data);
+    }
+
+    // Trailing 32-byte BLAKE3 digest
+    let digest = blake3::hash(&out);
+    out.extend_from_slice(digest.as_bytes());
+    Ok(out)
+}
+
+/// Encode a response frame (`FLAG_RESPONSE` set) with a trailing BLAKE3 digest.
+///
+/// If encoding fails (e.g. unknown flags or too many sections), returns a
+/// fail-closed [`Opcode::Refusal`] frame carrying the `0xE5xx` refusal code.
+pub fn encode_response(
+    opcode: Opcode,
+    flags: u32,
+    ontology_hash: [u8; 32],
+    sections: &[(u16, u16, &[u8])],
+) -> Vec<u8> {
+    match encode_frame(opcode, flags | FLAG_RESPONSE, ontology_hash, sections) {
+        Ok(bytes) => bytes,
+        Err(code) => encode_refusal(code, ontology_hash),
+    }
+}
+
+/// Encode a fail-closed [`Opcode::Refusal`] response frame with a 2-byte LE refusal code.
+pub fn encode_refusal(code: u16, ontology_hash: [u8; 32]) -> Vec<u8> {
+    let payload = code.to_le_bytes();
+    // Safe: constants are valid and section count is 1 <= MAX_SECTIONS.
+    encode_frame(
+        Opcode::Refusal,
+        FLAG_RESPONSE,
+        ontology_hash,
+        &[(0x0001, 0, &payload)],
+    )
+    .expect("refusal frame encoding is infallible")
+}
+
+/// Recognize and dispatch a binary ABI v2 frame, returning a signed response frame.
+///
+/// Any recognition error returns an [`Opcode::Refusal`] frame carrying the
+/// `0xE5xx` refusal code.
+pub fn dispatch_frame(frame: &[u8]) -> Vec<u8> {
+    match recognize_frame(frame) {
+        Ok(rec) => {
+            let mut resp_sections: Vec<(u16, u16, &[u8])> = Vec::with_capacity(rec.sections.len());
+            for sec in &rec.sections {
+                resp_sections.push((sec.desc.kind, sec.desc.flags, sec.data));
+            }
+            encode_response(
+                Opcode::Response,
+                rec.header.flags | FLAG_RESPONSE,
+                rec.header.ontology_hash,
+                &resp_sections,
+            )
+        }
+        Err(code) => encode_refusal(code, [0u8; 32]),
+    }
+}

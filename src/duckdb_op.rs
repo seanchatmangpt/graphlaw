@@ -21,7 +21,8 @@
 //!   → `{"ok":true,"receipt","query_hash","rows_emitted","cursor","more":bool}`.
 //!   WP P08 (the sieve becomes law): exec `max_rows` is the RESULT-ROW
 //!   ENVELOPE the eval runs under (absent → `DEFAULT_ROW_ENVELOPE` = 64; `0`
-//!   refused; no upper cap — the caller owns its envelope). A result set
+//!   refused; capped at `MAX_EXEC_ROWS`, typed `duckdb_exec_max_rows`
+//!   ResourceLimit above it). A result set
 //!   over the envelope is a typed `ResourceLimit` refusal with
 //!   `limit: "duckdb_result_rows"` and the exact `observed`/`max`, fired
 //!   mid-materialization strictly before any receipt. On `document:true`
@@ -63,7 +64,7 @@
 //! and dies with the process/instance (documented ephemeral-cursor contract).
 
 use std::collections::HashMap;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock, PoisonError};
 
 use serde_json::{Value, json};
 
@@ -86,6 +87,47 @@ pub const MAX_CHUNK_ROWS: usize = 10_000;
 /// `duckdb_chunk_bytes` ResourceLimit refusal and the cursor survives.
 pub const MAX_CHUNK_BYTES: usize = 16 * 1024 * 1024;
 
+/// Max live cursors (typed `duckdb_cursors` ResourceLimit above it).
+pub const MAX_CURSORS: usize = 64;
+/// Max total rows retained across all live cursors (typed
+/// `duckdb_retained_rows` ResourceLimit above it).
+pub const MAX_RETAINED_ROWS: usize = 1_000_000;
+/// Upper cap on the exec-mode `max_rows` envelope (typed
+/// `duckdb_exec_max_rows` ResourceLimit above it).
+pub const MAX_EXEC_ROWS: usize = 100_000;
+
+/// Admit one more cursor of `new_rows` rows against the registry caps.
+fn admit_cursor(
+    map: &HashMap<String, Cursor>,
+    id: &str,
+    new_rows: usize,
+) -> Result<(), Fail> {
+    let replacing = map.get(id);
+    let count = map.len() + usize::from(replacing.is_none());
+    check_limit("duckdb_cursors", count, MAX_CURSORS)?;
+    let retained: usize = map
+        .iter()
+        .filter(|(k, _)| k.as_str() != id)
+        .map(|(_, c)| c.rows.len())
+        .sum::<usize>()
+        .saturating_add(new_rows);
+    check_limit("duckdb_retained_rows", retained, MAX_RETAINED_ROWS)
+}
+
+/// Pre-execution cursor-slot check: refuse BEFORE the statement runs so a
+/// cap refusal never follows a committed mutation. Assumes a new cursor of up
+/// to `envelope` rows (the eval cannot return more).
+fn precheck_cursor_slot(envelope: usize) -> Result<(), Fail> {
+    let map = cursors().lock().unwrap_or_else(PoisonError::into_inner);
+    check_limit("duckdb_cursors", map.len() + 1, MAX_CURSORS)?;
+    let retained: usize = map
+        .values()
+        .map(|c| c.rows.len())
+        .sum::<usize>()
+        .saturating_add(envelope);
+    check_limit("duckdb_retained_rows", retained, MAX_RETAINED_ROWS)
+}
+
 /// Cursor registry, process-local (crash-only: worker kill invalidates).
 fn cursors() -> &'static Mutex<HashMap<String, Cursor>> {
     static C: OnceLock<Mutex<HashMap<String, Cursor>>> = OnceLock::new();
@@ -94,7 +136,19 @@ fn cursors() -> &'static Mutex<HashMap<String, Cursor>> {
 
 /// Max live sessions (bounded process-local resource; over-cap is a typed
 /// ResourceLimit refusal).
+#[cfg(not(target_arch = "wasm32"))]
 pub const MAX_SESSIONS: usize = 16;
+/// wasm32: the 32 MiB linear-memory budget is shared by every connection, so
+/// the live-session cap is 2 (see [`conn_memory_limit_mib`]).
+#[cfg(target_arch = "wasm32")]
+pub const MAX_SESSIONS: usize = 2;
+
+/// Per-connection `memory_limit` in MiB. Native: the full 32 MiB. wasm32:
+/// 32 MiB divided across `MAX_SESSIONS` sessions plus one fresh connection,
+/// so the sum of connection limits never exceeds the module budget.
+pub const fn conn_memory_limit_mib(wasm: bool) -> usize {
+    if wasm { 32 / (2 + 1) } else { 32 }
+}
 
 /// Session registry, process-local (crash-only, bounded by [`MAX_SESSIONS`];
 /// closing a session frees its connection).
@@ -145,19 +199,21 @@ fn duckdb_limit(name: &str, observed: usize, max: usize) -> Fail {
 /// stream-mode `max_rows` which is only a PAGE SIZE over an already-sieved
 /// cursor. Absent (or null) → [`DEFAULT_ROW_ENVELOPE`]. Present → must be an
 /// unsigned integer; `0` is refused (an envelope of zero rows is not a
-/// lawful eval; use a non-SELECT statement class instead). There is no upper
-/// cap: the caller owns its envelope.
+/// lawful eval; use a non-SELECT statement class instead). Above
+/// [`MAX_EXEC_ROWS`] the call is a typed `duckdb_exec_max_rows` ResourceLimit
+/// refusal.
 fn max_rows_of(v: &Value) -> Result<usize, Fail> {
     match v.get("max_rows") {
         None | Some(Value::Null) => Ok(DEFAULT_ROW_ENVELOPE),
         Some(n) => {
             let n = n
                 .as_u64()
-                .ok_or_else(|| duckdb_fail("`max_rows` must be an unsigned integer"))?
-                as usize;
+                .ok_or_else(|| duckdb_fail("`max_rows` must be an unsigned integer"))?;
+            let n = usize::try_from(n).unwrap_or(usize::MAX);
             if n == 0 {
                 return Err(duckdb_fail("`max_rows` must be at least 1"));
             }
+            check_limit("duckdb_exec_max_rows", n, MAX_EXEC_ROWS)?;
             Ok(n)
         }
     }
@@ -180,9 +236,16 @@ fn map_eval_error(err: crate::duckdb_eval::EvaluatorError) -> Fail {
 fn open_connection() -> Result<GraphLawDuckDB, Fail> {
     let conn = frozen_duckdb::Connection::open_in_memory().map_err(duckdb_fail)?;
     conn.execute_batch(&format!(
-        "SET memory_limit='{}'; SET threads={}; SET preserve_insertion_order=false;",
-        DUCKDB_MEMORY_LIMIT, DUCKDB_THREADS
+        "SET memory_limit='{}MiB'; SET threads={}; SET preserve_insertion_order=false;",
+        conn_memory_limit_mib(cfg!(target_arch = "wasm32")),
+        DUCKDB_THREADS
     ))
+    .map_err(duckdb_fail)?;
+    // Lock the configuration so admitted SQL cannot SET the pragmas above
+    // back (memory_limit, threads, ...). `enable_external_access` stays on:
+    // `views` (parquet/csv mounts) and `ATTACH` need it, and both are already
+    // gated by path admission (`GRAPHLAW_ATTACH_ROOTS`, `enforce_attach_policy`).
+    conn.execute_batch("SET lock_configuration=true;")
     .map_err(duckdb_fail)?;
     Ok(GraphLawDuckDB::from_connection(conn))
 }
@@ -253,6 +316,7 @@ fn mount_view(db: &GraphLawDuckDB, view: &Value) -> Result<(), Fail> {
             "view entries accept only {name, glob, hive}; SQL and pragmas are not caller-supplied",
         ));
     }
+    enforce_path_policy(glob, false)?;
     if glob.ends_with(".csv") || glob.contains("*.csv") {
         // D1 (epoch-coverage audit): route through `register_csv_view` so the
         // documented MUST holds — prepared-handle flush + C1 cache bump after
@@ -280,8 +344,151 @@ fn mount_view(db: &GraphLawDuckDB, view: &Value) -> Result<(), Fail> {
 /// the crate is `#![forbid(unsafe_code)]` and edition-2024 `set_var` is
 /// unsafe.
 fn enforce_attach_policy(sql: &str) -> Result<(), Fail> {
-    let roots = std::env::var("GRAPHLAW_ATTACH_ROOTS").ok();
-    enforce_attach_policy_with(sql, roots.as_deref())
+    // wasm32: ATTACH is refused unconditionally (no env read, no
+    // path resolution: the module has no host filesystem authority to widen).
+    #[cfg(target_arch = "wasm32")]
+    {
+        attach_refused_on_wasm(sql)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let roots = std::env::var("GRAPHLAW_ATTACH_ROOTS").ok();
+        enforce_attach_policy_with(sql, roots.as_deref())?;
+        enforce_copy_policy_with(sql, roots.as_deref())
+    }
+}
+
+/// Unconditional wasm ATTACH refusal (pure, native-testable).
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+fn attach_refused_on_wasm(sql: &str) -> Result<(), Fail> {
+    if leading_sql_token(sql).as_deref() == Some("ATTACH") {
+        return Err(duckdb_fail(
+            "attach path outside GRAPHLAW_ATTACH_ROOTS allowlist: ATTACH is refused on wasm32",
+        ));
+    }
+    Ok(())
+}
+
+/// Path allowlist shared by ATTACH, COPY and view mounts: `path` (or, for a
+/// glob, its static directory prefix; or, when `allow_missing_leaf`, its
+/// parent directory) must canonicalize under one of the colon-separated
+/// absolute `roots`. `..` components are refused outright.
+pub fn path_under_roots(path: &str, roots: &str, allow_missing_leaf: bool) -> bool {
+    use std::path::{Component, Path};
+    let p = Path::new(path);
+    if p.components().any(|c| c == Component::ParentDir) {
+        return false;
+    }
+    let target = match path.find(['*', '?', '[', '{']) {
+        Some(i) => match path[..i].rfind('/') {
+            Some(0) => "/".to_string(),
+            Some(j) => path[..j].to_string(),
+            None => return false,
+        },
+        None => path.to_string(),
+    };
+    let canonical = match std::fs::canonicalize(&target) {
+        Ok(c) => c,
+        Err(_) if allow_missing_leaf => {
+            let tp = Path::new(&target);
+            let (Some(parent), Some(leaf)) = (tp.parent(), tp.file_name()) else {
+                return false;
+            };
+            match std::fs::canonicalize(parent) {
+                Ok(c) => c.join(leaf),
+                Err(_) => return false,
+            }
+        }
+        Err(_) => return false,
+    };
+    roots.split(':').any(|root| {
+        root.starts_with('/')
+            && std::fs::canonicalize(root).is_ok_and(|croot| canonical.starts_with(&croot))
+    })
+}
+
+/// View-mount / COPY path admission. Env `GRAPHLAW_ATTACH_ROOTS` set (even
+/// empty, which refuses everything) enforces the ATTACH allowlist; env unset
+/// keeps the pre-existing open mount behavior so file-view courts that never
+/// configure roots still run. On wasm32 the env is not read.
+fn enforce_path_policy(path: &str, allow_missing_leaf: bool) -> Result<(), Fail> {
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = (path, allow_missing_leaf);
+        Ok(())
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let roots = std::env::var("GRAPHLAW_ATTACH_ROOTS").ok();
+        enforce_path_policy_with(path, roots.as_deref(), allow_missing_leaf)
+    }
+}
+
+/// Pure core of [`enforce_path_policy`].
+pub fn enforce_path_policy_with(
+    path: &str,
+    roots: Option<&str>,
+    allow_missing_leaf: bool,
+) -> Result<(), Fail> {
+    let Some(roots) = roots else { return Ok(()) };
+    if path_under_roots(path, roots, allow_missing_leaf) {
+        Ok(())
+    } else {
+        Err(duckdb_fail(format!(
+            "attach path outside GRAPHLAW_ATTACH_ROOTS allowlist: {path}"
+        )))
+    }
+}
+
+/// Top-level `TO '…'` / `FROM '…'` literals of a COPY statement.
+fn copy_path_literals(sql: &str) -> Vec<(String, bool)> {
+    let cs: Vec<char> = sql.chars().collect();
+    let mut out = Vec::new();
+    let mut i = skip_trivia(&cs, 0);
+    let mut depth = 0usize;
+    while i < cs.len() {
+        let c = cs[i];
+        if c == '\'' || c == '"' {
+            i = consume_quoted(&cs, i).1;
+        } else if c == '(' {
+            depth += 1;
+            i += 1;
+        } else if c == ')' {
+            depth = depth.saturating_sub(1);
+            i += 1;
+        } else if c.is_ascii_alphabetic() || c == '_' {
+            let st = i;
+            while i < cs.len() && (cs[i].is_ascii_alphanumeric() || cs[i] == '_') {
+                i += 1;
+            }
+            let w: String = cs[st..i].iter().collect::<String>().to_ascii_uppercase();
+            if depth == 0 && (w == "TO" || w == "FROM") {
+                let j = skip_trivia(&cs, i);
+                if j < cs.len() && cs[j] == '\'' {
+                    let (lit, end) = consume_quoted(&cs, j);
+                    out.push((lit, w == "TO"));
+                    i = end;
+                }
+            }
+        } else if (c == '-' && cs.get(i + 1) == Some(&'-')) || (c == '/' && cs.get(i + 1) == Some(&'*')) {
+            i = skip_trivia(&cs, i);
+        } else {
+            i += 1;
+        }
+    }
+    out
+}
+
+/// COPY paths go through the same allowlist as ATTACH (when roots are
+/// configured; see [`enforce_path_policy`]).
+pub fn enforce_copy_policy_with(sql: &str, roots: Option<&str>) -> Result<(), Fail> {
+    if roots.is_none() || leading_sql_token(sql).as_deref() != Some("COPY") {
+        return Ok(());
+    }
+    for (path, is_to) in copy_path_literals(sql) {
+        enforce_path_policy_with(&path, roots, is_to)?;
+    }
+    Ok(())
 }
 
 /// Pure core of the ATTACH allowlist: `roots` is `None` when the env is
@@ -570,7 +777,7 @@ pub fn dispatch(v: &Value) -> Result<Value, Fail> {
 fn exec(v: &Value) -> Result<Value, Fail> {
     match v.get("session").and_then(Value::as_str) {
         Some(name) => {
-            let map = sessions().lock().expect("session registry lock");
+            let map = sessions().lock().unwrap_or_else(PoisonError::into_inner);
             let db = map
                 .get(name)
                 .ok_or_else(|| duckdb_fail(format!("unknown or expired session `{name}`")))?;
@@ -666,21 +873,17 @@ fn exec_on(v: &Value, db: &GraphLawDuckDB) -> Result<Value, Fail> {
     if let Some(n) = v.get("chunk_rows") {
         let n = n
             .as_u64()
-            .ok_or_else(|| duckdb_fail("`chunk_rows` must be an unsigned integer"))?
-            as usize;
+            .ok_or_else(|| duckdb_fail("`chunk_rows` must be an unsigned integer"))?;
+        let n = usize::try_from(n).unwrap_or(usize::MAX);
         if n == 0 {
             return Err(duckdb_fail("`chunk_rows` must be at least 1"));
         }
         check_limit("duckdb_chunk_rows", n, MAX_CHUNK_ROWS)?;
     }
+    let envelope = max_rows_of(v)?;
+    precheck_cursor_slot(envelope)?;
     let receipt = db
-        .eval_ast_query_bounded(
-            query_ast,
-            &compiled,
-            subject_prefix,
-            vocab_prefix,
-            max_rows_of(v)?,
-        )
+        .eval_ast_query_bounded(query_ast, &compiled, subject_prefix, vocab_prefix, envelope)
         .map_err(map_eval_error)?;
     let mut rows: Vec<Vec<RdfTriple>> = Vec::new();
     for t in receipt.result_triples {
@@ -697,17 +900,24 @@ fn exec_on(v: &Value, db: &GraphLawDuckDB) -> Result<Value, Fail> {
     // Same receipt-IRI mint as `rules::builtins::builtin_eval_sql`:
     // `{subject_prefix}/receipt_{query_hash[0..16]}` — byte-identity court.
     let receipt_iri = format!("{}/receipt_{}", subject_prefix, &hex_hash[0..16]);
-    let id = cursor_id(&receipt.query_hash, rows.len());
-    cursors()
-        .lock()
-        .expect("cursor registry lock")
-        .insert(id.clone(), Cursor { rows, next: 0 });
+    // A 0-row result retains nothing: no cursor is minted (`cursor: null`).
+    let cursor = if rows.is_empty() {
+        None
+    } else {
+        let id = cursor_id(&receipt.query_hash, rows.len());
+        let mut map = cursors()
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner);
+        admit_cursor(&map, &id, rows.len())?;
+        map.insert(id.clone(), Cursor { rows, next: 0 });
+        Some(id)
+    };
     Ok(json!({
         "receipt": receipt_iri,
         "query_hash": hex_hash,
         "sql": receipt.sql_statement,
         "rows_emitted": rows_emitted,
-        "cursor": id,
+        "cursor": cursor,
         "more": more,
     }))
 }
@@ -829,8 +1039,8 @@ fn stream(v: &Value) -> Result<Value, Fail> {
         Some(n) => {
             let n = n
                 .as_u64()
-                .ok_or_else(|| duckdb_fail("`max_rows` must be an unsigned integer"))?
-                as usize;
+                .ok_or_else(|| duckdb_fail("`max_rows` must be an unsigned integer"))?;
+            let n = usize::try_from(n).unwrap_or(usize::MAX);
             if n == 0 {
                 return Err(duckdb_fail("`max_rows` must be at least 1"));
             }
@@ -838,7 +1048,7 @@ fn stream(v: &Value) -> Result<Value, Fail> {
             n
         }
     };
-    let mut map = cursors().lock().expect("cursor registry lock");
+    let mut map = cursors().lock().unwrap_or_else(PoisonError::into_inner);
     let Some(c) = map.get_mut(cursor) else {
         return Err(duckdb_fail(format!("unknown or expired cursor `{cursor}`")));
     };
@@ -849,24 +1059,32 @@ fn stream(v: &Value) -> Result<Value, Fail> {
     let mut nt = String::new();
     for row in &page {
         for t in row.iter() {
-            nt.push_str(&ntriples_line(t));
+            let line = ntriples_line(t);
+            let projected = nt.len() + line.len() + 1;
+            if projected > MAX_CHUNK_BYTES {
+                // Typed refusal (GAP-4), raised before the page grows past
+                // the cap; the cursor is untouched — retry smaller.
+                return Err(duckdb_limit(
+                    "duckdb_chunk_bytes",
+                    projected,
+                    MAX_CHUNK_BYTES,
+                ));
+            }
+            nt.push_str(&line);
             nt.push('\n');
         }
-    }
-    if nt.len() > MAX_CHUNK_BYTES {
-        // Typed refusal (GAP-4); the cursor is untouched — retry smaller.
-        return Err(duckdb_limit(
-            "duckdb_chunk_bytes",
-            nt.len(),
-            MAX_CHUNK_BYTES,
-        ));
     }
     c.next += page.len();
     let remaining = c.rows.len() - c.next;
     let more = remaining > 0;
+    let paged = page.len();
+    if !more {
+        // Drained: evict so the slot is freed (null-cursor protocol).
+        map.remove(cursor);
+    }
     Ok(json!({
         "nquads": nt,
-        "rows": page.len(),
+        "rows": paged,
         "cursor": if more { Some(cursor) } else { None },
         "more": more,
     }))
@@ -903,7 +1121,7 @@ fn open_session(v: &Value) -> Result<Value, Fail> {
     if name.is_empty() {
         return Err(duckdb_fail("`session` must be a non-empty string"));
     }
-    let mut map = sessions().lock().expect("session registry lock");
+    let mut map = sessions().lock().unwrap_or_else(PoisonError::into_inner);
     if map.contains_key(name) {
         return Err(duckdb_fail(format!(
             "session `{name}` already exists (close it before reopening)"
@@ -920,13 +1138,13 @@ fn close(v: &Value) -> Result<Value, Fail> {
     if let Some(cursor) = v.get("cursor").and_then(Value::as_str) {
         cursors()
             .lock()
-            .expect("cursor registry lock")
+            .unwrap_or_else(PoisonError::into_inner)
             .remove(cursor);
     }
     if let Some(session) = v.get("session").and_then(Value::as_str) {
         sessions()
             .lock()
-            .expect("session registry lock")
+            .unwrap_or_else(PoisonError::into_inner)
             .remove(session);
     }
     Ok(json!({}))
@@ -1009,10 +1227,7 @@ ex:C a sql:CreateStatement ;
         }));
         assert_eq!(out["ok"], serde_json::Value::Bool(true), "{out}");
         assert_eq!(out["rows_emitted"], 0, "{out}");
-        assert!(
-            out["cursor"].as_str().is_some_and(|c| !c.is_empty()),
-            "cursor minted: {out}"
-        );
+        assert!(out["cursor"].is_null(), "0-row result mints no cursor: {out}");
         assert_eq!(out["more"], serde_json::Value::Bool(false), "{out}");
         // Real readback: the CREATE actually ran on this connection — the
         // cursor's receipt SQL text is the CREATE statement.
@@ -1754,7 +1969,7 @@ ex:C a sql:CreateStatement ;
         }));
         assert_eq!(out["ok"], serde_json::Value::Bool(true), "{out}");
         assert_eq!(out["rows_emitted"], 0, "{out}");
-        assert!(out["cursor"].as_str().is_some(), "legacy cursor minted: {out}");
+        assert!(out["cursor"].is_null(), "0-row legacy exec mints no cursor: {out}");
         assert!(out["receipt"].as_str().unwrap_or("").starts_with("urn:row//receipt_"), "{out}");
     }
 }

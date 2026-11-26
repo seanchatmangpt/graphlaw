@@ -1,0 +1,399 @@
+# graphlaw-governance.ttl - the refusal, dialect, tier and authority-ceiling registers as data.
+#
+# Facts are restated from in-tree sources (read, not inferred):
+#   src/sql_ast/refusals.rs        REFUSAL-01/02/03/05 markers, RefusalCode, refusal_arm table
+#   src/tier.rs                    REFUSAL-04 marker, Tier, Dialect::tier
+#   src/dialect.rs, src/dialect/refusal.rs   Dialect, Engine, RefusalKind (9 arms)
+#   src/law.rs:111-141             Step::name, Step::required_ceiling
+#   src/registry/definitions.rs    RDF_DIALECTS / OTHER_DIALECTS wire order, aliases, LEASE_CEILINGS
+#   graphlaw_ex/lib/graphlaw_ex/   error.ex (10 public codes), error/class.ex (Splode class),
+#                                  refusal.ex (wire-code map, class, broken_term, doc),
+#                                  authority.ex (op floors), capability/dialect.ex (capability tier)
+#   docs/refusals.md               register text (append-only, never renumbered)
+#
+# Project namespace gl: is the only non-public namespace. No blank nodes anywhere in this file.
+# Shapes live in ontologies/shapes/graphlaw-governance.shapes.ttl.
+# This graph is the source; any Rust/Elixir/doc table is a projection of it, never hand-edited.
+
+@prefix gl: <https://graphlaw.dev/governance#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+<https://graphlaw.dev/governance> a owl:Ontology ;
+    rdfs:label "graphlaw governance registers" ;
+    dcterms:source "docs/refusals.md" , "src/sql_ast/refusals.rs" , "src/dialect/refusal.rs" ,
+        "src/tier.rs" , "src/law.rs" , "src/registry/definitions.rs" ,
+        "graphlaw_ex/lib/graphlaw_ex/refusal.ex" , "graphlaw_ex/lib/graphlaw_ex/error.ex" ,
+        "graphlaw_ex/lib/graphlaw_ex/authority.ex" .
+
+# ---------------------------------------------------------------- vocabulary
+
+gl:RefusalFamily a owl:Class ; rdfs:label "Refusal family (REFUSAL-nn)" .
+gl:RefusalArm a owl:Class ; rdfs:label "Refusal rendering arm (refusal_arm shape_id)" .
+gl:RefusalKind a owl:Class ; rdfs:label "Routing refusal kind (RefusalKind)" .
+gl:WireCode a owl:Class ; rdfs:label "Engine wire code (details.code / error.code)" .
+gl:PublicCode a owl:Class ; rdfs:label "Public Elixir error code (GraphlawEx.Error.codes/0)" .
+gl:SplodeClass a owl:Class ; rdfs:label "Splode/Ash error class" .
+gl:RefusalClass a owl:Class ; rdfs:label "Refusal taxonomy class (GraphlawEx.Refusal.classes/0)" .
+gl:BrokenTerm a owl:Class ; rdfs:label "Chatman failure-taxonomy term" .
+gl:Dialect a owl:Class ; rdfs:label "Dialect (14 wire dialects)" .
+gl:Engine a owl:Class ; rdfs:label "Engine owning a dialect" .
+gl:CapabilityTier a owl:Class ; rdfs:label "Capability tier (GraphlawEx.Capability.Dialect.tier/1)" .
+gl:KernelTier a owl:Class ; rdfs:label "Kernel tier (src/tier.rs Tier)" .
+gl:Ceiling a owl:Class ; rdfs:label "Lease ceiling" .
+gl:LawStep a owl:Class ; rdfs:label "Law step (src/law.rs Step)" .
+gl:AdmitStep a owl:Class ; rdfs:subClassOf gl:LawStep ; rdfs:label "Gate step: observes" .
+gl:PlanStep a owl:Class ; rdfs:subClassOf gl:LawStep ; rdfs:label "Plan step: selects" .
+gl:DeriveStep a owl:Class ; rdfs:subClassOf gl:LawStep ; rdfs:label "Derivation step: constructs" .
+gl:ProbeStep a owl:Class ; rdfs:subClassOf gl:LawStep ; rdfs:label "Test-only probe step" .
+gl:OpFloor a owl:Class ; rdfs:label "Per-op minimum ceiling (Authority.op_ceiling/1)" .
+
+gl:marker a owl:DatatypeProperty ; rdfs:domain gl:RefusalFamily ; rdfs:range xsd:string .
+gl:ordinal a owl:DatatypeProperty ; rdfs:domain gl:RefusalFamily ; rdfs:range xsd:integer .
+gl:familyName a owl:DatatypeProperty ; rdfs:domain gl:RefusalFamily ; rdfs:range xsd:string .
+gl:arm a owl:DatatypeProperty ; rdfs:domain gl:RefusalArm ; rdfs:range xsd:integer .
+gl:family a owl:ObjectProperty ; rdfs:domain gl:RefusalArm ; rdfs:range gl:RefusalFamily .
+gl:rustConst a owl:DatatypeProperty ; rdfs:range xsd:string .
+gl:message a owl:DatatypeProperty ; rdfs:range xsd:string .
+gl:recovery a owl:DatatypeProperty ; rdfs:range xsd:string .
+gl:appendedIn a owl:DatatypeProperty ; rdfs:range xsd:string ;
+    rdfs:comment "Release window the entry was appended; baseline = present at register creation." .
+gl:appendOnly a owl:DatatypeProperty ; rdfs:range xsd:boolean ;
+    rdfs:comment "Always true: codes are append-only, never renumbered (docs/refusals.md)." .
+gl:retryable a owl:DatatypeProperty ; rdfs:domain gl:RefusalKind ; rdfs:range xsd:boolean .
+gl:kindName a owl:DatatypeProperty ; rdfs:domain gl:RefusalKind ; rdfs:range xsd:string .
+gl:wireName a owl:DatatypeProperty ; rdfs:range xsd:string .
+gl:wrapsTo a owl:ObjectProperty ; rdfs:domain gl:WireCode ; rdfs:range gl:PublicCode .
+gl:taxClass a owl:ObjectProperty ; rdfs:domain gl:WireCode ; rdfs:range gl:RefusalClass .
+gl:brokenTerm a owl:ObjectProperty ; rdfs:domain gl:WireCode ; rdfs:range gl:BrokenTerm .
+gl:doc a owl:DatatypeProperty ; rdfs:range xsd:string .
+gl:liftKey a owl:DatatypeProperty ; rdfs:domain gl:WireCode ; rdfs:range xsd:string .
+gl:layer a owl:DatatypeProperty ; rdfs:range xsd:string .
+gl:elixirAtom a owl:DatatypeProperty ; rdfs:range xsd:string .
+gl:splodeClass a owl:ObjectProperty ; rdfs:domain gl:PublicCode ; rdfs:range gl:SplodeClass .
+gl:responseName a owl:DatatypeProperty ; rdfs:domain gl:Dialect ; rdfs:range xsd:string .
+gl:alias a owl:DatatypeProperty ; rdfs:domain gl:Dialect ; rdfs:range xsd:string .
+gl:mediaType a owl:DatatypeProperty ; rdfs:domain gl:Dialect ; rdfs:range xsd:string .
+gl:order a owl:DatatypeProperty ; rdfs:range xsd:integer .
+gl:tier a owl:ObjectProperty ; rdfs:domain gl:Dialect ; rdfs:range gl:CapabilityTier .
+gl:kernelTier a owl:ObjectProperty ; rdfs:domain gl:Dialect ; rdfs:range gl:KernelTier .
+gl:engine a owl:ObjectProperty ; rdfs:domain gl:Dialect ; rdfs:range gl:Engine .
+gl:rank a owl:DatatypeProperty ; rdfs:domain gl:Ceiling ; rdfs:range xsd:integer .
+gl:ceilingName a owl:DatatypeProperty ; rdfs:domain gl:Ceiling ; rdfs:range xsd:string .
+gl:stepName a owl:DatatypeProperty ; rdfs:domain gl:LawStep ; rdfs:range xsd:string .
+gl:rustVariant a owl:DatatypeProperty ; rdfs:range xsd:string .
+gl:capability a owl:DatatypeProperty ; rdfs:domain gl:LawStep ; rdfs:range xsd:string .
+gl:requiredCeiling a owl:ObjectProperty ; rdfs:domain gl:LawStep ; rdfs:range gl:Ceiling .
+gl:opName a owl:DatatypeProperty ; rdfs:domain gl:OpFloor ; rdfs:range xsd:string .
+gl:floor a owl:ObjectProperty ; rdfs:domain gl:OpFloor ; rdfs:range gl:Ceiling .
+gl:hidden a owl:DatatypeProperty ; rdfs:domain gl:OpFloor ; rdfs:range xsd:boolean .
+gl:hiddenReason a owl:DatatypeProperty ; rdfs:domain gl:OpFloor ; rdfs:range xsd:string .
+gl:abiOpNumber a owl:DatatypeProperty ; rdfs:domain gl:OpFloor ; rdfs:range xsd:integer .
+gl:Limit a owl:Class ; rdfs:label "ABI resource limit; value must equal the Rust const (tests/abi_manifest_court.rs)" .
+gl:limitName a owl:DatatypeProperty ; rdfs:domain gl:Limit ; rdfs:range xsd:string .
+gl:limitValue a owl:DatatypeProperty ; rdfs:domain gl:Limit ; rdfs:range xsd:integer .
+
+# ---------------------------------------------------------------- ceilings (observe < select < construct)
+
+gl:ceiling-observe a gl:Ceiling ; gl:ceilingName "observe" ; gl:rank 0 ; rdfs:label "observe" .
+gl:ceiling-select a gl:Ceiling ; gl:ceilingName "select" ; gl:rank 1 ; rdfs:label "select" .
+gl:ceiling-construct a gl:Ceiling ; gl:ceilingName "construct" ; gl:rank 2 ; rdfs:label "construct" .
+
+# ---------------------------------------------------------------- taxonomy individuals
+
+gl:class-blocked_resource a gl:RefusalClass ; rdfs:label "blocked_resource" .
+gl:class-refused_structure a gl:RefusalClass ; rdfs:label "refused_structure" .
+gl:class-refused_identity a gl:RefusalClass ; rdfs:label "refused_identity" .
+gl:class-unsupported a gl:RefusalClass ; rdfs:label "unsupported" .
+
+gl:term-mu_on_O a gl:BrokenTerm ; rdfs:label "mu_on_O" .
+gl:term-R_missing_consequence a gl:BrokenTerm ; rdfs:label "R_missing_consequence" .
+gl:term-R_missing_identity a gl:BrokenTerm ; rdfs:label "R_missing_identity" .
+gl:term-R_missing_standing a gl:BrokenTerm ; rdfs:label "R_missing_standing" .
+
+gl:splode-invalid a gl:SplodeClass ; rdfs:label "invalid" .
+gl:splode-forbidden a gl:SplodeClass ; rdfs:label "forbidden" .
+gl:splode-unknown a gl:SplodeClass ; rdfs:label "unknown" .
+
+# ---------------------------------------------------------------- refusal families
+
+gl:family-REFUSAL-01 a gl:RefusalFamily ; gl:ordinal 1 ; gl:familyName "MalformedAstRefusal" ;
+    gl:marker "[REFUSAL-01] MalformedAstRefusal:" ; gl:rustConst "REFUSAL_01_MALFORMED_AST" ;
+    gl:appendedIn "baseline" ; gl:appendOnly true ; rdfs:label "REFUSAL-01" .
+gl:family-REFUSAL-02 a gl:RefusalFamily ; gl:ordinal 2 ; gl:familyName "UnimplementedStatementRefusal" ;
+    gl:marker "[REFUSAL-02] UnimplementedStatementRefusal:" ; gl:rustConst "REFUSAL_02_UNIMPLEMENTED" ;
+    gl:appendedIn "baseline" ; gl:appendOnly true ; rdfs:label "REFUSAL-02" .
+gl:family-REFUSAL-03 a gl:RefusalFamily ; gl:ordinal 3 ; gl:familyName "ScopeIntegrityRefusal" ;
+    gl:marker "[REFUSAL-03] ScopeIntegrityRefusal:" ; gl:rustConst "REFUSAL_03_SCOPE_INTEGRITY" ;
+    gl:appendedIn "baseline" ; gl:appendOnly true ; rdfs:label "REFUSAL-03" .
+gl:family-REFUSAL-04 a gl:RefusalFamily ; gl:ordinal 4 ; gl:familyName "CapabilityRefusal" ;
+    gl:marker "REFUSAL-04" ; gl:rustConst "tier::REFUSAL_04_CAPABILITY_REFUSAL" ;
+    gl:appendedIn "baseline" ; gl:appendOnly true ; rdfs:label "REFUSAL-04" ;
+    rdfs:comment "Carried by RefusalCode::Capability; no rendering arms (Display emits the bare marker)." .
+gl:family-REFUSAL-05 a gl:RefusalFamily ; gl:ordinal 5 ; gl:familyName "UnboundedMutationRefusal" ;
+    gl:marker "[REFUSAL-05] UnboundedMutationRefusal:" ; gl:rustConst "REFUSAL_05_UNBOUNDED_MUTATION" ;
+    gl:appendedIn "v26.10.22" ; gl:appendOnly true ; rdfs:label "REFUSAL-05" .
+
+# ---------------------------------------------------------------- refusal arms
+# Arm numbers are per-family namespaces (REFUSAL-01 and REFUSAL-03 both use small integers).
+# Arms 0 (UNSUPPORTED_GENERIC), 255 (LEGACY_MESSAGE, shared by 01 and 03) and NO_SQL_TEMPLATE (2, no marker)
+# are internal carriers without a stable [REFUSAL-nn] marker and are not registered here.
+
+# --- REFUSAL-01 (MalformedAst)
+gl:arm-01-1 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 1 ; gl:rustConst "OPERATOR_TOKEN" ; gl:message "operator token is not in the section 4 enum (= != < <= > >= AND OR + - * / % LIKE ILIKE)" ; gl:recovery "Use a token from the section 4 operator enum." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-2 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 2 ; gl:rustConst "SCOPE_INDIVIDUAL" ; gl:message "value is not a sql:Scope individual (sql:ViewScope | sql:ProcessScope)" ; gl:recovery "Use sql:ViewScope or sql:ProcessScope." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-3 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 3 ; gl:rustConst "CANONICALIZATION" ; gl:message "admitted AST graph canonicalization refused" ; gl:recovery "Fix the AST graph so it canonicalizes." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-4 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 4 ; gl:rustConst "DUP_CLAUSE_PREDICATE" ; gl:message "clause predicate appears more than once; clause predicates are single-cardinality" ; gl:recovery "Keep one value per clause predicate." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-5 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 5 ; gl:rustConst "SCOPE_CARDINALITY" ; gl:message "node carries more than one sql:scope value; scope is single-cardinality" ; gl:recovery "Keep one sql:scope value." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-6 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 6 ; gl:rustConst "SCOPE_WRONG_NODE" ; gl:message "sql:scope is only defined on column or output-expression nodes" ; gl:recovery "Move sql:scope to a column or output-expression node." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-7 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 7 ; gl:rustConst "DISCRIMINATORS" ; gl:message "node carries more than one expression discriminator; exactly one is allowed" ; gl:recovery "Keep exactly one expression discriminator." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-8 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 8 ; gl:rustConst "EXPRESSION_WRAPPER" ; gl:message "bare sql:expression wrapper must be the node's only term" ; gl:recovery "Remove the other discriminators or the wrapper." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-9 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 9 ; gl:rustConst "ALIAS_IN_AGG_ARG" ; gl:message "aliased expression inside an aggregate argument is not serializable SQL" ; gl:recovery "Drop the alias inside the aggregate argument." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-10 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 10 ; gl:rustConst "DUAL_LEFT_OPERAND" ; gl:message "binary expression carries both sql:leftOperand and sql:left" ; gl:recovery "Use one left-operand predicate name." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-11 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 11 ; gl:rustConst "DUAL_RIGHT_OPERAND" ; gl:message "binary expression carries both sql:rightOperand and sql:right" ; gl:recovery "Use one right-operand predicate name." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-12 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 12 ; gl:rustConst "DUAL_OPERATOR_FORMS" ; gl:message "sql:operator carried as both a string token and an IRI" ; gl:recovery "Use exactly one operator form." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-13 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 13 ; gl:rustConst "SQL_ALIAS_IN_AGG_ARG" ; gl:message "sql:alias inside an aggregate argument is not serializable SQL" ; gl:recovery "Drop sql:alias inside the aggregate argument." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-14 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 14 ; gl:rustConst "SCOPE_ON_TABLE_REF" ; gl:message "sql:scope on a table-reference node is a term out of place" ; gl:recovery "Remove sql:scope from sql:fromTable/sql:joinTable references." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-15 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 15 ; gl:rustConst "DUAL_FROM" ; gl:message "statement carries both sql:from and sql:fromTable" ; gl:recovery "Keep exactly one data-source clause." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-16 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 16 ; gl:rustConst "EMPTY_FROM" ; gl:message "sql:from list is empty" ; gl:recovery "Give sql:from at least one source." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-17 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 17 ; gl:rustConst "NO_FROM" ; gl:message "statement has no sql:from (or legacy sql:fromTable) clause" ; gl:recovery "Add sql:from or sql:fromTable." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-18 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 18 ; gl:rustConst "DUAL_SELECT" ; gl:message "SelectStatement carries both sql:selectList and sql:select" ; gl:recovery "Keep exactly one projection list." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-19 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 19 ; gl:rustConst "NO_PROJECTION" ; gl:message "SelectStatement has no projection list (sql:select or sql:selectList)" ; gl:recovery "Add a projection list." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-20 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 20 ; gl:rustConst "EMPTY_PROJECTION" ; gl:message "SelectStatement has an empty projection list; SELECT * is not implied by rdf:nil" ; gl:recovery "List at least one projection item." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-21 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 21 ; gl:rustConst "DUAL_WHERE" ; gl:message "SelectStatement carries both sql:whereClause and sql:where" ; gl:recovery "Keep exactly one filter clause." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-22 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 22 ; gl:rustConst "DUAL_HAVING" ; gl:message "SelectStatement carries both sql:having and sql:havingClause" ; gl:recovery "Keep exactly one filter clause." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-23 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 23 ; gl:rustConst "DIRECTION_LEX" ; gl:message "sql:direction is not ASC or DESC" ; gl:recovery "Use ASC or DESC." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-24 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 24 ; gl:rustConst "DIRECTION_IRI" ; gl:message "sql:direction must be an ASC or DESC string literal, not an IRI" ; gl:recovery "Use a string literal." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-25 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 25 ; gl:rustConst "LIMIT_MALFORMED" ; gl:message "sql:limit is not a valid non-negative integer" ; gl:recovery "Use a non-negative xsd:integer." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-26 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 26 ; gl:rustConst "LIMIT_DUP" ; gl:message "sql:limit appears more than once" ; gl:recovery "Keep one sql:limit." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-27 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 27 ; gl:rustConst "LIMIT_NOT_INT" ; gl:message "sql:limit must be an xsd:integer literal" ; gl:recovery "Type the literal xsd:integer." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-28 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 28 ; gl:rustConst "OFFSET_MALFORMED" ; gl:message "sql:offset is not a valid non-negative integer" ; gl:recovery "Use a non-negative xsd:integer." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-29 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 29 ; gl:rustConst "OFFSET_DUP" ; gl:message "sql:offset appears more than once" ; gl:recovery "Keep one sql:offset." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-30 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 30 ; gl:rustConst "OFFSET_NOT_INT" ; gl:message "sql:offset must be an xsd:integer literal" ; gl:recovery "Type the literal xsd:integer." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-31 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 31 ; gl:rustConst "INDEX_MISSING" ; gl:message "statement is missing required sql:statementIndex" ; gl:recovery "Add sql:statementIndex." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-32 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 32 ; gl:rustConst "INDEX_DUP" ; gl:message "statement carries more than one sql:statementIndex; maxCount is 1" ; gl:recovery "Keep one sql:statementIndex." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-33 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 33 ; gl:rustConst "INDEX_NOT_INT" ; gl:message "sql:statementIndex is not an xsd:integer literal" ; gl:recovery "Use an xsd:integer literal." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-34 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 34 ; gl:rustConst "INDEX_BAD_DTYPE" ; gl:message "sql:statementIndex has a non-integer datatype" ; gl:recovery "Use datatype xsd:integer." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-35 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 35 ; gl:rustConst "INDEX_NEGATIVE" ; gl:message "sql:statementIndex is not a non-negative xsd:integer" ; gl:recovery "Use a non-negative index." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-36 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 36 ; gl:rustConst "UNKNOWN_STATEMENT_PREDICATE" ; gl:message "statement carries an unknown sql: predicate; the predicate set is a closed enum" ; gl:recovery "Use a predicate from the closed sql: set." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-01-37 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 37 ; gl:rustConst "JOIN_TYPE_IRI" ; gl:message "sql:joinType IRI is neither sql:InnerJoin nor sql:LeftJoin; never silently downgraded to Inner" ; gl:recovery "Use sql:InnerJoin or sql:LeftJoin." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-39 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 39 ; gl:rustConst "MIXED_DOCUMENT_ROOTS" ; gl:message "document carries more than one top-level root, or a bare statement plus a sequence" ; gl:recovery "Emit one root per document, or wrap members in one rdf:List sequence." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-40 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 40 ; gl:rustConst "INDEX_SEQUENCE_DISORDER" ; gl:message "sql:statementIndex cross-check failed along the sequence spine" ; gl:recovery "Renumber so indices ascend strictly from 0 with no gaps or duplicates." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-41 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 41 ; gl:rustConst "SEQUENCE_EMPTY" ; gl:message "sql:StatementSequence has an empty sql:statements list" ; gl:recovery "Give the sequence at least one member." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-42 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 42 ; gl:rustConst "WINDOW_FN_POSITION" ; gl:message "window function under a predicate position (WHERE / JOIN ON / GROUP BY / HAVING)" ; gl:recovery "Move the window expression to the projection list, ORDER BY or QUALIFY." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-43 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 43 ; gl:rustConst "FRAME_UNIT" ; gl:message "sql:frameUnit is not ROWS or RANGE" ; gl:recovery "Use ROWS or RANGE." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-44 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 44 ; gl:rustConst "FRAME_BOUND" ; gl:message "frame bound is not CURRENT ROW, UNBOUNDED PRECEDING/FOLLOWING, or <n> PRECEDING/FOLLOWING" ; gl:recovery "Use one of the five admitted bound forms." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-45 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 45 ; gl:rustConst "QUALIFY_EXPR" ; gl:message "sql:qualify fails to extract as one well-formed expression" ; gl:recovery "Carry one expression on the QUALIFY clause." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-46 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 46 ; gl:rustConst "ATOMIC_LITERAL" ; gl:message "sql:atomic literal is not an xsd:boolean true/false lexical" ; gl:recovery "Write sql:atomic true or false with datatype xsd:boolean." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-47 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 47 ; gl:rustConst "CTE_NO_QUERY" ; gl:message "sql:cte carries no sql:cteQuery; rendered SQL would be 'name AS ()'" ; gl:recovery "Attach a nested sql:SelectStatement via sql:cteQuery." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-48 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 48 ; gl:rustConst "COMPOSITE_DEPTH" ; gl:message "composite literal/accessor nesting exceeds the depth cap of 64" ; gl:recovery "Flatten the composite." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-49 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 49 ; gl:rustConst "COMPOSITE_MEMBER" ; gl:message "struct literal field key fails ^[a-zA-Z_][a-zA-Z0-9_]*$ or a required composite member is missing" ; gl:recovery "Use a strict-identifier key; attach the required member predicate." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-50 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 50 ; gl:rustConst "STAR_MODIFIER_POSITION" ; gl:message "star/COLUMNS vocabulary outside the projection list" ; gl:recovery "Place the star term in the sql:selectList projection-item position." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-51 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 51 ; gl:rustConst "COLUMNS_LAMBDA" ; gl:message "COLUMNS lambda form is refused typed until specified" ; gl:recovery "Use sql:columnsPattern with one quoted pattern string." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-52 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 52 ; gl:rustConst "COLUMNS_PATTERN" ; gl:message "COLUMNS projection carries no non-empty string sql:columnsPattern" ; gl:recovery "Provide one quoted pattern string." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+gl:arm-01-53 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 53 ; gl:rustConst "SET_OP_NO_RIGHT" ; gl:message "set-operation statement carries no sql:setRight" ; gl:recovery "Attach a nested sql:SelectStatement via sql:setRight." ; gl:appendedIn "v26.10.23" ; gl:appendOnly true .
+gl:arm-01-54 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 54 ; gl:rustConst "SET_OP_KIND_TOKEN" ; gl:message "sql:setOperator is not UNION, INTERSECT or EXCEPT" ; gl:recovery "Use one of the three admitted tokens." ; gl:appendedIn "v26.10.23" ; gl:appendOnly true .
+gl:arm-01-55 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 55 ; gl:rustConst "SET_OP_FLAG_LEX" ; gl:message "sql:setAll / sql:byName literal is not an xsd:boolean true/false lexical" ; gl:recovery "Write true or false with datatype xsd:boolean." ; gl:appendedIn "v26.10.23" ; gl:appendOnly true .
+gl:arm-01-56 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 56 ; gl:rustConst "SET_OP_BY_NAME_KIND" ; gl:message "sql:byName true beside a non-UNION sql:setOperator" ; gl:recovery "Drop sql:byName or use UNION." ; gl:appendedIn "v26.10.23" ; gl:appendOnly true .
+gl:arm-01-100 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 100 ; gl:rustConst "SHACL_DEPTH" ; gl:message "SHACL nesting depth exceeded (observed, max)" ; gl:recovery "Reduce nesting below the cap." ; gl:appendedIn "baseline" ; gl:appendOnly true ; rdfs:comment "Internal arm: no stable marker emitted in the message." .
+gl:arm-01-101 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 101 ; gl:rustConst "PARSE_DATASET" ; gl:message "Failed to parse AST dataset" ; gl:recovery "Supply a well-formed Turtle AST document." ; gl:appendedIn "baseline" ; gl:appendOnly true ; rdfs:comment "Internal arm: no stable marker emitted in the message." .
+gl:arm-01-102 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 102 ; gl:rustConst "PARSE_SHAPES" ; gl:message "Failed to parse SHACL shapes" ; gl:recovery "Repair the shapes graph." ; gl:appendedIn "baseline" ; gl:appendOnly true ; rdfs:comment "Internal arm: no stable marker emitted in the message." .
+gl:arm-01-103 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 103 ; gl:rustConst "SHACL_ENGINE" ; gl:message "Validation engine failure" ; gl:recovery "Report the engine failure; the AST was not judged." ; gl:appendedIn "baseline" ; gl:appendOnly true ; rdfs:comment "Internal arm: no stable marker emitted in the message." .
+gl:arm-01-104 a gl:RefusalArm ; gl:family gl:family-REFUSAL-01 ; gl:arm 104 ; gl:rustConst "SHACL_VIOLATIONS" ; gl:message "Node <focus>: first violation message (+N more violations)" ; gl:recovery "Fix each SHACL result against ontologies/sql-ast.ttl." ; gl:appendedIn "baseline" ; gl:appendOnly true ; rdfs:comment "Internal arm: no stable marker emitted in the message." .
+
+# --- REFUSAL-02 (UnimplementedStatement)
+gl:arm-02-1 a gl:RefusalArm ; gl:family gl:family-REFUSAL-02 ; gl:arm 1 ; gl:rustConst "UNIMPLEMENTED_STATEMENT" ; gl:message "statement kind is recognized but not implemented by this DuckDB build" ; gl:recovery "Rewrite with admitted statement kinds, or implement the evaluation path behind a receipted ticket." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+
+# --- REFUSAL-03 (ScopeIntegrity)
+gl:arm-03-1 a gl:RefusalArm ; gl:family gl:family-REFUSAL-03 ; gl:arm 1 ; gl:rustConst "AGG_IN_POSITION" ; gl:message "aggregate is not allowed in this syntactic position (WHERE, JOIN, GROUP BY are process-only)" ; gl:recovery "Move the aggregate into SELECT or HAVING." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-03-2 a gl:RefusalArm ; gl:family gl:family-REFUSAL-03 ; gl:arm 2 ; gl:rustConst "ALIASED_AGG_ARG" ; gl:message "aliased aggregate argument is not serializable SQL" ; gl:recovery "Drop the alias on the aggregate argument." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-03-3 a gl:RefusalArm ; gl:family gl:family-REFUSAL-03 ; gl:arm 3 ; gl:rustConst "AGG_IN_PREDICATE" ; gl:message "aggregate in a WHERE/JOIN/GROUP BY position is refused" ; gl:recovery "Re-scope the expression." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-03-4 a gl:RefusalArm ; gl:family gl:family-REFUSAL-03 ; gl:arm 4 ; gl:rustConst "PROCESS_SCOPE_IN_SELECT" ; gl:message "sql:ProcessScope column sits in the projection list" ; gl:recovery "Keep ProcessScope columns out of the projection." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-03-5 a gl:RefusalArm ; gl:family gl:family-REFUSAL-03 ; gl:arm 5 ; gl:rustConst "VIEW_SCOPE_IN_PREDICATE" ; gl:message "sql:ViewScope column sits inside a predicate (WHERE/JOIN/HAVING)" ; gl:recovery "Keep ViewScope columns out of predicate, GROUP BY and HAVING positions." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-03-6 a gl:RefusalArm ; gl:family gl:family-REFUSAL-03 ; gl:arm 6 ; gl:rustConst "SCOPE_IN_PRED_AGG_ARG" ; gl:message "explicit scope marker inside an aggregate argument beneath a predicate-rooted aggregate" ; gl:recovery "Drop the scope annotation on the aggregate argument." ; gl:appendedIn "baseline" ; gl:appendOnly true .
+gl:arm-03-7 a gl:RefusalArm ; gl:family gl:family-REFUSAL-03 ; gl:arm 7 ; gl:rustConst "MERGE_ON_NO_TARGET_COLUMN" ; gl:message "sql:mergeOn references no target-qualified column; WHEN MATCHED fan-out is unbounded" ; gl:recovery "Qualify the ON condition to at least one target column." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+
+# --- REFUSAL-05 (UnboundedMutation)
+gl:arm-05-38 a gl:RefusalArm ; gl:family gl:family-REFUSAL-05 ; gl:arm 38 ; gl:rustConst "UNBOUNDED_MUTATION" ; gl:message "UPDATE/DELETE carries neither sql:whereColumn nor sql:whereValue; compiler requires BOTH" ; gl:recovery "Add sql:whereColumn and sql:whereValue bounding the mutation." ; gl:appendedIn "v26.10.22" ; gl:appendOnly true .
+
+# ---------------------------------------------------------------- RefusalKind (src/dialect/refusal.rs, 9 arms)
+# retryable mirrors the doctest in src/dialect/refusal.rs (ResourceLimit => false, all others true);
+# no other in-tree source defines retry semantics.
+
+gl:kind-NotSemanticContent a gl:RefusalKind ; gl:kindName "NotSemanticContent" ; gl:order 1 ; gl:retryable true ; gl:appendOnly true ; gl:doc "Empty input, an HTML page, or an HTTP error body." .
+gl:kind-Ambiguous a gl:RefusalKind ; gl:kindName "Ambiguous" ; gl:order 2 ; gl:retryable true ; gl:appendOnly true ; gl:doc "Routing cannot tell two dialects apart without a hint." .
+gl:kind-EngineRejected a gl:RefusalKind ; gl:kindName "EngineRejected" ; gl:order 3 ; gl:retryable true ; gl:appendOnly true ; gl:doc "The owning engine rejected the document." .
+gl:kind-Unsupported a gl:RefusalKind ; gl:kindName "Unsupported" ; gl:order 4 ; gl:retryable true ; gl:appendOnly true ; gl:doc "The document is valid but cannot be used in this operation." .
+gl:kind-ResourceLimit a gl:RefusalKind ; gl:kindName "ResourceLimit" ; gl:order 5 ; gl:retryable false ; gl:appendOnly true ; gl:doc "The request exceeded a documented resource cap." .
+gl:kind-TierMismatch a gl:RefusalKind ; gl:kindName "TierMismatch" ; gl:order 6 ; gl:retryable true ; gl:appendOnly true ; gl:doc "The document belongs to the other semantic tier (R04), e.g. N3 logic given to an RDF parser." .
+gl:kind-DuckDb a gl:RefusalKind ; gl:kindName "DuckDb" ; gl:order 7 ; gl:retryable true ; gl:appendOnly true ; gl:doc "The embedded DuckDB substrate failed or the request misused it; never traps." .
+gl:kind-BareSql a gl:RefusalKind ; gl:kindName "BareSql" ; gl:order 8 ; gl:retryable true ; gl:appendOnly true ; gl:doc "SNIFF-01: the document is bare SQL with none of the SPARQL markers." .
+gl:kind-Fuse a gl:RefusalKind ; gl:kindName "Fuse" ; gl:order 9 ; gl:retryable true ; gl:appendOnly true ; gl:doc "An N3 inference fuse ({ premise } => false) became provable mid-fixpoint." .
+
+# ---------------------------------------------------------------- public codes (GraphlawEx.Error.codes/0, Error.Class.table/0)
+
+gl:public-ARTIFACT_INTEGRITY a gl:PublicCode ; gl:elixirAtom "REFUSED_ARTIFACT_INTEGRITY" ; gl:order 1 ; gl:splodeClass gl:splode-invalid .
+gl:public-INVALID_INPUT a gl:PublicCode ; gl:elixirAtom "REFUSED_INVALID_INPUT" ; gl:order 2 ; gl:splodeClass gl:splode-invalid .
+gl:public-AMBIGUOUS_DIALECT a gl:PublicCode ; gl:elixirAtom "REFUSED_AMBIGUOUS_DIALECT" ; gl:order 3 ; gl:splodeClass gl:splode-invalid .
+gl:public-UNSUPPORTED_SPARQL_FEATURE a gl:PublicCode ; gl:elixirAtom "REFUSED_UNSUPPORTED_SPARQL_FEATURE" ; gl:order 4 ; gl:splodeClass gl:splode-invalid .
+gl:public-RESOURCE_BOUND a gl:PublicCode ; gl:elixirAtom "REFUSED_RESOURCE_BOUND" ; gl:order 5 ; gl:splodeClass gl:splode-invalid .
+gl:public-MEMORY_LIMIT_EXCEEDED a gl:PublicCode ; gl:elixirAtom "REFUSED_MEMORY_LIMIT_EXCEEDED" ; gl:order 6 ; gl:splodeClass gl:splode-unknown .
+gl:public-QUERY_TIMEOUT a gl:PublicCode ; gl:elixirAtom "REFUSED_QUERY_TIMEOUT" ; gl:order 7 ; gl:splodeClass gl:splode-unknown .
+gl:public-WASM_TRAP a gl:PublicCode ; gl:elixirAtom "REFUSED_WASM_TRAP" ; gl:order 8 ; gl:splodeClass gl:splode-unknown .
+gl:public-RAW_SQL_FORBIDDEN a gl:PublicCode ; gl:elixirAtom "REFUSED_RAW_SQL_FORBIDDEN" ; gl:order 9 ; gl:splodeClass gl:splode-forbidden .
+gl:public-LEASE_REQUIRED a gl:PublicCode ; gl:elixirAtom "REFUSED_LEASE_REQUIRED" ; gl:order 10 ; gl:splodeClass gl:splode-forbidden .
+
+# ---------------------------------------------------------------- wire codes (Refusal @engine_codes + base_code/1)
+# wrapsTo is the table result of GraphlawEx.Error.code_for/1 on the Refusal code; Error.map_code/4 may
+# refine it by hint (ambiguous, raw-sql, unsupported sparql, memory) at run time.
+# layer "engine" = emitted by the Rust kernel; liftKey = fields lifted into Refusal.details.
+
+gl:wire-Refused a gl:WireCode ; gl:wireName "Refused" ; gl:elixirAtom "engine_refused" ; gl:order 1 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-INVALID_INPUT ; gl:taxClass gl:class-unsupported ; gl:brokenTerm gl:term-R_missing_standing ;
+    gl:appendOnly true ; gl:doc "The engine refused without a more specific known code." .
+gl:wire-ResourceLimit a gl:WireCode ; gl:wireName "ResourceLimit" ; gl:elixirAtom "resource_limit" ; gl:order 2 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-RESOURCE_BOUND ; gl:taxClass gl:class-blocked_resource ; gl:brokenTerm gl:term-R_missing_consequence ;
+    gl:appendOnly true ; gl:doc "A request or response exceeded a size cap, or the engine hit a resource limit, before it could decide." .
+gl:wire-PlanRefused a gl:WireCode ; gl:wireName "PlanRefused" ; gl:elixirAtom "plan_refused" ; gl:order 3 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-INVALID_INPUT ; gl:taxClass gl:class-refused_structure ; gl:brokenTerm gl:term-mu_on_O ;
+    gl:appendOnly true ; gl:doc "The engine refused the plan step." .
+gl:wire-ReceiptRequired a gl:WireCode ; gl:wireName "ReceiptRequired" ; gl:elixirAtom "receipt_required" ; gl:order 4 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-LEASE_REQUIRED ; gl:taxClass gl:class-refused_identity ; gl:brokenTerm gl:term-R_missing_identity ;
+    gl:appendOnly true ; gl:doc "The engine required a receipt the caller did not supply." .
+gl:wire-ReceiptRefused a gl:WireCode ; gl:wireName "ReceiptRefused" ; gl:elixirAtom "receipt_refused" ; gl:order 5 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-ARTIFACT_INTEGRITY ; gl:taxClass gl:class-refused_identity ; gl:brokenTerm gl:term-R_missing_identity ;
+    gl:liftKey "step" , "reason" ;
+    gl:appendOnly true ; gl:doc "The engine refused to mint or accept a receipt; the admission has no identity anchor." .
+gl:wire-LeaseRefused a gl:WireCode ; gl:wireName "LeaseRefused" ; gl:elixirAtom "lease_refused" ; gl:order 6 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-LEASE_REQUIRED ; gl:taxClass gl:class-refused_identity ; gl:brokenTerm gl:term-R_missing_standing ;
+    gl:liftKey "reason" , "lease_id" , "step" ;
+    gl:appendOnly true ; gl:doc "The engine refused the lease; the caller holds no standing for the operation." .
+gl:wire-NotAdmitted a gl:WireCode ; gl:wireName "NotAdmitted" ; gl:elixirAtom "not_admitted" ; gl:order 7 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-INVALID_INPUT ; gl:taxClass gl:class-refused_structure ; gl:brokenTerm gl:term-mu_on_O ;
+    gl:appendOnly true ; gl:doc "The engine did not admit the law chain." .
+gl:wire-UnverifiedLeaseRefused a gl:WireCode ; gl:wireName "UnverifiedLeaseRefused" ; gl:elixirAtom "unverified_lease_refused" ; gl:order 8 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-LEASE_REQUIRED ; gl:taxClass gl:class-refused_structure ; gl:brokenTerm gl:term-mu_on_O ;
+    gl:liftKey "reason" , "lease_id" , "step" ;
+    gl:appendOnly true ; gl:doc "The lease could not be verified against the admitted structure, so the operation was refused." .
+gl:wire-PolicyRefused a gl:WireCode ; gl:wireName "PolicyRefused" ; gl:elixirAtom "policy_refused" ; gl:order 9 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-INVALID_INPUT ; gl:taxClass gl:class-refused_structure ; gl:brokenTerm gl:term-mu_on_O ;
+    gl:appendOnly true ; gl:doc "The engine refused the FOND policy as not strong-cyclic." .
+gl:wire-Fuse a gl:WireCode ; gl:wireName "Fuse" ; gl:elixirAtom "fuse" ; gl:order 10 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-INVALID_INPUT ; gl:taxClass gl:class-refused_structure ; gl:brokenTerm gl:term-mu_on_O ;
+    gl:appendOnly true ; gl:doc "The engine's fuse tripped on a malformed or unadmitted structure before any evaluation." .
+gl:wire-DuckDb a gl:WireCode ; gl:wireName "DuckDb" ; gl:elixirAtom "duckdb_failure" ; gl:order 11 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-RESOURCE_BOUND ; gl:taxClass gl:class-blocked_resource ; gl:brokenTerm gl:term-R_missing_consequence ;
+    gl:appendOnly true ; gl:doc "The engine's DuckDB statement failed to execute, so no consequence was produced." .
+gl:wire-BatchMemberFailed a gl:WireCode ; gl:wireName "BatchMemberFailed" ; gl:elixirAtom "batch_member_failed" ; gl:order 12 ; gl:layer "engine" ;
+    gl:wrapsTo gl:public-RESOURCE_BOUND ; gl:taxClass gl:class-blocked_resource ; gl:brokenTerm gl:term-R_missing_consequence ;
+    gl:liftKey "member" , "message" , "partial_receipt" , "limit" , "observed" , "max" ;
+    gl:appendOnly true ; gl:doc "One batch member failed; the batch's partial receipt and observed/max counts are carried in details." .
+
+# ---------------------------------------------------------------- tiers and engines
+
+gl:tier-dataset a gl:CapabilityTier ; rdfs:label "dataset" .
+gl:tier-logic a gl:CapabilityTier ; rdfs:label "logic" .
+gl:tier-query a gl:CapabilityTier ; rdfs:label "query" .
+gl:tier-schema a gl:CapabilityTier ; rdfs:label "schema" .
+gl:tier-sql a gl:CapabilityTier ; rdfs:label "sql" .
+
+gl:ktier-Rdf a gl:KernelTier ; rdfs:label "Rdf" ; rdfs:comment "Dialect::tier fallback arm: every dialect other than N3 and SqlRdf." .
+gl:ktier-N3Logic a gl:KernelTier ; rdfs:label "N3Logic" .
+gl:ktier-Relational a gl:KernelTier ; rdfs:label "Relational" .
+
+gl:engine-PurRdf a gl:Engine ; rdfs:label "PurRdf" .
+gl:engine-FrozenDuckdb a gl:Engine ; rdfs:label "FrozenDuckdb" .
+
+# ---------------------------------------------------------------- dialects (wire order, RDF_DIALECTS then OTHER_DIALECTS)
+
+gl:dialect-turtle a gl:Dialect ; gl:wireName "turtle" ; gl:responseName "Turtle" ; gl:order 1 ; gl:alias "ttl" ; gl:mediaType "text/turtle" ; gl:tier gl:tier-dataset ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+gl:dialect-trig a gl:Dialect ; gl:wireName "trig" ; gl:responseName "TriG" ; gl:order 2 ; gl:mediaType "application/trig" ; gl:tier gl:tier-dataset ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+gl:dialect-ntriples a gl:Dialect ; gl:wireName "ntriples" ; gl:responseName "NTriples" ; gl:order 3 ; gl:alias "nt" ; gl:mediaType "application/n-triples" ; gl:tier gl:tier-dataset ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+gl:dialect-nquads a gl:Dialect ; gl:wireName "nquads" ; gl:responseName "NQuads" ; gl:order 4 ; gl:alias "nq" ; gl:mediaType "application/n-quads" ; gl:tier gl:tier-dataset ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+gl:dialect-rdfxml a gl:Dialect ; gl:wireName "rdfxml" ; gl:responseName "RdfXml" ; gl:order 5 ; gl:alias "rdf" , "owl" ; gl:mediaType "application/rdf+xml" ; gl:tier gl:tier-dataset ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+gl:dialect-jsonld a gl:Dialect ; gl:wireName "jsonld" ; gl:responseName "JsonLd" ; gl:order 6 ; gl:mediaType "application/ld+json" ; gl:tier gl:tier-dataset ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+gl:dialect-yamlld a gl:Dialect ; gl:wireName "yamlld" ; gl:responseName "YamlLd" ; gl:order 7 ; gl:mediaType "application/ld+yaml" ; gl:tier gl:tier-dataset ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+gl:dialect-trix a gl:Dialect ; gl:wireName "trix" ; gl:responseName "TriX" ; gl:order 8 ; gl:mediaType "application/trix" ; gl:tier gl:tier-dataset ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+gl:dialect-hextuples a gl:Dialect ; gl:wireName "hextuples" ; gl:responseName "HexTuples" ; gl:order 9 ; gl:alias "hext" ; gl:mediaType "application/x-hextuples" ; gl:tier gl:tier-dataset ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+gl:dialect-n3 a gl:Dialect ; gl:wireName "n3" ; gl:responseName "N3" ; gl:order 10 ; gl:tier gl:tier-logic ; gl:kernelTier gl:ktier-N3Logic ; gl:engine gl:engine-PurRdf .
+gl:dialect-sparql a gl:Dialect ; gl:wireName "sparql" ; gl:responseName "Sparql" ; gl:order 11 ; gl:alias "rq" ; gl:tier gl:tier-query ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+gl:dialect-sql a gl:Dialect ; gl:wireName "sql" ; gl:responseName "SqlRdf" ; gl:order 12 ; gl:mediaType "text/turtle" ; gl:tier gl:tier-sql ; gl:kernelTier gl:ktier-Relational ; gl:engine gl:engine-FrozenDuckdb .
+gl:dialect-shexc a gl:Dialect ; gl:wireName "shexc" ; gl:responseName "ShExC" ; gl:order 13 ; gl:alias "shex" ; gl:tier gl:tier-schema ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+gl:dialect-shexj a gl:Dialect ; gl:wireName "shexj" ; gl:responseName "ShExJ" ; gl:order 14 ; gl:tier gl:tier-schema ; gl:kernelTier gl:ktier-Rdf ; gl:engine gl:engine-PurRdf .
+
+# ---------------------------------------------------------------- law steps (src/law.rs Step::name / required_ceiling)
+
+gl:step-admit-shacl a gl:LawStep , gl:AdmitStep ; gl:stepName "admit:shacl" ; gl:wireName "shacl" ; gl:rustVariant "AdmitShacl" ; gl:capability "SHACL" ; gl:requiredCeiling gl:ceiling-observe .
+gl:step-derive-n3 a gl:LawStep , gl:DeriveStep ; gl:stepName "derive:n3" ; gl:wireName "n3" ; gl:rustVariant "DeriveN3" ; gl:capability "Notation3" ; gl:requiredCeiling gl:ceiling-construct .
+gl:step-derive-hooks a gl:LawStep , gl:DeriveStep ; gl:stepName "derive:hooks" ; gl:wireName "hooks" ; gl:rustVariant "Hooks" ; gl:capability "Knowledge hooks (kh: orchestration over SPARQL)" ; gl:requiredCeiling gl:ceiling-construct .
+gl:step-admit-plan a gl:LawStep , gl:PlanStep ; gl:stepName "admit:plan" ; gl:wireName "plan" ; gl:rustVariant "Plan" ; gl:capability "RDF 1.2 / codecs / storage IR" ; gl:requiredCeiling gl:ceiling-select .
+gl:step-admit-require-receipt a gl:LawStep , gl:AdmitStep ; gl:stepName "admit:require-receipt" ; gl:wireName "require-receipt" ; gl:rustVariant "RequireReceipt" ; gl:capability "RDF 1.2 / codecs / storage IR" ; gl:requiredCeiling gl:ceiling-observe .
+gl:step-admit-require-signed-receipt a gl:LawStep , gl:AdmitStep ; gl:stepName "admit:require-signed-receipt" ; gl:wireName "require-signed-receipt" ; gl:rustVariant "RequireSignedReceipt" ; gl:capability "RDF 1.2 / codecs / storage IR" ; gl:requiredCeiling gl:ceiling-observe .
+gl:step-derive-rdfs a gl:LawStep , gl:DeriveStep ; gl:stepName "derive:rdfs" ; gl:wireName "rdfs" ; gl:rustVariant "EntailRdfs" ; gl:capability "RDF/RDFS/OWL-RL entailment" ; gl:requiredCeiling gl:ceiling-construct .
+gl:step-derive-owl-rl a gl:LawStep , gl:DeriveStep ; gl:stepName "derive:owl-rl" ; gl:wireName "owl-rl" ; gl:rustVariant "EntailOwlRl" ; gl:capability "RDF/RDFS/OWL-RL entailment" ; gl:requiredCeiling gl:ceiling-construct .
+gl:step-admit-sql a gl:LawStep , gl:AdmitStep ; gl:stepName "admit:sql" ; gl:wireName "sql" ; gl:rustVariant "AdmitSql" ; gl:capability "SHACL" ; gl:requiredCeiling gl:ceiling-observe ;
+    rdfs:comment "The law step observes; the top-level sql OP floor is construct (see gl:op-sql)." .
+gl:step-test-capability-probe a gl:LawStep , gl:ProbeStep ; gl:stepName "test:capability-probe" ; gl:rustVariant "TestCapabilityProbe" ; gl:capability "caller-supplied string" ; gl:requiredCeiling gl:ceiling-observe ;
+    rdfs:comment "Test-only (#[doc(hidden)]); never constructed outside graphlaw's own courts." .
+
+# ---------------------------------------------------------------- op floors (GraphlawEx.Authority @op_ceilings)
+
+gl:op-capabilities a gl:OpFloor ; gl:opName "capabilities" ; gl:floor gl:ceiling-observe .
+gl:op-sniff a gl:OpFloor ; gl:opName "sniff" ; gl:floor gl:ceiling-observe .
+gl:op-parse a gl:OpFloor ; gl:opName "parse" ; gl:floor gl:ceiling-observe .
+gl:op-convert a gl:OpFloor ; gl:opName "convert" ; gl:floor gl:ceiling-observe .
+gl:op-canonical a gl:OpFloor ; gl:opName "canonical" ; gl:floor gl:ceiling-observe .
+gl:op-sparql a gl:OpFloor ; gl:opName "sparql" ; gl:floor gl:ceiling-observe .
+gl:op-shacl a gl:OpFloor ; gl:opName "shacl" ; gl:floor gl:ceiling-observe .
+gl:op-shex a gl:OpFloor ; gl:opName "shex" ; gl:floor gl:ceiling-observe .
+gl:op-policy a gl:OpFloor ; gl:opName "policy" ; gl:floor gl:ceiling-observe .
+gl:op-n3 a gl:OpFloor ; gl:opName "n3" ; gl:floor gl:ceiling-observe .
+gl:op-entail a gl:OpFloor ; gl:opName "entail" ; gl:floor gl:ceiling-observe .
+gl:op-datalog a gl:OpFloor ; gl:opName "datalog" ; gl:floor gl:ceiling-observe .
+gl:op-hooks a gl:OpFloor ; gl:opName "hooks" ; gl:floor gl:ceiling-observe .
+gl:op-law a gl:OpFloor ; gl:opName "law" ; gl:floor gl:ceiling-observe .
+gl:op-sql a gl:OpFloor ; gl:opName "sql" ; gl:floor gl:ceiling-construct ;
+    rdfs:comment "SQL-in-RDF executes caller-supplied statements: never lease-less." .
+# Op 15 is dispatched in src/abi.rs but hidden from the 14-op registry table
+# (registry::HIDDEN_OPS) so surface_blake3 is stable. The `sql` op above is the
+# SQL-in-RDF dialect floor; `duckdb` is the wire op name of op-15.
+gl:op-duckdb a gl:OpFloor ; gl:opName "duckdb" ; gl:abiOpNumber 15 ; gl:floor gl:ceiling-construct ; gl:hidden true ;
+    gl:hiddenReason "unadvertised from capabilities.ops by digest-stability choice; not host-only and not REFUSAL-04" .
+
+gl:limit-max_request_bytes a gl:Limit ; gl:limitName "max_request_bytes" ; gl:limitValue 16777216 .
+gl:limit-max_json_depth a gl:Limit ; gl:limitName "max_json_depth" ; gl:limitValue 64 .
+gl:limit-max_plan_actions a gl:Limit ; gl:limitName "max_plan_actions" ; gl:limitValue 1000 .
+gl:limit-max_atoms_per_field a gl:Limit ; gl:limitName "max_atoms_per_field" ; gl:limitValue 10000 .
+gl:limit-max_policy_entries a gl:Limit ; gl:limitName "max_policy_entries" ; gl:limitValue 100000 .
+gl:limit-n3_max_iterations a gl:Limit ; gl:limitName "n3_max_iterations" ; gl:limitValue 4000000 .
+gl:limit-n3_max_derived_facts a gl:Limit ; gl:limitName "n3_max_derived_facts" ; gl:limitValue 500000 .
+gl:limit-n3_max_total_bytes a gl:Limit ; gl:limitName "n3_max_total_bytes" ; gl:limitValue 268435456 .
+gl:limit-n3_max_term_bytes a gl:Limit ; gl:limitName "n3_max_term_bytes" ; gl:limitValue 65536 .
+gl:limit-n3_max_match_steps a gl:Limit ; gl:limitName "n3_max_match_steps" ; gl:limitValue 200000 .
+gl:limit-n3_max_total_steps a gl:Limit ; gl:limitName "n3_max_total_steps" ; gl:limitValue 50000000 .
+gl:limit-n3_max_backward_depth a gl:Limit ; gl:limitName "n3_max_backward_depth" ; gl:limitValue 32 .
+gl:limit-n3_max_backward_solutions_per_goal a gl:Limit ; gl:limitName "n3_max_backward_solutions_per_goal" ; gl:limitValue 1024 .
+gl:limit-n3_max_term_depth a gl:Limit ; gl:limitName "n3_max_term_depth" ; gl:limitValue 64 .
+gl:limit-max_plan_total_atoms a gl:Limit ; gl:limitName "max_plan_total_atoms" ; gl:limitValue 100000 .
+gl:limit-hooks_max_rounds a gl:Limit ; gl:limitName "hooks_max_rounds" ; gl:limitValue 64 .
+gl:limit-hooks_max_firings a gl:Limit ; gl:limitName "hooks_max_firings" ; gl:limitValue 10000 .
+gl:limit-hooks_max_state_quads a gl:Limit ; gl:limitName "hooks_max_state_quads" ; gl:limitValue 1000000 .
+gl:limit-max_outstanding_alloc_bytes a gl:Limit ; gl:limitName "max_outstanding_alloc_bytes" ; gl:limitValue 16777216 .
+gl:limit-shacl_validation_depth a gl:Limit ; gl:limitName "shacl_validation_depth" ; gl:limitValue 16 .
+gl:limit-shacl_shapes_bytes a gl:Limit ; gl:limitName "shacl_shapes_bytes" ; gl:limitValue 131072 .
+gl:limit-shacl_degree a gl:Limit ; gl:limitName "shacl_degree" ; gl:limitValue 128 .
+gl:limit-shacl_quads a gl:Limit ; gl:limitName "shacl_quads" ; gl:limitValue 16384 .
+gl:limit-duckdb_memory_limit_bytes a gl:Limit ; gl:limitName "duckdb_memory_limit_bytes" ; gl:limitValue 33554432 .
+gl:limit-duckdb_max_chunk_rows a gl:Limit ; gl:limitName "duckdb_max_chunk_rows" ; gl:limitValue 10000 .
+gl:limit-duckdb_max_chunk_bytes a gl:Limit ; gl:limitName "duckdb_max_chunk_bytes" ; gl:limitValue 16777216 .
+gl:limit-max_law_steps a gl:Limit ; gl:limitName "max_law_steps" ; gl:limitValue 1000 .
+gl:limit-max_datalog_rules a gl:Limit ; gl:limitName "max_datalog_rules" ; gl:limitValue 10000 .
+gl:limit-max_datalog_facts a gl:Limit ; gl:limitName "max_datalog_facts" ; gl:limitValue 100000 .
+gl:limit-max_datalog_derived_facts a gl:Limit ; gl:limitName "max_datalog_derived_facts" ; gl:limitValue 200000 .
+gl:limit-max_datalog_join_steps a gl:Limit ; gl:limitName "max_datalog_join_steps" ; gl:limitValue 50000000 .
+gl:limit-max_datalog_output_bytes a gl:Limit ; gl:limitName "max_datalog_output_bytes" ; gl:limitValue 8388608 .
+gl:limit-max_number_digits a gl:Limit ; gl:limitName "max_number_digits" ; gl:limitValue 64 .
+gl:limit-default_max_skew_secs a gl:Limit ; gl:limitName "default_max_skew_secs" ; gl:limitValue 60 .

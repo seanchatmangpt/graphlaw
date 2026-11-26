@@ -79,10 +79,15 @@ jobs:
       - name: Install b3sum (cargo install b3sum --locked)
         run: cargo install b3sum --locked
 
+      - name: Compile wrap shim (staged SDK clang)
+        if: steps.plan.outputs.work == 'yes'
+        run: $WASI_SDK_PATH/bin/clang --target=wasm32-wasip1 -c tests/fixtures/wasm-shim/glaw_wrap_shim.c -o tests/fixtures/wasm-shim/glaw_wrap_shim.o
+
       - name: Build and test (only when there is something to release)
         if: steps.plan.outputs.work == 'yes'
         env:
-          CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS: -C target-feature=+exception-handling
+          CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS: -C target-feature=+exception-handling -C link-arg=tests/fixtures/wasm-shim/glaw_wrap_shim.o -C link-arg=--wrap=open -C link-arg=--wrap=openat -C link-arg=--wrap=fcntl
+          BINDGEN_EXTRA_CLANG_ARGS: --target=wasm32-wasip1 --sysroot=/opt/wasi-sdk/share/wasi-sysroot
         run: |
           set -euo pipefail
           cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm

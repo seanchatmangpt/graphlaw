@@ -162,13 +162,16 @@ fn exec_stream_close_happy_path_over_injected_csv() {
     let nt2 = drained["nquads"].as_str().expect("nquads");
     assert!(nt2.contains("<https://example.org/data/row_2>"), "{nt2}");
 
-    // Draining an exhausted cursor yields an empty page (not an error).
+    // A drained cursor is evicted (null-cursor protocol): streaming it again is a typed
+    // refusal naming the unknown/expired cursor, not a silent empty page.
     let s3 = call(&json!({
         "op": "duckdb", "mode": "stream", "cursor": cursor, "max_rows": 10
     }));
-    assert_eq!(s3["ok"], Value::Bool(true));
-    assert_eq!(s3["rows"], 0);
-    assert!(s3["cursor"].is_null());
+    assert_eq!(s3["ok"], Value::Bool(false), "{s3}");
+    assert!(
+        s3.to_string().contains("unknown or expired cursor"),
+        "evicted cursor must refuse as unknown/expired: {s3}"
+    );
 
     // Close is idempotent-ok.
     let c = call(&json!({"op": "duckdb", "mode": "close", "cursor": cursor}));

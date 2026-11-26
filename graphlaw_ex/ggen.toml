@@ -1,0 +1,23 @@
+# Projection manifest for graphlaw_ex. Every file named in scripts/ggen_sync.sh PROJECTIONS is a
+# projection; never hand-edit it. Hand-written residue is ledgered in ggen/HANDWRITTEN.md.
+# Regenerate: `scripts/ggen_sync.sh` (exports the GGEN_* projection parameters, runs ggen sync,
+# prunes strays, mix format, sha256 manifest). Determinism: `scripts/ggen_sync.sh --check`.
+#
+# Schema: ggen frontmatter (ggen_engine::config::GgenConfig). Projection parameters are graph
+# facts: ontology/projection-target.ttl (gac:ProjectionTarget) selects the namespace, lib/
+# directory and SPDX holder; pack templates read them with for_each over a target query.
+# The pack resolves through the canonical sibling-checkout layout (~/ggen-marketplace adjacent
+# to ~/graphlaw).
+
+[project]
+name = "graphlaw-ex-projection"
+
+[ontology]
+source = "ontology/.staged/capability-registry.ttl"
+imports = ["ontology/projection-target.ttl"]
+
+[packs]
+graphlaw-ash-capability-pack = { path = "../../ggen-marketplace/packs/graphlaw-ash-capability-pack" }
+
+[templates]
+dir = "templates"

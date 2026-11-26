@@ -1,0 +1,26 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: graphlaw_ex
+Upstream-Contact: graphlaw contributors <https://github.com/seanchatmangpt/graphlaw>
+Source: https://github.com/seanchatmangpt/graphlaw
+
+Files: *
+Copyright: 2026 graphlaw contributors
+License: MIT
+
+Files: priv/graphlaw/*
+Copyright: 2026 graphlaw contributors
+License: MIT
+
+Files: lib/* test/* bench/* guides/* docs/* mix.exs mix.lock .formatter.exs README.md
+ CHANGELOG.md graphlaw_ex.livemd
+Copyright: 2026 graphlaw contributors
+License: MIT
+
+Files: LICENSE LICENSES/*
+Copyright: 2026 graphlaw contributors
+License: MIT
+
+Files: ggen.toml ggen.lock .gitignore .ggen/* .ggen-v2/* ggen/* ontology/* templates/*
+ scripts/* documentation/* priv/*
+Copyright: 2026 graphlaw contributors
+License: MIT

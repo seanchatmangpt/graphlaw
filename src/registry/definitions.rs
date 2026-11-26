@@ -148,6 +148,10 @@ pub const REFUSAL_KINDS: &[&str] = &[
     "EngineRejected",
     "Unsupported",
     "ResourceLimit",
+    "TierMismatch",
+    "DuckDb",
+    "BareSql",
+    "Fuse",
 ];
 /// Entailment regimes.
 pub const REGIMES: &[&str] = &["simple", "rdf", "rdfs", "owl-rl", "d"];
@@ -265,7 +269,13 @@ pub const OTHER_DIALECTS: &[DialectRow] = &[
     },
 ];
 
-const KINDS_ROUTED: &[&str] = REFUSAL_KINDS;
+const KINDS_ROUTED: &[&str] = &[
+    "NotSemanticContent",
+    "Ambiguous",
+    "EngineRejected",
+    "Unsupported",
+    "ResourceLimit",
+];
 const KINDS_ENGINE: &[&str] = &["EngineRejected", "Unsupported", "ResourceLimit"];
 const KINDS_SNIFF: &[&str] = &[
     "NotSemanticContent",
@@ -874,6 +884,25 @@ pub const LAW_STEPS: &[LawStepRow] = &[
 /// `op_names() + NATIVE_ONLY_OPS` and asserts it equals the parsed `fn dispatch`
 /// arms.
 pub const NATIVE_ONLY_OPS: &[&str] = &["duckdb"];
+
+/// An op dispatched by `abi::dispatch` but deliberately absent from [`OPS`]
+/// (and therefore from `surface_blake3`).
+#[derive(Debug, Clone, Copy)]
+pub struct HiddenOp {
+    /// Wire op name.
+    pub name: &'static str,
+    /// ABI op number.
+    pub abi_op_number: u32,
+    /// Why the op is not advertised.
+    pub reason: &'static str,
+}
+
+/// Explicit hidden-op register; mirrors `gl:op-duckdb` in the governance ontology.
+pub const HIDDEN_OPS: &[HiddenOp] = &[HiddenOp {
+    name: "duckdb",
+    abi_op_number: 15,
+    reason: "unadvertised from capabilities.ops by digest-stability choice; not host-only and not REFUSAL-04",
+}];
 
 /// ABI op names in registry order.
 pub fn op_names() -> Vec<&'static str> {

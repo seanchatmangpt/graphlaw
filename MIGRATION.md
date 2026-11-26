@@ -30,7 +30,8 @@ The WASM module target is `wasm32-wasip1`:
 `cargo build -p graphlaw-wasm --target wasm32-wasip1 --profile wasm`.
 Build prerequisite: `WASI_SDK_PATH` must point at a wasi-sdk root (`bin/clang`
 and `share/cmake/wasi-sdk-p1.cmake`; CI installs wasi-sdk 34 at
-`/opt/wasi-sdk` — the engine cache
+`/opt/wasi-sdk`, local `/Users/sac/wasi-sdks/wasi-sdk-34`; the link also needs
+`CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling"` — the engine cache
 `~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1` is not a wasi-sdk). With the
 variable set the link is green; without it the build fails typed at
 frozen-duckdb-sys `build.rs` (`WASI_SDK_PATH required`). Full runbook:
@@ -204,3 +205,19 @@ Source of truth: `CHANGELOG.md` `[26.10.28]` and `docs/jira/v26.10.28/RECEIPTS.m
 6. **Artifact pin.** The wasm pin is now `c92caeb6…` (62,909,537 B); re-read
    `priv/graphlaw.wasm.blake3` / `registry/ARTIFACTS.blake3`, never a remembered
    digest.
+
+## Lease policy and re-export lists (26.10.28 -> 26.11.25)
+
+Source of truth: `CHANGELOG.md` `[26.11.25]`.
+
+1. **Lease policy.** Rust hosts opt in with `graphlaw::abi::set_lease_policy(LeasePolicy::Required)`
+   or per request with `"lease_policy": "required"`; lease-less requests are refused with
+   `LeaseRequired` (`src/abi/lease.rs:39,109`). Elixir defaults to `:required`
+   (`graphlaw_ex/config/config.exs:3`); set `config :graphlaw_ex, :lease_policy, :none_allowed`
+   in test envs only (`graphlaw_ex/config/test.exs:5`).
+2. **Wildcard re-exports dropped.** `graphlaw::{sparql,shacl,shex,datalog,entailment,events,n3}`
+   export explicit item lists (`src/lib.rs:118-166`). Items from geo, text, retrieval, gts and
+   validate are reachable via `graphlaw::purrdf::...` (unstable, `src/lib.rs:112`).
+3. **Wasm not in the Hex tarball.** Run `mix graphlaw_ex.fetch`, or set `GRAPHLAW_WASM_PATH`
+   for air-gapped hosts; the path stays pinned to the manifest digest.
+4. **op_datalog limits.** Queries exceeding the new derivation/join/output caps now refuse.

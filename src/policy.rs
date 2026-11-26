@@ -131,6 +131,8 @@ pub struct PolicyAdmitted {
 }
 
 const NS: &str = "https://graphlaw.dev/policy#";
+/// Mirror of `abi::MAX_POLICY_ENTRIES` (that module is feature-gated; this one is not).
+const POLICY_CAP: usize = 100_000;
 const MASS: u64 = 1_000_000;
 
 fn lit(s: &str) -> String {
@@ -151,26 +153,27 @@ fn lit(s: &str) -> String {
 impl PolicyAdmitted {
     /// Deterministic N-Triples rendering of the admission.
     pub fn to_ntriples(&self) -> String {
+        use std::fmt::Write as _;
         let mut out = String::new();
         let a = format!("<{NS}admission>");
-        out.push_str(&format!(
-            "{a} <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <{NS}AdmittedPolicy> .\n"
-        ));
-        out.push_str(&format!("{a} <{NS}standing> \"STRONG_CYCLIC\" .\n"));
+        let _ = writeln!(out,
+            "{a} <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <{NS}AdmittedPolicy> ."
+        );
+        let _ = writeln!(out, "{a} <{NS}standing> \"STRONG_CYCLIC\" .");
         for s in &self.initial_states {
-            out.push_str(&format!("{a} <{NS}initialState> {} .\n", lit(s)));
+            let _ = writeln!(out, "{a} <{NS}initialState> {} .", lit(s));
         }
         for s in &self.reachable {
-            out.push_str(&format!("{a} <{NS}reachableState> {} .\n", lit(s)));
+            let _ = writeln!(out, "{a} <{NS}reachableState> {} .", lit(s));
         }
         for s in &self.goal_states {
-            out.push_str(&format!("{a} <{NS}goalState> {} .\n", lit(s)));
+            let _ = writeln!(out, "{a} <{NS}goalState> {} .", lit(s));
         }
         for (i, (s, act)) in self.entries.iter().enumerate() {
             let e = format!("<{NS}entry/{i}>");
-            out.push_str(&format!("{a} <{NS}entry> {e} .\n"));
-            out.push_str(&format!("{e} <{NS}state> {} .\n", lit(s)));
-            out.push_str(&format!("{e} <{NS}action> {} .\n", lit(act)));
+            let _ = writeln!(out, "{a} <{NS}entry> {e} .");
+            let _ = writeln!(out, "{e} <{NS}state> {} .", lit(s));
+            let _ = writeln!(out, "{e} <{NS}action> {} .", lit(act));
         }
         out
     }
@@ -217,6 +220,16 @@ fn malformed(message: String) -> PolicyRefused {
 
 /// Core admission over parsed structures.
 pub fn admit_parsed(problem: &Problem, policy: &[Entry]) -> Result<PolicyAdmitted, PolicyRefused> {
+    let cap = POLICY_CAP;
+    for (what, n) in [
+        ("states", problem.states.len()),
+        ("transitions", problem.transitions.len()),
+        ("policy entries", policy.len()),
+    ] {
+        if n > cap {
+            return Err(malformed(format!("{what} count {n} exceeds cap {cap}")));
+        }
+    }
     if problem.initial.is_empty() {
         return Err(malformed("problem has no initial states".into()));
     }
@@ -287,7 +300,14 @@ pub fn admit_parsed(problem: &Problem, policy: &[Entry]) -> Result<PolicyAdmitte
                     ),
                 ));
             }
-            mass += o.probability_ppm;
+            mass = mass.checked_add(o.probability_ppm).ok_or_else(|| {
+                PolicyRefused::new(
+                    PolicyRefusalKind::BadMass,
+                    &s,
+                    &e.action,
+                    format!("probability mass overflows u64 for `{s}`/`{}`", e.action),
+                )
+            })?;
             next.push(o.state.clone());
         }
         if mass != MASS {
@@ -358,66 +378,64 @@ mod json {
             .ok_or_else(|| malformed(format!("{ctx}: missing string `{k}`")))
     }
 
+    /// Required array field: missing or wrong-typed is Malformed.
+    fn req_arr<'a>(v: &'a Value, k: &str, ctx: &str) -> Result<&'a Vec<Value>, PolicyRefused> {
+        v.get(k)
+            .and_then(Value::as_array)
+            .ok_or_else(|| malformed(format!("{ctx}: missing or non-array `{k}`")))
+    }
+
+    /// Optional array field: absent or explicit `null` is empty (serde
+    /// `Option::None`); present but wrong-typed is Malformed.
+    fn opt_arr<'a>(v: &'a Value, k: &str, ctx: &str) -> Result<&'a [Value], PolicyRefused> {
+        match v.get(k) {
+            None | Some(Value::Null) => Ok(&[]),
+            Some(Value::Array(a)) => Ok(a),
+            Some(_) => Err(malformed(format!("{ctx}: non-array `{k}`"))),
+        }
+    }
+
     fn parse_problem(text: &str) -> Result<Problem, PolicyRefused> {
         let v: Value =
             serde_json::from_str(text).map_err(|e| malformed(format!("problem: {e}")))?;
         let mut p = Problem::default();
-        for s in v
-            .get("states")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-        {
+        for s in req_arr(&v, "states", "problem")? {
             let id = str_field(s, "id", "state")?;
-            let facts = s
-                .get("facts")
-                .and_then(Value::as_array)
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_str)
-                .map(String::from)
-                .collect();
+            let mut facts = BTreeSet::new();
+            for f in opt_arr(s, "facts", &format!("state `{id}`"))? {
+                facts.insert(
+                    f.as_str()
+                        .ok_or_else(|| malformed(format!("state `{id}` facts: non-string")))?
+                        .to_string(),
+                );
+            }
             p.states.insert(id.to_string(), facts);
         }
-        for s in v
-            .get("initial_states")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-        {
+        for s in req_arr(&v, "initial_states", "problem")? {
             p.initial.push(
                 s.as_str()
                     .ok_or_else(|| malformed("initial_states: non-string".into()))?
                     .to_string(),
             );
         }
-        for f in v
-            .pointer("/goal/facts")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-        {
+        let goal = v
+            .get("goal")
+            .ok_or_else(|| malformed("problem: missing `goal`".into()))?;
+        for f in req_arr(goal, "facts", "goal")? {
             p.goal_facts.insert(
                 f.as_str()
                     .ok_or_else(|| malformed("goal.facts: non-string".into()))?
                     .to_string(),
             );
         }
-        for s in v
-            .get("unsafe_states")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-            .filter_map(Value::as_str)
-        {
-            p.unsafe_states.insert(s.to_string());
+        for s in opt_arr(&v, "unsafe_states", "problem")? {
+            p.unsafe_states.insert(
+                s.as_str()
+                    .ok_or_else(|| malformed("unsafe_states: non-string".into()))?
+                    .to_string(),
+            );
         }
-        for t in v
-            .get("transitions")
-            .and_then(Value::as_array)
-            .into_iter()
-            .flatten()
-        {
+        for t in req_arr(&v, "transitions", "problem")? {
             p.transitions.insert((
                 str_field(t, "action", "transition")?.to_string(),
                 str_field(t, "from", "transition")?.to_string(),
@@ -440,12 +458,7 @@ mod json {
         let mut out = Vec::new();
         for e in arr {
             let mut outcomes = Vec::new();
-            for o in e
-                .get("outcomes")
-                .and_then(Value::as_array)
-                .into_iter()
-                .flatten()
-            {
+            for o in req_arr(e, "outcomes", "entry")? {
                 outcomes.push(Outcome {
                     state: str_field(o, "state", "outcome")?.to_string(),
                     probability_ppm: o

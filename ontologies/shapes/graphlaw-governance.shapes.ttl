@@ -1,0 +1,323 @@
+# graphlaw-governance.shapes.ttl - SHACL shapes over ontologies/graphlaw-governance.ttl.
+# Closed-world register laws: unique ordinals per family, append-only flags, one tier per dialect,
+# sparql/sql-rdf never dataset tier, construct steps need the construct ceiling, sql op floor >= construct.
+# No blank nodes: every property shape, constraint and prefix declaration is a named node, and no
+# rdf:List collection is used (sh:in / sh:or would need one).
+
+@prefix gl: <https://graphlaw.dev/governance#> .
+@prefix glsh: <https://graphlaw.dev/governance/shapes#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<https://graphlaw.dev/governance/shapes> a owl:Ontology ;
+    rdfs:label "graphlaw governance shapes" ;
+    sh:declare glsh:declare-gl , glsh:declare-rdfs .
+
+glsh:declare-gl sh:prefix "gl" ; sh:namespace "https://graphlaw.dev/governance#"^^xsd:anyURI .
+glsh:declare-rdfs sh:prefix "rdfs" ; sh:namespace "http://www.w3.org/2000/01/rdf-schema#"^^xsd:anyURI .
+
+# ---------------------------------------------------------------- refusal families
+
+glsh:RefusalFamilyShape a sh:NodeShape ;
+    sh:targetClass gl:RefusalFamily ;
+    sh:property glsh:family-ordinal , glsh:family-marker , glsh:family-name , glsh:family-appendOnly ,
+        glsh:family-appendedIn ;
+    sh:sparql glsh:family-unique-ordinal , glsh:family-unique-marker .
+
+glsh:family-ordinal a sh:PropertyShape ; sh:path gl:ordinal ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 .
+glsh:family-marker a sh:PropertyShape ; sh:path gl:marker ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:pattern "REFUSAL-0[0-9]" .
+glsh:family-name a sh:PropertyShape ; sh:path gl:familyName ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:family-appendOnly a sh:PropertyShape ; sh:path gl:appendOnly ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ; sh:hasValue true .
+glsh:family-appendedIn a sh:PropertyShape ; sh:path gl:appendedIn ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+
+glsh:family-unique-ordinal a sh:SPARQLConstraint ;
+    sh:message "Two refusal families share ordinal {?o}: ordinals are unique and never renumbered." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?o WHERE {
+            $this gl:ordinal ?o .
+            ?other a gl:RefusalFamily ; gl:ordinal ?o .
+            FILTER ($this != ?other)
+        }""" .
+
+glsh:family-unique-marker a sh:SPARQLConstraint ;
+    sh:message "Two refusal families share marker {?m}." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?m WHERE {
+            $this gl:marker ?m .
+            ?other a gl:RefusalFamily ; gl:marker ?m .
+            FILTER ($this != ?other)
+        }""" .
+
+# ---------------------------------------------------------------- refusal arms
+
+glsh:RefusalArmShape a sh:NodeShape ;
+    sh:targetClass gl:RefusalArm ;
+    sh:property glsh:arm-family , glsh:arm-number , glsh:arm-rustConst , glsh:arm-message ,
+        glsh:arm-recovery , glsh:arm-appendedIn , glsh:arm-appendOnly ;
+    sh:sparql glsh:arm-unique-per-family , glsh:arm-unique-const-per-family .
+
+glsh:arm-family a sh:PropertyShape ; sh:path gl:family ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:class gl:RefusalFamily ; sh:nodeKind sh:IRI .
+glsh:arm-number a sh:PropertyShape ; sh:path gl:arm ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:maxInclusive 65535 .
+glsh:arm-rustConst a sh:PropertyShape ; sh:path gl:rustConst ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:pattern "^[A-Z][A-Z0-9_]*$" .
+glsh:arm-message a sh:PropertyShape ; sh:path gl:message ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:arm-recovery a sh:PropertyShape ; sh:path gl:recovery ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:arm-appendedIn a sh:PropertyShape ; sh:path gl:appendedIn ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:arm-appendOnly a sh:PropertyShape ; sh:path gl:appendOnly ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ; sh:hasValue true .
+
+glsh:arm-unique-per-family a sh:SPARQLConstraint ;
+    sh:message "Arm number {?a} is registered twice in one refusal family: arms are unique per family and never renumbered." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?a WHERE {
+            $this gl:family ?f ; gl:arm ?a .
+            ?other a gl:RefusalArm ; gl:family ?f ; gl:arm ?a .
+            FILTER ($this != ?other)
+        }""" .
+
+glsh:arm-unique-const-per-family a sh:SPARQLConstraint ;
+    sh:message "Rust const {?c} is registered twice in one refusal family." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?c WHERE {
+            $this gl:family ?f ; gl:rustConst ?c .
+            ?other a gl:RefusalArm ; gl:family ?f ; gl:rustConst ?c .
+            FILTER ($this != ?other)
+        }""" .
+
+# ---------------------------------------------------------------- refusal kinds
+
+glsh:RefusalKindShape a sh:NodeShape ;
+    sh:targetClass gl:RefusalKind ;
+    sh:property glsh:kind-name , glsh:kind-order , glsh:kind-retryable , glsh:kind-appendOnly ;
+    sh:sparql glsh:kind-unique-order .
+
+glsh:kind-name a sh:PropertyShape ; sh:path gl:kindName ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:kind-order a sh:PropertyShape ; sh:path gl:order ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 .
+glsh:kind-retryable a sh:PropertyShape ; sh:path gl:retryable ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean .
+glsh:kind-appendOnly a sh:PropertyShape ; sh:path gl:appendOnly ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ; sh:hasValue true .
+
+glsh:kind-unique-order a sh:SPARQLConstraint ;
+    sh:message "Two refusal kinds share order {?o}." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?o WHERE {
+            $this gl:order ?o .
+            ?other a gl:RefusalKind ; gl:order ?o .
+            FILTER ($this != ?other)
+        }""" .
+
+# ---------------------------------------------------------------- wire codes
+
+glsh:WireCodeShape a sh:NodeShape ;
+    sh:targetClass gl:WireCode ;
+    sh:property glsh:wire-name , glsh:wire-order , glsh:wire-wrapsTo , glsh:wire-taxClass ,
+        glsh:wire-brokenTerm , glsh:wire-doc , glsh:wire-layer , glsh:wire-appendOnly ;
+    sh:sparql glsh:wire-unique-order .
+
+glsh:wire-name a sh:PropertyShape ; sh:path gl:wireName ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:wire-order a sh:PropertyShape ; sh:path gl:order ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 .
+glsh:wire-wrapsTo a sh:PropertyShape ; sh:path gl:wrapsTo ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:class gl:PublicCode .
+glsh:wire-taxClass a sh:PropertyShape ; sh:path gl:taxClass ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:class gl:RefusalClass .
+glsh:wire-brokenTerm a sh:PropertyShape ; sh:path gl:brokenTerm ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:class gl:BrokenTerm .
+glsh:wire-doc a sh:PropertyShape ; sh:path gl:doc ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:wire-layer a sh:PropertyShape ; sh:path gl:layer ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:wire-appendOnly a sh:PropertyShape ; sh:path gl:appendOnly ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ; sh:hasValue true .
+
+glsh:wire-unique-order a sh:SPARQLConstraint ;
+    sh:message "Two wire codes share order {?o}." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?o WHERE {
+            $this gl:order ?o .
+            ?other a gl:WireCode ; gl:order ?o .
+            FILTER ($this != ?other)
+        }""" .
+
+# ---------------------------------------------------------------- public codes
+
+glsh:PublicCodeShape a sh:NodeShape ;
+    sh:targetClass gl:PublicCode ;
+    sh:property glsh:public-atom , glsh:public-order , glsh:public-splode .
+
+glsh:public-atom a sh:PropertyShape ; sh:path gl:elixirAtom ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:pattern "^REFUSED_[A-Z_]+$" .
+glsh:public-order a sh:PropertyShape ; sh:path gl:order ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer .
+glsh:public-splode a sh:PropertyShape ; sh:path gl:splodeClass ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:class gl:SplodeClass .
+
+# ---------------------------------------------------------------- dialects
+
+glsh:DialectShape a sh:NodeShape ;
+    sh:targetClass gl:Dialect ;
+    sh:property glsh:dialect-wireName , glsh:dialect-responseName , glsh:dialect-order ,
+        glsh:dialect-tier , glsh:dialect-kernelTier , glsh:dialect-engine ;
+    sh:sparql glsh:dialect-unique-order , glsh:dialect-query-sql-not-dataset ,
+        glsh:dialect-dataset-has-media-type .
+
+glsh:dialect-wireName a sh:PropertyShape ; sh:path gl:wireName ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:dialect-responseName a sh:PropertyShape ; sh:path gl:responseName ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:dialect-order a sh:PropertyShape ; sh:path gl:order ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ; sh:maxInclusive 14 .
+glsh:dialect-tier a sh:PropertyShape ; sh:path gl:tier ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:class gl:CapabilityTier .
+glsh:dialect-kernelTier a sh:PropertyShape ; sh:path gl:kernelTier ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:class gl:KernelTier .
+glsh:dialect-engine a sh:PropertyShape ; sh:path gl:engine ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:class gl:Engine .
+
+glsh:dialect-unique-order a sh:SPARQLConstraint ;
+    sh:message "Two dialects share wire order {?o}." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?o WHERE {
+            $this gl:order ?o .
+            ?other a gl:Dialect ; gl:order ?o .
+            FILTER ($this != ?other)
+        }""" .
+
+glsh:dialect-query-sql-not-dataset a sh:SPARQLConstraint ;
+    sh:message "Dialect {?n} must never sit in the dataset tier." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?n WHERE {
+            $this gl:responseName ?n ; gl:tier gl:tier-dataset .
+            FILTER (?n = "Sparql" || ?n = "SqlRdf")
+        }""" .
+
+glsh:dialect-dataset-has-media-type a sh:SPARQLConstraint ;
+    sh:message "Dataset-tier dialect {?n} carries no media type." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?n WHERE {
+            $this gl:responseName ?n ; gl:tier gl:tier-dataset .
+            FILTER NOT EXISTS { $this gl:mediaType ?m }
+        }""" .
+
+# ---------------------------------------------------------------- ceilings
+
+glsh:CeilingShape a sh:NodeShape ;
+    sh:targetClass gl:Ceiling ;
+    sh:property glsh:ceiling-name , glsh:ceiling-rank ;
+    sh:sparql glsh:ceiling-unique-rank .
+
+glsh:ceiling-name a sh:PropertyShape ; sh:path gl:ceilingName ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:ceiling-rank a sh:PropertyShape ; sh:path gl:rank ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:maxInclusive 2 .
+
+glsh:ceiling-unique-rank a sh:SPARQLConstraint ;
+    sh:message "Two ceilings share rank {?r}: observe < select < construct is a strict order." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?r WHERE {
+            $this gl:rank ?r .
+            ?other a gl:Ceiling ; gl:rank ?r .
+            FILTER ($this != ?other)
+        }""" .
+
+# ---------------------------------------------------------------- law steps
+
+glsh:LawStepShape a sh:NodeShape ;
+    sh:targetClass gl:LawStep ;
+    sh:property glsh:step-name , glsh:step-ceiling , glsh:step-variant .
+
+glsh:step-name a sh:PropertyShape ; sh:path gl:stepName ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:step-ceiling a sh:PropertyShape ; sh:path gl:requiredCeiling ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:class gl:Ceiling .
+glsh:step-variant a sh:PropertyShape ; sh:path gl:rustVariant ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+
+# Every derivation (construct) step maps to the construct ceiling.
+glsh:DeriveStepShape a sh:NodeShape ;
+    sh:targetClass gl:DeriveStep ;
+    sh:property glsh:derive-requires-construct .
+glsh:derive-requires-construct a sh:PropertyShape ; sh:path gl:requiredCeiling ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:hasValue gl:ceiling-construct ;
+    sh:message "A derivation step requires the construct ceiling." .
+
+glsh:PlanStepShape a sh:NodeShape ;
+    sh:targetClass gl:PlanStep ;
+    sh:property glsh:plan-requires-select .
+glsh:plan-requires-select a sh:PropertyShape ; sh:path gl:requiredCeiling ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:hasValue gl:ceiling-select ;
+    sh:message "The plan step requires the select ceiling." .
+
+glsh:AdmitStepShape a sh:NodeShape ;
+    sh:targetClass gl:AdmitStep ;
+    sh:property glsh:admit-requires-observe .
+glsh:admit-requires-observe a sh:PropertyShape ; sh:path gl:requiredCeiling ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:hasValue gl:ceiling-observe ;
+    sh:message "A gate step requires the observe ceiling." .
+
+# ---------------------------------------------------------------- op floors
+
+glsh:OpFloorShape a sh:NodeShape ;
+    sh:targetClass gl:OpFloor ;
+    sh:property glsh:op-name , glsh:op-floor ;
+    sh:sparql glsh:op-unique-name , glsh:op-sql-floor-not-below-construct .
+
+glsh:op-name a sh:PropertyShape ; sh:path gl:opName ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:op-floor a sh:PropertyShape ; sh:path gl:floor ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:class gl:Ceiling .
+
+glsh:op-unique-name a sh:SPARQLConstraint ;
+    sh:message "Op {?n} carries more than one floor row." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?n WHERE {
+            $this gl:opName ?n .
+            ?other a gl:OpFloor ; gl:opName ?n .
+            FILTER ($this != ?other)
+        }""" .
+
+glsh:op-sql-floor-not-below-construct a sh:SPARQLConstraint ;
+    sh:message "The sql op floor is never below construct (rank 2); observed rank {?r}." ;
+    sh:prefixes <https://graphlaw.dev/governance/shapes> ;
+    sh:select """
+        SELECT $this ?r WHERE {
+            $this gl:opName "sql" ; gl:floor ?c .
+            ?c gl:rank ?r .
+            gl:ceiling-construct gl:rank ?need .
+            FILTER (?r < ?need)
+        }""" .
+
+# The sql op must exist exactly once, so deleting the row cannot pass vacuously.
+glsh:SqlOpPresenceShape a sh:NodeShape ;
+    sh:targetNode gl:op-sql ;
+    sh:property glsh:sql-op-is-construct .
+glsh:sql-op-is-construct a sh:PropertyShape ; sh:path gl:floor ;
+    sh:minCount 1 ; sh:maxCount 1 ; sh:hasValue gl:ceiling-construct ;
+    sh:message "gl:op-sql must exist and carry the construct floor." .

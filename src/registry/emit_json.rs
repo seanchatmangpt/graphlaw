@@ -176,7 +176,23 @@ fn base_document() -> Value {
             "hooks_max_firings": crate::hooks::MAX_FIRINGS,
             "hooks_max_state_quads": crate::hooks::MAX_STATE_QUADS,
             "max_outstanding_alloc_bytes": MAX_OUTSTANDING_ALLOC_BYTES,
+            "shacl_validation_depth": crate::shacl_guard::MAX_SHACL_VALIDATION_DEPTH,
+            "shacl_shapes_bytes": crate::shacl_guard::MAX_SHACL_SHAPES_BYTES,
+            "shacl_degree": crate::shacl_guard::MAX_SHACL_DEGREE,
+            "shacl_quads": crate::shacl_guard::MAX_SHACL_QUADS,
+            // DUCKDB_MEMORY_LIMIT is the string "32MiB"; the registry carries bytes.
+            "duckdb_memory_limit_bytes": 32usize * 1024 * 1024,
+            "duckdb_max_chunk_rows": crate::duckdb_op::MAX_CHUNK_ROWS,
+            "duckdb_max_chunk_bytes": crate::duckdb_op::MAX_CHUNK_BYTES,
+            "max_law_steps": crate::abi::MAX_LAW_STEPS,
+            "max_datalog_rules": crate::abi::MAX_DATALOG_RULES,
+            "max_datalog_facts": crate::abi::MAX_DATALOG_FACTS,
+            "datalog_derived_facts": crate::abi::MAX_DATALOG_DERIVED_FACTS,
+            "datalog_join_steps": crate::abi::MAX_DATALOG_JOIN_STEPS,
+            "datalog_output_bytes": crate::abi::MAX_DATALOG_OUTPUT_BYTES,
+            "default_max_skew_secs": crate::law::DEFAULT_MAX_SKEW_SECS,
         },
+        "refusal_kind_classes": refusal_kind_classes_json(),
         "limit_meta": limit_meta_json(),
         "models": models_json(),
         "model_enums": model_enums_json(),
@@ -225,7 +241,7 @@ const LIMIT_META: &[(&str, &str, &str, &str, Option<&str>)] = &[
     ),
     (
         "max_policy_entries",
-        "abi",
+        "law",
         "count",
         "src/abi.rs",
         Some("policy_entries"),
@@ -325,7 +341,127 @@ const LIMIT_META: &[(&str, &str, &str, &str, Option<&str>)] = &[
         "src/abi.rs",
         None,
     ),
+    (
+        "shacl_validation_depth",
+        "shacl",
+        "count",
+        "src/shacl_guard.rs",
+        None,
+    ),
+    (
+        "shacl_shapes_bytes",
+        "shacl",
+        "bytes",
+        "src/shacl_guard.rs",
+        None,
+    ),
+    (
+        "shacl_degree",
+        "shacl",
+        "count",
+        "src/shacl_guard.rs",
+        None,
+    ),
+    (
+        "shacl_quads",
+        "shacl",
+        "count",
+        "src/shacl_guard.rs",
+        None,
+    ),
+    (
+        "duckdb_memory_limit_bytes",
+        "duckdb",
+        "bytes",
+        "src/duckdb_op.rs",
+        None,
+    ),
+    (
+        "duckdb_max_chunk_rows",
+        "duckdb",
+        "count",
+        "src/duckdb_op.rs",
+        None,
+    ),
+    (
+        "duckdb_max_chunk_bytes",
+        "duckdb",
+        "bytes",
+        "src/duckdb_op.rs",
+        None,
+    ),
+    (
+        "max_law_steps",
+        "law",
+        "count",
+        "src/abi.rs",
+        None,
+    ),
+    (
+        "max_datalog_rules",
+        "law",
+        "count",
+        "src/abi.rs",
+        None,
+    ),
+    (
+        "max_datalog_facts",
+        "law",
+        "count",
+        "src/abi.rs",
+        None,
+    ),
+    (
+        "datalog_derived_facts",
+        "law",
+        "count",
+        "src/abi.rs",
+        Some("datalog_derived_facts"),
+    ),
+    (
+        "datalog_join_steps",
+        "law",
+        "steps",
+        "src/abi.rs",
+        Some("datalog_join_steps"),
+    ),
+    (
+        "datalog_output_bytes",
+        "law",
+        "bytes",
+        "src/abi.rs",
+        Some("datalog_output_bytes"),
+    ),
+    (
+        "default_max_skew_secs",
+        "law",
+        "secs",
+        "src/law.rs",
+        None,
+    ),
 ];
+
+/// Splode error class per refusal kind (mirrors graphlaw_ex
+/// `Introspection.Tables.error_class/1`, extended for the SQL kinds).
+const REFUSAL_KIND_CLASSES: &[(&str, &str)] = &[
+    ("NotSemanticContent", "invalid"),
+    ("Ambiguous", "invalid"),
+    ("EngineRejected", "invalid"),
+    ("Unsupported", "unknown"),
+    ("ResourceLimit", "forbidden"),
+    ("TierMismatch", "forbidden"),
+    ("DuckDb", "invalid"),
+    ("BareSql", "invalid"),
+    ("Fuse", "forbidden"),
+];
+
+fn refusal_kind_classes_json() -> Value {
+    let mut m = serde_json::Map::new();
+    for (kind, class) in REFUSAL_KIND_CLASSES {
+        m.insert((*kind).into(), json!({"error_class": class}));
+    }
+    Value::Object(m)
+}
 
 fn limit_meta_json() -> Value {
     let mut m = serde_json::Map::new();
@@ -619,6 +755,7 @@ fn models_json() -> Value {
                     "name": name,
                     "order": i + 1,
                     "elixir_module": format!("AshGraphLaw.Model.{name}"),
+                    "elixir_module_suffix": format!("Model.{name}"),
                     "rust_path": rust_path,
                     "doc": doc,
                     "fields": fields.iter().enumerate().map(|(j, (fname, ty, required, nullable, fdoc))| json!({

@@ -74,6 +74,55 @@ fn release(bytes: usize) {
     });
 }
 
+/// RAII reservation against the outstanding cap: releases on drop (including
+/// unwind) unless [`BudgetGuard::disarm`]ed at the handoff to the side table.
+struct BudgetGuard(usize);
+
+impl BudgetGuard {
+    /// Reserve `bytes`; `None` when the cap would be exceeded.
+    fn reserve(bytes: usize) -> Option<Self> {
+        reserve(bytes).then_some(Self(bytes))
+    }
+
+    /// Adopt an already-reserved `bytes` (a reclaimed slot's budget).
+    #[allow(dead_code)]
+    fn adopt(bytes: usize) -> Self {
+        Self(bytes)
+    }
+
+    /// Ownership of the budget passes to the side table; drop no longer releases.
+    fn disarm(mut self) {
+        self.0 = 0;
+    }
+}
+
+impl Drop for BudgetGuard {
+    fn drop(&mut self) {
+        release(self.0);
+    }
+}
+
+/// The single immortal saturated-cap error buffer `(ptr, declared)`. It is
+/// leaked once, never registered in `LIVE`, never counted, and never
+/// reconstructed into a `Vec`: `reclaim` sees an unknown pointer, so a host
+/// freeing it (once or many times, from any number of callers) is a no-op.
+static IMMORTAL_ERR: std::sync::OnceLock<(usize, u32)> = std::sync::OnceLock::new();
+
+/// Pack `(ptr, len)` as `(ptr << 32) | len`. wasm32 pointers fit in 32 bits;
+/// on a 64-bit native host the pointer is masked (native never ships this).
+fn pack(ptr: usize, len: u32) -> u64 {
+    ((ptr as u64 & 0xFFFF_FFFF) << 32) | u64::from(len)
+}
+
+/// The shared immortal error slot, initialized from `err` on first use.
+fn immortal_error(err: Vec<u8>) -> (usize, u32) {
+    *IMMORTAL_ERR.get_or_init(|| {
+        let declared = u32::try_from(err.len()).unwrap_or(0);
+        let leaked: &'static mut [u8] = Box::leak(err.into_boxed_slice());
+        (leaked.as_mut_ptr() as usize, declared)
+    })
+}
+
 /// Live host-owned buffers: the bounds-checked side table. The key is the
 /// leaked buffer pointer.
 /// Absent on purpose from the ABI: the host only round-trips `(ptr, len)`.
@@ -145,7 +194,9 @@ fn reclaim(ptr: *mut u8, len: u32) -> Result<Taken, Reject> {
     if slot.declared != len {
         return Err(Reject::Len);
     }
-    let slot = map.remove(&key).expect("key was just present");
+    let Some(slot) = map.remove(&key) else {
+        return Err(Reject::Unknown);
+    };
     // SAFETY: `ptr`, `length`, and `capacity` were recorded by `publish` from
     // this exact `Vec`; `length` bytes were initialized before the leak
     // (zero-filled `_alloc` buffers, or a response `Vec` built in safe code).
@@ -164,12 +215,14 @@ pub fn alloc_buf(len: u32) -> *mut u8 {
         return core::ptr::null_mut();
     }
     let n = (len as usize).max(1);
-    if !reserve(n) {
+    let Some(guard) = BudgetGuard::reserve(n) else {
         return core::ptr::null_mut();
-    }
+    };
     // Zero-fill so the bytes are initialized even if the host never writes.
     // `capacity()` may exceed `n`; `publish` records the real value.
-    publish(vec![0u8; n], len, n)
+    let ptr = publish(vec![0u8; n], len, n);
+    guard.disarm();
+    ptr
 }
 
 /// Release a buffer obtained from [`alloc_buf`] or returned by [`call_buf`].
@@ -203,10 +256,12 @@ pub unsafe fn call_buf(ptr: *mut u8, len: u32) -> Vec<u8> {
     } else {
         match reclaim(ptr, len) {
             Ok(taken) => {
+                // Released on drop, so a panic in the core cannot leak the budget.
+                let budget = BudgetGuard::adopt(taken.budget);
                 let usable = (len as usize).min(taken.buf.len());
                 let response = graphlaw::abi::call(&taken.buf[..usable]);
                 drop(taken.buf);
-                release(taken.budget);
+                drop(budget);
                 response
             }
             Err(Reject::Missing) => graphlaw::abi::missing_buffer_response(),
@@ -222,32 +277,46 @@ pub unsafe fn call_buf(ptr: *mut u8, len: u32) -> Vec<u8> {
 }
 
 /// Hand a response to the host; returns `(out_ptr << 32) | out_len`.
-fn pack_response(response: Vec<u8>) -> u64 {
+pub fn pack_response(response: Vec<u8>) -> u64 {
     let response = if response.is_empty() {
         b"{}".to_vec()
     } else {
         response
     };
+    // The packed length is 32 bits: a larger response is a typed limit error.
+    let response = if u32::try_from(response.len()).is_err() {
+        graphlaw::abi::limit_response("response_bytes", response.len(), u32::MAX as usize)
+    } else {
+        response
+    };
     let budget = response.len().max(1);
-    if reserve(budget) {
-        return publish_response(response, budget);
+    if let Some(guard) = BudgetGuard::reserve(budget) {
+        let packed = publish_response(response, budget);
+        guard.disarm();
+        return packed;
     }
     // The response itself would exceed the outstanding cap. Hand back a small
     // typed limit error, counted when it fits.
     let err = graphlaw::abi::limit_response("outstanding_bytes", budget, MAX_OUTSTANDING_BYTES);
     let err_budget = err.len().max(1);
-    if reserve(err_budget) {
-        return publish_response(err, err_budget);
+    if let Some(guard) = BudgetGuard::reserve(err_budget) {
+        let packed = publish_response(err, err_budget);
+        guard.disarm();
+        return packed;
     }
-    // The cap is already saturated. Track the error buffer with a zero budget
-    // so `_free` is still defined, without wrapping the counter.
-    publish_response(err, 0)
+    // The cap is already saturated: hand out the ONE immortal, uncounted error
+    // buffer. It is not in the side table, so no caller's free can reclaim it
+    // (no use-after-free / double-free across callers), and a host that never
+    // frees cannot grow memory or the table.
+    let (ptr, declared) = immortal_error(err);
+    pack(ptr, declared)
 }
 
+/// Publish `response` (length already checked to fit `u32`) and pack it.
 fn publish_response(response: Vec<u8>, budget: usize) -> u64 {
-    let declared = u32::try_from(response.len()).unwrap_or(u32::MAX);
+    let declared = u32::try_from(response.len()).unwrap_or(0);
     let ptr = publish(response, declared, budget);
-    ((ptr as usize as u64) << 32) | u64::from(declared)
+    pack(ptr as usize, declared)
 }
 
 /// Reserve `len` bytes of linear memory for the host. Returns null (0) when
@@ -358,5 +427,30 @@ mod tests {
             let text = String::from_utf8(response).expect("json");
             assert!(text.contains("\"ok\""), "{text}");
         }
+    }
+
+    #[test]
+    fn immortal_error_is_shared_unregistered_and_free_is_a_noop() {
+        let (p1, n1) = immortal_error(b"{\"err\":1}".to_vec());
+        let (p2, n2) = immortal_error(b"{\"other\":2}".to_vec());
+        assert_eq!((p1, n1), (p2, n2), "one bounded slot");
+        assert!(!is_live(p1 as *mut u8), "never registered in LIVE");
+        // Every caller frees what it was handed; none may reclaim the slot.
+        unsafe {
+            free_buf(p1 as *mut u8, n1);
+            free_buf(p2 as *mut u8, n2);
+        }
+        // Still readable and intact after the frees (never dropped).
+        let bytes = unsafe { core::slice::from_raw_parts(p1 as *const u8, n1 as usize) };
+        assert_eq!(bytes.len(), n1 as usize);
+        assert_eq!(pack(p1, n1) & 0xFFFF_FFFF, u64::from(n1));
+    }
+
+    #[test]
+    fn budget_guard_releases_on_drop_and_not_after_disarm() {
+        // Zero-byte guards leave the shared counter untouched either way.
+        BudgetGuard::reserve(0).expect("zero reserve fits").disarm();
+        drop(BudgetGuard::reserve(0).expect("zero reserve fits"));
+        assert!(BudgetGuard::reserve(usize::MAX).is_none(), "cap enforced");
     }
 }

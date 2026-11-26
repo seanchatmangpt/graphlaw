@@ -76,6 +76,7 @@ reg += open("Cargo.lock", encoding="utf-8", errors="replace").read() if os.path.
 reg += open("receipts/CHAIN.blake3", encoding="utf-8", errors="replace").read() if os.path.exists("receipts/CHAIN.blake3") else ""
 for root, dirs, files in os.walk("docs"):
     dirs[:] = [d for d in dirs if d not in ("reference-generated",)]
+    if root == "docs" and "archive" in dirs: dirs.remove("archive")  # frozen history
     for f in files:
         if not f.endswith(".md"): continue
         p = os.path.join(root, f)
@@ -135,6 +136,7 @@ for base in SCAN:
     for p, _, _ in it:
         if os.path.abspath(p) == SELF: continue  # gate self-lists BANNED; scanning itself is vacuous self-fire
         if p == "docs/jira/v26.10.22/designs/doc-staleness-gate-design.md": continue  # the spec must state BANNED to spec them
+        if p.startswith("docs/archive/"): continue  # frozen history (ARCHIVED.md stubs mark the move)
         try:
             fh = open(p, encoding="utf-8", errors="replace")
         except IsADirectoryError:

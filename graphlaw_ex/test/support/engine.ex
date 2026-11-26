@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sean Chatman <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
 defmodule GraphlawEx.TestEngine do
   @moduledoc """
   Shared test helper resolving the graphlaw WASM engine artifact for tests.

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 # UNSUPPORTED(generator-capability): hand-written exception wrapper. graphlaw_ex
 # has no Splode dependency, so this is a plain `defexception` mirroring the
 # shape of ash_graphlaw's `AshGraphLaw.Error.Refused` (fields `[:refusal]`,
@@ -10,10 +10,15 @@ defmodule GraphlawEx.Error.Refused do
 
   Raised by every `GraphlawEx.Capability.API.op!/2` function when the
   corresponding `op/2` returns `{:error, refusal}`. The typed refusal stays
-  intact on the exception: recover it with `refusal/1`, read its code with
-  `code/1`, its lossless engine error map with `raw/1` and its Chatman
-  failure-taxonomy term with `broken_term/1`.
+  intact in the `:refusal` field; read its code with `code/1`, its lossless
+  engine error map with `raw/1` and its Chatman failure-taxonomy term with
+  `broken_term/1`.
+
+  **Deprecated.** Use `GraphlawEx.Error`; `GraphlawEx.Error.wrap/1` unwraps
+  this exception into the public error.
   """
+
+  @moduledoc deprecated: "Use GraphlawEx.Error (wrap/1 unwraps this exception)"
 
   defexception [:refusal]
 

@@ -164,7 +164,12 @@ fn frame_raw(body: &[u8], class: &str, desc: &str) -> Value {
     let verdict = if resp["ok"] == json!(true) {
         "ok:true (admitted)".to_string()
     } else {
-        format!("refusal:{}", resp["error"]["kind"].as_str().unwrap_or("UNTYPED"))
+        format!(
+            "refusal:{}",
+            resp["error"]["kind"]
+                .as_str()
+                .unwrap_or_else(|| panic!("[{class}] {desc}: refusal lacks string error.kind: {resp}"))
+        )
     };
     record(&verdict, class);
     canary();
@@ -326,7 +331,9 @@ fn p19_n3_boundary_fuzz() {
                     json!(false),
                     "[1-depth] {desc} passed the recursion guard: {resp}"
                 );
-                let msg = resp["error"]["message"].as_str().unwrap_or("");
+                let msg = resp["error"]["message"].as_str().unwrap_or_else(|| {
+                    panic!("[1-depth] {desc}: refusal lacks string error.message: {resp}")
+                });
                 assert!(
                     msg.contains("nested") || msg.contains("deep"),
                     "[1-depth] {desc} refused on the wrong axis (not depth): {resp}"
@@ -645,7 +652,13 @@ fn p19_n3_boundary_fuzz() {
         let resp = frame(hijack, "4-prefix", "math: namespace hijack");
         let silent_ok = resp["ok"] == json!(true);
         if silent_ok {
-            let derived = resp["derived"].as_str().unwrap_or("");
+            // An admitted frame that derived nothing may omit `derived`; any
+            // other non-string shape is a loud failure.
+            let derived = match &resp["derived"] {
+                Value::String(s) => s.as_str(),
+                Value::Null => "",
+                other => panic!("[4-prefix] `derived` must be a string, got {other}: {resp}"),
+            };
             assert!(
                 !derived.contains("fired"),
                 "[4-prefix] the hijacked math:greaterThan must not fire, got: {derived}"
@@ -670,7 +683,9 @@ fn p19_n3_boundary_fuzz() {
             json!(true),
             "real math:greaterThan twin must admit: {tr}"
         );
-        let derived = tr["derived"].as_str().unwrap_or("");
+        let derived = tr["derived"]
+            .as_str()
+            .unwrap_or_else(|| panic!("real math twin must return string `derived`: {tr}"));
         assert!(
             derived.contains("fired"),
             "the real math builtin must genuinely fire, got: {derived}"
@@ -737,9 +752,10 @@ fn p19_n3_boundary_fuzz() {
                 let bytes = base.as_bytes();
                 let cut = rng.below(bytes.len() as u64) as usize;
                 let mut s = String::new();
-                s.push_str(std::str::from_utf8(&bytes[..cut]).unwrap_or(base));
+                // `spots` templates are pure ASCII, so every byte cut is a char boundary.
+                s.push_str(std::str::from_utf8(&bytes[..cut]).expect("ASCII template prefix"));
                 s.push(cp);
-                s.push_str(std::str::from_utf8(&bytes[cut..]).unwrap_or(""));
+                s.push_str(std::str::from_utf8(&bytes[cut..]).expect("ASCII template suffix"));
                 (s, None)
             }
             2 => {
@@ -847,7 +863,9 @@ fn p19_n3_boundary_fuzz() {
     {
         let fam = family_histo().lock().unwrap_or_else(|e| e.into_inner());
         for family in ["1-depth", "2-unicode", "2-term-bytes", "3-closure", "4-prefix", "fuzz"] {
-            let got = fam.get(family).copied().unwrap_or(0);
+            let got = *fam.get(family).unwrap_or_else(|| {
+                panic!("class histogram incomplete: family {family} ran zero frames")
+            });
             assert!(
                 got > 0,
                 "class histogram incomplete: family {family} ran zero frames"
@@ -856,7 +874,9 @@ fn p19_n3_boundary_fuzz() {
         // 6-wasm is present only when the compiled artifact was available.
         let wid = WASM_IDENTITY_FRAMES.load(Ordering::Relaxed);
         if wid > 0 {
-            let got = fam.get("6-wasm").copied().unwrap_or(0);
+            let got = *fam
+                .get("6-wasm")
+                .unwrap_or_else(|| panic!("wasm-identity frames ran ({wid}) but 6-wasm family is absent"));
             assert_eq!(
                 got, wid,
                 "wasm-identity frames not recorded in the class histogram"

@@ -1,4 +1,8 @@
-//! PCCf server admission leaf (scaffold).
+//! PCCf server admission leaf — **FAKE-ALIVE / stub**.
+//!
+//! Standing: `parse_pccf` length fence is real (`PCCF_LEN` = 736). Full server
+//! admit is **not** wired — [`admit_pccf`] always returns
+//! [`PccfRefusal::NotImplemented`]. Do not treat this module as live ADMIT.
 //!
 //! # Law
 //!
@@ -41,7 +45,7 @@ pub enum PccfRefusal {
         /// Observed length.
         got: usize,
     },
-    /// Scaffold: SRL stratify + admit body not yet wired.
+    /// FAKE-ALIVE stub: SRL stratify + admit body not yet wired.
     NotImplemented(&'static str),
 }
 
@@ -56,9 +60,9 @@ pub fn parse_pccf(bytes: &[u8]) -> Result<Pccf, PccfRefusal> {
     Ok(Pccf { raw })
 }
 
-/// Full server admission (scaffold).
+/// Full server admission — **FAKE-ALIVE / stub** (`NotImplemented`).
 ///
-/// Intended body:
+/// Intended body (not implemented):
 /// 1. Load PCCf SRL rules that use `NOT { }` only.
 /// 2. `stratify_rules(&rules, &run_once)?` — refuse if unstratifiable.
 /// 3. Evaluate schedule against envelope + carrier.
@@ -67,7 +71,7 @@ pub fn parse_pccf(bytes: &[u8]) -> Result<Pccf, PccfRefusal> {
 /// Until that lands, every call refuses closed.
 pub fn admit_pccf(_p: &Pccf) -> Result<(), PccfRefusal> {
     Err(PccfRefusal::NotImplemented(
-        "admit_pccf awaits stratified SRL rules via stratify_rules; Step enum untouched",
+        "FAKE-ALIVE: admit_pccf awaits stratified SRL rules via stratify_rules; Step enum untouched",
     ))
 }
 

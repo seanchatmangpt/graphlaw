@@ -42,6 +42,14 @@ mod tests {
     }
 
     #[test]
+    fn hidden_ops_are_disjoint_from_advertised_ops() {
+        assert_eq!(HIDDEN_OPS.len(), 1);
+        assert_eq!(HIDDEN_OPS[0].name, "duckdb");
+        assert_eq!(HIDDEN_OPS[0].abi_op_number as usize, OPS.len() + 1);
+        assert!(!op_names().contains(&HIDDEN_OPS[0].name));
+    }
+
+    #[test]
     fn document_is_ascii_and_float_free() {
         fn walk(v: &Value) {
             match v {

@@ -82,6 +82,18 @@ here per lane ownership; documented as-is above.
 
 (Graded PASS, no change needed: #3, #6, #7, #8, #9.)
 
+## ABI and receipt refusals added in v26.11 (symptom -> code -> recovery)
+
+Not probe-captured (the probe covers the sql-rdf surface only); symptoms are read from the
+source at the cited lines, 2026-11-25. Register rows: [refusals.md](refusals.md).
+
+| Symptom | Code | Recovery |
+|---|---|---|
+| `law` request fails with message `a lease is required: supply signed_lease + trusted_keys (lease policy required)` (`src/abi/lease.rs:105-109`) | `LeaseRequired` (`details.code`, envelope kind `Unsupported`) | Send `signed_lease` + `trusted_keys`. Policy is `Required` from `abi::set_lease_policy` or request `"lease_policy": "required"`; a request cannot loosen the host policy. From Elixir, the pre-gate answers `:ceiling_unmet` first; an engine-side `LeaseRequired` decodes as `:engine_unclassified`. |
+| `receipt::record` fails with `[RECEIPT-IRI-INVALID] receipt IRI contains forbidden character '<c>'` (`src/receipt.rs:98`) | `RECEIPT-IRI-INVALID` (kind `Unsupported`, `details.code` `Refused`) | Pass a child IRI free of `< > " { } \| \ ^`, backtick, whitespace/control and C1 characters; percent-encode upstream. |
+| `materialize` fails with `hook-refused: <hook iri>: <reason>` (`src/hooks.rs:295`) | `hook-refused` (kind `Unsupported`, `details.code` `Refused`) | A refuse-effect hook fired and no state was committed. Correct the input the hook objects to, or the hook pack. Pre-seeding a `kh:Firing` marker does not suppress it. |
+| `datalog` op fails with `ResourceLimit` and `limit` `datalog_derived_facts`, `datalog_join_steps` or `datalog_output_bytes` (`src/abi/ops/query_engines.rs:172`) | `ResourceLimit` | Reduce rules/facts, or split the program. Caps: 200000 derived facts, 50000000 join steps, 8 MiB N-Quads output (`src/abi.rs:74-78`). |
+
 ## Receipts
 
 Real probe run: real frozen-duckdb connections, real refusals, no mocks, no

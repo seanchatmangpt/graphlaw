@@ -1,11 +1,23 @@
 #![allow(missing_docs)]
-#![allow(clippy::result_large_err)]
 
 use super::ast::{
-    AggregateFunction, CompiledQuery, Cte, FrameSpec, JoinClause, OrderTerm, ScopePos, SqlExpr,
-    SqlLiteral, TableRef, validate_identifier, validate_qualified_identifier,
+    AggregateFunction, CompiledQuery, Cte, FrameSpec, JoinClause, OrderTerm, QualifiedIdent,
+    ScopePos, SqlExpr, SqlIdent, SqlLiteral, TableRef,
 };
 use super::refusals::{AstError, RefusalCode, refusal_arm};
+
+/// Constrained identifier unparser: emits a validated [`SqlIdent`] into `sql`.
+#[inline]
+fn push_ident(sql: &mut String, ident: &SqlIdent) {
+    sql.push_str(ident.as_str());
+}
+
+/// Constrained qualified-identifier unparser: emits a validated
+/// [`QualifiedIdent`] into `sql`.
+#[inline]
+fn push_qualified_ident(sql: &mut String, ident: &QualifiedIdent) {
+    sql.push_str(ident.as_str());
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SelectStatement {
@@ -69,7 +81,7 @@ impl SelectStatement {
         depth: usize,
     ) -> Result<(), AstError> {
         if depth > Self::MAX_DEPTH {
-            return Err(AstError::RecursionLimitExceeded(Self::MAX_DEPTH));
+            return Err(AstError::RecursionLimitObserved(depth, Self::MAX_DEPTH));
         }
         match item {
             SelectItem::Expr(expr) => {
@@ -83,8 +95,8 @@ impl SelectStatement {
                         if idx > 0 {
                             sql.push_str(", ");
                         }
-                        validate_identifier(col)?;
-                        sql.push_str(col);
+                        let col_ident = SqlIdent::new(col)?;
+                        push_ident(sql, &col_ident);
                     }
                     sql.push(')');
                 }
@@ -96,8 +108,8 @@ impl SelectStatement {
                         }
                         Self::serialize_expr(expr, sql, params, depth + 1, ScopePos::SelectList)?;
                         sql.push_str(" AS ");
-                        validate_identifier(name)?;
-                        sql.push_str(name);
+                        let name_ident = SqlIdent::new(name)?;
+                        push_ident(sql, &name_ident);
                     }
                     sql.push(')');
                 }
@@ -146,16 +158,16 @@ impl SelectStatement {
                 if idx > 0 {
                     sql.push_str(", ");
                 }
-                validate_identifier(&cte.name)?;
-                sql.push_str(&cte.name);
+                let cte_name = SqlIdent::new(&cte.name)?;
+                push_ident(sql, &cte_name);
                 if !cte.columns.is_empty() {
                     sql.push('(');
                     for (col_idx, col) in cte.columns.iter().enumerate() {
                         if col_idx > 0 {
                             sql.push_str(", ");
                         }
-                        validate_identifier(col)?;
-                        sql.push_str(col);
+                        let col_ident = SqlIdent::new(col)?;
+                        push_ident(sql, &col_ident);
                     }
                     sql.push(')');
                 }
@@ -166,7 +178,9 @@ impl SelectStatement {
             sql.push(' ');
         }
 
-        validate_identifier(&self.from.name)?;
+        let from_name = self.from.validated_name()?;
+        let from_schema = self.from.validated_schema()?;
+        let from_alias = self.from.validated_alias()?;
         sql.push_str("SELECT ");
         if self.select_list.is_empty() {
             sql.push('*');
@@ -180,35 +194,31 @@ impl SelectStatement {
         }
 
         sql.push_str(" FROM ");
-        if let Some(schema) = &self.from.schema {
-            sql.push_str(schema);
+        if let Some(schema) = &from_schema {
+            push_qualified_ident(sql, schema);
             sql.push('.');
         }
-        sql.push_str(&self.from.name);
-        if let Some(alias) = &self.from.alias {
+        push_ident(sql, &from_name);
+        if let Some(alias) = &from_alias {
             sql.push(' ');
-            sql.push_str(alias);
+            push_ident(sql, alias);
         }
 
         for join in &self.joins {
-            validate_identifier(&join.table.name)?;
-            if let Some(schema) = &join.table.schema {
-                validate_qualified_identifier(schema)?;
-            }
-            if let Some(alias) = &join.table.alias {
-                validate_identifier(alias)?;
-            }
+            let join_name = join.table.validated_name()?;
+            let join_schema = join.table.validated_schema()?;
+            let join_alias = join.table.validated_alias()?;
             sql.push(' ');
             sql.push_str(join.join_type.as_sql());
             sql.push(' ');
-            if let Some(schema) = &join.table.schema {
-                sql.push_str(schema);
+            if let Some(schema) = &join_schema {
+                push_qualified_ident(sql, schema);
                 sql.push('.');
             }
-            sql.push_str(&join.table.name);
-            if let Some(alias) = &join.table.alias {
+            push_ident(sql, &join_name);
+            if let Some(alias) = &join_alias {
                 sql.push(' ');
-                sql.push_str(alias);
+                push_ident(sql, alias);
             }
             sql.push_str(" ON ");
             Self::serialize_expr(
@@ -276,7 +286,7 @@ impl SelectStatement {
         pos: ScopePos,
     ) -> Result<(), AstError> {
         if depth > Self::MAX_DEPTH {
-            return Err(AstError::RecursionLimitExceeded(Self::MAX_DEPTH));
+            return Err(AstError::RecursionLimitObserved(depth, Self::MAX_DEPTH));
         }
 
         match expr {
@@ -284,15 +294,15 @@ impl SelectStatement {
                 column,
                 table_alias,
             } => {
-                validate_identifier(column)?;
+                let col_ident = SqlIdent::new(column)?;
                 if let Some(alias) = table_alias {
                     // Qualified references (`main.regional_sales.region_id`)
                     // validate per dot-separated part.
-                    validate_qualified_identifier(alias)?;
-                    sql.push_str(alias);
+                    let alias_ident = QualifiedIdent::new(alias)?;
+                    push_qualified_ident(sql, &alias_ident);
                     sql.push('.');
                 }
-                sql.push_str(column);
+                push_ident(sql, &col_ident);
             }
             SqlExpr::Literal(lit) => {
                 params.push(lit.clone());
@@ -453,10 +463,10 @@ impl SelectStatement {
                         refusal_arm::ALIASED_AGG_ARG,
                     ));
                 }
-                validate_identifier(alias)?;
+                let alias_ident = SqlIdent::new(alias)?;
                 Self::serialize_expr(expr, sql, params, depth + 1, pos)?;
                 sql.push_str(" AS ");
-                sql.push_str(alias);
+                push_ident(sql, &alias_ident);
             }
         }
         Ok(())

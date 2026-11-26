@@ -1,0 +1,274 @@
+# graphlaw-elixir.ttl - graphlaw_ex (Elixir host) facts as data.
+# Namespace: gle: <https://graphlaw.dev/elixir#> (distinct from gl: <https://graphlaw.dev/governance#> in
+# graphlaw-governance.ttl; the two files share no prefix). No blank nodes.
+# Sources read: graphlaw_ex/lib/graphlaw_ex/{telemetry,introspection,config,wasm_config}.ex,
+# graphlaw_ex/mix.exs, graphlaw_ex/priv/graphlaw/MANIFEST.json, registry/op-examples.json,
+# registry/ARTIFACTS.blake3, .github/workflows/elixir.yml.
+# OpExample rows are a projection of registry/op-examples.json; re-project, never hand-edit rows.
+# Sync direction: gle:ecm-* (ErrorClassMap) and gle:op-* (Op) rows MIRROR registry/capability-registry.json
+# (refusal_kind_classes, ops; emitted as gac: rows by src/registry/emit_ttl.rs). The registry is the
+# source; src/registry/emit_ttl.rs test elixir_ttl_mirror_rows_equal_registry fails on drift.
+# Event names are dotted; split on "." for the segment list.
+
+@prefix gle: <https://graphlaw.dev/elixir#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+gle:ElixirModule a rdfs:Class ; rdfs:label "Elixir module" .
+gle:TelemetryEvent a rdfs:Class ; rdfs:label "Telemetry event" .
+gle:MetadataKey a rdfs:Class ; rdfs:label "Telemetry metadata key" .
+gle:ConfigKey a rdfs:Class ; rdfs:label "config :graphlaw_ex key" .
+gle:ErrorClassMap a rdfs:Class ; rdfs:label "Refusal kind to Splode class row" .
+gle:LimitScope a rdfs:Class ; rdfs:label "Introspection limit scope row" .
+gle:Op a rdfs:Class ; rdfs:label "Registry op" .
+gle:OpExample a rdfs:Class ; rdfs:label "Registry op example" .
+gle:Artifact a rdfs:Class ; rdfs:label "Pinned artifact" .
+gle:CiMatrix a rdfs:Class ; rdfs:label "CI matrix" .
+gle:CiPair a rdfs:Class ; rdfs:label "Elixir/OTP pair" .
+gle:License a rdfs:Class ; rdfs:label "License" .
+gle:HexPackage a rdfs:Class ; rdfs:label "Hex package" .
+gle:Redaction a rdfs:Class ; rdfs:label "Telemetry redaction policy" .
+
+gle:mod-Telemetry a gle:ElixirModule ; rdfs:label "GraphlawEx.Telemetry" .
+gle:mod-EngineLoad a gle:ElixirModule ; rdfs:label "GraphlawEx.EngineLoad" .
+gle:mod-Host a gle:ElixirModule ; rdfs:label "GraphlawEx.Host" .
+
+gle:redaction-default a gle:Redaction ;
+    rdfs:label "GraphlawEx.Telemetry.redact/1" ;
+    gle:maxPlainBytes 128 ;
+    gle:summaryShape "bytes,sha256" .
+
+# --- metadata keys ---
+
+gle:mk-nquads a gle:MetadataKey ; gle:keyName "nquads" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-sparql a gle:MetadataKey ; gle:keyName "sparql" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-sql a gle:MetadataKey ; gle:keyName "sql" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-query a gle:MetadataKey ; gle:keyName "query" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-payload a gle:MetadataKey ; gle:keyName "payload" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-request a gle:MetadataKey ; gle:keyName "request" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-body a gle:MetadataKey ; gle:keyName "body" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-data a gle:MetadataKey ; gle:keyName "data" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-lease a gle:MetadataKey ; gle:keyName "lease" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-lease-secret a gle:MetadataKey ; gle:keyName "lease_secret" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-secret a gle:MetadataKey ; gle:keyName "secret" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-token a gle:MetadataKey ; gle:keyName "token" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-password a gle:MetadataKey ; gle:keyName "password" ; gle:sensitive true ; gle:redactAs "summary" .
+gle:mk-op a gle:MetadataKey ; gle:keyName "op" ; gle:sensitive false ; gle:redactAs "plainIfShort" .
+gle:mk-server a gle:MetadataKey ; gle:keyName "server" ; gle:sensitive false ; gle:redactAs "passthrough" .
+gle:mk-source-digest a gle:MetadataKey ; gle:keyName "source_digest" ; gle:sensitive false ; gle:redactAs "plainIfShort" .
+gle:mk-outcome a gle:MetadataKey ; gle:keyName "outcome" ; gle:sensitive false ; gle:redactAs "plainIfShort" .
+gle:mk-refusal-code a gle:MetadataKey ; gle:keyName "refusal_code" ; gle:sensitive false ; gle:redactAs "plainIfShort" .
+gle:mk-kind a gle:MetadataKey ; gle:keyName "kind" ; gle:sensitive false ; gle:redactAs "plainIfShort" .
+gle:mk-reason a gle:MetadataKey ; gle:keyName "reason" ; gle:sensitive false ; gle:redactAs "exceptionDescriptor" .
+gle:mk-stacktrace a gle:MetadataKey ; gle:keyName "stacktrace" ; gle:sensitive false ; gle:redactAs "strippedFrames" .
+gle:mk-code a gle:MetadataKey ; gle:keyName "code" ; gle:sensitive false ; gle:redactAs "plainIfShort" .
+gle:mk-wasm-sha256 a gle:MetadataKey ; gle:keyName "wasm_sha256" ; gle:sensitive false ; gle:redactAs "plainIfShort" .
+
+# --- telemetry events ---
+
+gle:ev-admit-start a gle:TelemetryEvent ;
+    gle:name "graphlaw_ex.admit.start" ;
+    gle:description "An admit call began." ;
+    gle:logLevel "debug" ;
+    gle:emittedBy gle:mod-Telemetry ;
+    gle:measurement "system_time" ;
+    gle:metadataKey gle:mk-op, gle:mk-server, gle:mk-source-digest .
+
+gle:ev-admit-stop a gle:TelemetryEvent ;
+    gle:name "graphlaw_ex.admit.stop" ;
+    gle:description "An admit call returned (ok or refused)." ;
+    gle:logLevel "info" ;
+    gle:emittedBy gle:mod-Telemetry ;
+    gle:measurement "duration" ;
+    gle:metadataKey gle:mk-op, gle:mk-server, gle:mk-source-digest, gle:mk-outcome, gle:mk-refusal-code .
+
+gle:ev-admit-exception a gle:TelemetryEvent ;
+    gle:name "graphlaw_ex.admit.exception" ;
+    gle:description "An admit call raised, exited or threw; re-raised after the event." ;
+    gle:logLevel "warning" ;
+    gle:emittedBy gle:mod-Telemetry ;
+    gle:measurement "duration" ;
+    gle:metadataKey gle:mk-op, gle:mk-server, gle:mk-source-digest, gle:mk-outcome, gle:mk-refusal-code, gle:mk-kind, gle:mk-reason, gle:mk-stacktrace .
+
+gle:ev-engine-admit a gle:TelemetryEvent ;
+    gle:name "graphlaw_ex.engine.admit" ;
+    gle:description "The wasm engine load receipt." ;
+    gle:logLevel "debug" ;
+    gle:emittedBy gle:mod-EngineLoad ;
+    gle:metadataKey gle:mk-outcome, gle:mk-code, gle:mk-wasm-sha256 .
+
+gle:ev-host-call-stop a gle:TelemetryEvent ;
+    gle:name "graphlaw_ex.host.call.stop" ;
+    gle:description "A host call into the wasm instance finished." ;
+    gle:logLevel "debug" ;
+    gle:emittedBy gle:mod-Host ;
+    gle:measurement "duration" ;
+    gle:metadataKey gle:mk-op, gle:mk-outcome, gle:mk-code .
+
+gle:ev-host-recycle a gle:TelemetryEvent ;
+    gle:name "graphlaw_ex.host.recycle" ;
+    gle:description "The wasm instance was recycled." ;
+    gle:logLevel "debug" ;
+    gle:emittedBy gle:mod-Host ;
+    gle:measurement "count" ;
+    gle:metadataKey gle:mk-reason, gle:mk-wasm-sha256 .
+
+# --- config keys (GraphlawEx.Config / WasmConfig) ---
+
+gle:ck-auto_start a gle:ConfigKey ; gle:keyName "auto_start" ; gle:valueType "boolean" ; gle:default false ; gle:zeroOk false .
+gle:ck-wasm_path a gle:ConfigKey ; gle:keyName "wasm_path" ; gle:valueType "nonEmptyString" ; gle:zeroOk false .
+gle:ck-pool_size a gle:ConfigKey ; gle:keyName "pool_size" ; gle:valueType "posInteger" ; gle:min 1 ; gle:zeroOk false ; rdfs:comment "Listed in Config.keys/0; Pool size is passed as size: n, default System.schedulers_online/0." .
+gle:ck-fuel a gle:ConfigKey ; gle:keyName "fuel" ; gle:valueType "posInteger" ; gle:min 1 ; gle:zeroOk false ; gle:defaultExpr "timeout_ms * fuel_per_ms" .
+gle:ck-timeout_ms a gle:ConfigKey ; gle:keyName "timeout_ms" ; gle:valueType "posInteger" ; gle:min 1 ; gle:zeroOk false ; gle:default 5000 .
+gle:ck-fuel_per_ms a gle:ConfigKey ; gle:keyName "fuel_per_ms" ; gle:valueType "posInteger" ; gle:min 1 ; gle:zeroOk false ; gle:default 1000000 .
+gle:ck-instantiate_fuel a gle:ConfigKey ; gle:keyName "instantiate_fuel" ; gle:valueType "posInteger" ; gle:min 1 ; gle:zeroOk false ; gle:default 1000000000 .
+gle:ck-memory_limit_bytes a gle:ConfigKey ; gle:keyName "memory_limit_bytes" ; gle:valueType "posInteger" ; gle:min 1 ; gle:zeroOk false ; gle:default 268435456 .
+gle:ck-recycle_bytes a gle:ConfigKey ; gle:keyName "recycle_bytes" ; gle:valueType "posInteger" ; gle:min 1 ; gle:zeroOk false ; gle:default 134217728 .
+gle:ck-max_queue a gle:ConfigKey ; gle:keyName "max_queue" ; gle:valueType "posInteger" ; gle:min 1 ; gle:zeroOk false ; gle:default 64 .
+gle:ck-max_response_bytes a gle:ConfigKey ; gle:keyName "max_response_bytes" ; gle:valueType "posInteger" ; gle:min 1 ; gle:zeroOk false ; gle:default 33554432 .
+gle:ck-table_elements a gle:ConfigKey ; gle:keyName "table_elements" ; gle:valueType "nonNegInteger" ; gle:min 0 ; gle:zeroOk true ; gle:default 100000 .
+gle:ck-instances a gle:ConfigKey ; gle:keyName "instances" ; gle:valueType "nonNegInteger" ; gle:min 0 ; gle:zeroOk true ; gle:default 10 .
+gle:ck-tables a gle:ConfigKey ; gle:keyName "tables" ; gle:valueType "nonNegInteger" ; gle:min 0 ; gle:zeroOk true ; gle:default 10 .
+gle:ck-memories a gle:ConfigKey ; gle:keyName "memories" ; gle:valueType "nonNegInteger" ; gle:min 0 ; gle:zeroOk true ; gle:default 4 .
+
+# --- introspection error classes and limit scopes ---
+
+gle:ecm-ResourceLimit a gle:ErrorClassMap ; gle:refusalKind "ResourceLimit" ; gle:errorClass "forbidden" .
+gle:ecm-NotSemanticContent a gle:ErrorClassMap ; gle:refusalKind "NotSemanticContent" ; gle:errorClass "invalid" .
+gle:ecm-Ambiguous a gle:ErrorClassMap ; gle:refusalKind "Ambiguous" ; gle:errorClass "invalid" .
+gle:ecm-EngineRejected a gle:ErrorClassMap ; gle:refusalKind "EngineRejected" ; gle:errorClass "invalid" .
+gle:ecm-Unsupported a gle:ErrorClassMap ; gle:refusalKind "Unsupported" ; gle:errorClass "unknown" .
+gle:ecm-TierMismatch a gle:ErrorClassMap ; gle:refusalKind "TierMismatch" ; gle:errorClass "forbidden" .
+gle:ecm-DuckDb a gle:ErrorClassMap ; gle:refusalKind "DuckDb" ; gle:errorClass "invalid" .
+gle:ecm-BareSql a gle:ErrorClassMap ; gle:refusalKind "BareSql" ; gle:errorClass "invalid" .
+gle:ecm-Fuse a gle:ErrorClassMap ; gle:refusalKind "Fuse" ; gle:errorClass "forbidden" .
+gle:ecm-other a gle:ErrorClassMap ; gle:refusalKind "*" ; gle:errorClass "unknown" ; rdfs:comment "Any kind not listed above." .
+gle:ls-n3 a gle:LimitScope ; gle:limitPrefix "n3_" ; gle:scopedToOp gle:op-n3 .
+gle:ls-hooks a gle:LimitScope ; gle:limitPrefix "hooks_" ; gle:scopedToOp gle:op-hooks .
+gle:ls-law a gle:LimitScope ; gle:limitPrefix "max_plan_" ; gle:scopedToOp gle:op-law .
+gle:ls-policy a gle:LimitScope ; gle:limitPrefix "max_policy_" ; gle:scopedToOp gle:op-policy .
+
+# --- registry ops ---
+
+gle:op-canonical a gle:Op ; gle:opName "canonical" .
+gle:op-capabilities a gle:Op ; gle:opName "capabilities" .
+gle:op-convert a gle:Op ; gle:opName "convert" .
+gle:op-datalog a gle:Op ; gle:opName "datalog" .
+gle:op-entail a gle:Op ; gle:opName "entail" .
+gle:op-hooks a gle:Op ; gle:opName "hooks" .
+gle:op-law a gle:Op ; gle:opName "law" .
+gle:op-n3 a gle:Op ; gle:opName "n3" .
+gle:op-parse a gle:Op ; gle:opName "parse" .
+gle:op-policy a gle:Op ; gle:opName "policy" .
+gle:op-shacl a gle:Op ; gle:opName "shacl" .
+gle:op-shex a gle:Op ; gle:opName "shex" .
+gle:op-sniff a gle:Op ; gle:opName "sniff" .
+gle:op-sparql a gle:Op ; gle:opName "sparql" .
+
+# --- op examples (projection of registry/op-examples.json) ---
+
+gle:ex-capabilities-default a gle:OpExample ; gle:exampleId "capabilities.default" ; gle:forOp gle:op-capabilities ; gle:description "Report ABI version, authorities and the supported op and dialect surface." ; gle:outcome "ok" ; gle:requestJson "{\"op\":\"capabilities\"}" ; gle:positiveControl true .
+gle:ex-sniff-turtle a gle:OpExample ; gle:exampleId "sniff.turtle" ; gle:forOp gle:op-sniff ; gle:description "Content routing recognises Turtle." ; gle:outcome "ok" ; gle:requestJson "{\"op\":\"sniff\",\"text\":\"@prefix e: <https://e/> . e:s e:p e:o .\"}" ; gle:positiveControl true .
+gle:ex-sniff-ntriples a gle:OpExample ; gle:exampleId "sniff.ntriples" ; gle:forOp gle:op-sniff ; gle:description "Content routing recognises N-Triples." ; gle:outcome "ok" ; gle:requestJson "{\"op\":\"sniff\",\"text\":\"<https://e/s> <https://e/p> <https://e/o> .\\n\"}" ; gle:positiveControl false .
+gle:ex-sniff-n3-hint a gle:OpExample ; gle:exampleId "sniff.n3-hint" ; gle:forOp gle:op-sniff ; gle:description "A hint steers routing toward N3 rules." ; gle:outcome "ok" ; gle:requestJson "{\"hint\":\"n3\",\"op\":\"sniff\",\"text\":\"{ ?x a <https://e/A> } => { ?x a <https://e/B> } .\"}" ; gle:positiveControl false .
+gle:ex-sniff-sparql a gle:OpExample ; gle:exampleId "sniff.sparql" ; gle:forOp gle:op-sniff ; gle:description "Content routing recognises a SPARQL query." ; gle:outcome "ok" ; gle:requestJson "{\"op\":\"sniff\",\"text\":\"SELECT * WHERE { ?s ?p ?o }\"}" ; gle:positiveControl false .
+gle:ex-sniff-html-refused a gle:OpExample ; gle:exampleId "sniff.html-refused" ; gle:forOp gle:op-sniff ; gle:description "HTML is not semantic content." ; gle:outcome "refused" ; gle:refusalKind "NotSemanticContent" ; gle:requestJson "{\"op\":\"sniff\",\"text\":\"<!DOCTYPE html><html></html>\"}" ; gle:positiveControl false .
+gle:ex-sniff-missing-text-refused a gle:OpExample ; gle:exampleId "sniff.missing-text-refused" ; gle:forOp gle:op-sniff ; gle:description "A request without text is refused as unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"op\":\"sniff\"}" ; gle:positiveControl false .
+gle:ex-parse-turtle a gle:OpExample ; gle:exampleId "parse.turtle" ; gle:forOp gle:op-parse ; gle:description "Parse Turtle and report the quad count and dataset id." ; gle:outcome "ok" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"parse\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"}" ; gle:positiveControl true .
+gle:ex-parse-sniffed a gle:OpExample ; gle:exampleId "parse.sniffed" ; gle:forOp gle:op-parse ; gle:description "Parse without a dialect: the router sniffs Turtle." ; gle:outcome "ok" ; gle:requestJson "{\"op\":\"parse\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"}" ; gle:positiveControl false .
+gle:ex-parse-n3-syntax-check a gle:OpExample ; gle:exampleId "parse.n3-syntax-check" ; gle:forOp gle:op-parse ; gle:description "A non-RDF dialect (N3) is syntax-checked and reports valid." ; gle:outcome "ok" ; gle:requestJson "{\"dialect\":\"n3\",\"op\":\"parse\",\"text\":\"{ ?x a <https://e/A> } => { ?x a <https://e/B> } .\"}" ; gle:positiveControl false .
+gle:ex-parse-turtle-invalid-refused a gle:OpExample ; gle:exampleId "parse.turtle-invalid-refused" ; gle:forOp gle:op-parse ; gle:description "Malformed Turtle is rejected by the engine." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"parse\",\"text\":\"<a> <b> .\"}" ; gle:positiveControl false .
+gle:ex-parse-unknown-dialect-refused a gle:OpExample ; gle:exampleId "parse.unknown-dialect-refused" ; gle:forOp gle:op-parse ; gle:description "An unknown dialect name is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"dialect\":\"nope\",\"op\":\"parse\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"}" ; gle:positiveControl false .
+gle:ex-convert-turtle a gle:OpExample ; gle:exampleId "convert.turtle" ; gle:forOp gle:op-convert ; gle:description "Convert the sample graph to turtle." ; gle:outcome "ok" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"convert\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\",\"to\":\"turtle\"}" ; gle:positiveControl true .
+gle:ex-convert-trig a gle:OpExample ; gle:exampleId "convert.trig" ; gle:forOp gle:op-convert ; gle:description "Convert the sample graph to trig." ; gle:outcome "ok" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"convert\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\",\"to\":\"trig\"}" ; gle:positiveControl false .
+gle:ex-convert-ntriples a gle:OpExample ; gle:exampleId "convert.ntriples" ; gle:forOp gle:op-convert ; gle:description "Convert the sample graph to ntriples." ; gle:outcome "ok" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"convert\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\",\"to\":\"ntriples\"}" ; gle:positiveControl false .
+gle:ex-convert-nquads a gle:OpExample ; gle:exampleId "convert.nquads" ; gle:forOp gle:op-convert ; gle:description "Convert the sample graph to nquads." ; gle:outcome "ok" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"convert\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\",\"to\":\"nquads\"}" ; gle:positiveControl false .
+gle:ex-convert-rdfxml a gle:OpExample ; gle:exampleId "convert.rdfxml" ; gle:forOp gle:op-convert ; gle:description "Convert the sample graph to rdfxml." ; gle:outcome "ok" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"convert\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\",\"to\":\"rdfxml\"}" ; gle:positiveControl false .
+gle:ex-convert-jsonld a gle:OpExample ; gle:exampleId "convert.jsonld" ; gle:forOp gle:op-convert ; gle:description "Convert the sample graph to jsonld." ; gle:outcome "ok" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"convert\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\",\"to\":\"jsonld\"}" ; gle:positiveControl false .
+gle:ex-convert-yamlld a gle:OpExample ; gle:exampleId "convert.yamlld" ; gle:forOp gle:op-convert ; gle:description "Convert the sample graph to yamlld." ; gle:outcome "ok" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"convert\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\",\"to\":\"yamlld\"}" ; gle:positiveControl false .
+gle:ex-convert-trix a gle:OpExample ; gle:exampleId "convert.trix" ; gle:forOp gle:op-convert ; gle:description "Convert the sample graph to trix." ; gle:outcome "ok" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"convert\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\",\"to\":\"trix\"}" ; gle:positiveControl false .
+gle:ex-convert-hextuples a gle:OpExample ; gle:exampleId "convert.hextuples" ; gle:forOp gle:op-convert ; gle:description "Convert the sample graph to hextuples." ; gle:outcome "ok" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"convert\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\",\"to\":\"hextuples\"}" ; gle:positiveControl false .
+gle:ex-convert-non-rdf-target-refused a gle:OpExample ; gle:exampleId "convert.non-rdf-target-refused" ; gle:forOp gle:op-convert ; gle:description "A non-RDF target dialect is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"convert\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\",\"to\":\"n3\"}" ; gle:positiveControl false .
+gle:ex-convert-bad-source-refused a gle:OpExample ; gle:exampleId "convert.bad-source-refused" ; gle:forOp gle:op-convert ; gle:description "Malformed source text is rejected." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:requestJson "{\"dialect\":\"turtle\",\"op\":\"convert\",\"text\":\"<a> <b> .\",\"to\":\"ntriples\"}" ; gle:positiveControl false .
+gle:ex-canonical-flat a gle:OpExample ; gle:exampleId "canonical.flat" ; gle:forOp gle:op-canonical ; gle:description "Canonical N-Quads and id for the sample graph." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"},\"op\":\"canonical\"}" ; gle:positiveControl true .
+gle:ex-canonical-nested-data-spec a gle:OpExample ; gle:exampleId "canonical.nested-data-spec" ; gle:forOp gle:op-canonical ; gle:description "A data spec with hint and base canonicalises to the same content." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"base\":\"https://e/\",\"dialect\":\"turtle\",\"hint\":\"ttl\",\"text\":\"<s> <p> <o> .\"},\"op\":\"canonical\"}" ; gle:positiveControl false .
+gle:ex-canonical-string-data-refused a gle:OpExample ; gle:exampleId "canonical.string-data-refused" ; gle:forOp gle:op-canonical ; gle:description "A bare string is not a data spec object." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"data\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\",\"op\":\"canonical\"}" ; gle:positiveControl false .
+gle:ex-sparql-select a gle:OpExample ; gle:exampleId "sparql.select" ; gle:forOp gle:op-sparql ; gle:description "SELECT returns solutions." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"},\"op\":\"sparql\",\"query\":\"SELECT ?o WHERE { <https://e/s> <https://e/p> ?o } ORDER BY ?o\"}" ; gle:positiveControl true .
+gle:ex-sparql-construct a gle:OpExample ; gle:exampleId "sparql.construct" ; gle:forOp gle:op-sparql ; gle:description "CONSTRUCT returns a graph." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"},\"op\":\"sparql\",\"query\":\"CONSTRUCT { ?s a <https://e/U> } WHERE { ?s a <https://e/T> }\"}" ; gle:positiveControl false .
+gle:ex-sparql-ask a gle:OpExample ; gle:exampleId "sparql.ask" ; gle:forOp gle:op-sparql ; gle:description "ASK returns a boolean." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"},\"op\":\"sparql\",\"query\":\"ASK { <https://e/s> a <https://e/T> }\"}" ; gle:positiveControl false .
+gle:ex-sparql-syntax-refused a gle:OpExample ; gle:exampleId "sparql.syntax-refused" ; gle:forOp gle:op-sparql ; gle:description "A malformed query is rejected by the engine." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"},\"op\":\"sparql\",\"query\":\"SELEKT nope\"}" ; gle:positiveControl false .
+gle:ex-sparql-missing-query-refused a gle:OpExample ; gle:exampleId "sparql.missing-query-refused" ; gle:forOp gle:op-sparql ; gle:description "A request without a query is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"},\"op\":\"sparql\"}" ; gle:positiveControl false .
+gle:ex-shacl-conforming a gle:OpExample ; gle:exampleId "shacl.conforming" ; gle:forOp gle:op-shacl ; gle:description "Conforming data yields conforms true." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"text\":\"@prefix ex: <https://e/> . ex:s a ex:T ; ex:p 1 .\"},\"op\":\"shacl\",\"shapes\":\"@prefix sh: <http://www.w3.org/ns/shacl#> . @prefix ex: <https://e/> . @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\\nex:S a sh:NodeShape ; sh:targetClass ex:T ; sh:property [ sh:path ex:p ; sh:datatype xsd:integer ] .\"}" ; gle:positiveControl true .
+gle:ex-shacl-violating a gle:OpExample ; gle:exampleId "shacl.violating" ; gle:forOp gle:op-shacl ; gle:description "Violating data is a successful validation with conforms false." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"},\"op\":\"shacl\",\"shapes\":\"@prefix sh: <http://www.w3.org/ns/shacl#> . @prefix ex: <https://e/> . @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\\nex:S a sh:NodeShape ; sh:targetClass ex:T ; sh:property [ sh:path ex:p ; sh:datatype xsd:integer ] .\"}" ; gle:positiveControl false .
+gle:ex-shacl-bad-shapes-refused a gle:OpExample ; gle:exampleId "shacl.bad-shapes-refused" ; gle:forOp gle:op-shacl ; gle:description "Unparseable shapes are rejected." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"},\"op\":\"shacl\",\"shapes\":\"this is not turtle\"}" ; gle:positiveControl false .
+gle:ex-shacl-missing-shapes-refused a gle:OpExample ; gle:exampleId "shacl.missing-shapes-refused" ; gle:forOp gle:op-shacl ; gle:description "A request without shapes is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:s ex:p ex:o, \\\"caf\\\\u00e9\\\"@fr, 42 ; a ex:T .\"},\"op\":\"shacl\"}" ; gle:positiveControl false .
+gle:ex-shex-shexc a gle:OpExample ; gle:exampleId "shex.shexc" ; gle:forOp gle:op-shex ; gle:description "ShExC schema with a mixed conformant/nonconformant shape map." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"text\":\"@prefix ex: <https://e/> . ex:cat ex:says \\\"meow\\\" . ex:rock ex:weight 5 .\"},\"map\":\"<https://e/cat>@<https://e/Cat>, <https://e/rock>@<https://e/Cat>\",\"op\":\"shex\",\"schema\":\"PREFIX ex: <https://e/>\\nex:Cat { ex:says . }\"}" ; gle:positiveControl true .
+gle:ex-shex-shexj a gle:OpExample ; gle:exampleId "shex.shexj" ; gle:forOp gle:op-shex ; gle:description "The same schema as ShExJ." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"text\":\"@prefix ex: <https://e/> . ex:cat ex:says \\\"meow\\\" . ex:rock ex:weight 5 .\"},\"map\":\"<https://e/cat>@<https://e/Cat>, <https://e/rock>@<https://e/Cat>\",\"op\":\"shex\",\"schema\":\"{\\\"@context\\\":\\\"http://www.w3.org/ns/shex.jsonld\\\",\\\"type\\\":\\\"Schema\\\",\\\"shapes\\\":[{\\\"type\\\":\\\"Shape\\\",\\\"id\\\":\\\"https://e/Cat\\\",\\\"expression\\\":{\\\"type\\\":\\\"TripleConstraint\\\",\\\"predicate\\\":\\\"https://e/says\\\"}}]}\",\"schema_dialect\":\"shexj\"}" ; gle:positiveControl false .
+gle:ex-shex-bad-schema-refused a gle:OpExample ; gle:exampleId "shex.bad-schema-refused" ; gle:forOp gle:op-shex ; gle:description "An unparseable ShExC schema is rejected." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:requestJson "{\"data\":{\"text\":\"@prefix ex: <https://e/> . ex:cat ex:says \\\"meow\\\" . ex:rock ex:weight 5 .\"},\"map\":\"<https://e/cat>@<https://e/Cat>, <https://e/rock>@<https://e/Cat>\",\"op\":\"shex\",\"schema\":\"ex:Cat {{{\"}" ; gle:positiveControl false .
+gle:ex-shex-missing-map-refused a gle:OpExample ; gle:exampleId "shex.missing-map-refused" ; gle:forOp gle:op-shex ; gle:description "A request without a shape map is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"data\":{\"text\":\"@prefix ex: <https://e/> . ex:cat ex:says \\\"meow\\\" . ex:rock ex:weight 5 .\"},\"op\":\"shex\",\"schema\":\"PREFIX ex: <https://e/>\\nex:Cat { ex:says . }\"}" ; gle:positiveControl false .
+gle:ex-n3-reason a gle:OpExample ; gle:exampleId "n3.reason" ; gle:forOp gle:op-n3 ; gle:description "N3 rules derive new facts." ; gle:outcome "ok" ; gle:requestJson "{\"op\":\"n3\",\"text\":\"@prefix : <https://e/> . :s a :Human . { ?x a :Human } => { ?x a :Mortal } .\"}" ; gle:positiveControl true .
+gle:ex-n3-syntax-refused a gle:OpExample ; gle:exampleId "n3.syntax-refused" ; gle:forOp gle:op-n3 ; gle:description "Malformed N3 is rejected by the purrdf::n3 engine." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:requestJson "{\"op\":\"n3\",\"text\":\"{ ?x a } =>\"}" ; gle:positiveControl false .
+gle:ex-n3-missing-text-refused a gle:OpExample ; gle:exampleId "n3.missing-text-refused" ; gle:forOp gle:op-n3 ; gle:description "A request without text is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"op\":\"n3\"}" ; gle:positiveControl false .
+gle:ex-entail-simple a gle:OpExample ; gle:exampleId "entail.simple" ; gle:forOp gle:op-entail ; gle:description "Materialise the simple entailment regime." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"text\":\"@prefix ex: <https://e/> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . ex:Cat rdfs:subClassOf ex:Animal . ex:tom a ex:Cat .\"},\"op\":\"entail\",\"regime\":\"simple\"}" ; gle:positiveControl true .
+gle:ex-entail-rdf a gle:OpExample ; gle:exampleId "entail.rdf" ; gle:forOp gle:op-entail ; gle:description "Materialise the rdf entailment regime." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"text\":\"@prefix ex: <https://e/> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . ex:Cat rdfs:subClassOf ex:Animal . ex:tom a ex:Cat .\"},\"op\":\"entail\",\"regime\":\"rdf\"}" ; gle:positiveControl false .
+gle:ex-entail-rdfs a gle:OpExample ; gle:exampleId "entail.rdfs" ; gle:forOp gle:op-entail ; gle:description "Materialise the rdfs entailment regime." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"text\":\"@prefix ex: <https://e/> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . ex:Cat rdfs:subClassOf ex:Animal . ex:tom a ex:Cat .\"},\"op\":\"entail\",\"regime\":\"rdfs\"}" ; gle:positiveControl false .
+gle:ex-entail-owl-rl a gle:OpExample ; gle:exampleId "entail.owl-rl" ; gle:forOp gle:op-entail ; gle:description "Materialise the owl-rl entailment regime." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"text\":\"@prefix ex: <https://e/> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . ex:Cat rdfs:subClassOf ex:Animal . ex:tom a ex:Cat .\"},\"op\":\"entail\",\"regime\":\"owl-rl\"}" ; gle:positiveControl false .
+gle:ex-entail-d a gle:OpExample ; gle:exampleId "entail.d" ; gle:forOp gle:op-entail ; gle:description "Materialise the d entailment regime." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"text\":\"@prefix ex: <https://e/> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . ex:Cat rdfs:subClassOf ex:Animal . ex:tom a ex:Cat .\"},\"op\":\"entail\",\"regime\":\"d\"}" ; gle:positiveControl false .
+gle:ex-entail-unknown-regime-refused a gle:OpExample ; gle:exampleId "entail.unknown-regime-refused" ; gle:forOp gle:op-entail ; gle:description "An unknown regime is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"data\":{\"text\":\"@prefix ex: <https://e/> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . ex:Cat rdfs:subClassOf ex:Animal . ex:tom a ex:Cat .\"},\"op\":\"entail\",\"regime\":\"nope\"}" ; gle:positiveControl false .
+gle:ex-datalog-ancestor a gle:OpExample ; gle:exampleId "datalog.ancestor" ; gle:forOp gle:op-datalog ; gle:description "Least fixpoint of a transitive-closure program." ; gle:outcome "ok" ; gle:requestJson "{\"facts\":[[\"https://e/a\",\"https://e/par\",\"https://e/b\"],[\"https://e/b\",\"https://e/par\",\"https://e/c\"]],\"op\":\"datalog\",\"rules\":[{\"body\":[[\"?x\",\"https://e/par\",\"?y\"]],\"head\":[\"?x\",\"https://e/anc\",\"?y\"]},{\"body\":[[\"?x\",\"https://e/anc\",\"?y\"],[\"?y\",\"https://e/par\",\"?z\"]],\"head\":[\"?x\",\"https://e/anc\",\"?z\"]}]}" ; gle:positiveControl true .
+gle:ex-datalog-no-rules a gle:OpExample ; gle:exampleId "datalog.no-rules" ; gle:forOp gle:op-datalog ; gle:description "No rules: the output is exactly the input facts." ; gle:outcome "ok" ; gle:requestJson "{\"facts\":[[\"https://e/a\",\"https://e/par\",\"https://e/b\"],[\"https://e/b\",\"https://e/par\",\"https://e/c\"]],\"op\":\"datalog\",\"rules\":[]}" ; gle:positiveControl false .
+gle:ex-datalog-missing-facts-refused a gle:OpExample ; gle:exampleId "datalog.missing-facts-refused" ; gle:forOp gle:op-datalog ; gle:description "A request without facts is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"op\":\"datalog\",\"rules\":[{\"body\":[[\"?x\",\"https://e/par\",\"?y\"]],\"head\":[\"?x\",\"https://e/anc\",\"?y\"]},{\"body\":[[\"?x\",\"https://e/anc\",\"?y\"],[\"?y\",\"https://e/par\",\"?z\"]],\"head\":[\"?x\",\"https://e/anc\",\"?z\"]}]}" ; gle:positiveControl false .
+gle:ex-datalog-bad-atom-refused a gle:OpExample ; gle:exampleId "datalog.bad-atom-refused" ; gle:forOp gle:op-datalog ; gle:description "A malformed atom is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"facts\":[[\"https://e/a\",\"https://e/par\",\"https://e/b\"],[\"https://e/b\",\"https://e/par\",\"https://e/c\"]],\"op\":\"datalog\",\"rules\":[{\"body\":[],\"head\":[\"?x\",\"https://e/q\"]}]}" ; gle:positiveControl false .
+gle:ex-hooks-inline-pack a gle:OpExample ; gle:exampleId "hooks.inline-pack" ; gle:forOp gle:op-hooks ; gle:description "An inline kh pack derives a B for every A and reports its firing." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:x a ex:A .\"},\"op\":\"hooks\",\"pack\":{\"dialect\":\"turtle\",\"text\":\"@prefix kh: <http://seanchatmangpt.github.io/graphlaw/kh#> . @prefix ex: <https://e/> .\\nex:h a kh:Hook ; kh:kind \\\"sparql\\\" ; kh:effect \\\"emit-delta\\\" ; kh:action ex:a ;\\n  kh:query \\\"SELECT ?x WHERE { ?x a <https://e/A> }\\\" .\\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;\\n  kh:query \\\"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\\\" .\\n\"}}" ; gle:positiveControl true .
+gle:ex-hooks-no-match a gle:OpExample ; gle:exampleId "hooks.no-match" ; gle:forOp gle:op-hooks ; gle:description "A pack over data it does not match fires nothing." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:x a ex:Z .\"},\"op\":\"hooks\",\"pack\":{\"dialect\":\"turtle\",\"text\":\"@prefix kh: <http://seanchatmangpt.github.io/graphlaw/kh#> . @prefix ex: <https://e/> .\\nex:h a kh:Hook ; kh:kind \\\"sparql\\\" ; kh:effect \\\"emit-delta\\\" ; kh:action ex:a ;\\n  kh:query \\\"SELECT ?x WHERE { ?x a <https://e/A> }\\\" .\\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;\\n  kh:query \\\"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\\\" .\\n\"}}" ; gle:positiveControl false .
+gle:ex-hooks-unsupported-kind-refused a gle:OpExample ; gle:exampleId "hooks.unsupported-kind-refused" ; gle:forOp gle:op-hooks ; gle:description "A hook with an unsupported kh:kind is refused, not skipped." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:x a ex:A .\"},\"op\":\"hooks\",\"pack\":{\"dialect\":\"turtle\",\"text\":\"@prefix kh: <http://seanchatmangpt.github.io/graphlaw/kh#> . @prefix ex: <https://e/> .\\nex:h a kh:Hook ; kh:kind \\\"datalog\\\" ; kh:effect \\\"emit-delta\\\" ; kh:action ex:a ;\\n  kh:query \\\"SELECT ?x WHERE { ?x a <https://e/A> }\\\" .\\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;\\n  kh:query \\\"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\\\" .\\n\"}}" ; gle:positiveControl false .
+gle:ex-hooks-missing-pack-refused a gle:OpExample ; gle:exampleId "hooks.missing-pack-refused" ; gle:forOp gle:op-hooks ; gle:description "A request without a pack is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:x a ex:A .\"},\"op\":\"hooks\"}" ; gle:positiveControl false .
+gle:ex-law-shacl-n3 a gle:OpExample ; gle:exampleId "law.shacl-n3" ; gle:forOp gle:op-law ; gle:description "Derive with N3 then admit with SHACL; receipts are chained." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:a a ex:T ; ex:name \\\"a\\\" .\"},\"op\":\"law\",\"steps\":[{\"rules\":\"@prefix ex: <https://e/> . { ?x a ex:T } => { ?x a ex:Checked } .\",\"step\":\"n3\"},{\"shapes\":\"@prefix sh: <http://www.w3.org/ns/shacl#> . @prefix ex: <https://e/> .\\nex:S a sh:NodeShape ; sh:targetClass ex:T ; sh:property [ sh:path ex:name ; sh:minCount 1 ] .\",\"step\":\"shacl\"}]}" ; gle:positiveControl true .
+gle:ex-law-rdfs a gle:OpExample ; gle:exampleId "law.rdfs" ; gle:forOp gle:op-law ; gle:description "An RDFS entailment step is receipted." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"ntriples\",\"text\":\"<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .\\n<urn:a:x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <urn:a:C> .\\n\"},\"op\":\"law\",\"steps\":[{\"step\":\"rdfs\"}]}" ; gle:positiveControl false .
+gle:ex-law-owl-rl a gle:OpExample ; gle:exampleId "law.owl-rl" ; gle:forOp gle:op-law ; gle:description "An OWL-RL entailment step is receipted." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"ntriples\",\"text\":\"<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .\\n<urn:a:x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <urn:a:C> .\\n\"},\"op\":\"law\",\"steps\":[{\"step\":\"owl-rl\"}]}" ; gle:positiveControl false .
+gle:ex-law-plan-receipts a gle:OpExample ; gle:exampleId "law.plan-receipts" ; gle:forOp gle:op-law ; gle:description "A two-action plan is admitted, its receipts recorded and required." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"ntriples\",\"text\":\"<urn:p:robot> <urn:p:at> <urn:p:a> .\\n\"},\"op\":\"law\",\"steps\":[{\"plan\":{\"actions\":[{\"add\":\"<urn:p:robot> <urn:p:at> <urn:p:b> .\\n\",\"del\":\"<urn:p:robot> <urn:p:at> <urn:p:a> .\\n\",\"name\":\"a-b\",\"pre\":\"<urn:p:robot> <urn:p:at> <urn:p:a> .\\n\"},{\"add\":\"<urn:p:robot> <urn:p:at> <urn:p:c> .\\n\",\"del\":\"<urn:p:robot> <urn:p:at> <urn:p:b> .\\n\",\"name\":\"b-c\",\"pre\":\"<urn:p:robot> <urn:p:at> <urn:p:b> .\\n\"}],\"goal\":\"<urn:p:robot> <urn:p:at> <urn:p:c> .\\n\"},\"step\":\"plan\"},{\"step\":\"record-receipts\"},{\"step\":\"require-receipt\",\"step_name\":\"plan-action\"}]}" ; gle:positiveControl false .
+gle:ex-law-hooks-step a gle:OpExample ; gle:exampleId "law.hooks-step" ; gle:forOp gle:op-law ; gle:description "A hooks step runs an inline kh pack." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:x a ex:A .\"},\"op\":\"law\",\"steps\":[{\"pack\":{\"dialect\":\"turtle\",\"text\":\"@prefix kh: <http://seanchatmangpt.github.io/graphlaw/kh#> . @prefix ex: <https://e/> .\\nex:h a kh:Hook ; kh:kind \\\"sparql\\\" ; kh:effect \\\"emit-delta\\\" ; kh:action ex:a ;\\n  kh:query \\\"SELECT ?x WHERE { ?x a <https://e/A> }\\\" .\\nex:a a kh:Action ; kh:handler <http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct> ;\\n  kh:query \\\"CONSTRUCT { ?x a <https://e/B> } WHERE { ?x a <https://e/A> }\\\" .\\n\"},\"step\":\"hooks\"}]}" ; gle:positiveControl false .
+gle:ex-law-leased-shacl-n3-plan a gle:OpExample ; gle:exampleId "law.leased-shacl-n3-plan" ; gle:forOp gle:op-law ; gle:description "shacl, n3 and plan under an unverified lease with an explicit clock." ; gle:outcome "ok" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:a a ex:T ; ex:name \\\"a\\\" .\"},\"lease\":{\"ceiling\":\"construct\",\"expires_unix\":100,\"holder\":\"h\",\"id\":\"L1\",\"scope\":[\"admit:shacl\",\"derive:n3\",\"admit:plan\"]},\"now_unix\":50,\"op\":\"law\",\"steps\":[{\"shapes\":\"@prefix sh: <http://www.w3.org/ns/shacl#> . @prefix ex: <https://e/> .\\nex:S a sh:NodeShape ; sh:targetClass ex:T ; sh:property [ sh:path ex:name ; sh:minCount 1 ] .\",\"step\":\"shacl\"},{\"rules\":\"@prefix ex: <https://e/> . { ?x a ex:T } => { ?x a ex:Checked } .\",\"step\":\"n3\"},{\"plan\":{\"actions\":[{\"add\":\"<https://e/a> <https://e/done> <https://e/yes> .\\n\",\"del\":\"\",\"name\":\"t\",\"pre\":\"<https://e/a> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://e/Checked> .\\n\"}],\"goal\":\"<https://e/a> <https://e/done> <https://e/yes> .\\n\"},\"step\":\"plan\"}],\"unverified_lease\":true}" ; gle:positiveControl false .
+gle:ex-law-shacl-not-admitted-refused a gle:OpExample ; gle:exampleId "law.shacl-not-admitted-refused" ; gle:forOp gle:op-law ; gle:description "SHACL admission refuses violating data." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:refusalCode "NotAdmitted" ; gle:requestJson "{\"data\":{\"dialect\":\"turtle\",\"text\":\"@prefix ex: <https://e/> . ex:a a ex:T .\"},\"op\":\"law\",\"steps\":[{\"shapes\":\"@prefix sh: <http://www.w3.org/ns/shacl#> . @prefix ex: <https://e/> .\\nex:S a sh:NodeShape ; sh:targetClass ex:T ; sh:property [ sh:path ex:name ; sh:minCount 1 ] .\",\"step\":\"shacl\"}]}" ; gle:positiveControl false .
+gle:ex-law-plan-precondition-refused a gle:OpExample ; gle:exampleId "law.plan-precondition-refused" ; gle:forOp gle:op-law ; gle:description "A plan with an unmet precondition is refused at that action." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:refusalCode "PlanRefused" ; gle:requestJson "{\"data\":{\"dialect\":\"ntriples\",\"text\":\"<urn:p:robot> <urn:p:at> <urn:p:a> .\\n\"},\"op\":\"law\",\"steps\":[{\"plan\":{\"actions\":[{\"add\":\"<urn:p:robot> <urn:p:at> <urn:p:b> .\\n\",\"del\":\"<urn:p:robot> <urn:p:at> <urn:p:a> .\\n\",\"name\":\"a-b\",\"pre\":\"<urn:p:robot> <urn:p:at> <urn:p:a> .\\n\"},{\"add\":\"<urn:p:robot> <urn:p:at> <urn:p:c> .\\n\",\"del\":\"<urn:p:robot> <urn:p:at> <urn:p:b> .\\n\",\"name\":\"b-c\",\"pre\":\"<urn:p:robot> <urn:p:at> <urn:p:z> .\\n\"}],\"goal\":\"<urn:p:robot> <urn:p:at> <urn:p:c> .\\n\"},\"step\":\"plan\"}]}" ; gle:positiveControl false .
+gle:ex-law-receipt-required-refused a gle:OpExample ; gle:exampleId "law.receipt-required-refused" ; gle:forOp gle:op-law ; gle:description "require-receipt refuses when nothing was recorded." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:refusalCode "ReceiptRequired" ; gle:requestJson "{\"data\":{\"dialect\":\"ntriples\",\"text\":\"<urn:p:robot> <urn:p:at> <urn:p:a> .\\n\"},\"op\":\"law\",\"steps\":[{\"step\":\"require-receipt\",\"step_name\":\"derive:rdfs\"}]}" ; gle:positiveControl false .
+gle:ex-law-lease-expired-refused a gle:OpExample ; gle:exampleId "law.lease-expired-refused" ; gle:forOp gle:op-law ; gle:description "An expired unverified lease refuses the step." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:refusalCode "LeaseRefused" ; gle:requestJson "{\"data\":{\"dialect\":\"ntriples\",\"text\":\"<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .\\n<urn:a:x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <urn:a:C> .\\n\"},\"lease\":{\"ceiling\":\"construct\",\"expires_unix\":100,\"holder\":\"h\",\"id\":\"L1\",\"scope\":[\"derive:rdfs\"]},\"now_unix\":100,\"op\":\"law\",\"steps\":[{\"step\":\"rdfs\"}],\"unverified_lease\":true}" ; gle:positiveControl false .
+gle:ex-law-lease-ceiling-refused a gle:OpExample ; gle:exampleId "law.lease-ceiling-refused" ; gle:forOp gle:op-law ; gle:description "A select lease cannot authorise a construct step." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:refusalCode "LeaseRefused" ; gle:requestJson "{\"data\":{\"dialect\":\"ntriples\",\"text\":\"<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .\\n<urn:a:x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <urn:a:C> .\\n\"},\"lease\":{\"ceiling\":\"select\",\"expires_unix\":100,\"holder\":\"h\",\"id\":\"L1\",\"scope\":[\"derive:rdfs\"]},\"now_unix\":1,\"op\":\"law\",\"steps\":[{\"step\":\"rdfs\"}],\"unverified_lease\":true}" ; gle:positiveControl false .
+gle:ex-law-unverified-lease-refused a gle:OpExample ; gle:exampleId "law.unverified-lease-refused" ; gle:forOp gle:op-law ; gle:description "An unsigned lease without the explicit opt-in is refused." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:refusalCode "UnverifiedLeaseRefused" ; gle:requestJson "{\"data\":{\"dialect\":\"ntriples\",\"text\":\"<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .\\n<urn:a:x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <urn:a:C> .\\n\"},\"lease\":{\"ceiling\":\"construct\",\"expires_unix\":100,\"holder\":\"h\",\"id\":\"L1\",\"scope\":[\"derive:rdfs\"]},\"now_unix\":1,\"op\":\"law\",\"steps\":[{\"step\":\"rdfs\"}]}" ; gle:positiveControl false .
+gle:ex-law-unknown-step-refused a gle:OpExample ; gle:exampleId "law.unknown-step-refused" ; gle:forOp gle:op-law ; gle:description "An unknown step name is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"data\":{\"dialect\":\"ntriples\",\"text\":\"<urn:a:C> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:a:D> .\\n<urn:a:x> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <urn:a:C> .\\n\"},\"op\":\"law\",\"steps\":[{\"step\":\"nope\"}]}" ; gle:positiveControl false .
+gle:ex-policy-accepted a gle:OpExample ; gle:exampleId "policy.accepted" ; gle:forOp gle:op-policy ; gle:description "A strong-cyclic FOND policy is admitted." ; gle:outcome "ok" ; gle:requestJson "{\"op\":\"policy\",\"policy\":{\"policy\":[{\"action\":\"flip\",\"outcomes\":[{\"probability_ppm\":500000,\"state\":\"g\"},{\"probability_ppm\":500000,\"state\":\"s0\"}],\"state\":\"s0\"}]},\"problem\":{\"goal\":{\"facts\":[\"done\"]},\"initial_states\":[\"s0\"],\"states\":[{\"id\":\"s0\"},{\"facts\":[\"done\"],\"id\":\"g\"}],\"transitions\":[{\"action\":\"flip\",\"from\":\"s0\",\"probability_ppm\":500000,\"to\":\"g\"},{\"action\":\"flip\",\"from\":\"s0\",\"probability_ppm\":500000,\"to\":\"s0\"}]}}" ; gle:positiveControl true .
+gle:ex-policy-string-inputs a gle:OpExample ; gle:exampleId "policy.string-inputs" ; gle:forOp gle:op-policy ; gle:description "Problem and policy may be JSON strings." ; gle:outcome "ok" ; gle:requestJson "{\"op\":\"policy\",\"policy\":\"{\\\"policy\\\": [{\\\"state\\\": \\\"s0\\\", \\\"action\\\": \\\"flip\\\", \\\"outcomes\\\": [{\\\"state\\\": \\\"g\\\", \\\"probability_ppm\\\": 500000}, {\\\"state\\\": \\\"s0\\\", \\\"probability_ppm\\\": 500000}]}]}\",\"problem\":\"{\\\"states\\\": [{\\\"id\\\": \\\"s0\\\"}, {\\\"id\\\": \\\"g\\\", \\\"facts\\\": [\\\"done\\\"]}], \\\"initial_states\\\": [\\\"s0\\\"], \\\"goal\\\": {\\\"facts\\\": [\\\"done\\\"]}, \\\"transitions\\\": [{\\\"action\\\": \\\"flip\\\", \\\"from\\\": \\\"s0\\\", \\\"to\\\": \\\"g\\\", \\\"probability_ppm\\\": 500000}, {\\\"action\\\": \\\"flip\\\", \\\"from\\\": \\\"s0\\\", \\\"to\\\": \\\"s0\\\", \\\"probability_ppm\\\": 500000}]}\"}" ; gle:positiveControl false .
+gle:ex-policy-bad-mass-refused a gle:OpExample ; gle:exampleId "policy.bad-mass-refused" ; gle:forOp gle:op-policy ; gle:description "Outcome probabilities that do not sum to one are refused." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:refusalCode "PolicyRefused" ; gle:requestJson "{\"op\":\"policy\",\"policy\":{\"policy\":[{\"action\":\"flip\",\"outcomes\":[{\"probability_ppm\":400000,\"state\":\"g\"},{\"probability_ppm\":500000,\"state\":\"s0\"}],\"state\":\"s0\"}]},\"problem\":{\"goal\":{\"facts\":[\"done\"]},\"initial_states\":[\"s0\"],\"states\":[{\"id\":\"s0\"},{\"facts\":[\"done\"],\"id\":\"g\"}],\"transitions\":[{\"action\":\"flip\",\"from\":\"s0\",\"probability_ppm\":500000,\"to\":\"g\"},{\"action\":\"flip\",\"from\":\"s0\",\"probability_ppm\":500000,\"to\":\"s0\"}]}}" ; gle:positiveControl false .
+gle:ex-policy-dead-end-refused a gle:OpExample ; gle:exampleId "policy.dead-end-refused" ; gle:forOp gle:op-policy ; gle:description "An empty policy leaves the initial state without an action." ; gle:outcome "refused" ; gle:refusalKind "EngineRejected" ; gle:refusalCode "PolicyRefused" ; gle:requestJson "{\"op\":\"policy\",\"policy\":{\"policy\":[]},\"problem\":{\"goal\":{\"facts\":[\"done\"]},\"initial_states\":[\"s0\"],\"states\":[{\"id\":\"s0\"},{\"facts\":[\"done\"],\"id\":\"g\"}],\"transitions\":[{\"action\":\"flip\",\"from\":\"s0\",\"probability_ppm\":500000,\"to\":\"g\"},{\"action\":\"flip\",\"from\":\"s0\",\"probability_ppm\":500000,\"to\":\"s0\"}]}}" ; gle:positiveControl false .
+gle:ex-policy-missing-policy-refused a gle:OpExample ; gle:exampleId "policy.missing-policy-refused" ; gle:forOp gle:op-policy ; gle:description "A request without a policy is unsupported." ; gle:outcome "refused" ; gle:refusalKind "Unsupported" ; gle:requestJson "{\"op\":\"policy\",\"problem\":{\"goal\":{\"facts\":[\"done\"]},\"initial_states\":[\"s0\"],\"states\":[{\"id\":\"s0\"},{\"facts\":[\"done\"],\"id\":\"g\"}],\"transitions\":[{\"action\":\"flip\",\"from\":\"s0\",\"probability_ppm\":500000,\"to\":\"g\"},{\"action\":\"flip\",\"from\":\"s0\",\"probability_ppm\":500000,\"to\":\"s0\"}]}}" ; gle:positiveControl false .
+gle:ls-shacl a gle:LimitScope ; gle:limitPrefix "shacl_" ; gle:scopedToOp gle:op-shacl ;
+    rdfs:comment "shacl_validation_depth 16; shapes bytes 131072 (128 KiB); degree 128; quads 16384." .
+gle:ls-duckdb a gle:LimitScope ; gle:limitPrefix "duckdb_" ;
+    rdfs:comment "Three DuckDb limits: names and values not given in the dispatch; left unpinned (no scopedToOp: no duckdb op row)." .
+
+# --- artifacts ---
+
+gle:art-graphlaw-wasm a gle:Artifact ;
+    gle:artifactName "graphlaw_wasm.wasm" ;
+    gle:version "26.11.25" ;
+    gle:sizeBytes 62909469 ;
+    gle:blake3 "66369e37ad71d8c19817951565aad669379aa9b97ef5dacf7dda403f304cb117" ;
+    gle:sha256 "9aebf9f3c99207af9cb3294aa211d68a26d95fd9f0c569a257bec80f147037b3" ;
+    gle:releaseRepo "seanchatmangpt/graphlaw" ;
+    gle:assetName "graphlaw_wasm.wasm" ;
+    rdfs:comment "size from registry/ARTIFACTS.blake3 wasm row; digests from MANIFEST.json (blake3 equals the ARTIFACTS row). Version bumped to 26.11.25; size, blake3 and sha256 pin the 26.11.25 relink (wasi-sdk 34, EH feature, cache sysroot libunwind)." .
+
+# --- CI ---
+
+gle:pair-1-18 a gle:CiPair ; gle:elixir "1.18.4" ; gle:otp "27.3" .
+gle:pair-1-19 a gle:CiPair ; gle:elixir "1.19.5" ; gle:otp "28" .
+gle:ci-elixir a gle:CiMatrix ;
+    gle:workflow ".github/workflows/elixir.yml" ;
+    gle:pair gle:pair-1-18, gle:pair-1-19 ;
+    gle:rust "1.98.0" ;
+    gle:hexTarballMaxBytes 8000000 .
+
+# --- license ---
+
+gle:license-MIT a gle:License ; gle:spdxId "MIT" .
+gle:pkg-graphlaw_ex a gle:HexPackage ; gle:packageName "graphlaw_ex" ; gle:license gle:license-MIT .

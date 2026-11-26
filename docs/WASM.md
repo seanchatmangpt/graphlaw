@@ -239,7 +239,7 @@ Protocol (all integers are wasm `i32`/`i64`):
 1. `gl_alloc(len) -> ptr` — host reserves `len` bytes, writes a UTF-8 JSON
    request there. Returns null above `MAX_REQUEST_BYTES` (16 MiB,
    `src/abi.rs:48`) or when the outstanding-byte cap
-   (`MAX_OUTSTANDING_ALLOC_BYTES`, 16 MiB, `src/abi.rs:73`) would be
+   (`MAX_OUTSTANDING_ALLOC_BYTES`, 16 MiB, `src/abi.rs:89`) would be
    exceeded. The 16 MiB request and 16 MiB outstanding caps are uniform
    across targets: the generated `abi_meta` mirrors them
    (`wasm/src/abi_meta.rs:20` request, `wasm/src/abi_meta.rs:29`

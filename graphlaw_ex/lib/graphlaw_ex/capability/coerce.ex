@@ -43,6 +43,21 @@ defmodule GraphlawEx.Capability.Coerce do
   end
 
   @doc """
+  Shared args normalizer: a keyword list or a (non-struct) map with atom or string keys becomes a
+  string-keyed map; anything else refuses `:invalid_capability_request`. Pure; never raises.
+
+      iex> GraphlawEx.Capability.Coerce.normalize("sql", text: "x")
+      {:ok, %{"text" => "x"}}
+      iex> GraphlawEx.Capability.Coerce.normalize("sql", %{"text" => "x"})
+      {:ok, %{"text" => "x"}}
+      iex> {:error, r} = GraphlawEx.Capability.Coerce.normalize("sql", 42)
+      iex> r.code
+      :invalid_capability_request
+  """
+  @spec normalize(String.t(), term()) :: {:ok, %{String.t() => term()}} | {:error, Refusal.t()}
+  def normalize(op, args), do: normalize_args(op, args)
+
+  @doc """
   Deep-stringifies keys and atom values: map keys become strings, keyword lists become maps,
   non-boolean atoms become strings. Idempotent.
   """
@@ -57,7 +72,9 @@ defmodule GraphlawEx.Capability.Coerce do
   end
 
   def stringify([{key, _} | _] = list) when is_atom(key) do
-    if Keyword.keyword?(list), do: list |> Map.new() |> stringify(), else: Enum.map(list, &stringify/1)
+    if Keyword.keyword?(list),
+      do: list |> Map.new() |> stringify(),
+      else: Enum.map(list, &stringify/1)
   end
 
   def stringify(list) when is_list(list), do: Enum.map(list, &stringify/1)
@@ -157,19 +174,19 @@ defmodule GraphlawEx.Capability.Coerce do
     name = fetch!(field, :name)
     type = fetch!(field, :type)
 
-    with {:ok, raw} <- Map.fetch(given, name),
-         {:ok, value} <- coerce(type, raw) do
-      {Map.put(body, name, value), errors}
-    else
-      :error ->
-        case Map.fetch(given, name) do
-          {:ok, raw} ->
-            error = %{"field" => name, "expected" => type, "got" => type_name(raw)}
-            {body, [error | errors]}
+    case Map.fetch(given, name) do
+      {:ok, raw} ->
+        case coerce(type, raw) do
+          {:ok, value} ->
+            {Map.put(body, name, value), errors}
 
           :error ->
-            {body, errors}
+            error = %{"field" => name, "expected" => type, "got" => type_name(raw)}
+            {body, [error | errors]}
         end
+
+      :error ->
+        {body, errors}
     end
   end
 
@@ -196,11 +213,34 @@ defmodule GraphlawEx.Capability.Coerce do
   end
 
   defp coerce("list<" <> rest, value) when is_list(value) do
-    inner = String.trim_trailing(rest, ">")
-    each(value, inner)
+    case list_inner(rest) do
+      {:ok, inner} -> each(value, inner)
+      :error -> :error
+    end
   end
 
   defp coerce(_type, _value), do: :error
+
+  # `rest` is the text after "list<": it must end in exactly one closing '>' that is
+  # not part of the inner type's own balanced brackets, and the inner type must be non-empty.
+  defp list_inner(rest) do
+    size = byte_size(rest)
+
+    with true <- size > 1,
+         ">" <- binary_part(rest, size - 1, 1),
+         inner = binary_part(rest, 0, size - 1),
+         true <- balanced?(inner) do
+      {:ok, inner}
+    else
+      _ -> :error
+    end
+  end
+
+  defp balanced?(inner) do
+    opens = for <<"<" <- inner>>, reduce: 0, do: (n -> n + 1)
+    closes = for <<">" <- inner>>, reduce: 0, do: (n -> n + 1)
+    opens == closes
+  end
 
   defp object(value) when is_map(value) or (is_list(value) and value != []) do
     case stringify(value) do
@@ -215,7 +255,9 @@ defmodule GraphlawEx.Capability.Coerce do
   defp data_spec(%{"text" => text} = spec) when is_binary(text) do
     spec = spec |> Enum.reject(fn {_key, value} -> is_nil(value) end) |> Map.new()
 
-    if Enum.all?(~w(dialect hint base), &is_binary(Map.get(spec, &1, ""))), do: {:ok, spec}, else: :error
+    if Enum.all?(~w(dialect hint base), &is_binary(Map.get(spec, &1, ""))),
+      do: {:ok, spec},
+      else: :error
   end
 
   defp data_spec(_), do: :error

@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 # UNSUPPORTED(generator-capability): hand-written receipt struct backing
 # `GraphlawEx.Result.Admitted` (the `law` capability result). Forward-compatible:
 # every known receipt field is read when present, and `:raw` keeps the whole
@@ -16,31 +16,94 @@ defmodule GraphlawEx.Result.Receipt do
   Note: attestations are recorded as RDF triples inside the state
   (src/receipt.rs:104-108), never as JSON on the wire; `subject_blake3` is a
   reserved payload field (src/attest.rs:506-526) not yet emitted on the wire.
-  `:raw` preserves the wire map losslessly, so `from_map(m).raw == m` for
-  every `m`. Never raises.
+  `:raw` preserves the wire map losslessly, so `from_map(m).raw == m` for every `m`.
+  `from_map/1` never raises; `from_map!/1` raises `ArgumentError` for a map missing
+  `"step"`, `"parent"` or `"child"` (use `parse/1` for a structured
+  `{:error, {:missing, keys}}`).
+  `Inspect` omits `:raw`.
   """
 
-  defstruct [:step, :parent, :child, :added, :authority, :revision, :plan_blake3, :lease_id, :index, :subject_blake3, :raw]
+  @required ["step", "parent", "child"]
+
+  @derive {Inspect, except: [:raw]}
+  defstruct [
+    :step,
+    :parent,
+    :child,
+    :added,
+    :authority,
+    :revision,
+    :plan_blake3,
+    :lease_id,
+    :index,
+    :subject_blake3,
+    :raw
+  ]
 
   @type t :: %__MODULE__{
           step: term(),
           parent: term(),
           child: term(),
-          added: integer() | nil,
-          authority: String.t() | nil,
-          revision: String.t() | nil,
-          plan_blake3: String.t() | nil,
-          lease_id: String.t() | nil,
+          added: term(),
+          authority: term(),
+          revision: term(),
+          plan_blake3: term(),
+          lease_id: term(),
           # plan receipts only
-          index: non_neg_integer() | nil,
+          index: term(),
           # reserved payload field (src/attest.rs:506-526), not yet emitted on the wire
-          subject_blake3: String.t() | nil,
-          raw: map()
+          subject_blake3: term(),
+          raw: term()
         }
 
-  @doc "Builds a receipt from its wire map. Never raises; `:raw` carries the input unchanged."
+  @doc """
+  Strict decode: `{:ok, receipt}` when the wire map carries `"step"`, `"parent"`
+  and `"child"`, else `{:error, {:missing, keys}}` (or `{:error, :not_a_map}`).
+  """
+  @spec parse(term()) :: {:ok, t()} | {:error, {:missing, [String.t()]} | :not_a_map}
+  def parse(map) when is_map(map) do
+    case Enum.reject(@required, &Map.has_key?(map, &1)) do
+      [] -> {:ok, build(map)}
+      missing -> {:error, {:missing, missing}}
+    end
+  end
+
+  def parse(_other), do: {:error, :not_a_map}
+
+  @doc """
+  Lossless build from the wire map; never raises, consistent with the other results.
+  `:raw` carries the input unchanged, and a non-map input is kept in `:raw`.
+  """
   @spec from_map(term()) :: t()
-  def from_map(map) when is_map(map) do
+  def from_map(input), do: lossless(input)
+
+  @doc false
+  # Compatibility for callers passing `lossless: true` (now the only behavior of from_map).
+  @spec from_map(term(), keyword()) :: t()
+  def from_map(input, _opts), do: lossless(input)
+
+  @doc """
+  Strict build: raises `ArgumentError` when `"step"`, `"parent"` or `"child"` is
+  missing or the input is not a map (the lossy cases of `from_map/1`).
+  """
+  @spec from_map!(term()) :: t()
+  def from_map!(input) do
+    case parse(input) do
+      {:ok, receipt} ->
+        receipt
+
+      {:error, {:missing, keys}} ->
+        raise ArgumentError, "receipt wire map missing required keys: #{inspect(keys)}"
+
+      {:error, :not_a_map} ->
+        raise ArgumentError, "receipt wire value is not a map: #{inspect(input)}"
+    end
+  end
+
+  defp lossless(map) when is_map(map), do: build(map)
+  defp lossless(other), do: %__MODULE__{raw: other}
+
+  defp build(map) do
     %__MODULE__{
       step: Map.get(map, "step"),
       parent: Map.get(map, "parent"),
@@ -56,6 +119,4 @@ defmodule GraphlawEx.Result.Receipt do
       raw: map
     }
   end
-
-  def from_map(other), do: %__MODULE__{raw: other}
 end

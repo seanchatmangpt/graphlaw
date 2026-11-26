@@ -1,0 +1,6 @@
+{
+  "id": "blake3:49bf319ce063eeca2491afa99f2e111ed47ca26f270f9e7c02dd67ebbc0fb911",
+  "nquads": "<https://x/a> <https://x/p> <https://x/b> .\n<https://x/a> <https://x/q> \"lit\" .\n<https://x/b> <https://x/p> <https://x/c> .\n",
+  "ok": true,
+  "quads": 3
+}

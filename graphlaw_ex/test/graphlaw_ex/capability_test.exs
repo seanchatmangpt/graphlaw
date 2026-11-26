@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sean Chatman <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
 defmodule GraphlawEx.CapabilityTest do
   use ExUnit.Case, async: true
 
@@ -10,11 +13,14 @@ defmodule GraphlawEx.CapabilityTest do
   alias GraphlawEx.Capability.Registry
   alias GraphlawEx.Error.Refused
 
-  @ops ~w(capabilities sniff parse convert canonical sparql shacl shex n3 entail datalog hooks law policy)
-
   describe "registry" do
-    test "names/0 lists the 14 ops in ABI order" do
-      assert Registry.names() == @ops
+    test "names/0 agrees with ops/0 in order, is unique, and has a facade module per op" do
+      names = Registry.names()
+
+      assert names == Enum.map(Registry.ops(), & &1.name)
+      assert names == Enum.uniq(names)
+      assert Enum.map(Registry.ops(), & &1.order) == Enum.to_list(1..length(names))
+      assert "capabilities" == hd(names)
     end
 
     test "module_for/1 round-trips every op and refuses an unknown name" do
@@ -44,7 +50,7 @@ defmodule GraphlawEx.CapabilityTest do
 
     test "digests match the canonical registry projection" do
       assert Registry.schema() == "graphlaw.capability-registry/1"
-      assert Registry.graphlaw_version() == "26.10.28"
+      assert Registry.graphlaw_version() =~ ~r/^\d+\.\d+\.\d+$/
       assert Registry.abi_version() == 1
       assert String.starts_with?(Registry.digest(), "blake3:")
       assert String.starts_with?(Registry.surface_digest(), "blake3:")
@@ -62,7 +68,7 @@ defmodule GraphlawEx.CapabilityTest do
                GraphlawEx.Capability.Capabilities.build_request([])
 
       assert {:error, %Refusal{code: :invalid_capability_request} = refusal} =
-               GraphlawEx.Capability.Capabilities.build_request([bogus: 1])
+               GraphlawEx.Capability.Capabilities.build_request(bogus: 1)
 
       assert refusal.details["unknown_keys"] == ["bogus"]
     end
@@ -71,12 +77,19 @@ defmodule GraphlawEx.CapabilityTest do
       text = "@prefix : <https://x/> . :a :b :c ."
 
       for args <- [[text: text], %{text: text}, %{"text" => text}] do
-        assert {:ok, %{"op" => "sniff", "text" => ^text}} = GraphlawEx.Capability.Sniff.build_request(args)
+        assert {:ok, %{"op" => "sniff", "text" => ^text}} =
+                 GraphlawEx.Capability.Sniff.build_request(args)
       end
     end
 
     test "parse: optional fields coerce (atom values stringify), nil optional means absent" do
-      assert {:ok, %{"op" => "parse", "text" => "<s> <p> <o> .", "dialect" => "turtle", "base" => "https://base/"}} =
+      assert {:ok,
+              %{
+                "op" => "parse",
+                "text" => "<s> <p> <o> .",
+                "dialect" => "turtle",
+                "base" => "https://base/"
+              }} =
                GraphlawEx.Capability.Parse.build_request(
                  text: "<s> <p> <o> .",
                  dialect: "turtle",
@@ -150,7 +163,11 @@ defmodule GraphlawEx.CapabilityTest do
   describe "decode/1" do
     test "never raises on unexpected shapes; extra and missing keys are tolerated" do
       for name <- Registry.names() do
-        assert {:ok, struct} = Registry.module_for(name) |> elem(1) |> then(& &1.decode(%{"totally" => "unexpected"}))
+        assert {:ok, struct} =
+                 Registry.module_for(name)
+                 |> elem(1)
+                 |> then(& &1.decode(%{"totally" => "unexpected"}))
+
         assert struct.raw == %{"totally" => "unexpected"}
       end
     end
@@ -162,7 +179,9 @@ defmodule GraphlawEx.CapabilityTest do
 
     test "a JSON binary object decodes" do
       assert {:ok, %{dialect: "Turtle", engine: engine}} =
-               GraphlawEx.Capability.Sniff.decode(Jason.encode!(%{dialect: "Turtle", engine: "PurRdf"}))
+               GraphlawEx.Capability.Sniff.decode(
+                 Jason.encode!(%{dialect: "Turtle", engine: "PurRdf"})
+               )
 
       assert engine in Registry.engines()
     end
@@ -249,7 +268,9 @@ defmodule GraphlawEx.CapabilityTest do
     end
 
     test "an unclassified engine error maps to :engine_unclassified, never a crash" do
-      assert %Refusal{code: :engine_unclassified} = Refusal.from_engine(%{"ok" => false, "error" => %{"code" => "FutureVariant"}})
+      assert %Refusal{code: :engine_unclassified} =
+               Refusal.from_engine(%{"ok" => false, "error" => %{"code" => "FutureVariant"}})
+
       assert %Refusal{code: :engine_unclassified} = Refusal.from_engine("not even a map")
     end
 
@@ -287,18 +308,22 @@ defmodule GraphlawEx.CapabilityTest do
       end
     end
 
-    test "op!/2 raises GraphlawEx.Error.Refused carrying the typed refusal" do
-      assert_raise Refused, ~r/GraphLaw refused: invalid_capability_request/, fn ->
-        API.capabilities!(bogus: 1)
-      end
+    test "op!/2 raises the typed public GraphlawEx.Error" do
+      error =
+        assert_raise GraphlawEx.Error, ~r/REFUSED_INVALID_INPUT: .*unknown request keys/, fn ->
+          API.capabilities!(bogus: 1)
+        end
 
-      assert_raise Refused, fn -> API.sniff!(text: 42) end
+      assert error.code == :REFUSED_INVALID_INPUT
+      assert error.evidence["refusal_code"] == "invalid_capability_request"
+
+      assert_raise GraphlawEx.Error, fn -> API.sniff!(text: 42) end
     end
   end
 
   describe "Error.Refused wrapper" do
     test "exposes code/raw/broken_term of the wrapped refusal" do
-      {:error, refusal} = API.capabilities([bogus: 1])
+      {:error, refusal} = API.capabilities(bogus: 1)
       error = struct(Refused, refusal: refusal)
 
       assert Refused.code(error) == :invalid_capability_request

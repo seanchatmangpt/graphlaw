@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 # CONSOLIDATED (GL28-11): the closed refusal table lives in ONE module,
 # `GraphlawEx.Refusal` (host + capability + engine-side codes, each with its
 # class and Chatman `broken_term`). This module is the capability layer's
@@ -42,13 +42,23 @@ defmodule GraphlawEx.Capability.Refusal do
   losslessly.
   """
 
+  @derive {Inspect, except: [:raw, :details]}
   defstruct [:code, :message, :details, :raw, :broken_term]
 
   alias GraphlawEx.Refusal
+  alias GraphlawEx.Refusal.Table
 
   @type code ::
           Refusal.code()
-          | atom()
+          | :ceiling_unmet
+          | :malformed_lease
+          | :lease_not_carried
+          | :trusted_keys_absent
+          | :REFUSED_INVALID_INPUT
+          | :REFUSED_RESOURCE_BOUND
+          | :REFUSED_UNSUPPORTED_SPARQL_FEATURE
+          | :REFUSED_TIER_MISMATCH
+          | :REFUSED_AMBIGUOUS_DIALECT
 
   @typedoc "A typed refusal: `code`, `message`, `details`, lossless `raw`."
   @type t :: %__MODULE__{
@@ -65,13 +75,7 @@ defmodule GraphlawEx.Capability.Refusal do
   2026-10-28); the rest are the layer's pre-existing client codes.
   """
   @spec client_codes() :: [atom()]
-  def client_codes,
-    do: [
-      :ceiling_unmet,
-      :invalid_capability_request,
-      :unknown_capability,
-      :capability_response_undecodable
-    ]
+  def client_codes, do: [:ceiling_unmet | Refusal.capability_client_codes()]
 
   @doc """
   Builds a client-side refusal. `message` defaults to a rendering of `code`;
@@ -99,7 +103,7 @@ defmodule GraphlawEx.Capability.Refusal do
       code: :ceiling_unmet,
       message: message,
       details: details,
-      broken_term: :R_missing_standing
+      broken_term: Table.broken_term(:ceiling_unmet)
     }
   end
 
@@ -112,7 +116,7 @@ defmodule GraphlawEx.Capability.Refusal do
   @spec from_engine(term()) :: t()
   def from_engine(%{"ok" => false, "error" => %{} = error} = _response) do
     %__MODULE__{
-      code: Refusal.from_engine(%{"code" => Map.get(error, "code"), "kind" => Map.get(error, "kind")}).code,
+      code: Refusal.from_engine(error).code,
       message: string_or_nil(Map.get(error, "message")),
       details: %{"kind" => Map.get(error, "kind")},
       raw: error,
@@ -146,13 +150,7 @@ defmodule GraphlawEx.Capability.Refusal do
   # `:ceiling_unmet` is the one client-side code this layer owns outright
   # (GL28-7 authority pre-gate): class `:refused_structure`, broken term
   # `:R_missing_standing` — the host table stays closed.
-  defp broken_term_of(:ceiling_unmet), do: :R_missing_standing
-
-  defp broken_term_of(code) do
-    if code in Refusal.codes(), do: Refusal.broken_term_of(code), else: :mu_on_O
-  rescue
-    ArgumentError -> :mu_on_O
-  end
+  defp broken_term_of(code), do: Table.broken_term(code) || :mu_on_O
 
   defp string_or_nil(value) when is_binary(value), do: value
   defp string_or_nil(_), do: nil

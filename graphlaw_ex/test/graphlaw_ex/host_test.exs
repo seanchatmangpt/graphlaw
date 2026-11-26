@@ -1,16 +1,16 @@
+# SPDX-FileCopyrightText: 2026 Sean Chatman <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
 defmodule GraphlawEx.HostTest do
   use ExUnit.Case, async: false
 
   # Chicago: the real engine is the collaborator. The courts below exercise the
   # REAL host GenServer over the real wasm artifact — the caller-side
   # :saturated shed, and the :memory_high_water recycle watermark (the
-  # Host.info recycles counter). Absence of the artifact is a LOUD typed skip,
-  # never a faked pass. No mocks, no sleeps: the mailbox fill is structural
-  # (:sys.suspend/1 suspends the GenServer's message processing), never
-  # time-based.
-
-  @wasm_path GraphlawEx.TestEngine.wasm_path()
-  @require_engine System.get_env("GRAPHLAW_REQUIRE_ENGINE") == "1"
+  # Host.info recycles counter). :wasm tests are excluded loudly when the
+  # artifact is absent and FAIL under GRAPHLAW_REQUIRE_ENGINE=1. No mocks, no
+  # sleeps: the mailbox fill is structural (:sys.suspend/1 suspends the
+  # GenServer's message processing), never time-based.
 
   # The first host start in a fresh VM compiles the real 74 MB artifact.
   @moduletag timeout: 300_000
@@ -69,7 +69,8 @@ defmodule GraphlawEx.HostTest do
       {:ok, info} = GraphlawEx.Host.info(host)
       assert info.recycles >= 1
       assert is_binary(info.wasm_sha256) and byte_size(info.wasm_sha256) == 64
-      assert info.path == path
+      # Host.info/2 reports the artifact basename, never the filesystem path.
+      assert info.path == Path.basename(path)
 
       # A recycled host still serves: recycle replaces the instance over the
       # cached compiled module, it never degrades availability.
@@ -80,7 +81,8 @@ defmodule GraphlawEx.HostTest do
   end
 
   test "no engine: a host over a missing artifact is unavailable and refuses typed, never crashes" do
-    missing = Path.join(System.tmp_dir!(), "graphlaw-host-court-missing-#{System.unique_integer()}.wasm")
+    missing =
+      Path.join(System.tmp_dir!(), "graphlaw-host-court-missing-#{System.unique_integer()}.wasm")
 
     start_link_supervised!({GraphlawEx.Host, wasm_path: missing, expected_sha256: :unpinned})
 
@@ -100,16 +102,7 @@ defmodule GraphlawEx.HostTest do
 
   defp huge, do: 268_435_456
 
-  defp with_engine(fun) do
-    if File.regular?(@wasm_path) do
-      fun.(@wasm_path)
-    else
-      message =
-        "[SKIP] host courts: wasm artifact not found at #{@wasm_path} (set PRIV_WASM). " <>
-          "A loud skip is not a pass."
-
-      if @require_engine, do: flunk(message)
-      IO.puts(message)
-    end
-  end
+  # Fail-closed: raises when the artifact is missing (:wasm tests are excluded
+  # by test_helper.exs unless GRAPHLAW_REQUIRE_ENGINE=1).
+  defp with_engine(fun), do: fun.(GraphlawEx.TestEngine.engine_path!())
 end

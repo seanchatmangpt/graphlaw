@@ -3,12 +3,16 @@
 # rust-wasi-wasmex-pack ffi rule. ffi rule only; abi_meta.rs is NOT generated
 # here. Regenerate: `cd wasm && ggen sync run` (ggen >= 26.10.11).
 # Determinism receipt: two consecutive `ggen sync run` invocations (plus a
-# delete-and-regen) yield b3sum 9dcab4e4099ede0e605b2f619c8791e8f19bf656f3c
-# 6a8bd552eeade6d9e46a9 for src/ffi.rs; graph_hash_hex
+# delete-and-regen) yield (raw projection, before rustfmt; 2026-11-25 pack_response
+# zero-budget reuse hunk) a projection whose rustfmt form is committed as src/ffi.rs
+# (b3sum 04f658da38f1636ed0ecaafc828b016497d313fbd139fee4b8771ea048b3f908); graph_hash_hex
 # 8821e277608452cd44baac350c850e4d96759b17a64bec9b08f2b644b0c07ae2.
+# 2026-11-25 R1: BudgetGuard RAII + immortal saturated-cap error buffer +
+# u32 response-length typed limit hunk (ffi.rs.tmpl). Re-render regenerates the
+# raw projection; re-pin the b3sum above after rustfmt.
 # Templates pinned via ggen-marketplace rust-wasi-wasmex-pack (ontology.ttl
 # ed1e1070..., queries/ffi.rq b1ed5354..., templates/abi/ffi.rs.tmpl
-# cace92e2...).
+# 88302f0d...).
 #
 # L160 normalization (2026-10-22): all paths relative to wasm/ (the ggen.toml
 # directory = ggen's project root, joined by ggen-engine's root.join(...)).

@@ -1,0 +1,21 @@
+@prefix gac: <http://seanchatmangpt.github.io/packs/graphlaw-ash-capability#> .
+
+# Consumer projection target for graphlaw_ex: the graph, not the environment, says which
+# Elixir namespace and lib/ directory the graphlaw-ash-capability-pack projects into.
+gac:GraphlawExTarget a gac:ProjectionTarget ;
+    gac:targetNamespace "GraphlawEx" ;
+    gac:targetPathPrefix "graphlaw_ex" ;
+    gac:targetCopyrightHolder "Sean Chatman" .
+
+# Op bindings the consumer owns: law decodes to the hand-written Admitted struct
+# (hand-written residue ledgered in ggen/HANDWRITTEN.md).
+<https://graphlaw.dev/registry#binding/law> a gac:OpBinding ;
+    gac:bindingOp "law" ;
+    gac:bindingResultModule "GraphlawEx.Result.Admitted" ;
+    gac:bindingLegacy false .
+
+# sparql routes through the Extension behaviour (query/2,3 over SELECT/ASK/CONSTRUCT).
+<https://graphlaw.dev/registry#binding/sparql> a gac:OpBinding ;
+    gac:bindingOp "sparql" ;
+    gac:bindingLegacy false ;
+    gac:bindingOverrides true .

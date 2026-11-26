@@ -5,6 +5,11 @@ Python wasmtime, browsers via WASI shims): JSON in, JSON out, no JavaScript
 glue. Reference: [abi-reference](../abi-reference.md) ·
 [wasm-integration](../wasm-integration.md) · [refusals](../refusals.md).
 
+## Prerequisites
+
+- Rust 1.98 (`rust-toolchain.toml`), the `wasm32-wasip1` target, wasi-sdk 34.
+- A lease policy decision: [authorize-with-signed-leases.md](authorize-with-signed-leases.md).
+
 ## Build the module
 
 ```sh
@@ -15,11 +20,19 @@ cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
 # -> target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
 ```
 
+Local workstation relink (wasi-sdk 34 at `/Users/sac/wasi-sdks/wasi-sdk-34`):
+
+```sh
+WASI_SDK_PATH=/Users/sac/wasi-sdks/wasi-sdk-34 \
+CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling" \
+  cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+```
+
 `WASI_SDK_PATH` is a wasi-sdk root (CI installs wasi-sdk 34 at `/opt/wasi-sdk`; the
 local workstation has it at `/Users/sac/wasi-sdks/wasi-sdk-34`). The EH
 target-feature is required at link time (without it:
 `undefined _Unwind_GetWasmLPadContext`). Full recipe and pin flow: `docs/WASM.md`.
-As of 2026-11-09 the crate is `26.10.28` on Rust 1.98.
+Crate version is `26.11.25` (`Cargo.toml:3`) on Rust 1.98.
 
 `wasm32-unknown-unknown` is not a supported module target (it requires a JavaScript
 host); the WASI clock gate lives in the rev-pinned purrdf fork (branch
@@ -127,6 +140,15 @@ error, never a trap.
 | policy_entries | `MAX_POLICY_ENTRIES` | 100,000 | FOND policy entries |
 | n3_iterations | `law::N3_MAX_ITERATIONS` | 4,000,000 | purrdf-n3 max_iterations cap (`src/law.rs`; its own default is 1,000,000) |
 
+Datalog is bounded per call (`src/abi.rs:67-75`; enforced at
+`src/abi/ops/query_engines.rs:232-250`):
+
+| limit | const | value |
+|---|---|---|
+| datalog_derived_facts | `MAX_DATALOG_DERIVED_FACTS` | 200,000 |
+| datalog_join_steps | `MAX_DATALOG_JOIN_STEPS` | 50,000,000 |
+| datalog_output_bytes | `MAX_DATALOG_OUTPUT_BYTES` | 8 MiB |
+
 All consts are `pub` in `graphlaw::abi` / `graphlaw::law`; caps are checked before
 parsing or heavy work.
 
@@ -148,3 +170,10 @@ legacy
 pre-DuckDB artifact court (`tests/wasm_abi.rs`) — the retired wasmi runner's
 historical domain, not
 the `graphlaw-run-eh` / DuckDB-linked artifact class above.
+
+## See Also
+
+- [release-publish.md](release-publish.md)
+- [authorize-with-signed-leases.md](authorize-with-signed-leases.md)
+- [use-knowledge-hooks.md](use-knowledge-hooks.md)
+- [../WASM.md](../WASM.md)

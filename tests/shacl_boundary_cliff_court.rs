@@ -124,7 +124,13 @@ fn admit(state: &LawState, shapes: &str) -> Result<(), LawError> {
 fn limit_component(err: &LawError) -> Option<String> {
     match err {
         LawError::NotAdmitted { violations, results } if *violations == 1 && results.len() == 1 => {
-            Some(results[0].component.clone())
+            // `component` is the typed limit name; the observed/max prose is in `message`.
+            assert!(
+                results[0].component.starts_with("shacl_validation_"),
+                "component must be the typed limit name: {}",
+                results[0].component
+            );
+            Some(format!("{} {}", results[0].component, results[0].message))
         }
         _ => None,
     }
@@ -138,7 +144,9 @@ fn abi_shacl(shapes: &str) -> (bool, serde_json::Value) {
         "data": {"text": "@prefix ex: <http://example.org/> .\nex:x a ex:T .\n", "dialect": "turtle"},
         "shapes": shapes,
     }));
-    let ok = resp["ok"].as_bool().unwrap_or(false);
+    let ok = resp["ok"]
+        .as_bool()
+        .unwrap_or_else(|| panic!("response must carry boolean `ok`: {resp}"));
     (ok, resp["error"].clone())
 }
 

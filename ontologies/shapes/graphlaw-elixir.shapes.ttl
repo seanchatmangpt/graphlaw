@@ -1,0 +1,84 @@
+# graphlaw-elixir.shapes.ttl - closed-world shapes for ontologies/graphlaw-elixir.ttl.
+# Namespace gle: <https://graphlaw.dev/elixir#>. No blank nodes (property shapes are named).
+
+@prefix gle: <https://graphlaw.dev/elixir#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix glsh: <https://graphlaw.dev/ns/shapes#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+glsh:EmittedEventShape a sh:NodeShape ;
+    sh:targetSubjectsOf gle:emittedBy ;
+    sh:class gle:TelemetryEvent ;
+    sh:property glsh:EmittedEvent-metadataKey, glsh:EmittedEvent-emittedBy, glsh:EmittedEvent-name .
+glsh:EmittedEvent-metadataKey sh:path gle:metadataKey ; sh:minCount 1 ; sh:class gle:MetadataKey .
+glsh:EmittedEvent-emittedBy sh:path gle:emittedBy ; sh:minCount 1 ; sh:maxCount 1 ; sh:class gle:ElixirModule .
+glsh:EmittedEvent-name sh:path gle:name ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+
+glsh:MetadataKeyShape a sh:NodeShape ;
+    sh:targetClass gle:MetadataKey ;
+    sh:property glsh:MetadataKey-keyName, glsh:MetadataKey-sensitive .
+glsh:MetadataKey-keyName sh:path gle:keyName ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:MetadataKey-sensitive sh:path gle:sensitive ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean .
+
+glsh:SensitiveKeyShape a sh:NodeShape ;
+    sh:targetClass gle:MetadataKey ;
+    sh:sparql glsh:SensitiveKey-needsRedactAs .
+glsh:SensitiveKey-needsRedactAs a sh:SPARQLConstraint ;
+    sh:message "A sensitive metadata key must declare gle:redactAs." ;
+    sh:prefixes <https://graphlaw.dev/elixir/shapes> ;
+    sh:select """PREFIX gle: <https://graphlaw.dev/elixir#>
+SELECT $this WHERE { $this gle:sensitive true . FILTER NOT EXISTS { $this gle:redactAs ?r } }""" .
+<https://graphlaw.dev/elixir/shapes> a owl:Ontology ;
+    sh:declare glsh:SensitiveKey-prefix .
+glsh:SensitiveKey-prefix sh:prefix "gle" ; sh:namespace "https://graphlaw.dev/elixir#"^^xsd:anyURI .
+
+glsh:RedactAsShape a sh:NodeShape ;
+    sh:targetSubjectsOf gle:redactAs ;
+    sh:property glsh:RedactAs-one .
+glsh:RedactAs-one sh:path gle:redactAs ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:minLength 1 .
+
+glsh:ConfigKeyShape a sh:NodeShape ;
+    sh:targetClass gle:ConfigKey ;
+    sh:property glsh:ConfigKey-keyName, glsh:ConfigKey-valueType, glsh:ConfigKey-zeroOk, glsh:ConfigKey-min .
+glsh:ConfigKey-keyName sh:path gle:keyName ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:ConfigKey-valueType sh:path gle:valueType ; sh:minCount 1 ; sh:maxCount 1 ;
+    sh:pattern "^(boolean|nonEmptyString|posInteger|nonNegInteger)$" .
+glsh:ConfigKey-zeroOk sh:path gle:zeroOk ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean .
+glsh:ConfigKey-min sh:path gle:min ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:maxInclusive 1 .
+
+glsh:OpExampleShape a sh:NodeShape ;
+    sh:targetClass gle:OpExample ;
+    sh:property glsh:OpExample-forOp, glsh:OpExample-id, glsh:OpExample-outcome,
+        glsh:OpExample-request, glsh:OpExample-control, glsh:OpExample-kind, glsh:OpExample-code .
+glsh:OpExample-forOp sh:path gle:forOp ; sh:minCount 1 ; sh:maxCount 1 ; sh:class gle:Op .
+glsh:OpExample-id sh:path gle:exampleId ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:OpExample-outcome sh:path gle:outcome ; sh:minCount 1 ; sh:maxCount 1 ; sh:pattern "^(ok|refused)$" .
+glsh:OpExample-request sh:path gle:requestJson ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:OpExample-control sh:path gle:positiveControl ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean .
+glsh:OpExample-kind sh:path gle:refusalKind ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:OpExample-code sh:path gle:refusalCode ; sh:maxCount 1 ; sh:datatype xsd:string .
+
+glsh:ArtifactShape a sh:NodeShape ;
+    sh:targetClass gle:Artifact ;
+    sh:property glsh:Artifact-name, glsh:Artifact-version, glsh:Artifact-size, glsh:Artifact-blake3,
+        glsh:Artifact-sha256, glsh:Artifact-repo, glsh:Artifact-asset .
+glsh:Artifact-name sh:path gle:artifactName ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:Artifact-version sh:path gle:version ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:Artifact-size sh:path gle:sizeBytes ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 .
+glsh:Artifact-blake3 sh:path gle:blake3 ; sh:minCount 1 ; sh:maxCount 1 ; sh:pattern "^[0-9a-f]{64}$" .
+glsh:Artifact-sha256 sh:path gle:sha256 ; sh:minCount 1 ; sh:maxCount 1 ; sh:pattern "^[0-9a-f]{64}$" .
+glsh:Artifact-repo sh:path gle:releaseRepo ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:Artifact-asset sh:path gle:assetName ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+
+glsh:CiMatrixShape a sh:NodeShape ;
+    sh:targetClass gle:CiMatrix ;
+    sh:property glsh:CiMatrix-pair, glsh:CiMatrix-rust, glsh:CiMatrix-hex .
+glsh:CiMatrix-pair sh:path gle:pair ; sh:minCount 1 ; sh:class gle:CiPair .
+glsh:CiMatrix-rust sh:path gle:rust ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string .
+glsh:CiMatrix-hex sh:path gle:hexTarballMaxBytes ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer .
+
+glsh:HexPackageShape a sh:NodeShape ;
+    sh:targetClass gle:HexPackage ;
+    sh:property glsh:HexPackage-license .
+glsh:HexPackage-license sh:path gle:license ; sh:minCount 1 ; sh:maxCount 1 ; sh:class gle:License .

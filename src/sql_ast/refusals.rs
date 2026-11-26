@@ -1,5 +1,4 @@
 #![allow(missing_docs)]
-#![allow(clippy::result_large_err)]
 
 use std::fmt;
 
@@ -266,12 +265,16 @@ pub struct RefusalContext {
 /// A typed sql-rdf refusal. Pure data (SQLRDF-18 restructure): `code` +
 /// fixed-size `ctx`, with message rendering deferred entirely to the cold
 /// Display/JSON-at-ABI path via the const code→template table.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// The ~400-byte context is boxed so `Result<_, AstError>` stays small across
+/// the recursive extraction/serialization paths; `Display`, codes and field
+/// access (`err.ctx.shape_id`) are unchanged via auto-deref.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AstError {
     /// Stable (or internal) refusal code.
     pub code: RefusalCode,
-    /// Fixed-size rendering context.
-    pub ctx: RefusalContext,
+    /// Fixed-size rendering context (boxed).
+    pub ctx: Box<RefusalContext>,
 }
 
 impl RefusalCode {
@@ -298,6 +301,9 @@ pub const REFUSAL_IDENT_BYTES: usize = 192;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PackedIdent {
     len: u8,
+    /// Bytes that did not fit (or were cut to a char boundary); non-zero
+    /// means the rendering carries a `…[truncated N bytes]` marker.
+    dropped: u32,
     bytes: [u8; REFUSAL_IDENT_BYTES],
 }
 
@@ -305,6 +311,7 @@ impl Default for PackedIdent {
     fn default() -> Self {
         Self {
             len: 0,
+            dropped: 0,
             bytes: [0u8; REFUSAL_IDENT_BYTES],
         }
     }
@@ -331,28 +338,51 @@ impl PackedIdent {
         let mut w = FixedWriter {
             buf: &mut self.bytes,
             len: self.len as usize,
+            dropped: self.dropped,
         };
         // Formatting can only fail when the underlying writer fails; the
         // fixed buffer never fails, it truncates.
         let _ = fmt::write(&mut w, format_args!("{v}"));
         self.len = w.len.min(REFUSAL_IDENT_BYTES) as u8;
+        self.dropped = w.dropped;
     }
 
-    /// The packed bytes as a (possibly lossy) string, cold path.
+    /// Number of bytes dropped by truncation (0 when the value fit).
+    pub fn truncated_bytes(&self) -> u32 {
+        self.dropped
+    }
+
+    /// The packed bytes as a (possibly lossy) string, cold path. A truncated
+    /// value is marked `…[truncated N bytes]`; truncation is never silent.
     pub fn as_str_lossy(&self) -> std::borrow::Cow<'_, str> {
-        String::from_utf8_lossy(&self.bytes[..self.len as usize])
+        let base = String::from_utf8_lossy(&self.bytes[..self.len as usize]);
+        if self.dropped == 0 {
+            base
+        } else {
+            std::borrow::Cow::Owned(format!("{base}…[truncated {} bytes]", self.dropped))
+        }
     }
 }
 
 struct FixedWriter<'a> {
     buf: &'a mut [u8; REFUSAL_IDENT_BYTES],
     len: usize,
+    dropped: u32,
 }
 
 impl fmt::Write for FixedWriter<'_> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        if self.dropped > 0 {
+            // Already truncated: later fragments would leave a gap.
+            self.dropped = self.dropped.saturating_add(s.len() as u32);
+            return Ok(());
+        }
         let rem = REFUSAL_IDENT_BYTES - self.len;
-        let n = s.len().min(rem);
+        let mut n = s.len().min(rem);
+        while n > 0 && !s.is_char_boundary(n) {
+            n -= 1;
+        }
+        self.dropped = self.dropped.saturating_add((s.len() - n) as u32);
         self.buf[self.len..self.len + n].copy_from_slice(&s.as_bytes()[..n]);
         self.len += n;
         Ok(())
@@ -364,10 +394,10 @@ impl AstError {
     pub(super) fn new(code: RefusalCode, shape_id: u16) -> Self {
         Self {
             code,
-            ctx: RefusalContext {
+            ctx: Box::new(RefusalContext {
                 shape_id,
                 ..RefusalContext::default()
-            },
+            }),
         }
     }
     #[inline]
@@ -431,6 +461,13 @@ impl AstError {
     pub fn RecursionLimitExceeded(n: usize) -> Self {
         AstError::new(RefusalCode::RecursionLimitExceeded, 0).with_num(n)
     }
+    /// Limit refusal carrying the real observed value and the cap.
+    #[allow(non_snake_case)]
+    pub fn RecursionLimitObserved(observed: usize, max: usize) -> Self {
+        AstError::new(RefusalCode::RecursionLimitExceeded, 0)
+            .with_num(max)
+            .with_aux_num(observed)
+    }
     #[allow(non_snake_case)]
     pub fn MalformedNode(a: String) -> Self {
         AstError::new(RefusalCode::MalformedNode, 0).with_ident(a)
@@ -454,11 +491,17 @@ impl fmt::Display for AstError {
             RefusalCode::MissingProperty => {
                 write!(f, "Missing required property '{id}' on node {aux}")
             }
-            RefusalCode::RecursionLimitExceeded => write!(
-                f,
-                "Recursion depth limit exceeded ({}) while traversing AST",
-                self.ctx.num
-            ),
+            RefusalCode::RecursionLimitExceeded => {
+                write!(
+                    f,
+                    "Recursion depth limit exceeded ({}) while traversing AST",
+                    self.ctx.num
+                )?;
+                if self.ctx.aux_num > 0 {
+                    write!(f, " [observed {}, max {}]", self.ctx.aux_num, self.ctx.num)?;
+                }
+                Ok(())
+            }
             RefusalCode::MalformedList => {
                 write!(f, "Malformed RDF list: circular reference or unclosed node")
             }
@@ -661,6 +704,10 @@ impl fmt::Display for AstError {
                         f,
                         "SHACL AST structural violation: {marker}sql:StatementSequence {id} has an empty sql:statements list; a document sequence carries at least one member"
                     ),
+                    arm::ATOMIC_LITERAL => write!(
+                        f,
+                        "SHACL AST structural violation: {marker}sql:atomic on {id} is not an xsd:boolean 'true' or 'false' literal"
+                    ),
                     arm::CTE_NO_QUERY => write!(
                         f,
                         "SHACL AST structural violation: {marker}CTE {id} carries no sql:cteQuery; a WITH arm is a named sub-select, the rendered SQL would be 'name AS ()'"
@@ -806,5 +853,22 @@ fn aggregate_debug_name(idx: u32) -> &'static str {
         3 => "Min",
         4 => "Max",
         _ => "Aggregate",
+    }
+}
+
+#[cfg(test)]
+mod arm_display_tests {
+    use super::*;
+
+    /// Every REFUSAL-01 arm that extraction emits renders its own template,
+    /// never the generic `node {id}` fallthrough.
+    #[test]
+    fn atomic_literal_arm_has_dedicated_display() {
+        let e = AstError::new(RefusalCode::MalformedAst, refusal_arm::ATOMIC_LITERAL)
+            .with_ident("urn:seq");
+        let msg = e.to_string();
+        assert!(msg.contains("[REFUSAL-01]"), "{msg}");
+        assert!(msg.contains("sql:atomic"), "{msg}");
+        assert!(!msg.contains("node urn:seq"), "generic fallthrough: {msg}");
     }
 }

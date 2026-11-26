@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sean Chatman <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
 defmodule GraphlawEx.ABITest do
   use ExUnit.Case, async: true
 
@@ -30,6 +33,37 @@ defmodule GraphlawEx.ABITest do
     end
   end
 
+  describe "recognize_request/1" do
+    test "accepts valid JSON payloads" do
+      payload = ~s({"op":"law","nested":{"items":[1,2,3],"value":-42.5e+10}})
+      assert {:ok, ^payload} = ABI.recognize_request(payload)
+    end
+
+    test "refuses JSON nesting depth above 64 with :resource_limit" do
+      at_limit = String.duplicate("[", 64) <> "1" <> String.duplicate("]", 64)
+      assert {:ok, ^at_limit} = ABI.recognize_request(at_limit)
+
+      too_deep = String.duplicate("[", 65) <> "1" <> String.duplicate("]", 65)
+      assert {:error, %Refusal{code: :resource_limit} = refusal} = ABI.recognize_request(too_deep)
+      assert refusal.details.depth == 65
+      assert refusal.details.limit == 64
+    end
+
+    test "refuses numeric tokens above 64 digits (CVE-2026-115274 class) with :resource_limit" do
+      at_limit = ~s({"n":#{String.duplicate("9", 64)}})
+      assert {:ok, ^at_limit} = ABI.recognize_request(at_limit)
+
+      too_long = ~s({"n":#{String.duplicate("9", 65)}})
+      assert {:error, %Refusal{code: :resource_limit} = refusal} = ABI.recognize_request(too_long)
+      assert refusal.details.digits == 65
+      assert refusal.details.limit == 64
+    end
+
+    test "refuses invalid UTF-8 with :invalid_encoding" do
+      assert {:error, %Refusal{code: :invalid_encoding}} = ABI.recognize_request(<<0xFF, 0xFE>>)
+    end
+  end
+
   describe "frame/1" do
     test "prefixes the payload with its 4-byte big-endian length" do
       assert {:ok, <<len::unsigned-integer-size(32), "hello">>} = ABI.frame("hello")
@@ -41,7 +75,9 @@ defmodule GraphlawEx.ABITest do
     end
 
     test "refuses a payload above the 16 MiB cap" do
-      assert {:error, %Refusal{code: :resource_limit} = refusal} = ABI.frame(String.duplicate("a", @cap + 1))
+      assert {:error, %Refusal{code: :resource_limit} = refusal} =
+               ABI.frame(String.duplicate("a", @cap + 1))
+
       assert refusal.details.bytes == @cap + 1
     end
 
@@ -50,7 +86,9 @@ defmodule GraphlawEx.ABITest do
     end
 
     test "the cap boundary itself frames fine" do
-      assert {:ok, <<len::unsigned-integer-size(32), _rest::binary>>} = ABI.frame(String.duplicate("a", @cap))
+      assert {:ok, <<len::unsigned-integer-size(32), _rest::binary>>} =
+               ABI.frame(String.duplicate("a", @cap))
+
       assert len == @cap
     end
   end

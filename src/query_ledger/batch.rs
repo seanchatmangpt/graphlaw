@@ -183,7 +183,13 @@ pub struct ChainState {
 }
 
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
+    const T: &[u8; 16] = b"0123456789abcdef";
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for &b in bytes {
+        s.push(T[(b >> 4) as usize] as char);
+        s.push(T[(b & 15) as usize] as char);
+    }
+    s
 }
 
 pub(super) fn digest_of(bytes: &[u8]) -> String {
@@ -455,5 +461,16 @@ mod tests {
     #[test]
     fn escaper_matches_receipt_store_shape() {
         assert_eq!(esc("a\"b\\c\n"), "\"a\\\"b\\\\c\\n\"");
+    }
+}
+
+#[cfg(test)]
+mod hex_table_tests {
+    #[test]
+    fn hex_matches_format_reference() {
+        let bytes: Vec<u8> = (0..=255u8).collect();
+        let reference: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+        assert_eq!(super::hex(&bytes), reference);
+        assert_eq!(super::hex(&[]), "");
     }
 }

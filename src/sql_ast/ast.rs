@@ -1,5 +1,4 @@
 #![allow(missing_docs)]
-#![allow(clippy::result_large_err)]
 
 use super::refusals::{AstError, RefusalCode, refusal_arm};
 use super::serializer::SelectStatement;
@@ -21,6 +20,72 @@ pub fn validate_identifier(ident: &str) -> Result<&str, AstError> {
         }
     }
     Ok(ident)
+}
+
+/// Validated single-segment SQL identifier (`^[a-zA-Z_][a-zA-Z0-9_]*$`).
+///
+/// The inner `String` is private so an unvalidated identifier cannot be
+/// constructed; every emission site in the SQL unparser accepts only
+/// `SqlIdent` (or [`QualifiedIdent`]).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SqlIdent(String);
+
+impl SqlIdent {
+    /// Constructs a validated `SqlIdent` via [`validate_identifier`].
+    pub fn new(ident: &str) -> Result<Self, AstError> {
+        validate_identifier(ident)?;
+        Ok(Self(ident.to_string()))
+    }
+
+    /// Returns the validated identifier string slice.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for SqlIdent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl AsRef<str> for SqlIdent {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+/// Validated dot-qualified SQL identifier (e.g. `main.regional_sales`), where
+/// every dot-separated segment satisfies [`validate_identifier`].
+///
+/// The inner `String` is private so an unvalidated qualified identifier cannot
+/// be constructed.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct QualifiedIdent(String);
+
+impl QualifiedIdent {
+    /// Constructs a validated `QualifiedIdent` via [`validate_qualified_identifier`].
+    pub fn new(ident: &str) -> Result<Self, AstError> {
+        validate_qualified_identifier(ident)?;
+        Ok(Self(ident.to_string()))
+    }
+
+    /// Returns the validated qualified identifier string slice.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for QualifiedIdent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl AsRef<str> for QualifiedIdent {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -490,6 +555,23 @@ pub struct TableRef {
     pub schema: Option<String>,
 }
 
+impl TableRef {
+    /// Validates and returns the table's `SqlIdent` name.
+    pub fn validated_name(&self) -> Result<SqlIdent, AstError> {
+        SqlIdent::new(&self.name)
+    }
+
+    /// Validates and returns the optional `QualifiedIdent` schema qualifier.
+    pub fn validated_schema(&self) -> Result<Option<QualifiedIdent>, AstError> {
+        self.schema.as_deref().map(QualifiedIdent::new).transpose()
+    }
+
+    /// Validates and returns the optional `SqlIdent` table alias.
+    pub fn validated_alias(&self) -> Result<Option<SqlIdent>, AstError> {
+        self.alias.as_deref().map(SqlIdent::new).transpose()
+    }
+}
+
 /// Validates a dotted identifier (`main.regional_sales`): every dot-separated
 /// part must satisfy [`validate_identifier`].
 pub fn validate_qualified_identifier(ident: &str) -> Result<(), AstError> {
@@ -728,13 +810,9 @@ impl MergeStatement {
     /// The sub-select literal is extracted into `params` ($1 = "SETTLED" for
     /// the section 7 graph), never string-interpolated.
     pub fn compile_merge(&self) -> Result<CompiledQuery, AstError> {
-        validate_identifier(&self.target.name)?;
-        if let Some(schema) = &self.target.schema {
-            validate_qualified_identifier(schema)?;
-        }
-        if let Some(alias) = &self.target.alias {
-            validate_identifier(alias)?;
-        }
+        let target_name = self.target.validated_name()?;
+        let target_schema = self.target.validated_schema()?;
+        let _target_alias = self.target.validated_alias()?;
 
         let mut params = Vec::new();
         // Inner sub-select body (the leading "SELECT " of the clause compiler
@@ -745,11 +823,11 @@ impl MergeStatement {
 
         let mut sql = String::with_capacity(body.len() + 160);
         sql.push_str("MERGE INTO ");
-        if let Some(schema) = &self.target.schema {
-            sql.push_str(schema);
+        if let Some(schema) = &target_schema {
+            sql.push_str(schema.as_str());
             sql.push('.');
         }
-        sql.push_str(&self.target.name);
+        sql.push_str(target_name.as_str());
         sql.push_str(" USING (");
         sql.push_str(&body);
         sql.push_str(") AS src ON ");
@@ -767,8 +845,8 @@ impl MergeStatement {
             if idx > 0 {
                 sql.push_str(", ");
             }
-            validate_identifier(column)?;
-            sql.push_str(column);
+            let col_ident = SqlIdent::new(column)?;
+            sql.push_str(col_ident.as_str());
             sql.push_str(" = ");
             SelectStatement::serialize_expr(value, &mut sql, &mut params, 0, ScopePos::Predicate)?;
         }

@@ -66,6 +66,7 @@
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
+#![recursion_limit = "256"]
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -119,64 +120,46 @@ pub mod rdf {
     };
 }
 
-/// Unstable re-export of PurRDF's SPARQL API (`purrdf::sparql::*`). Not covered by GraphLaw's stability promise.
+/// Re-export of the PurRDF SPARQL items GraphLaw's API and courts use (explicit list).
 pub mod sparql {
-    pub use purrdf::sparql::*;
+    pub use purrdf::sparql::NativeSparqlEngine;
 }
 
-/// Unstable re-export of PurRDF's SHACL API. Not covered by GraphLaw's stability promise.
+/// Re-export of the PurRDF SHACL items GraphLaw's API and courts use (explicit list).
 pub mod shacl {
-    pub use purrdf::shapes::*;
+    pub use purrdf::shapes::engine;
 }
 
-/// Unstable re-export of PurRDF's ShEx API. Not covered by GraphLaw's stability promise.
+/// Re-export of the PurRDF ShEx items GraphLaw's API and courts use (explicit list).
 pub mod shex {
-    pub use purrdf::shex::*;
+    pub use purrdf::shex::{
+        ValidationOptions, check_structure, parse_shexc, parse_shexj, validate_shape_map,
+    };
 }
 
-/// Unstable re-export of PurRDF's Datalog API. Not covered by GraphLaw's stability promise.
+/// Re-export of the PurRDF Datalog modules GraphLaw's API and courts use (explicit list).
 pub mod datalog {
-    pub use purrdf::datalog::*;
+    pub use purrdf::datalog::{clause, plan, seminaive, store};
 }
 
-/// Unstable re-export of PurRDF's entailment API. Not covered by GraphLaw's stability promise.
+/// Re-export of the PurRDF entailment items GraphLaw's API and courts use (explicit list).
 pub mod entailment {
-    pub use purrdf::entail::*;
+    pub use purrdf::entail::{Materialization, Regime, materialize};
 }
 
-/// Unstable re-export of PurRDF's event API. Not covered by GraphLaw's stability promise.
+/// Re-export of the PurRDF event item referenced by the migration guide (explicit list).
 pub mod events {
-    pub use purrdf::events::*;
+    pub use purrdf::events::EventTriple;
 }
 
-/// Unstable re-export of PurRDF's GeoSPARQL API. Not covered by GraphLaw's stability promise.
-pub mod geo {
-    pub use purrdf::geo::*;
-}
-
-/// Unstable re-export of PurRDF's full-text search API. Not covered by GraphLaw's stability promise.
-pub mod text {
-    pub use purrdf::text::*;
-}
-
-/// Unstable re-export of PurRDF's retrieval and ranking composition API.
-pub mod retrieval {
-    pub use purrdf::retrieval::*;
-}
-
-/// Unstable re-export of PurRDF's GTS container engine API.
-pub mod gts {
-    pub use purrdf::gts::*;
-}
-
-/// Unstable re-export of PurRDF's SARIF validation reporting boundary.
-pub mod validate {
-    pub use purrdf::validate::*;
-}
-
-/// Unstable re-export of Notation3 API (`purrdf::n3::*`). Not covered by GraphLaw's stability promise.
+/// Re-export of the Notation3 items GraphLaw's API and courts use (explicit list).
 pub mod n3 {
-    pub use purrdf::n3::*;
+    pub use purrdf::n3::{
+        CompletionStatus, Document, EyeronError, Graph, PreparedReasoner, ReasonerLimit,
+        ReasonerOptions, ReasonerResult, ReasonerStatistics, Term, Triple, parse_n3,
+        parse_n3_with_source, proof_check, proof_check_n3, proof_to_n3, reason, reason_document,
+        triples_to_n3,
+    };
 }
 
 /// The canonical immutable, content-addressed GraphLaw law state.
@@ -263,8 +246,9 @@ pub mod evidence_ring;
 pub mod query_cache;
 /// SQL builtins; they call `duckdb_eval`.
 pub mod rules;
-/// PCCf server admission leaf (`admit_pccf`). Stratified SRL only; not a
-/// [`law::Step`] variant. Client verify is `pccf-verifier-wasm`, not this wasm.
+/// PCCf server admission leaf — **FAKE-ALIVE / stub** (`admit_pccf` →
+/// `NotImplemented`). Stratified SRL only when wired; not a [`law::Step`]
+/// variant. Client verify is `pccf-verifier-wasm`, not this wasm.
 pub mod pccf;
 pub mod sql_ast;
 pub mod sql_statement_kinds;

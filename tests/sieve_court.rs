@@ -412,7 +412,9 @@ fn wire_exec_zero_max_rows_refused() {
         json!({"max_rows": 0}),
     );
     assert_eq!(out["ok"], serde_json::Value::Bool(false), "{out}");
-    let message = out["error"]["message"].as_str().unwrap_or("");
+    let message = out["error"]["message"]
+        .as_str()
+        .unwrap_or_else(|| panic!("refusal carries string error.message: {out}"));
     assert!(
         message.contains("at least 1"),
         "zero envelope refused with the typed message: {out}"

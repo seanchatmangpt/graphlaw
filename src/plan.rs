@@ -562,13 +562,7 @@ impl Plan {
     /// `blake3:` of [`Plan::canonical_json`].
     pub fn digest(&self) -> String {
         let d = blake3::hash(self.canonical_json().as_bytes());
-        format!(
-            "blake3:{}",
-            d.as_bytes()
-                .iter()
-                .map(|b| format!("{b:02x}"))
-                .collect::<String>()
-        )
+        format!("blake3:{}", d.to_hex())
     }
 
     /// Replay the plan over `start`. Refuses at the first violated

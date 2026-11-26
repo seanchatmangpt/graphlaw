@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "5a984fb1b3a6334f196c549333f81384d893fa852898d07d006acfbd9aea644d",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-11-25T210936Z-Edit-5a984fb1.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/ggen-marketplace/packs/graphlaw-ash-capability-pack/witnesses/pass/190_refusal_kind_class_contract.ttl",
+  "timestamp_utc": "2026-11-25T210936Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

@@ -3,7 +3,7 @@
 Rust law-admission kernel: RDF/SHACL graphs admit through one executable law
 (`src/law.rs`), project to SQL/DuckDB (`src/sql_ast.rs`, `src/duckdb_eval.rs`),
 sign receipts (Ed25519, `src/attest.rs`), and run the same artifact on host and
-wasm (`wasm/`, `graphlaw-run-eh` wasmtime packet-4 stdio runner). Version 26.10.28,
+wasm (`wasm/`, `graphlaw-run-eh` wasmtime packet-4 stdio runner). Version 26.11.25,
 Rust 1.98.0 (`rust-toolchain.toml`), frozen-duckdb 2.0.2, purrdf 3.0.1 git-sourced at a
 pinned rev.
 

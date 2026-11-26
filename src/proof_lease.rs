@@ -15,8 +15,16 @@
 use crate::n3::proof_check::Report;
 use crate::n3::proof_check_n3::check_proof;
 
+/// Maximum source bytes [`verify_leased_proof`] will hash or check.
+pub const MAX_LEASED_SOURCE_BYTES: usize = 16 * 1024 * 1024;
+/// Maximum proof-document bytes [`verify_leased_proof`] will check.
+pub const MAX_LEASED_PROOF_BYTES: usize = 16 * 1024 * 1024;
+/// Exact length of a lease digest: BLAKE3 as lowercase hex.
+pub const LEASE_DIGEST_HEX_LEN: usize = 64;
+
 /// Why [`verify_leased_proof`] refused to check a proof.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ProofLeaseError {
     /// The source bytes are not the bytes the lease covers. The checker
     /// never runs: the lease binding is the gate.
@@ -28,6 +36,26 @@ pub enum ProofLeaseError {
     },
     /// The source program or the proof document is not readable N3.
     Parse(String),
+    /// The source exceeds [`MAX_LEASED_SOURCE_BYTES`]; refused before hashing.
+    SourceTooLarge {
+        /// Observed byte length.
+        observed: usize,
+        /// The cap.
+        max: usize,
+    },
+    /// The proof exceeds [`MAX_LEASED_PROOF_BYTES`]; refused before hashing.
+    ProofTooLarge {
+        /// Observed byte length.
+        observed: usize,
+        /// The cap.
+        max: usize,
+    },
+    /// The lease digest is not canonical 64-char lowercase hex (no trimming
+    /// or case folding is applied).
+    MalformedLeaseDigest {
+        /// Byte length of the presented digest.
+        len: usize,
+    },
 }
 
 impl std::fmt::Display for ProofLeaseError {
@@ -38,6 +66,16 @@ impl std::fmt::Display for ProofLeaseError {
                 "proof lease digest mismatch: the lease covers {lease_digest}, the presented source hashes to {source_digest}"
             ),
             ProofLeaseError::Parse(detail) => write!(f, "unreadable N3: {detail}"),
+            ProofLeaseError::SourceTooLarge { observed, max } => {
+                write!(f, "source is {observed} bytes, over the {max} byte cap")
+            }
+            ProofLeaseError::ProofTooLarge { observed, max } => {
+                write!(f, "proof is {observed} bytes, over the {max} byte cap")
+            }
+            ProofLeaseError::MalformedLeaseDigest { len } => write!(
+                f,
+                "lease digest must be {LEASE_DIGEST_HEX_LEN} lowercase hex chars (got {len} bytes)"
+            ),
         }
     }
 }
@@ -81,11 +119,11 @@ impl std::error::Error for ProofLeaseError {}
 /// // checker runs.
 /// let other = lease_digest(b"@prefix : <http://example.org/> .\n:Plato a :Man .\n");
 /// assert_eq!(
-///     verify_leased_proof(&other, SOURCE, proof, "leased.n3"),
-///     Err(ProofLeaseError::LeaseDigestMismatch {
+///     verify_leased_proof(&other, SOURCE, proof, "leased.n3").unwrap_err(),
+///     ProofLeaseError::LeaseDigestMismatch {
 ///         lease_digest: other,
 ///         source_digest,
-///     })
+///     }
 /// );
 /// ```
 pub fn verify_leased_proof(
@@ -94,8 +132,27 @@ pub fn verify_leased_proof(
     proof: &str,
     label: &str,
 ) -> Result<Report, ProofLeaseError> {
+    if source.len() > MAX_LEASED_SOURCE_BYTES {
+        return Err(ProofLeaseError::SourceTooLarge {
+            observed: source.len(),
+            max: MAX_LEASED_SOURCE_BYTES,
+        });
+    }
+    if proof.len() > MAX_LEASED_PROOF_BYTES {
+        return Err(ProofLeaseError::ProofTooLarge {
+            observed: proof.len(),
+            max: MAX_LEASED_PROOF_BYTES,
+        });
+    }
+    let canonical = lease_digest.len() == LEASE_DIGEST_HEX_LEN
+        && lease_digest
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
+    if !canonical {
+        return Err(ProofLeaseError::MalformedLeaseDigest { len: lease_digest.len() });
+    }
     let source_digest = lease_digest_source(source);
-    if source_digest != lease_digest.trim().to_ascii_lowercase() {
+    if source_digest != lease_digest {
         return Err(ProofLeaseError::LeaseDigestMismatch {
             lease_digest: lease_digest.to_string(),
             source_digest,

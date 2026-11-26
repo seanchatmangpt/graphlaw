@@ -17,9 +17,9 @@ The crate has two halves:
   is rendered by Lane 1's config, not this one). Regenerate `ffi.rs` with
   `cd wasm && ggen sync run` (ggen >= 26.10.11). Determinism receipt
   (2026-10-22): two consecutive syncs plus a delete-and-regen all produce
-  b3sum `9dcab4e4099ede0e605b2f619c8791e8f19bf656f3c6a8bd552eeade6d9e46a9` (historical lane receipt, 2026-10-22, not a pin; re-verify with `b3sum wasm/src/ffi.rs`)
+  one identical b3sum (digest omitted: no receipts/ row registers it) (historical lane receipt, 2026-10-22, not a pin; re-verify with `b3sum wasm/src/ffi.rs`)
   for `wasm/src/ffi.rs` at graph_hash_hex
-  `8821e277608452cd44baac350c850e4d96759b17a64bec9b08f2b644b0c07ae2` (historical graph hash, not a pin).
+  (hash omitted: no receipts/ row registers it; read it from the `ffi.rs` header).
   "Rendered by ggen ...
   never edit this file by hand" is the standing header law
   (`wasm/src/ffi.rs`, `wasm/src/abi_meta.rs`). Edit the ontology, re-render.

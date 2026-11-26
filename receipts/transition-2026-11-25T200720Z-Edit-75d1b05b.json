@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "75d1b05bd9daff1aad02f2a806d79aa8b7bff8acc3d23b334f2f9fd3fbb38405",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-11-25T200720Z-Edit-75d1b05b.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/ggen-marketplace/docs/reference/pack-catalog.md",
+  "timestamp_utc": "2026-11-25T200720Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

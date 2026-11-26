@@ -168,7 +168,7 @@ read through `read_operator` in `src/sql_ast.rs`).
 Other malformed-composite and malformed-star refusals are the REFUSAL-01
 family (see docs/refusals.md); arms 48-52 are settled codes (48
 COMPOSITE_DEPTH, 49 COMPOSITE_MEMBER, 50 STAR_MODIFIER_POSITION,
-51 COLUMNS_LAMBDA, 52 COLUMNS_PATTERN — `src/sql_ast/refusals.rs:119-144`).
+51 COLUMNS_LAMBDA, 52 COLUMNS_PATTERN — `src/sql_ast/refusals.rs:138-143`).
 
 Courts: `tests/composite_literal_court.rs` (Row 4: real frozen-duckdb
 readbacks, depth-overflow and malformed-key refusals),
@@ -204,7 +204,7 @@ Typed refusals (never a trap):
 - Duplicate open: "session `<name>` already exists (close it before
   reopening)" (`src/duckdb_op.rs#open_session`).
 - Over-cap open: 16 live sessions max (`MAX_SESSIONS`,
-  `src/duckdb_op.rs:79`); the 17th open is a `duckdb_sessions`
+  `src/duckdb_op.rs#MAX_SESSIONS`); the 17th open is a `duckdb_sessions`
   ResourceLimit refusal (`src/duckdb_op.rs#open_session`).
 
 Registry semantics: the session registry is process-local and crash-only

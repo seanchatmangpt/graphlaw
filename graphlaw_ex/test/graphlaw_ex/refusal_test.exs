@@ -1,7 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Sean Chatman <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
 defmodule GraphlawEx.RefusalTest do
   use ExUnit.Case, async: true
 
   alias GraphlawEx.Refusal
+
+  doctest GraphlawEx.Refusal.Table
 
   describe "closed table" do
     test "every code has a class, a broken term and a doc" do
@@ -35,7 +40,13 @@ defmodule GraphlawEx.RefusalTest do
     end
 
     test "a future engine variant is :engine_unclassified, never a crash" do
-      future = %{"code" => "QuantumRefused", "kind" => "Entangled", "message" => "no", "novel_field" => 1}
+      future = %{
+        "code" => "QuantumRefused",
+        "kind" => "Entangled",
+        "message" => "no",
+        "novel_field" => 1
+      }
+
       refusal = Refusal.from_engine(future)
       assert refusal.code == :engine_unclassified
       # Lossless: fields this library does not know are never dropped.
@@ -47,18 +58,25 @@ defmodule GraphlawEx.RefusalTest do
       for payload <- [:atom, "text", 42, [1, 2], nil] do
         refusal = Refusal.from_engine(payload)
         assert refusal.code == :engine_unclassified
-        assert is_binary(refusal.details["raw"])
+        # Payload bytes are never carried: type tag, size, digest prefix only.
+        assert %{"type" => type, "bytes" => bytes, "sha256_prefix" => prefix} =
+                 refusal.details["raw"]
+
+        assert is_binary(type) and is_integer(bytes) and byte_size(prefix) == 16
       end
     end
 
     test "preserves kind and caller details" do
-      refusal = Refusal.from_engine(%{"code" => "Refused", "kind" => "Ambiguous"}, %{"step" => :admit})
+      refusal =
+        Refusal.from_engine(%{"code" => "Refused", "kind" => "Ambiguous"}, %{"step" => :admit})
+
       assert refusal.details["kind"] == "Ambiguous"
       assert refusal.details["step"] == :admit
     end
 
     test "formerly-coarsened refusal codes are no longer :engine_refused or :engine_unclassified" do
-      for wire <- ~w(ReceiptRefused LeaseRefused UnverifiedLeaseRefused Fuse DuckDb BatchMemberFailed) do
+      for wire <-
+            ~w(ReceiptRefused LeaseRefused UnverifiedLeaseRefused Fuse DuckDb BatchMemberFailed) do
         refusal = Refusal.from_engine(%{"code" => wire, "message" => "no"})
         assert refusal.code != :engine_unclassified
         assert refusal.code != :engine_refused
@@ -66,18 +84,36 @@ defmodule GraphlawEx.RefusalTest do
     end
 
     test "ReceiptRefused lifts step and reason" do
-      error = %{"code" => "ReceiptRefused", "message" => "no receipt", "step" => "mint", "reason" => "unsigned"}
+      error = %{
+        "code" => "ReceiptRefused",
+        "message" => "no receipt",
+        "step" => "mint",
+        "reason" => "unsigned"
+      }
+
       refusal = Refusal.from_engine(error)
-      assert %{code: :receipt_refused, class: :refused_identity, broken_term: :R_missing_identity} = refusal
+
+      assert %{code: :receipt_refused, class: :refused_identity, broken_term: :R_missing_identity} =
+               refusal
+
       assert refusal.details["step"] == "mint"
       assert refusal.details["reason"] == "unsigned"
       assert refusal.raw == error
     end
 
     test "LeaseRefused lifts reason, lease_id and step" do
-      error = %{"code" => "LeaseRefused", "reason" => "expired", "lease_id" => "l-1", "step" => "acquire"}
+      error = %{
+        "code" => "LeaseRefused",
+        "reason" => "expired",
+        "lease_id" => "l-1",
+        "step" => "acquire"
+      }
+
       refusal = Refusal.from_engine(error)
-      assert %{code: :lease_refused, class: :refused_identity, broken_term: :R_missing_standing} = refusal
+
+      assert %{code: :lease_refused, class: :refused_identity, broken_term: :R_missing_standing} =
+               refusal
+
       assert refusal.details["reason"] == "expired"
       assert refusal.details["lease_id"] == "l-1"
       assert refusal.details["step"] == "acquire"
@@ -86,7 +122,10 @@ defmodule GraphlawEx.RefusalTest do
     test "UnverifiedLeaseRefused lifts reason, lease_id and step" do
       error = %{"code" => "UnverifiedLeaseRefused", "reason" => "no proof", "lease_id" => "l-2"}
       refusal = Refusal.from_engine(error)
-      assert %{code: :unverified_lease_refused, class: :refused_structure, broken_term: :mu_on_O} = refusal
+
+      assert %{code: :unverified_lease_refused, class: :refused_structure, broken_term: :mu_on_O} =
+               refusal
+
       assert refusal.details["reason"] == "no proof"
       assert refusal.details["lease_id"] == "l-2"
     end
@@ -99,7 +138,13 @@ defmodule GraphlawEx.RefusalTest do
 
     test "DuckDb lifts message and classifies blocked_resource" do
       refusal = Refusal.from_engine(%{"code" => "DuckDb", "message" => "stmt failed"})
-      assert %{code: :duckdb_failure, class: :blocked_resource, broken_term: :R_missing_consequence} = refusal
+
+      assert %{
+               code: :duckdb_failure,
+               class: :blocked_resource,
+               broken_term: :R_missing_consequence
+             } = refusal
+
       assert refusal.message == "stmt failed"
     end
 
@@ -115,7 +160,12 @@ defmodule GraphlawEx.RefusalTest do
       }
 
       refusal = Refusal.from_engine(error)
-      assert %{code: :batch_member_failed, class: :blocked_resource, broken_term: :R_missing_consequence} = refusal
+
+      assert %{
+               code: :batch_member_failed,
+               class: :blocked_resource,
+               broken_term: :R_missing_consequence
+             } = refusal
 
       for key <- ~w(member message partial_receipt limit observed max) do
         assert refusal.details[key] == error[key]
@@ -125,6 +175,8 @@ defmodule GraphlawEx.RefusalTest do
 
   test "per-code constructors fill class and broken_term" do
     assert %{code: :call_trapped, class: :blocked_resource} = Refusal.call_trapped()
-    assert %{code: :wasm_digest_mismatch, broken_term: :R_missing_identity} = Refusal.wasm_digest_mismatch()
+
+    assert %{code: :wasm_digest_mismatch, broken_term: :R_missing_identity} =
+             Refusal.wasm_digest_mismatch()
   end
 end

@@ -15,41 +15,146 @@ permissions:
   contents: read
 
 jobs:
+  # Projection court: committed graphlaw_ex/lib equals a fresh ggen sync of the
+  # committed sources under the pinned ggen identity (same pin recipe as
+  # ash_graphlaw manufacture.yml). Never adds, commits, or pushes.
+  ggen-projection:
+    name: ggen-projection (committed lib equals fresh sync)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      GGEN_SHA: ff96f04e8c7b851e5cca53f3faf5ce1d5f43ce6e
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Restore pinned ggen binary
+        id: ggen-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ggen-bin
+          key: ggen-bin-${{ runner.os }}-${{ env.GGEN_SHA }}
+      - name: Checkout pinned ggen source
+        if: steps.ggen-cache.outputs.cache-hit != 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: seanchatmangpt/ggen
+          ref: ${{ env.GGEN_SHA }}
+          path: vendor/ggen
+          persist-credentials: false
+      - name: Build pinned ggen from Rust source
+        if: steps.ggen-cache.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+          RUSTC_WRAPPER: ""
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang libclang-dev llvm-dev
+          rustup toolchain install nightly-2026-06-22 --profile minimal
+          cargo +nightly-2026-06-22 build --release --locked --manifest-path vendor/ggen/crates/ggen-cli/Cargo.toml --bin ggen
+          mkdir -p "${HOME}/.cache/ggen-bin"
+          cp vendor/ggen/target/release/ggen "${HOME}/.cache/ggen-bin/ggen"
+      - name: Put ggen on PATH
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${HOME}/.cache/ggen-bin" >> "${GITHUB_PATH}"
+          "${HOME}/.cache/ggen-bin/ggen" --version
+      - name: ggen sync --check
+        run: bash graphlaw_ex/scripts/ggen_sync.sh --check
+      - name: Committed lib equals projection
+        run: git diff --exit-code -- graphlaw_ex/lib
+
   graphlaw_ex-courts:
-    name: graphlaw_ex-courts
+    name: graphlaw_ex-courts (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: '1.18.6'
+            otp: '27.3.4.20'
+          - elixir: '1.19.7'
+            otp: '28.5.0.9'
     env:
       # Fail-closed engine gate: with this set, the engine courts FAIL on a
       # missing/unloadable vendored artifact instead of loud-skipping
       # (graphlaw_ex/test/graphlaw_ex_test.exs, a2a_authority_ceiling_court_test.exs).
       GRAPHLAW_REQUIRE_ENGINE: '1'
+      # Hex tarball size ceiling (bytes); hex.pm compressed package limit is 8 MB.
+      HEX_TARBALL_MAX_BYTES: '8000000'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      # wasmex 0.15.1 rides rustler_precompiled; when the precompiled NIF
+      # wasmex (version pinned in graphlaw_ex/mix.exs) rides rustler_precompiled; when the precompiled NIF
       # misses the platform it falls back to compiling with cargo — keep the
       # same rust toolchain as ci.yml so the fallback is never a red X.
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.98.0
-      # TODO: pin to the local asdf versions (brew 1.19.5 currently shadows
-      # asdf 1.20.4 — see auto-memory elixir-toolchain-shadowing) once the
-      # runner images settle; 1.18/OTP 27 is the current stable pair.
       - uses: erlef/setup-beam@5304e04ea2b355f03681464e683d92e3b2f18451 # v1.18.2
         with:
-          elixir-version: '1.18.4'
-          otp-version: '27.3'
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
       - name: Restore deps + _build
+        id: mix-cache
         uses: actions/cache@v4
         with:
           path: |
             graphlaw_ex/deps
             graphlaw_ex/_build
-          key: mix-${{ runner.os }}-otp27-ex118-${{ hashFiles('graphlaw_ex/mix.lock') }}
-          restore-keys: mix-${{ runner.os }}-otp27-ex118-
+          key: mix-${{ runner.os }}-otp${{ matrix.otp }}-ex${{ matrix.elixir }}-${{ hashFiles('graphlaw_ex/mix.lock') }}
+          restore-keys: mix-${{ runner.os }}-otp${{ matrix.otp }}-ex${{ matrix.elixir }}-
+      - name: Restore dialyzer PLT
+        uses: actions/cache@v4
+        with:
+          path: graphlaw_ex/_build/plts
+          key: plt-${{ runner.os }}-otp${{ matrix.otp }}-ex${{ matrix.elixir }}-${{ hashFiles('graphlaw_ex/mix.lock') }}
+          restore-keys: plt-${{ runner.os }}-otp${{ matrix.otp }}-ex${{ matrix.elixir }}-
       - name: mix deps.get
         working-directory: graphlaw_ex
         run: mix deps.get && mix deps.compile
+      - name: mix format --check-formatted
+        working-directory: graphlaw_ex
+        run: mix format --check-formatted
+      # Exact-key cache hit means deps (mix.lock) are unchanged: incremental
+      # compile. Miss (deps changed or cold cache): --force.
+      - name: mix compile --warnings-as-errors
+        working-directory: graphlaw_ex
+        run: |
+          if [ "${{ steps.mix-cache.outputs.cache-hit }}" = "true" ]; then
+            mix compile --warnings-as-errors
+          else
+            mix compile --force --warnings-as-errors
+          fi
+      - name: mix dialyzer
+        working-directory: graphlaw_ex
+        run: mix dialyzer
+      # Fetch only where the wasm is not staged: GRAPHLAW_WASM_PATH (built
+      # artifact) wins when set; otherwise fetch the published artifact.
+      - name: mix graphlaw_ex.fetch (only when wasm is not staged)
+        working-directory: graphlaw_ex
+        run: |
+          if [ -n "${GRAPHLAW_WASM_PATH:-}" ] && [ -f "${GRAPHLAW_WASM_PATH}" ]; then
+            echo "wasm staged at ${GRAPHLAW_WASM_PATH}; fetch skipped"
+          else
+            mix graphlaw_ex.fetch
+          fi
+      - name: mix graphlaw_ex.verify (BLAKE3 artifact check)
+        working-directory: graphlaw_ex
+        run: mix graphlaw_ex.verify
       - name: mix test (engine courts fail-closed)
         working-directory: graphlaw_ex
         run: mix test
+      - name: reuse lint
+        run: pipx run reuse lint
+      - name: mix hex.build + tarball size check
+        working-directory: graphlaw_ex
+        run: |
+          mix hex.build
+          tarball="$(ls -1 graphlaw_ex-*.tar | head -n1)"
+          test -n "$tarball" || { echo "no hex tarball produced"; exit 1; }
+          size="$(wc -c < "$tarball")"
+          echo "$tarball: $size bytes (max $HEX_TARBALL_MAX_BYTES)"
+          test "$size" -le "$HEX_TARBALL_MAX_BYTES"

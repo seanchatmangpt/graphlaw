@@ -56,3 +56,13 @@ graphlaw_ex/*.tar
 
 # provenance blobs re-derivable from upstream (recipe in docs/jira/v26.10.28/provenance/)
 docs/jira/v26.10.28/provenance/purrdf-fork-44f4979.tar.gz
+
+# v26.11.25 release hygiene: lane/court build roots and scratch (regenerable)
+/target-*/
+/mutants.out*/
+graphlaw_ex/tmp/
+graphlaw_ex/.ggen/
+graphlaw_ex/.ggen-v2/
+graphlaw_ex/ontology/.staged/
+*.md-e
+*.ttl-e

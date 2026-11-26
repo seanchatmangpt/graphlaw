@@ -26,7 +26,7 @@
 
 use std::fmt;
 use std::fs::OpenOptions;
-use std::io::{BufWriter, Write};
+use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
@@ -205,8 +205,42 @@ pub fn now_ms() -> u64 {
         .unwrap_or(0)
 }
 
+/// Injectable wall clock for ledger-side timestamps (`refused_at_ms` in drop
+/// lines). Production uses [`SystemClock`]; replay courts inject
+/// [`FixedClock`] so a ledger is byte-deterministic.
+pub trait Clock: Send + Sync + 'static {
+    /// Milliseconds since the Unix epoch.
+    fn now_ms(&self) -> u64;
+}
+
+/// The real wall clock ([`now_ms`]).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SystemClock;
+
+impl Clock for SystemClock {
+    fn now_ms(&self) -> u64 {
+        now_ms()
+    }
+}
+
+/// A constant clock for deterministic replay.
+#[derive(Debug, Clone, Copy)]
+pub struct FixedClock(pub u64);
+
+impl Clock for FixedClock {
+    fn now_ms(&self) -> u64 {
+        self.0
+    }
+}
+
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
+    const T: &[u8; 16] = b"0123456789abcdef";
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for &b in bytes {
+        s.push(T[(b >> 4) as usize] as char);
+        s.push(T[(b & 15) as usize] as char);
+    }
+    s
 }
 
 /// Genesis parent digest (all-zero hex).
@@ -216,12 +250,20 @@ const GENESIS: &str = "000000000000000000000000000000000000000000000000000000000
 /// `child = BLAKE3(parent_hex || body_without_child)` — the receipt_store
 /// parent -> child convention. Returns (full line with trailing newline, child).
 fn encode_line(seq: u64, kind: &str, body: &str, parent: &str) -> (String, String) {
-    let body = format!("{{\"seq\":{seq},\"kind\":\"{kind}\",{body}\"parent\":\"{parent}\"");
+    use std::fmt::Write as _;
+    let mut line = String::with_capacity(body.len() + parent.len() + 160);
+    // Writing into a String cannot fail.
+    let _ = write!(
+        line,
+        "{{\"seq\":{seq},\"kind\":\"{kind}\",{body}\"parent\":\"{parent}\""
+    );
     let mut h = blake3::Hasher::new();
     h.update(parent.as_bytes());
-    h.update(body.as_bytes());
+    h.update(line.as_bytes());
     let child = hex(h.finalize().as_bytes());
-    let line = format!("{body},\"child\":\"{child}\"}}\n");
+    line.push_str(",\"child\":\"");
+    line.push_str(&child);
+    line.push_str("\"}\n");
     (line, child)
 }
 
@@ -259,7 +301,16 @@ impl EvidenceRing {
     /// `<dir>/evidence.ndjson`. No lazy default exists: nothing touches the
     /// filesystem until this is called.
     pub fn init(dir: impl AsRef<Path>) -> Result<Arc<Self>, RingError> {
-        Self::init_inner(dir, None, 0)
+        Self::init_inner(dir, None, 0, Arc::new(SystemClock))
+    }
+
+    /// Like [`EvidenceRing::init`], with an injected [`Clock`] for drop-line
+    /// timestamps (deterministic replay).
+    pub fn init_with_clock(
+        dir: impl AsRef<Path>,
+        clock: Arc<dyn Clock>,
+    ) -> Result<Arc<Self>, RingError> {
+        Self::init_inner(dir, None, 0, clock)
     }
 
     /// Like [`EvidenceRing::init`], but the drainer additionally records every
@@ -272,7 +323,7 @@ impl EvidenceRing {
     ) -> Result<Arc<Self>, RingError> {
         let ledger_dir = ledger_dir.as_ref().to_path_buf();
         std::fs::create_dir_all(&ledger_dir)?;
-        Self::init_inner(dir, Some(ledger_dir), 0)
+        Self::init_inner(dir, Some(ledger_dir), 0, Arc::new(SystemClock))
     }
 
     /// Like [`EvidenceRing::init_with_ledger`], but resumes an interrupted
@@ -290,16 +341,20 @@ impl EvidenceRing {
     ) -> Result<Arc<Self>, RingError> {
         let ledger_dir = ledger_dir.as_ref().to_path_buf();
         std::fs::create_dir_all(&ledger_dir)?;
-        Self::init_inner(dir, Some(ledger_dir), producer_attempted)
+        Self::init_inner(dir, Some(ledger_dir), producer_attempted, Arc::new(SystemClock))
     }
 
     fn init_inner(
         dir: impl AsRef<Path>,
         ledger_dir: Option<PathBuf>,
         watermark: u64,
+        clock: Arc<dyn Clock>,
     ) -> Result<Arc<Self>, RingError> {
         let dir = dir.as_ref();
         std::fs::create_dir_all(dir)?;
+        // Startup recovery: validate the existing ledger BEFORE any drainer
+        // exists. Torn trailing bytes are truncated; any other damage refuses.
+        let recovered = recover_ledger(&dir.join("evidence.ndjson"))?;
         let (producer, consumer) = RingBuffer::new(RING_CAPACITY);
         let ring = Arc::new(Self {
             dir: dir.to_path_buf(),
@@ -309,7 +364,11 @@ impl EvidenceRing {
             // F5: the sequence counter is seeded from the producer watermark,
             // so a restart-mid-stream continues the global sequence — never
             // silent renumbering. Fresh rings seed at 0.
-            seq_counter: Arc::new(AtomicU64::new(watermark)),
+            // Restart fix: also never below the recovered ledger's coverage
+            // (`covered_seq`), else the first push after a restart writes
+            // seq 1 onto a ledger covered through N and `ChainState::accept`
+            // refuses with SequenceGap, poisoning the ledger permanently.
+            seq_counter: Arc::new(AtomicU64::new(watermark.max(recovered.covered_seq))),
             dropped: AtomicU64::new(0),
             paused_flag: Arc::new(AtomicBool::new(false)),
             shutdown_flag: Arc::new(AtomicBool::new(false)),
@@ -341,6 +400,8 @@ impl EvidenceRing {
                         &shutdown,
                         &seq,
                         watermark,
+                        recovered,
+                        clock.as_ref(),
                     )
                 })?
         };
@@ -447,8 +508,11 @@ impl EvidenceRing {
         if !desc.pads_zero() {
             return PushOutcome::RefusedTornPad;
         }
-        let seq = self.seq_counter.fetch_add(1, Ordering::Relaxed) + 1;
+        // Sequence minting and enqueue are ONE critical section: minting
+        // before the lock lets concurrent callers enqueue out of order and
+        // corrupt the NDJSON chain (court: evidence_ring_concurrency_court).
         let mut guard = self.producer.lock().expect("producer lock poisoned");
+        let seq = self.seq_counter.fetch_add(1, Ordering::Relaxed) + 1;
         let Some(producer) = guard.as_mut() else {
             drop(guard);
             self.dropped.fetch_add(1, Ordering::Relaxed);
@@ -529,6 +593,7 @@ fn drop_line(
     dropped_count: u64,
     refused_h_query: &[u8; 32],
     parent: &str,
+    clock: &dyn Clock,
 ) -> (String, String) {
     encode_line(
         seq,
@@ -537,7 +602,7 @@ fn drop_line(
             "\"dropped_count\":{},\"refused_h_query\":\"{}\",\"refused_at_ms\":{},",
             dropped_count,
             hex(refused_h_query),
-            now_ms()
+            clock.now_ms()
         ),
         parent,
     )
@@ -560,6 +625,7 @@ fn write_batch(out: &mut BufWriter<std::fs::File>, buf: &str) -> std::io::Result
     out.flush()
 }
 
+#[allow(clippy::too_many_arguments)]
 fn drain_loop(
     mut consumer: Consumer<EvidenceSlot>,
     dir: &Path,
@@ -570,6 +636,8 @@ fn drain_loop(
     shutdown: &AtomicBool,
     seq: &AtomicU64,
     producer_attempted: u64,
+    recovered: Recovered,
+    clock: &dyn Clock,
 ) {
     let path = dir.join("evidence.ndjson");
     // RUST-4: an unopenable ledger is a typed failure, not a silent no-op
@@ -585,31 +653,11 @@ fn drain_loop(
         }
     };
     let mut out = BufWriter::new(file);
-    let mut parent = String::from(GENESIS);
-    // Restart watermark: the highest sequence the NDJSON ledger shows as
-    // covered (evidence + drop lines). On a restart-mid-stream this is the
-    // previous session's true producer watermark; a new drainer reconciles
-    // the cold ledger against it at open so lost drain coverage is persisted
-    // as a gap marker (never backfilled, never silently renumbered).
-    let mut restart_seq: u64 = 0;
-    // Resume: an existing ledger's last child becomes the chain head.
-    if let Ok(existing) = std::fs::read_to_string(&path) {
-        if let Some(last) = existing.lines().next_back() {
-            if let Some(child) = last
-                .rsplit("\"child\":\"")
-                .next()
-                .and_then(|r| r.split('"').next())
-            {
-                parent = child.to_string();
-            }
-            restart_seq = last
-                .split("\"seq\":")
-                .nth(1)
-                .and_then(|r| r.split(',').next())
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(0);
-        }
-    }
+    // Resume from the validated ledger (see `recover_ledger`): chain head and
+    // the highest covered sequence (evidence + drop-range coverage). Never a
+    // silent GENESIS/0 fallback over an existing ledger.
+    let mut parent = recovered.parent;
+    let restart_seq: u64 = recovered.covered_seq;
     // Joint pipeline: the content-addressed query ledger is owned exclusively
     // by this thread (no locks on the ledger from producer or court threads).
     let mut ledger = ledger_dir.map(|d| (d, None::<crate::query_ledger::QueryLedger>));
@@ -665,7 +713,7 @@ fn drain_loop(
         // Startup drop line: crash loss between sessions, disclosed before
         // the first resumed slot so NDJSON coverage stays exact.
         let count = producer_attempted - restart_seq;
-        let (line, child) = drop_line(restart_seq + 1, count, &[0u8; 32], &parent);
+        let (line, child) = drop_line(restart_seq + 1, count, &[0u8; 32], &parent, clock);
         buf.push_str(&line);
         parent = child;
         expected_seq = producer_attempted;
@@ -725,7 +773,7 @@ fn drain_loop(
                             }
                         }
                         let (line, child) =
-                            drop_line(expected_seq + 1, count, &slot.desc.h_query, &parent);
+                            drop_line(expected_seq + 1, count, &slot.desc.h_query, &parent, clock);
                         buf.push_str(&line);
                         parent = child;
                     }
@@ -812,7 +860,7 @@ fn drain_loop(
             }
         }
         let count = final_seq - covered_seq;
-        let (line, _child) = drop_line(covered_seq + 1, count, &[0u8; 32], &committed_parent);
+        let (line, _child) = drop_line(covered_seq + 1, count, &[0u8; 32], &committed_parent, clock);
         if !ndjson_dead {
             if let Err(e) = write_batch(&mut out, &line) {
                 record_write_error(
@@ -835,97 +883,259 @@ fn drain_loop(
     }
 }
 
-fn decode_u64_field(body: &str, key: &str) -> Option<u64> {
-    let marker = format!("\"{key}\":");
-    let i = body.find(&marker)? + marker.len();
-    let rest = &body[i..];
-    let end = rest.find(',').unwrap_or(rest.len());
-    rest[..end].parse().ok()
+
+// ---------------------------------------------------------------------------
+// Strict ledger parser + chain fold (shared by `verify` and startup recovery).
+// ---------------------------------------------------------------------------
+
+/// Byte cursor over one ledger line. Every accessor is exact: no whitespace,
+/// no key reordering, no leading zeros, lowercase hex only.
+struct Cur<'a> {
+    s: &'a str,
+    pos: usize,
 }
 
-fn decode_hex_field<'a>(body: &'a str, key: &str) -> Option<&'a str> {
-    let marker = format!("\"{key}\":\"");
-    let i = body.find(&marker)? + marker.len();
-    let rest = &body[i..];
-    let end = rest.find('"')?;
-    rest.get(..end)
+impl<'a> Cur<'a> {
+    fn lit(&mut self, l: &str) -> Option<()> {
+        self.s[self.pos..].starts_with(l).then(|| self.pos += l.len())
+    }
+
+    fn u64(&mut self) -> Option<u64> {
+        let s = self.s;
+        let rest = &s[self.pos..];
+        let n = rest.bytes().take_while(u8::is_ascii_digit).count();
+        if n == 0 || (n > 1 && rest.as_bytes()[0] == b'0') {
+            return None;
+        }
+        let v = rest[..n].parse().ok()?;
+        self.pos += n;
+        Some(v)
+    }
+
+    fn hex64(&mut self) -> Option<&'a str> {
+        let s = self.s;
+        let h = s[self.pos..].get(..64)?;
+        h.bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+            .then(|| self.pos += 64)?;
+        Some(h)
+    }
+
+    fn eof(&self) -> bool {
+        self.pos == self.s.len()
+    }
 }
 
-/// Re-reads the ledger under `dir`, recomputes every child digest, checks the
-/// linear parent -> child chain, the pad-zero detector, and that evidence +
-/// drop lines cover every attempted sequence exactly once. Returns
-/// `(evidence_lines, dropped_lines, dropped_total)`.
-pub fn verify(dir: impl AsRef<Path>) -> Result<(usize, usize, u64), RingError> {
-    let path = dir.as_ref().join("evidence.ndjson");
-    let text = std::fs::read_to_string(&path).map_err(|e| RingError::Io(e.to_string()))?;
-    let mut parent = String::from(GENESIS);
-    let mut expected_seq: u64 = 0;
-    let mut evidence = 0usize;
-    let mut dropped_lines = 0usize;
-    let mut dropped_total = 0u64;
-    for (idx, line) in text.lines().enumerate() {
-        let line_no = idx + 1;
-        let (body, child) = match line
-            .strip_suffix("\"}")
-            .and_then(|b| b.rsplit_once(",\"child\":\""))
-        {
-            Some((b, c)) if !c.contains('"') => (b, c),
-            _ => return Err(RingError::Malformed { line: line_no }),
-        };
+enum Kind {
+    Evidence { pads: u64 },
+    Dropped { count: u64 },
+}
+
+struct Parsed<'a> {
+    seq: u64,
+    kind: Kind,
+    parent: &'a str,
+    /// Exact bytes the child digest covers (line up to `,"child"`).
+    body: &'a str,
+    child: &'a str,
+}
+
+/// Strict decoder for exactly the canonical encoding [`encode_line`] emits.
+fn parse_line(line: &str) -> Option<Parsed<'_>> {
+    let mut c = Cur { s: line, pos: 0 };
+    c.lit("{\"seq\":")?;
+    let seq = c.u64()?;
+    c.lit(",\"kind\":\"")?;
+    let kind = if c.lit("evidence\",\"h_query\":\"").is_some() {
+        c.hex64()?;
+        c.lit("\",\"rows_emitted\":")?;
+        c.u64()?;
+        c.lit(",\"execution_ms\":")?;
+        u32::try_from(c.u64()?).ok()?;
+        c.lit(",\"cached\":")?;
+        u8::try_from(c.u64()?).ok()?;
+        c.lit(",\"timestamp_ms\":")?;
+        c.u64()?;
+        c.lit(",\"pads\":")?;
+        Kind::Evidence { pads: c.u64()? }
+    } else if c.lit("dropped\",\"dropped_count\":").is_some() {
+        let count = c.u64()?;
+        c.lit(",\"refused_h_query\":\"")?;
+        c.hex64()?;
+        c.lit("\",\"refused_at_ms\":")?;
+        c.u64()?;
+        Kind::Dropped { count }
+    } else {
+        return None;
+    };
+    c.lit(",\"parent\":\"")?;
+    let parent = c.hex64()?;
+    c.lit("\"")?;
+    let body = &line[..c.pos];
+    c.lit(",\"child\":\"")?;
+    let child = c.hex64()?;
+    c.lit("\"}")?;
+    c.eof().then_some(Parsed {
+        seq,
+        kind,
+        parent,
+        body,
+        child,
+    })
+}
+
+/// Running fold of the ledger chain.
+struct ChainState {
+    parent: String,
+    expected_seq: u64,
+    evidence: usize,
+    dropped_lines: usize,
+    dropped_total: u64,
+}
+
+impl ChainState {
+    fn genesis() -> Self {
+        Self {
+            parent: String::from(GENESIS),
+            expected_seq: 0,
+            evidence: 0,
+            dropped_lines: 0,
+            dropped_total: 0,
+        }
+    }
+
+    /// Admits one newline-stripped line or returns the typed refusal.
+    fn accept(&mut self, line: &str, line_no: usize) -> Result<(), RingError> {
+        let p = parse_line(line).ok_or(RingError::Malformed { line: line_no })?;
+        if p.parent != self.parent {
+            return Err(RingError::BrokenChain {
+                detail: format!("line {line_no}: parent is not the chain head"),
+            });
+        }
         let mut h = blake3::Hasher::new();
-        h.update(parent.as_bytes());
-        h.update(body.as_bytes());
-        if hex(h.finalize().as_bytes()) != child {
+        h.update(self.parent.as_bytes());
+        h.update(p.body.as_bytes());
+        if hex(h.finalize().as_bytes()) != p.child {
             return Err(RingError::BrokenChain {
                 detail: format!("line {line_no}: child digest mismatch"),
             });
         }
-        let seq = decode_u64_field(body, "seq").ok_or(RingError::Malformed { line: line_no })?;
-        let kind = decode_hex_field(body, "kind").ok_or(RingError::Malformed { line: line_no })?;
-        if kind == "evidence" {
-            let hq =
-                decode_hex_field(body, "h_query").ok_or(RingError::Malformed { line: line_no })?;
-            if hq.len() != 64 {
-                return Err(RingError::Malformed { line: line_no });
-            }
-            if seq != expected_seq + 1 {
-                return Err(RingError::SequenceGap {
-                    detail: format!(
-                        "line {line_no}: evidence seq {seq}, expected {}",
-                        expected_seq + 1
-                    ),
-                });
-            }
-            evidence += 1;
-            let pads =
-                decode_u64_field(body, "pads").ok_or(RingError::Malformed { line: line_no })?;
-            if pads != 0 {
-                return Err(RingError::TornSlot { line: line_no });
-            }
-        } else if kind == "dropped" {
-            let count = decode_u64_field(body, "dropped_count")
-                .ok_or(RingError::Malformed { line: line_no })?;
-            let hq = decode_hex_field(body, "refused_h_query")
-                .ok_or(RingError::Malformed { line: line_no })?;
-            if count == 0 || hq.len() != 64 {
-                return Err(RingError::Malformed { line: line_no });
-            }
-            if seq != expected_seq + 1 {
-                return Err(RingError::SequenceGap {
-                    detail: format!(
-                        "line {line_no}: drop seq {seq}, expected {}",
-                        expected_seq + 1
-                    ),
-                });
-            }
-            expected_seq += count - 1;
-            dropped_lines += 1;
-            dropped_total += count;
-        } else {
-            return Err(RingError::Malformed { line: line_no });
+        if p.seq != self.expected_seq.wrapping_add(1) || self.expected_seq == u64::MAX {
+            return Err(RingError::SequenceGap {
+                detail: format!(
+                    "line {line_no}: seq {}, expected {}",
+                    p.seq,
+                    self.expected_seq.wrapping_add(1)
+                ),
+            });
         }
-        expected_seq += 1;
-        parent = child.to_string();
+        match p.kind {
+            Kind::Evidence { pads } => {
+                if pads != 0 {
+                    return Err(RingError::TornSlot { line: line_no });
+                }
+                self.evidence += 1;
+                self.expected_seq = p.seq;
+            }
+            Kind::Dropped { count } => {
+                if count == 0 {
+                    return Err(RingError::Malformed { line: line_no });
+                }
+                self.expected_seq = p
+                    .seq
+                    .checked_add(count - 1)
+                    .ok_or(RingError::Malformed { line: line_no })?;
+                self.dropped_lines += 1;
+                self.dropped_total += count;
+            }
+        }
+        self.parent = p.child.to_string();
+        Ok(())
     }
-    Ok((evidence, dropped_lines, dropped_total))
+}
+
+/// Chain head + coverage watermark of a validated ledger.
+struct Recovered {
+    parent: String,
+    covered_seq: u64,
+}
+
+/// Streams the ledger line by line. Returns the fold and the byte length of
+/// the valid newline-terminated prefix; an unterminated tail is reported via
+/// `torn_tail` (never folded).
+fn scan_ledger(path: &Path) -> Result<(ChainState, u64, bool), RingError> {
+    let mut rd = BufReader::new(std::fs::File::open(path)?);
+    let mut state = ChainState::genesis();
+    let mut good_len = 0u64;
+    let mut line_no = 0usize;
+    let mut buf = Vec::new();
+    loop {
+        buf.clear();
+        let n = rd.read_until(b'\n', &mut buf)?;
+        if n == 0 {
+            return Ok((state, good_len, false));
+        }
+        line_no += 1;
+        if buf.last() != Some(&b'\n') {
+            return Ok((state, good_len, true));
+        }
+        buf.pop();
+        let line = std::str::from_utf8(&buf).map_err(|_| RingError::Malformed { line: line_no })?;
+        state.accept(line, line_no)?;
+        good_len += n as u64;
+    }
+}
+
+/// Startup recovery. Absent ledger -> genesis (the only lawful GENESIS/0
+/// start). Present ledger -> every newline-terminated record must be strictly
+/// parseable, hash-chained and sequence-contiguous (else typed refusal:
+/// forked/corrupt tails are never repaired); trailing bytes without a
+/// terminating newline are a torn append and are truncated away.
+fn recover_ledger(path: &Path) -> Result<Recovered, RingError> {
+    if !path.exists() {
+        let g = ChainState::genesis();
+        return Ok(Recovered {
+            parent: g.parent,
+            covered_seq: 0,
+        });
+    }
+    let (state, good_len, torn) = scan_ledger(path)?;
+    if torn {
+        let f = OpenOptions::new().write(true).open(path)?;
+        f.set_len(good_len)?;
+        f.sync_data()?;
+    }
+    Ok(Recovered {
+        parent: state.parent,
+        covered_seq: state.expected_seq,
+    })
+}
+
+/// Re-reads the ledger under `dir` (streaming), recomputes every child digest,
+/// checks the linear parent -> child chain, the pad-zero detector, and that
+/// evidence + drop lines cover every attempted sequence exactly once. An
+/// unterminated tail is refused (`Malformed`). Returns
+/// `(evidence_lines, dropped_lines, dropped_total)`.
+pub fn verify(dir: impl AsRef<Path>) -> Result<(usize, usize, u64), RingError> {
+    let path = dir.as_ref().join("evidence.ndjson");
+    let (state, _good_len, torn) = scan_ledger(&path)?;
+    if torn {
+        // line number of the unterminated record = terminated lines + 1
+        let terminated = state.evidence + state.dropped_lines;
+        return Err(RingError::Malformed {
+            line: terminated + 1,
+        });
+    }
+    Ok((state.evidence, state.dropped_lines, state.dropped_total))
+}
+
+#[cfg(test)]
+mod hex_table_tests {
+    #[test]
+    fn hex_matches_format_reference() {
+        let bytes: Vec<u8> = (0..=255u8).collect();
+        let reference: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+        assert_eq!(super::hex(&bytes), reference);
+        assert_eq!(super::hex(&[]), "");
+    }
 }

@@ -59,7 +59,8 @@ fn admit(state: &LawState, shapes: &str) -> Result<(), LawError> {
 
 fn depth_guard_refused(err: &LawError) -> bool {
     // The guard surfaces as a non-conforms SHACL violation naming the
-    // exceeded cap (consumer-facing contract: downstream reporters render
+    // exceeded cap: `component` is the typed limit name, `message` carries the
+    // prose (consumer-facing contract: downstream reporters render
     // "SHACL validation failed ... constraint violated ... maximum safe
     // validation depth ...").
     match err {
@@ -71,9 +72,8 @@ fn depth_guard_refused(err: &LawError) -> bool {
                 && results.len() == 1
                 && results[0].component.contains("shacl_validation_depth")
                 && results[0]
-                    .component
+                    .message
                     .contains("maximum safe validation depth")
-                && results[0].message.is_empty()
         }
         _ => false,
     }

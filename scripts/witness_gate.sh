@@ -5,7 +5,7 @@
 # `target-lane*` citations; each must resolve to a receipts/ file containing
 # it, or an existing dir/file on disk.
 # Skips fenced code blocks (quoted court output) and lines carrying
-# `witness-gate:allow`. Excludes generated docs/reference-generated/.
+# `witness-gate:allow`. Excludes generated docs/reference-generated/ and the frozen docs/archive/ (historical receipts).
 # Non-vacuity: flags docs/WASM.md:44/47/99 (target-lane114 + unregistered
 # 9d299ed8…) today; a doc citing a registered digest passes.
 # A gate that cannot exit 1 is the failure.
@@ -16,7 +16,7 @@ status=0
 [ -d "$RECEIPTS" ] || { echo "WITNESS-GATE REFUSED: no receipts/ dir at $RECEIPTS" >&2; exit 2; }
 RECEIPT_DIGESTS=$(grep -rhoE '[0-9a-f]{64}' "$RECEIPTS" 2>/dev/null | sort -u)
 if [ "$#" -eq 0 ]; then
-  FILES=$(find "$ROOT/docs" -name '*.md' -type f -not -path "*/reference-generated/*")
+  FILES=$(find "$ROOT/docs" -name '*.md' -type f -not -path "*/reference-generated/*" -not -path "$ROOT/docs/archive/*")
 else
   FILES="$*"
 fi

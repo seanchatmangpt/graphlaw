@@ -33,28 +33,75 @@ fn lit(s: &str) -> String {
     out
 }
 
+fn describe(v: &Value) -> String {
+    let mut s = v.to_string();
+    if s.len() > 120 {
+        let mut end = 120;
+        while !s.is_char_boundary(end) {
+            end -= 1;
+        }
+        s.truncate(end);
+        s.push_str("...");
+    }
+    s
+}
+
+// Strict accessors: the registry JSON is produced by emit_json.rs in the same crate, so a
+// missing or retyped key is a producer/consumer drift bug and must fail loudly, never
+// default to "" / 0 / false / [].
+#[track_caller]
 fn text_of(v: &Value, key: &str) -> String {
-    v.get(key)
-        .and_then(Value::as_str)
-        .unwrap_or_default()
-        .to_owned()
+    match v.get(key) {
+        Some(Value::String(s)) => s.clone(),
+        other => panic!(
+            "registry json: key `{key}` is not a string (got {other:?}) in {}",
+            describe(v)
+        ),
+    }
 }
 
+#[track_caller]
 fn int_of(v: &Value, key: &str) -> String {
-    v.get(key).map_or_else(|| "0".into(), Value::to_string)
+    match v.get(key) {
+        Some(n @ Value::Number(_)) => n.to_string(),
+        other => panic!(
+            "registry json: key `{key}` is not a number (got {other:?}) in {}",
+            describe(v)
+        ),
+    }
 }
 
+#[track_caller]
 fn bool_of(v: &Value, key: &str) -> String {
-    v.get(key)
-        .and_then(Value::as_bool)
-        .unwrap_or(false)
-        .to_string()
+    match v.get(key) {
+        Some(Value::Bool(b)) => b.to_string(),
+        other => panic!(
+            "registry json: key `{key}` is not a bool (got {other:?}) in {}",
+            describe(v)
+        ),
+    }
 }
 
+/// Array under `key`. An explicit JSON `null` is an empty list (the producer emits
+/// `"enum": null` for non-enum fields); an absent key or any other type panics.
+#[track_caller]
 fn items<'a>(v: &'a Value, key: &str) -> &'a [Value] {
-    v.get(key)
-        .and_then(Value::as_array)
-        .map_or(&[][..], Vec::as_slice)
+    match v.get(key) {
+        Some(Value::Array(a)) => a.as_slice(),
+        Some(Value::Null) => &[],
+        other => panic!(
+            "registry json: key `{key}` is not an array (got {other:?}) in {}",
+            describe(v)
+        ),
+    }
+}
+
+#[track_caller]
+fn str_item(v: &Value, what: &str) -> String {
+    match v.as_str() {
+        Some(s) => s.to_owned(),
+        None => panic!("registry json: {what} element is not a string: {}", describe(v)),
+    }
 }
 
 impl Graph {
@@ -88,7 +135,7 @@ impl Graph {
                 self.typed(&eiri, "EnumValue");
                 self.add(&eiri, "gac:enumOf", node(&iri));
                 self.add(&eiri, "gac:enumOrder", (i + 1).to_string());
-                self.add(&eiri, "gac:enumValue", lit(e.as_str().unwrap_or_default()));
+                self.add(&eiri, "gac:enumValue", lit(&str_item(e, "field enum")));
             }
         }
     }
@@ -137,17 +184,19 @@ fn graph(doc: &Value) -> Graph {
             g.add(
                 &oi,
                 "gac:opRefusalKind",
-                lit(k.as_str().unwrap_or_default()),
+                lit(&str_item(k, "refusal_kinds")),
             );
         }
         for c in items(op, "refusal_codes") {
             g.add(
                 &oi,
                 "gac:opRefusalCode",
-                lit(c.as_str().unwrap_or_default()),
+                lit(&str_item(c, "refusal_codes")),
             );
         }
-        let request = op.get("request").unwrap_or(&Value::Null);
+        let request = op
+            .get("request")
+            .unwrap_or_else(|| panic!("registry json: op `{name}` missing `request`"));
         g.fields(
             items(request, "fields"),
             &oi,
@@ -187,7 +236,7 @@ fn graph(doc: &Value) -> Graph {
             g.add(&di, "gac:dialectMediaType", lit(m));
         }
         for a in items(d, "aliases") {
-            g.add(&di, "gac:dialectAlias", lit(a.as_str().unwrap_or_default()));
+            g.add(&di, "gac:dialectAlias", lit(&str_item(a, "aliases")));
         }
     }
 
@@ -232,7 +281,7 @@ fn graph(doc: &Value) -> Graph {
             g.add(
                 &vi,
                 "gac:vocabValue",
-                lit(value.as_str().unwrap_or_default()),
+                lit(&str_item(value, vocab)),
             );
         }
     }
@@ -252,6 +301,18 @@ fn graph(doc: &Value) -> Graph {
             g.add(&li, "gac:limitScope", lit(&text_of(m, "scope")));
             g.add(&li, "gac:limitUnit", lit(&text_of(m, "unit")));
             g.add(&li, "gac:limitSource", lit(&text_of(m, "source")));
+            if let Some(r) = m.get("refusal_name").and_then(Value::as_str) {
+                g.add(&li, "gac:limitRefusalName", lit(r));
+            }
+        }
+    }
+
+    if let Some(classes) = doc.get("refusal_kind_classes").and_then(Value::as_object) {
+        for (kind, c) in sorted_entries(classes) {
+            let ki = format!("refusalKind/{kind}");
+            g.typed(&ki, "RefusalKindClass");
+            g.add(&ki, "gac:refusalKindName", lit(kind));
+            g.add(&ki, "gac:errorClass", lit(&text_of(c, "error_class")));
         }
     }
 
@@ -265,6 +326,11 @@ fn graph(doc: &Value) -> Graph {
             &mi,
             "gac:modelElixirModule",
             lit(&text_of(m, "elixir_module")),
+        );
+        g.add(
+            &mi,
+            "gac:modelElixirModuleSuffix",
+            lit(&text_of(m, "elixir_module_suffix")),
         );
         g.add(&mi, "gac:modelRustPath", lit(&text_of(m, "rust_path")));
         g.add(&mi, "gac:modelDoc", lit(&text_of(m, "doc")));
@@ -293,7 +359,7 @@ fn graph(doc: &Value) -> Graph {
             g.typed(&vi, "ModelEnumValue");
             g.add(&vi, "gac:enumOf", node(&ei));
             g.add(&vi, "gac:enumOrder", (i + 1).to_string());
-            g.add(&vi, "gac:enumValue", lit(v.as_str().unwrap_or_default()));
+            g.add(&vi, "gac:enumValue", lit(&str_item(v, "model enum values")));
         }
     }
     g
@@ -330,4 +396,81 @@ pub fn registry_turtle() -> String {
         i = j;
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ELIXIR_TTL: &str = include_str!("../../ontologies/graphlaw-elixir.ttl");
+
+    fn quoted_after<'a>(line: &'a str, pred: &str) -> Option<&'a str> {
+        let rest = &line[line.find(pred)? + pred.len()..];
+        let rest = rest.trim_start().strip_prefix('"')?;
+        Some(&rest[..rest.find('"')?])
+    }
+
+    #[test]
+    #[should_panic(expected = "key `nope` is not a string")]
+    fn strict_text_of_panics_on_missing_key() {
+        text_of(&serde_json::json!({"a": "b"}), "nope");
+    }
+
+    #[test]
+    #[should_panic(expected = "key `n` is not a number")]
+    fn strict_int_of_panics_on_wrong_type() {
+        int_of(&serde_json::json!({"n": "1"}), "n");
+    }
+
+    #[test]
+    #[should_panic(expected = "key `b` is not a bool")]
+    fn strict_bool_of_panics_on_missing_key() {
+        bool_of(&serde_json::json!({}), "b");
+    }
+
+    #[test]
+    #[should_panic(expected = "key `xs` is not an array")]
+    fn strict_items_panics_on_missing_key() {
+        items(&serde_json::json!({}), "xs");
+    }
+
+    #[test]
+    fn strict_items_treats_explicit_null_as_empty() {
+        assert!(items(&serde_json::json!({"xs": null}), "xs").is_empty());
+    }
+
+    /// Sync direction: `registry/capability-registry.json` (emit_json.rs) is the source;
+    /// the gle:ecm-* and gle:op-* rows in ontologies/graphlaw-elixir.ttl are a hand-kept
+    /// mirror. They must equal the registry (gle:ecm-other `*` is the fallback row).
+    #[test]
+    fn elixir_ttl_mirror_rows_equal_registry() {
+        let doc = document();
+        let mut want_classes: Vec<(String, String)> = doc["refusal_kind_classes"]
+            .as_object()
+            .expect("refusal_kind_classes object")
+            .iter()
+            .map(|(k, c)| (k.clone(), text_of(c, "error_class")))
+            .collect();
+        want_classes.sort();
+        let mut got_classes = Vec::new();
+        let mut got_ops = Vec::new();
+        for line in ELIXIR_TTL.lines() {
+            if line.starts_with("gle:ecm-") {
+                let kind = quoted_after(line, "gle:refusalKind").expect("ecm refusalKind");
+                if kind != "*" {
+                    let class = quoted_after(line, "gle:errorClass").expect("ecm errorClass");
+                    got_classes.push((kind.to_owned(), class.to_owned()));
+                }
+            } else if line.starts_with("gle:op-") && line.contains("a gle:Op ") {
+                got_ops.push(quoted_after(line, "gle:opName").expect("opName").to_owned());
+            }
+        }
+        got_classes.sort();
+        assert_eq!(got_classes, want_classes, "gle:ecm rows drifted from registry");
+        let mut want_ops: Vec<String> =
+            items(doc, "ops").iter().map(|o| text_of(o, "name")).collect();
+        want_ops.sort();
+        got_ops.sort();
+        assert_eq!(got_ops, want_ops, "gle:op rows drifted from registry ops");
+    }
 }

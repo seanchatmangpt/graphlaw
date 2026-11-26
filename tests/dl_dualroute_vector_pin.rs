@@ -25,24 +25,26 @@ use std::path::PathBuf;
 use std::process::Command;
 
 /// (slug, pinned BLAKE3 of the rev-normalized emitted vector bytes).
-/// Re-pin 2026-10-26: engine fix wave re-emit (P01/P02 landed) changed the
-/// emitted vector bytes; digests recomputed from the re-emitted fixtures.
+/// Re-pin 2026-11-25: the crate version bump 26.10.28 -> 26.11.25 changed the
+/// `graphlaw_version` provenance field inside every vector (by design, see the
+/// module doc); digests recomputed from the re-emitted fixtures.
+/// (Earlier: 2026-10-26 engine fix wave re-emit, P01/P02.)
 const PINS: &[(&str, &str)] = &[
     (
         "a-paper-baader-el",
-        "b0831fc636e00669ff802fd9ae0b5998f5d8adf20b4f379032491c52ad8760f3",
+        "4454861c6c85e51c9da44cac4229652216791216b6b9202981865f2300685b73",
     ),
     (
         "b-chain3-conj",
-        "73871aac3c243968fbdc0b877c8f7416ba74d02eb8572e16c29744f4f7c55c38",
+        "7d8d4b5af979459d1cae6fd3a9cd5dd13c1b17d34b350c3ff3753c7946f895eb",
     ),
     (
         "c-exists-pair",
-        "ae2c1c772f405cfe33f32a1644d45d6139372e3edb8bc67300f8454715171454",
+        "623e0d28186162cbfd6fa82cd6f5ca4128bbf0de22b0314322556b28e1fc5c82",
     ),
     (
         "d-exists-conj-interlock",
-        "21fd20682d7baf64a0d23d86be458837c33fdc618cc1fc7f4050888a4cf21964",
+        "02cb0d6964866153de396ed53411ddb3f5d009692b8b12094737191c423a1ab2",
     ),
 ];
 

@@ -15,8 +15,9 @@
 use serde_json::{Value, json};
 
 use crate::abi::{
-    ABI_VERSION, MAX_ATOMS_PER_FIELD, MAX_DATALOG_FACTS, MAX_DATALOG_RULES, MAX_JSON_DEPTH,
-    MAX_LAW_STEPS, MAX_OUTSTANDING_ALLOC_BYTES, MAX_PLAN_ACTIONS, MAX_POLICY_ENTRIES,
+    ABI_VERSION, MAX_ATOMS_PER_FIELD, MAX_DATALOG_DERIVED_FACTS, MAX_DATALOG_FACTS, MAX_DATALOG_JOIN_STEPS,
+    MAX_DATALOG_OUTPUT_BYTES, MAX_DATALOG_RULES, MAX_JSON_DEPTH,
+    MAX_LAW_STEPS, MAX_NUMBER_DIGITS, MAX_OUTSTANDING_ALLOC_BYTES, MAX_PLAN_ACTIONS, MAX_POLICY_ENTRIES,
     MAX_REQUEST_BYTES,
 };
 use crate::law::{
@@ -168,6 +169,10 @@ fn base_manifest() -> Value {
             "max_law_steps": MAX_LAW_STEPS,
             "max_datalog_rules": MAX_DATALOG_RULES,
             "max_datalog_facts": MAX_DATALOG_FACTS,
+            "max_datalog_derived_facts": MAX_DATALOG_DERIVED_FACTS,
+            "max_datalog_join_steps": MAX_DATALOG_JOIN_STEPS,
+            "max_datalog_output_bytes": MAX_DATALOG_OUTPUT_BYTES,
+            "max_number_digits": MAX_NUMBER_DIGITS,
             "n3_max_iterations": N3_MAX_ITERATIONS,
             "n3_max_term_bytes": N3_MAX_TERM_BYTES,
             "n3_max_total_bytes": N3_MAX_TOTAL_BYTES,
@@ -176,7 +181,7 @@ fn base_manifest() -> Value {
             "default_max_skew_secs": DEFAULT_MAX_SKEW_SECS,
         },
         "ops": ops,
-        "notes": "op `duckdb` (op-15) dispatches inside the module on every target; the gates that compiled that dispatch arm out of wasm32 are removed. It is unadvertised from `capabilities.ops` (and stays off the hashed 14-op table) by digest-stability choice, so `registry_blake3` does not move until an explicit digest bump — not because the op is host-only. The wasm `capabilities.authorities` list now includes `frozen-duckdb` (as the host list already did). Absence from `capabilities.ops` is not a SQL refusal and is not REFUSAL-04. SQL-in-RDF admits inside the module through `compile_turtle`. Bounds enforced in src/duckdb_op.rs: DuckDB memory_limit=32MiB and threads=1 compile-time pragmas (GAP-2), chunk rows <= 10000 and chunk bytes <= 16 MiB typed ResourceLimit refusals (GAP-4), MAX_OUTSTANDING_ALLOC_BYTES is 16 MiB for the wasm32 target via split-config (GAP-1)",
+        "notes": "op `duckdb` (op-15) dispatches inside the module on every target; the gates that compiled that dispatch arm out of wasm32 are removed. It is unadvertised from `capabilities.ops` (and stays off the hashed 14-op table) by digest-stability choice, so `registry_blake3` does not move until an explicit digest bump — not because the op is host-only. The wasm `capabilities.authorities` list now includes `frozen-duckdb` (as the host list already did). Absence from `capabilities.ops` is not a SQL refusal and is not REFUSAL-04. SQL-in-RDF admits inside the module through `compile_turtle`. Bounds enforced in src/duckdb_op.rs: DuckDB memory_limit=32MiB and threads=1 compile-time pragmas (GAP-2), chunk rows <= 10000 and chunk bytes <= 16 MiB typed ResourceLimit refusals (GAP-4), MAX_OUTSTANDING_ALLOC_BYTES is 16 MiB on every target (GAP-1; target-uniform per src/abi.rs)",
         "response_envelope": {
             "success": {"ok": true, "extra": "op-specific fields"},
             "refusal": {"ok": false, "error": {

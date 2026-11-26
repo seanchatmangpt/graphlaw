@@ -292,3 +292,41 @@ fn manifest_frame_spec_matches_the_real_struct_and_layout() {
 fn doc_frame_spec() -> Value {
     graphlaw::abi_manifest::manifest_value()["frame"].clone()
 }
+
+/// Governance ontology limits and hidden-op naming must equal the Rust tables.
+#[test]
+fn governance_ttl_limits_and_hidden_op_equal_rust_tables() {
+    let ttl_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("ontologies/graphlaw-governance.ttl");
+    let ttl = std::fs::read_to_string(&ttl_path).expect("governance ttl readable");
+    let mut ttl_limits = std::collections::BTreeMap::new();
+    for line in ttl.lines().filter(|l| l.starts_with("gl:limit-")) {
+        let name = line.split("gl:limitName \"").nth(1).and_then(|r| r.split('"').next());
+        let val = line.split("gl:limitValue ").nth(1).and_then(|r| r.trim_end_matches(" .").trim().parse::<u64>().ok());
+        let (name, val) = (name.expect("limitName"), val.expect("limitValue"));
+        assert!(ttl_limits.insert(name.to_owned(), val).is_none(), "duplicate {name}");
+    }
+    let manifest: Value =
+        serde_json::from_str(&graphlaw::abi_manifest::manifest_json_pretty()).expect("json");
+    let rust: std::collections::BTreeMap<String, u64> = manifest["limits"]
+        .as_object()
+        .expect("limits object")
+        .iter()
+        .map(|(k, v)| (k.clone(), v.as_u64().expect("integer limit")))
+        .collect();
+    // Every manifest limit must appear in the ontology with an equal value; the
+    // ontology also carries registry-owned limits the manifest does not list.
+    for (k, v) in &rust {
+        assert_eq!(
+            ttl_limits.get(k),
+            Some(v),
+            "governance.ttl limit {k} drifted from Rust consts"
+        );
+    }
+
+    assert!(ttl.contains("gl:opName \"duckdb\""), "op-15 named duckdb in ontology");
+    assert!(ttl.contains("gl:abiOpNumber 15"));
+    assert!(ttl.contains("gl:hidden true"));
+    let h = graphlaw::registry::HIDDEN_OPS;
+    assert_eq!((h[0].name, h[0].abi_op_number), ("duckdb", 15));
+}

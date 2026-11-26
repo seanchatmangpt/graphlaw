@@ -27,6 +27,12 @@
 //! any `now_unix` in the request is ignored. An unsigned `"lease"` is refused
 //! (`UnverifiedLeaseRefused`) unless the request sets `"unverified_lease": true`, which
 //! also needs the caller's `now_unix` and proves nothing about who issued the lease.
+//! The lease is admitted once, before any step runs (`abi::lease::LeaseContext::admit`):
+//! signature, expiry and every step's scope/ceiling (`plan` at Select, `record-receipts`
+//! at Observe, unscoped) are judged up front; a refusal leaves `receipts` empty. A request
+//! with no lease runs unleased under the default `LeasePolicy::NoneAllowed`; a host calls
+//! `set_lease_policy(LeasePolicy::Required)`, or a request sets `"lease_policy": "required"`,
+//! to refuse lease-less requests (`LeaseRequired`) before any step.
 //! A *data spec* is `{"text": "...", "dialect"?: "turtle", "hint"?: "ttl", "base"?: "..."}`;
 //! without `dialect` the router sniffs the content.
 
@@ -39,6 +45,7 @@ use crate::law::LawState;
 mod lease;
 mod ops;
 
+pub use lease::{LeasePolicy, lease_policy, set_lease_policy};
 pub use ops::plan_from_json;
 
 /// ABI revision; bumped on any incompatible request/response change.
@@ -48,6 +55,9 @@ pub const ABI_VERSION: u32 = 1;
 pub const MAX_REQUEST_BYTES: usize = 16 * 1024 * 1024;
 /// Deepest accepted JSON nesting (arrays/objects), checked before parsing.
 pub const MAX_JSON_DEPTH: usize = 64;
+/// Maximum length of one numeric token (digits, sign, `.`, `e`/`E`) in a request.
+/// Mirrors the Elixir ABI scanner (`@max_number_digits`).
+pub const MAX_NUMBER_DIGITS: usize = 64;
 /// Most actions accepted in one `plan` step.
 pub const MAX_PLAN_ACTIONS: usize = 1_000;
 /// Most N-Triples atoms (non-empty lines) in one plan `pre`/`add`/`del`/`goal` field.
@@ -60,6 +70,12 @@ pub const MAX_LAW_STEPS: usize = 1_000;
 pub const MAX_DATALOG_RULES: usize = 10_000;
 /// Most datalog facts accepted in one `datalog` request.
 pub const MAX_DATALOG_FACTS: usize = 100_000;
+/// Most facts (seeded plus derived) the datalog evaluator may store.
+pub const MAX_DATALOG_DERIVED_FACTS: usize = 200_000;
+/// Most candidate join solutions the datalog evaluator may enumerate.
+pub const MAX_DATALOG_JOIN_STEPS: u64 = 50_000_000;
+/// Most bytes of N-Quads `op_datalog` will materialize in its response.
+pub const MAX_DATALOG_OUTPUT_BYTES: usize = 8 * 1024 * 1024;
 /// Ceiling, in bytes, on host-visible buffers (`gl_alloc` buffers and `gl_call`
 /// responses) the wasm module holds at once; `gl_alloc` returns null beyond it.
 ///
@@ -147,6 +163,36 @@ fn json_depth(b: &[u8]) -> usize {
     max
 }
 
+/// Longest numeric token outside JSON strings (same token rule as the Elixir
+/// scanner: digits, a leading `-`, and `. e E + -` once a token has started).
+fn max_number_token(b: &[u8]) -> usize {
+    let (mut cur, mut max, mut in_str, mut esc) = (0usize, 0usize, false, false);
+    for &c in b {
+        if in_str {
+            if esc {
+                esc = false;
+            } else if c == b'\\' {
+                esc = true;
+            } else if c == b'"' {
+                in_str = false;
+            }
+            continue;
+        }
+        match c {
+            b'"' => {
+                in_str = true;
+                cur = 0;
+            }
+            b'0'..=b'9' => cur += 1,
+            b'-' if cur == 0 => cur = 1,
+            b'.' | b'e' | b'E' | b'+' | b'-' if cur > 0 => cur += 1,
+            _ => cur = 0,
+        }
+        max = max.max(cur);
+    }
+    max
+}
+
 /// Response for a request that exceeds `MAX_REQUEST_BYTES` (used by the wasm shim).
 pub fn limit_response(name: &str, observed: usize, max: usize) -> Vec<u8> {
     respond(Err(limit(name, observed, max)))
@@ -187,12 +233,17 @@ pub fn call(request: &[u8]) -> Vec<u8> {
     let out = check_limit("request_bytes", request.len(), MAX_REQUEST_BYTES)
         .and_then(|()| check_limit("json_depth", json_depth(request), MAX_JSON_DEPTH))
         .and_then(|()| {
+            check_limit("number_digits", max_number_token(request), MAX_NUMBER_DIGITS)
+        })
+        .and_then(|()| {
             serde_json::from_slice::<Value>(request)
                 .map_err(|e| bad(format!("request is not JSON: {e}")))
         })
         .and_then(|v| dispatch(&v));
     respond(out)
 }
+
+const SERIALIZE_REFUSED: &[u8] = br#"{"ok":false,"error":{"kind":"Unsupported","engine":null,"dialect":null,"message":"response could not be serialized"}}"#;
 
 fn respond(out: Res<Value>) -> Vec<u8> {
     let v = match out {
@@ -204,10 +255,9 @@ fn respond(out: Res<Value>) -> Vec<u8> {
         }
         Err(f) => json!({"ok": false, "error": refusal_json(&f)}),
     };
-    // `Value` from `json!` / `serde_json::Value` always serializes. With the
-    // wasm profile's `panic = "abort"`, a failure here is a guest trap, not a
-    // JSON refusal — it is a bug in the response builder, not a host input.
-    serde_json::to_vec(&v).expect("json serializes")
+    // A `Value` serializes in practice; if it ever does not, answer with a
+    // fixed typed refusal instead of trapping the guest.
+    serde_json::to_vec(&v).unwrap_or_else(|_| SERIALIZE_REFUSED.to_vec())
 }
 
 fn refusal_json(f: &Fail) -> Value {
@@ -337,5 +387,7 @@ fn dispatch(v: &Value) -> Res<Value> {
 
 /// Convenience for native callers and tests: parse a response.
 pub fn call_json(request: &Value) -> Value {
-    serde_json::from_slice(&call(request.to_string().as_bytes())).expect("response is JSON")
+    serde_json::from_slice(&call(request.to_string().as_bytes())).unwrap_or_else(|e| {
+        json!({"ok": false, "error": {"kind": "Unsupported", "message": format!("response is not JSON: {e}")}})
+    })
 }

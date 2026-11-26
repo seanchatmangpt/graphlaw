@@ -17,7 +17,8 @@ on refusal:
 ```
 
 - `kind` is one of `NotSemanticContent`, `Ambiguous`, `EngineRejected`, `Unsupported`,
-  `ResourceLimit`, `TierMismatch`, `DuckDb`.
+  `ResourceLimit`, `TierMismatch`, `DuckDb`, `BareSql`, `Fuse` (registry `refusal_kinds`,
+  `registry/capability-registry.json`).
 - `engine` (`PurRdf` or `FrozenDuckdb`) and `dialect` are `null` when not applicable.
 - `details` is present only for refusals that carry a machine-readable `code`; see
   [Refusals](refusals.md).
@@ -39,8 +40,20 @@ Checked before or during the call; exceeding one is a `ResourceLimit` refusal wi
 | `plan_actions` | `MAX_PLAN_ACTIONS` | 1,000 |
 | `atoms_per_field` | `MAX_ATOMS_PER_FIELD` | 10,000 |
 | `policy_entries` | `MAX_POLICY_ENTRIES` | 100,000 |
-| `n3_iterations` | `law::N3_MAX_ITERATIONS` | 4,000 |
+| `law_steps` | `MAX_LAW_STEPS` | 1,000 |
+| `datalog_rules` | `MAX_DATALOG_RULES` | 10,000 |
+| `datalog_facts` | `MAX_DATALOG_FACTS` | 100,000 |
+| `datalog_derived_facts` | `MAX_DATALOG_DERIVED_FACTS` | 200,000 |
+| `datalog_join_steps` | `MAX_DATALOG_JOIN_STEPS` | 50,000,000 |
+| `datalog_output_bytes` | `MAX_DATALOG_OUTPUT_BYTES` | 8,388,608 (8 MiB) |
+| `n3_iterations` | `law::N3_MAX_ITERATIONS` | 4,000,000 |
 
+Constants: `src/abi.rs:55-89`, `src/law.rs:458-486`. The authoritative full set (also
+`n3_max_*`, `hooks_max_*`, `shacl_*`, `duckdb_*`, `max_outstanding_alloc_bytes` = 16,777,216)
+is `limits` in `registry/capability-registry.json`, with per-limit scope/source in
+`limit_meta`. The `datalog_derived_facts`, `datalog_join_steps` and `datalog_output_bytes`
+limits bound `op_datalog` (`src/abi/ops/query_engines.rs:172`); refusal `limit` names
+are the left column (registry key minus `max_` prefix where `refusal_name` is set).
 ## Data spec versus flat text
 
 The ABI is deliberately not uniform, and hosts must follow it per op.
@@ -147,11 +160,16 @@ Response: `nquads` (closure), `added` (quads beyond the input).
 Request: `rules`* (list of `{head, body}`; atoms are `[s, p, o]` where `p` is an IRI string;
 terms starting with `?` are variables, terms starting with `"` are literals, others are IRIs),
 `facts`* (list of `[s, p, o]` strings). Response: `count`, `facts` (sorted `[s, p, o]` triples).
+Bounded by `datalog_rules`, `datalog_facts`, `datalog_derived_facts`, `datalog_join_steps`
+and `datalog_output_bytes` (see Limits); overrun is a `ResourceLimit` refusal.
 
 ### 12. `hooks`
 
 Request: `pack`* (data spec holding `kh:` hooks), `data`* (data spec). Response: `id`, `rounds`,
-`quads`, `nquads`, `firings[]` (`hook`, `round`, `added`, `row`).
+`quads`, `nquads`, `firings[]` (`hook`, `round`, `added`, `row`). A `kh:Effect "refuse"`
+hook that fires halts the call with `hook-refused: <hook iri>: <reason>` and commits no state;
+refuse hooks always evaluate, so a caller-supplied `kh:Firing` marker cannot suppress them
+(`src/hooks.rs:295`, [Refusals](refusals.md)).
 
 ### 13. `law`
 
@@ -209,6 +227,16 @@ a typed `ResourceLimit` refusal (`limit: "duckdb_result_rows"`). ATTACH is
 fail-closed unless `GRAPHLAW_ATTACH_ROOTS` allows the path. Full wire
 contract: the module doc of `src/duckdb_op.rs`.
 
+## Lease policy
+
+`abi::LeasePolicy` (`NoneAllowed` default, `Required`), `abi::set_lease_policy`,
+`abi::lease_policy` (`src/abi/lease.rs:39-44`, re-exported at `src/abi.rs:48`). Under `Required`
+a `law` request with no lease is refused with `details.code = "LeaseRequired"` before any step
+runs. A request may tighten the process policy with `"lease_policy": "required"`; it never
+loosens a `Required` host; any other value is refused (`src/abi/lease.rs:53`).
+`LeaseRequired` is documented in [Refusals](refusals.md) and is not in the registry's
+`refusal_codes` list (10 codes at the time of this edit).
+
 ## Not in the ABI
 
 Signing keys, key distribution, and revocation are outside the module; the caller supplies
@@ -225,3 +253,9 @@ External sibling (`../ggen-marketplace`, separate repo):
 - [How to represent a Rust ABI crate](../../ggen-marketplace/docs/how-to/represent-a-rust-abi-crate.md)
 - [Ontology maturity L4-L5](../../ggen-marketplace/docs/reference/ONTOLOGY-MATURITY-L4-L5.md) (the ggen bridge doctrine)
 - [rust-wasi-wasmex-pack](../../ggen-marketplace/packs/rust-wasi-wasmex-pack/README.md) (canonical consumer pack rendering this FFI)
+
+## Binary ABI v2 (archived)
+
+The echo-only `abi_bin` v2 framing was removed from the crate at its v26.11.26 delete
+criterion (no consumer). Source and court are preserved as text under
+`docs/archive/abi-bin-v2/`.

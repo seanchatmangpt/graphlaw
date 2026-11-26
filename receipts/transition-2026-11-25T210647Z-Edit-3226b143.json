@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "3226b14374eceffb524e756991208d1513b629af558fd29515c9a3ed1bdea11c",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-11-25T210647Z-Edit-3226b143.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/tests/hooks_refuse_idempotency_court.rs",
+  "timestamp_utc": "2026-11-25T210647Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "172a7788b9fb5aad4c0bfcd32f7bb6db720b21ba79d8717d879b9b29c59c37c3",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-11-25T195440Z-Edit-172a7788.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/ggen-marketplace/packs/graphlaw-ash-capability-pack/templates/capability_doc.md.tmpl",
+  "timestamp_utc": "2026-11-25T195440Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

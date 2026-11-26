@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sean Chatman <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
 defmodule GraphlawEx.EngineLoadTest do
   use ExUnit.Case, async: true
 
@@ -17,11 +20,31 @@ defmodule GraphlawEx.EngineLoadTest do
   # and no exports at all (so BOTH surface checks would fail; the court
   # asserts the import refusal wins, proving the order).
   @foreign_import <<
-    0, 97, 115, 109, 1, 0, 0, 0,
+    0,
+    97,
+    115,
+    109,
+    1,
+    0,
+    0,
+    0,
     # type section: id 1, size 4, content [1 type, functype ()->()]
-    1, 4, 1, 0x60, 0, 0,
+    1,
+    4,
+    1,
+    0x60,
+    0,
+    0,
     # import section: id 2, size 7, count 1, module (len 1) "x", name (len 1) "y", kind 0 (func), type index 0
-    2, 7, 1, 1, 120, 1, 121, 0, 0
+    2,
+    7,
+    1,
+    1,
+    120,
+    1,
+    121,
+    0,
+    0
   >>
 
   # A real compilable module with NO imports and NO exports: it passes the
@@ -74,36 +97,53 @@ defmodule GraphlawEx.EngineLoadTest do
     end
   end
 
+  describe "boot vs artifact integrity" do
+    test "boot ignores :expected_blake3 (BLAKE3 is not run at boot)" do
+      wrong = String.duplicate("00", 32)
+
+      # Same bytes, same wrong BLAKE3 pin: verify_artifact refuses, boot does
+      # not run BLAKE3 and so reaches surface admission, a typed Refusal.
+      assert {:error, {:REFUSED_ARTIFACT_INTEGRITY, _}} =
+               EngineLoad.verify_artifact(@no_exports, expected_blake3: wrong)
+
+      assert {:error, %Refusal{code: :wasm_import_surface_mismatch}} =
+               EngineLoad.boot(@no_exports, expected_sha256: :unpinned, expected_blake3: wrong)
+    end
+  end
+
+  # The cache court lives in GraphlawEx.EngineLoadCacheTest below: it purges the
+  # global compiled-module cache, so it must run async: false, and this module is
+  # async: true.
+end
+
+# :wasm - excluded loudly without the artifact; engine_path!/0 raises under
+# GRAPHLAW_REQUIRE_ENGINE=1.
+defmodule GraphlawEx.EngineLoadCacheTest do
+  use ExUnit.Case, async: false
+
+  alias GraphlawEx.EngineLoad
+
+  @moduletag timeout: 300_000
+
   describe "cache" do
+    @tag :wasm
     test "only an admitted module is cached, and the real artifact round-trips the cache" do
-      path =
-        System.get_env("PRIV_WASM") ||
-          if(Code.ensure_loaded?(GraphlawEx.TestEngine) and
-               function_exported?(GraphlawEx.TestEngine, :wasm_path, 0),
-            do: GraphlawEx.TestEngine.wasm_path(),
-            else: Path.expand("../../priv/graphlaw/graphlaw.wasm", __DIR__))
+      path = GraphlawEx.TestEngine.engine_path!()
+      bytes = File.read!(path)
+      digest = :crypto.hash(:sha256, bytes) |> Base.encode16(case: :lower)
 
-      if File.regular?(path) do
-        bytes = File.read!(path)
-        digest = :crypto.hash(:sha256, bytes) |> Base.encode16(case: :lower)
+      EngineLoad.purge_cache()
+      refute EngineLoad.cached?(digest, false)
 
-        refute EngineLoad.cached?(digest, false)
+      assert {:ok, admitted} = EngineLoad.admit(bytes, expected_sha256: :unpinned, fuel?: false)
+      assert admitted.wasm_sha256 == digest
 
-        assert {:ok, admitted} = EngineLoad.admit(bytes, expected_sha256: :unpinned, fuel?: false)
-        assert admitted.wasm_sha256 == digest
+      assert EngineLoad.cached?(digest, false)
+      assert EngineLoad.purge_cache() == :ok
+      refute EngineLoad.cached?(digest, false)
 
-        assert EngineLoad.cached?(digest, false)
-        assert EngineLoad.purge_cache() == :ok
-        refute EngineLoad.cached?(digest, false)
-
-        # And a pinned admit of the REAL bytes admits too (the pin matches).
-        assert {:ok, _} = EngineLoad.admit(bytes, expected_sha256: digest)
-      else
-        message = "[SKIP] engine-load cache court: no wasm artifact at #{path} (set PRIV_WASM). A loud skip is not a pass."
-
-        if System.get_env("GRAPHLAW_REQUIRE_ENGINE") == "1", do: flunk(message)
-        IO.puts(message)
-      end
+      # And a pinned admit of the REAL bytes admits too (the pin matches).
+      assert {:ok, _} = EngineLoad.admit(bytes, expected_sha256: digest)
     end
   end
 end

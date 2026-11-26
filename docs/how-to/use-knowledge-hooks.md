@@ -4,6 +4,11 @@ Derive obligations and state transitions directly from the knowledge graph: decl
 
 Knowledge Hooks are implemented in this crate, `graphlaw::hooks` (`src/hooks.rs`); every query is parsed and executed by PurRDF's SPARQL engine. Verified against `src/hooks.rs` on 2026-11-09: there is no separate `purrdf-hooks` crate in the pinned purrdf checkout (rev `2223f89`), and the only supported `kh:kind` and handler are `"sparql"` and `handler#sparql-construct`.
 
+## Prerequisites
+
+- A `LawState` holding the pack's `kh:Hook` / `kh:Action` resources and the data to trigger on.
+- `graphlaw` as a dependency (`graphlaw::hooks`).
+
 ---
 
 ## 1. Defining a Hook Pack
@@ -55,7 +60,7 @@ questions; courts `tests/knowledge_hooks.rs` and `tests/self_monitoring_pack.rs`
 |---|---|
 | **Trigger kind (`kh:kind`)** | `"sparql"` only (a SELECT; one firing per distinct solution row). Any other kind is a typed `Unsupported` refusal, never skipped. |
 | **Action handler (`kh:handler`)** | `<http://seanchatmangpt.github.io/graphlaw/handler#sparql-construct>` only (`HANDLER_SPARQL_CONSTRUCT`). |
-| **Effect (`kh:effect`)** | `"emit-delta"` (merge the CONSTRUCT into the state) or `"refuse"` (no delta; surfaces `Verdict::Refuse(reason)`, reason from `kh:reason`, default `kh:name`). Anything else is a typed refusal. |
+| **Effect (`kh:effect`)** | `"emit-delta"` (merge the CONSTRUCT into the state) or `"refuse"` (a fuse: halts `materialize` with a typed `hook-refused` refusal, reason from `kh:reason`, default `kh:name`; see section 3). Anything else is a typed refusal. |
 | **Fixpoint ceilings** | Rounds repeat until no new row appears; hard ceilings `MAX_ROUNDS = 64`, `MAX_FIRINGS = 10_000`, `MAX_STATE_QUADS = 1_000_000` are refused, never truncated. Hooks run in ascending `kh:priority` (ties by IRI). |
 | **Lineage markers** | Each firing records `<urn:graphlaw:hook-firing:blake3> a kh:Firing ; kh:hook <hook>` in the state, so a row fires at most once per state lineage (re-materializing a saturated state changes nothing). |
 
@@ -89,12 +94,20 @@ for v in &result.verdicts {
 // result.state is the saturated LawState
 ```
 
-A refuse is never an error at `materialize`: the consumer decides what a refusal means.
-Emit-delta packs are unaffected.
+### Refuse semantics
+
+A `kh:effect "refuse"` hook is a fuse. When it fires, `materialize` returns `Err`
+(`RefusalKind::Unsupported`) with message `hook-refused: <hook iri>: <reason>`; no state is
+committed and the caller's prior state is unchanged (`src/hooks.rs:332-343`). Match on that
+error rather than expecting a `Verdict::Refuse` in `result.verdicts`.
+
+A refuse hook always evaluates. A `kh:Firing` marker supplied by the caller cannot suppress
+it; seeded markers are advisory idempotency for emit-delta hooks only
+(`src/hooks.rs:318-324`). Emit-delta packs are unaffected.
 
 ---
 
-## 4. Verification & Testing
+## 4. Verify
 
 - `tests/knowledge_hooks.rs` — 11 `#[test]` functions (hook rounds, fixpoint, priority
   chaining, SPARQL counting of `smon:EscalationObligation`s, the refuse effect, typed
@@ -106,3 +119,11 @@ Emit-delta packs are unaffected.
   cargo test --test knowledge_hooks
   cargo test --test self_monitoring_pack
   ```
+- Refuse check: seed the input state with a `kh:Firing` marker for the refuse hook's row and
+  confirm `materialize` still returns the `hook-refused` error.
+
+## See Also
+
+- [../refusals.md](../refusals.md) (`hook-refused`)
+- [authorize-with-signed-leases.md](authorize-with-signed-leases.md)
+- [run-the-wasm-module.md](run-the-wasm-module.md)

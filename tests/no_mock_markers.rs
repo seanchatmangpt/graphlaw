@@ -236,6 +236,56 @@ const ORACLE_ALLOWLIST: &[(&str, &str, &str)] = &[
         "violation_component",
         "real response-envelope extractor with loud unwrap_or_else panic; asserts pinned component names.",
     ),
+    (
+        "tests/hooks_refuse_idempotency_court.rs",
+        "bound",
+        "binding-order fixture builder; asserts target the real firing_marker output, with non-vacuity (differing value/hook must change the marker).",
+    ),
+    (
+        "tests/ops_boundary_hardening_court.rs",
+        "limit_name",
+        "real response-envelope extractor with loud unwrap_or_else panic; asserts pin the real ResourceLimit name.",
+    ),
+    (
+        "tests/receipt_store_idempotence_court.rs",
+        "mtime",
+        "real filesystem metadata readback (loud unwrap) over the real ReceiptStore files; asserts compare before/after real state.",
+    ),
+    (
+        "tests/policy_strict_court.rs",
+        "problem",
+        "fixture builder for the real policy::admit input; asserts target the real admit refusal kind.",
+    ),
+    (
+        "tests/policy_strict_court.rs",
+        "policy",
+        "fixture builder for the real policy::admit input; asserts target the real admit refusal kind.",
+    ),
+    (
+        "tests/policy_strict_court.rs",
+        "run",
+        "thin wrapper over the real policy::admit returning its real refusal kind; no decision logic of its own.",
+    ),
+    (
+        "tests/policy_mass_overflow_court.rs",
+        "problem",
+        "fixture builder for the real policy::admit input; asserts target the real admit result.",
+    ),
+    (
+        "tests/policy_mass_overflow_court.rs",
+        "policy",
+        "fixture builder for the real policy::admit input; asserts target the real admit result.",
+    ),
+    (
+        "tests/policy_malformed_facts_court.rs",
+        "problem",
+        "fixture builder for the real policy::admit input; asserts target the real admit result.",
+    ),
+    (
+        "tests/policy_malformed_facts_court.rs",
+        "run",
+        "thin wrapper returning the real policy::admit result; no decision logic of its own.",
+    ),
 ];
 
 /// Sanctioned `.unwrap_or` / `.unwrap_or_default` uses: (file, line snippet,

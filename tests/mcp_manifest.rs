@@ -123,9 +123,22 @@ fn expected_type_schema(ty: &str) -> Value {
 /// The expected inputSchema property for one registry request field,
 /// independently derived from the registry JSON field row.
 fn expected_property(field: &Value) -> Value {
-    let name = field["name"].as_str().unwrap_or_default();
-    let mut schema = expected_type_schema(field["type"].as_str().unwrap_or_default());
-    if field["nullable"].as_bool().unwrap_or(false) {
+    let name = field["name"]
+        .as_str()
+        .unwrap_or_else(|| panic!("registry field row lacks string name: {field}"));
+    let mut schema = expected_type_schema(
+        field["type"]
+            .as_str()
+            .unwrap_or_else(|| panic!("registry field `{name}` lacks string type: {field}")),
+    );
+    // `nullable` is optional in the registry rows: absent means not nullable.
+    let nullable = match field.get("nullable") {
+        None => false,
+        Some(v) => v
+            .as_bool()
+            .unwrap_or_else(|| panic!("registry field `{name}` nullable is not a bool: {field}")),
+    };
+    if nullable {
         let t = schema
             .as_object_mut()
             .expect("type schema is an object")

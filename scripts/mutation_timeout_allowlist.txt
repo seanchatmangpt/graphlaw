@@ -1,0 +1,3 @@
+# Allowlist for scripts/mutation_court.sh --check (exit 9 otherwise).
+# One exact mutants.out/timeout.txt line per entry, with a reason comment above it.
+# Empty by default: every timeout is a failure until justified here.

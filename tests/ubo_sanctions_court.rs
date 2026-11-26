@@ -144,7 +144,15 @@ fn read_table(h: &mut Host, session: &str, table: &str, columns: &[&str]) -> (us
     let n = sel["rows_emitted"]
         .as_u64()
         .unwrap_or_else(|| panic!("rows_emitted missing from select envelope: {sel}")) as usize;
-    let cur = sel["cursor"].as_str().expect("select cursor").to_string();
+    // An empty table yields `cursor: null` (nothing to stream); a non-empty one must carry a cursor.
+    if n == 0 {
+        assert!(sel["cursor"].is_null(), "empty select must carry a null cursor: {sel}");
+        return (0, String::new());
+    }
+    let cur = sel["cursor"]
+        .as_str()
+        .unwrap_or_else(|| panic!("select cursor missing from envelope: {sel}"))
+        .to_string();
     (n, h.stream_all(session, &cur))
 }
 

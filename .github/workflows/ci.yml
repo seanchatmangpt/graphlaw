@@ -23,6 +23,7 @@ jobs:
           toolchain: 1.98.0
           components: rustfmt, clippy
           targets: wasm32-wasip1
+      - uses: Swatinem/rust-cache@v2
       # WASI setup: the wasm link REQUIRES a staged toolchain (WASI_SDK_PATH
       # with bin/clang + libc++ for wasm32-wasip1) AND the compiled DuckDB wasm
       # archives in ~/.frozen-duckdb/cache. One composite action now owns the
@@ -67,6 +68,8 @@ jobs:
       - name: Test backend authorities
         env:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
+          GRAPHLAW_REQUIRE_ENGINE: '1'
+          GRAPHLAW_REQUIRE_WASM: '1'
         run: cargo test --locked --all-targets --features pack-tools,abi,evidentiary-ring
       - name: Upload WASI module
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -90,6 +93,45 @@ jobs:
       - name: Docs
         run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features pack-tools,abi
 
+  # Offline, deterministic scripts/* gates on a fresh checkout (audit lane X1).
+  # Each gate is its own step so a red one names itself. EXCLUDED on purpose:
+  #   count_gate.sh, receipt_replay_court.sh, shape_mutation_court.sh,
+  #   mutation_families.sh  -- re-run cargo courts (build + disk heavy);
+  #                            mutation_court.sh runs in mutation.yml.
+  #   spc_court.sh, wasm_audit.sh, wasm_unknown_unknown_smoke.sh
+  #                         -- need the wasm artifact / targets.
+  #   exit_capture_check.sh -- exercises the zsh exit-capture pattern (no zsh on runner).
+  #   run_court.sh, fleet_cleanup.sh, gen_w3c_manifest.sh
+  #                         -- helpers/generators, not gates.
+  # Local equivalent: run each listed script from the repo root.
+  script-gates:
+    name: scripts/* gates (offline, deterministic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+        with:
+          toolchain: 1.98.0
+      - name: Install b3sum (receipt chain)
+        run: cargo install b3sum --locked
+      - name: Receipt chain verifies (receipt_chain_sync.sh --check)
+        run: bash scripts/receipt_chain_sync.sh --check
+      - name: Receipt chain flag court
+        run: bash scripts/chain_flag_court.sh
+      - name: Doc staleness gate
+        run: bash scripts/doc_staleness_gate.sh
+      - name: Doc staleness selfcheck (anti-vacuity)
+        run: bash scripts/doc_staleness_selfcheck.sh
+      - name: Witness gate
+        run: bash scripts/witness_gate.sh
+      - name: Machine-shaped gate
+        run: bash scripts/machine_shaped_gate.sh
+      - name: Machine-shaped gate self-test (anti-vacuity)
+        run: bash scripts/machine_shaped_gate.sh --self-test
+      - name: Code-partition court
+        run: bash scripts/partition_court.sh
+
   # Nightly-only cross-engine court (L41). Lives in a workspace-excluded crate
   # because ggen-engine -> wasm4pm-compat 26.8.7 is nightly-only (E0554 on
   # stable); the only root-manifest git dep is the pinned purrdf fork
@@ -104,6 +146,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: courts/castle-diff
       # frozen-duckdb-sys host cmake fails on ubuntu-24.04 with
       # "Could NOT find CURL"; install it before the build runs.
       - name: Install libcurl dev + pkg-config (frozen-duckdb-sys host cmake)
@@ -128,12 +173,16 @@ jobs:
     name: wasm courts (WASI ABI + landed wasm suites)
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # The WASI module is built once, in `native`, and downloaded here so the
+    # courts run against the exact artifact native built (one RUSTFLAGS set).
+    needs: native
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.98.0 # pinned: matches rust-toolchain.toml
           targets: wasm32-wasip1, wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
       # WASI setup — same composite staged-SDK + duckdb-archive recipe as the
       # native job above (cache key hashes the action recipe, not this file).
       - name: Stage WASI SDK + duckdb wasm archives
@@ -144,42 +193,45 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev pkg-config
       - name: Compile facade for wasm32-unknown-unknown
         run: cargo check --lib --target wasm32-unknown-unknown
-      - name: Build WASI module
-        # Same EH link requirement as the native job (DuckDB-linked artifact,
-        # wasmtime-hosted; wasmi cannot load it).
-        env:
-          CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS: -C target-feature=+exception-handling
-        run: cargo build --locked -p graphlaw-wasm --target wasm32-wasip1 --profile wasm
+      - name: Download WASI module (built by native)
+        uses: actions/download-artifact@v4
+        with:
+          name: graphlaw-wasm
+          path: target/wasm32-wasip1/wasm
       # Post-EH-closure (wasmi retirement): tests/wasm_abi.rs hosts the
       # DuckDB-linked artifact through wasmtime 48 with W3C exceptions
       # (Config::wasm_exceptions) — wasmi 2 rejects that artifact's
       # exception-handling sections, so the old legacy-wasmi framing is gone.
-      # Loud skip: continue-on-error so a red run here is visible but not
-      # gating — never folded into a passing step silently.
-      - name: "[SKIP-loud] ABI court (tests/wasm_abi.rs, wasmtime-48 EH host)"
-        continue-on-error: true
+      # Gating: a red run here fails the job.
+      - name: ABI court (tests/wasm_abi.rs, wasmtime-48 EH host)
         env:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
+          GRAPHLAW_REQUIRE_ENGINE: '1'
+          GRAPHLAW_REQUIRE_WASM: '1'
         run: cargo test --locked --test wasm_abi --features abi
       - name: Run WASI ABI courts (wasmtime EH host)
         env:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
+          GRAPHLAW_REQUIRE_ENGINE: '1'
+          GRAPHLAW_REQUIRE_WASM: '1'
         run: >
           cargo test --locked
           --test wasm_duckdb_lifecycle_eh
-          --test wasm_duckdb_op_wired
+          --test wasm_duckdb_op
           --features abi,runner-eh
-      - name: Run landed wasm court suites (loud-skip unlanded)
+      - name: Run landed wasm court suites (missing suite fails)
         env:
           GRAPHLAW_WASM: ${{ github.workspace }}/target/wasm32-wasip1/wasm/graphlaw_wasm.wasm
+          GRAPHLAW_REQUIRE_ENGINE: '1'
+          GRAPHLAW_REQUIRE_WASM: '1'
         run: |
           set -e
           for t in wasm_size_court abi_manifest_court abi_bounds_court canonical_cross_dialect parse_refusal_court tier_court parser_capability_probe wasm_native_differential; do
-            if [ -f tests/$t.rs ]; then
-              cargo test --locked --test $t
-            else
-              echo "[SKIP-loud] $t not landed"
+            if [ ! -f tests/$t.rs ]; then
+              echo "::error::tests/$t.rs missing (suite deleted or never landed)"
+              exit 1
             fi
+            cargo test --locked --test $t
           done
 
   # RUST-8 (lane L7): every workspace member gets its own clippy+test gate.
@@ -204,6 +256,9 @@ jobs:
         with:
           toolchain: 1.98.0
           components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.package }}
       # frozen-duckdb-sys host cmake fails on ubuntu-24.04 with
       # "Could NOT find CURL" (the runner image ships no libcurl dev headers);
       # install it before any cargo step compiles frozen-duckdb-sys.
@@ -296,6 +351,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:
           toolchain: 1.98.0
+      - uses: Swatinem/rust-cache@v2
       # frozen-duckdb-sys host cmake fails on ubuntu-24.04 with
       # "Could NOT find CURL"; install it before the build runs.
       - name: Install libcurl dev + pkg-config (frozen-duckdb-sys host cmake)

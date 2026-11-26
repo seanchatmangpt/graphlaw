@@ -269,6 +269,65 @@
     gac:lawStepName "sql" ;
     gac:lawStepOrder 5 .
 
+<https://graphlaw.dev/registry#limit/datalog_derived_facts>
+    a gac:Limit ;
+    gac:limitName "datalog_derived_facts" ;
+    gac:limitRefusalName "datalog_derived_facts" ;
+    gac:limitScope "law" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 200000 .
+
+<https://graphlaw.dev/registry#limit/datalog_join_steps>
+    a gac:Limit ;
+    gac:limitName "datalog_join_steps" ;
+    gac:limitRefusalName "datalog_join_steps" ;
+    gac:limitScope "law" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "steps" ;
+    gac:limitValue 50000000 .
+
+<https://graphlaw.dev/registry#limit/datalog_output_bytes>
+    a gac:Limit ;
+    gac:limitName "datalog_output_bytes" ;
+    gac:limitRefusalName "datalog_output_bytes" ;
+    gac:limitScope "law" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "bytes" ;
+    gac:limitValue 8388608 .
+
+<https://graphlaw.dev/registry#limit/default_max_skew_secs>
+    a gac:Limit ;
+    gac:limitName "default_max_skew_secs" ;
+    gac:limitScope "law" ;
+    gac:limitSource "src/law.rs" ;
+    gac:limitUnit "secs" ;
+    gac:limitValue 60 .
+
+<https://graphlaw.dev/registry#limit/duckdb_max_chunk_bytes>
+    a gac:Limit ;
+    gac:limitName "duckdb_max_chunk_bytes" ;
+    gac:limitScope "duckdb" ;
+    gac:limitSource "src/duckdb_op.rs" ;
+    gac:limitUnit "bytes" ;
+    gac:limitValue 16777216 .
+
+<https://graphlaw.dev/registry#limit/duckdb_max_chunk_rows>
+    a gac:Limit ;
+    gac:limitName "duckdb_max_chunk_rows" ;
+    gac:limitScope "duckdb" ;
+    gac:limitSource "src/duckdb_op.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 10000 .
+
+<https://graphlaw.dev/registry#limit/duckdb_memory_limit_bytes>
+    a gac:Limit ;
+    gac:limitName "duckdb_memory_limit_bytes" ;
+    gac:limitScope "duckdb" ;
+    gac:limitSource "src/duckdb_op.rs" ;
+    gac:limitUnit "bytes" ;
+    gac:limitValue 33554432 .
+
 <https://graphlaw.dev/registry#limit/hooks_max_firings>
     a gac:Limit ;
     gac:limitName "hooks_max_firings" ;
@@ -288,6 +347,7 @@
 <https://graphlaw.dev/registry#limit/hooks_max_state_quads>
     a gac:Limit ;
     gac:limitName "hooks_max_state_quads" ;
+    gac:limitRefusalName "state_quads" ;
     gac:limitScope "hooks" ;
     gac:limitSource "src/hooks.rs" ;
     gac:limitUnit "quads" ;
@@ -296,7 +356,24 @@
 <https://graphlaw.dev/registry#limit/max_atoms_per_field>
     a gac:Limit ;
     gac:limitName "max_atoms_per_field" ;
+    gac:limitRefusalName "atoms_per_field" ;
     gac:limitScope "abi" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 10000 .
+
+<https://graphlaw.dev/registry#limit/max_datalog_facts>
+    a gac:Limit ;
+    gac:limitName "max_datalog_facts" ;
+    gac:limitScope "law" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 100000 .
+
+<https://graphlaw.dev/registry#limit/max_datalog_rules>
+    a gac:Limit ;
+    gac:limitName "max_datalog_rules" ;
+    gac:limitScope "law" ;
     gac:limitSource "src/abi.rs" ;
     gac:limitUnit "count" ;
     gac:limitValue 10000 .
@@ -304,10 +381,19 @@
 <https://graphlaw.dev/registry#limit/max_json_depth>
     a gac:Limit ;
     gac:limitName "max_json_depth" ;
+    gac:limitRefusalName "json_depth" ;
     gac:limitScope "abi" ;
     gac:limitSource "src/abi.rs" ;
     gac:limitUnit "count" ;
     gac:limitValue 64 .
+
+<https://graphlaw.dev/registry#limit/max_law_steps>
+    a gac:Limit ;
+    gac:limitName "max_law_steps" ;
+    gac:limitScope "law" ;
+    gac:limitSource "src/abi.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 1000 .
 
 <https://graphlaw.dev/registry#limit/max_outstanding_alloc_bytes>
     a gac:Limit ;
@@ -320,6 +406,7 @@
 <https://graphlaw.dev/registry#limit/max_plan_actions>
     a gac:Limit ;
     gac:limitName "max_plan_actions" ;
+    gac:limitRefusalName "plan_actions" ;
     gac:limitScope "abi" ;
     gac:limitSource "src/abi.rs" ;
     gac:limitUnit "count" ;
@@ -328,6 +415,7 @@
 <https://graphlaw.dev/registry#limit/max_plan_total_atoms>
     a gac:Limit ;
     gac:limitName "max_plan_total_atoms" ;
+    gac:limitRefusalName "plan_total_atoms" ;
     gac:limitScope "plan" ;
     gac:limitSource "src/plan.rs" ;
     gac:limitUnit "count" ;
@@ -336,7 +424,8 @@
 <https://graphlaw.dev/registry#limit/max_policy_entries>
     a gac:Limit ;
     gac:limitName "max_policy_entries" ;
-    gac:limitScope "abi" ;
+    gac:limitRefusalName "policy_entries" ;
+    gac:limitScope "law" ;
     gac:limitSource "src/abi.rs" ;
     gac:limitUnit "count" ;
     gac:limitValue 100000 .
@@ -344,6 +433,7 @@
 <https://graphlaw.dev/registry#limit/max_request_bytes>
     a gac:Limit ;
     gac:limitName "max_request_bytes" ;
+    gac:limitRefusalName "request_bytes" ;
     gac:limitScope "abi" ;
     gac:limitSource "src/abi.rs" ;
     gac:limitUnit "bytes" ;
@@ -352,6 +442,7 @@
 <https://graphlaw.dev/registry#limit/n3_max_backward_depth>
     a gac:Limit ;
     gac:limitName "n3_max_backward_depth" ;
+    gac:limitRefusalName "n3_backward_depth" ;
     gac:limitScope "n3" ;
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "count" ;
@@ -360,6 +451,7 @@
 <https://graphlaw.dev/registry#limit/n3_max_backward_solutions_per_goal>
     a gac:Limit ;
     gac:limitName "n3_max_backward_solutions_per_goal" ;
+    gac:limitRefusalName "n3_backward_solutions_per_goal" ;
     gac:limitScope "n3" ;
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "count" ;
@@ -368,6 +460,7 @@
 <https://graphlaw.dev/registry#limit/n3_max_derived_facts>
     a gac:Limit ;
     gac:limitName "n3_max_derived_facts" ;
+    gac:limitRefusalName "n3_derived_facts" ;
     gac:limitScope "n3" ;
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "count" ;
@@ -376,6 +469,7 @@
 <https://graphlaw.dev/registry#limit/n3_max_iterations>
     a gac:Limit ;
     gac:limitName "n3_max_iterations" ;
+    gac:limitRefusalName "n3_iterations" ;
     gac:limitScope "n3" ;
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "count" ;
@@ -384,6 +478,7 @@
 <https://graphlaw.dev/registry#limit/n3_max_match_steps>
     a gac:Limit ;
     gac:limitName "n3_max_match_steps" ;
+    gac:limitRefusalName "n3_match_steps" ;
     gac:limitScope "n3" ;
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "steps" ;
@@ -392,6 +487,7 @@
 <https://graphlaw.dev/registry#limit/n3_max_term_bytes>
     a gac:Limit ;
     gac:limitName "n3_max_term_bytes" ;
+    gac:limitRefusalName "n3_term_bytes" ;
     gac:limitScope "n3" ;
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "bytes" ;
@@ -400,6 +496,7 @@
 <https://graphlaw.dev/registry#limit/n3_max_term_depth>
     a gac:Limit ;
     gac:limitName "n3_max_term_depth" ;
+    gac:limitRefusalName "n3_term_depth" ;
     gac:limitScope "n3" ;
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "count" ;
@@ -408,6 +505,7 @@
 <https://graphlaw.dev/registry#limit/n3_max_total_bytes>
     a gac:Limit ;
     gac:limitName "n3_max_total_bytes" ;
+    gac:limitRefusalName "n3_total_bytes" ;
     gac:limitScope "n3" ;
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "bytes" ;
@@ -416,10 +514,43 @@
 <https://graphlaw.dev/registry#limit/n3_max_total_steps>
     a gac:Limit ;
     gac:limitName "n3_max_total_steps" ;
+    gac:limitRefusalName "n3_match_steps" ;
     gac:limitScope "n3" ;
     gac:limitSource "src/law.rs" ;
     gac:limitUnit "steps" ;
     gac:limitValue 50000000 .
+
+<https://graphlaw.dev/registry#limit/shacl_degree>
+    a gac:Limit ;
+    gac:limitName "shacl_degree" ;
+    gac:limitScope "shacl" ;
+    gac:limitSource "src/shacl_guard.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 128 .
+
+<https://graphlaw.dev/registry#limit/shacl_quads>
+    a gac:Limit ;
+    gac:limitName "shacl_quads" ;
+    gac:limitScope "shacl" ;
+    gac:limitSource "src/shacl_guard.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 16384 .
+
+<https://graphlaw.dev/registry#limit/shacl_shapes_bytes>
+    a gac:Limit ;
+    gac:limitName "shacl_shapes_bytes" ;
+    gac:limitScope "shacl" ;
+    gac:limitSource "src/shacl_guard.rs" ;
+    gac:limitUnit "bytes" ;
+    gac:limitValue 131072 .
+
+<https://graphlaw.dev/registry#limit/shacl_validation_depth>
+    a gac:Limit ;
+    gac:limitName "shacl_validation_depth" ;
+    gac:limitScope "shacl" ;
+    gac:limitSource "src/shacl_guard.rs" ;
+    gac:limitUnit "count" ;
+    gac:limitValue 16 .
 
 <https://graphlaw.dev/registry#model-enum/Ceiling/1>
     a gac:ModelEnumValue ;
@@ -597,6 +728,7 @@
     a gac:Model ;
     gac:modelDoc "One plan action over ground triples." ;
     gac:modelElixirModule "AshGraphLaw.Model.Action" ;
+    gac:modelElixirModuleSuffix "Model.Action" ;
     gac:modelName "Action" ;
     gac:modelOrder 6 ;
     gac:modelRustPath "graphlaw::plan::Action" .
@@ -635,6 +767,7 @@
     a gac:Model ;
     gac:modelDoc "Ed25519 attestation over a canonical payload." ;
     gac:modelElixirModule "AshGraphLaw.Model.Attestation" ;
+    gac:modelElixirModuleSuffix "Model.Attestation" ;
     gac:modelName "Attestation" ;
     gac:modelOrder 4 ;
     gac:modelRustPath "graphlaw::attest::Attestation" .
@@ -703,6 +836,7 @@
     a gac:Model ;
     gac:modelDoc "Time-boxed authority grant for law steps." ;
     gac:modelElixirModule "AshGraphLaw.Model.Lease" ;
+    gac:modelElixirModuleSuffix "Model.Lease" ;
     gac:modelName "Lease" ;
     gac:modelOrder 1 ;
     gac:modelRustPath "graphlaw::law::Lease" .
@@ -741,6 +875,7 @@
     a gac:Model ;
     gac:modelDoc "Ordered candidate plan and the goal it claims to reach." ;
     gac:modelElixirModule "AshGraphLaw.Model.Plan" ;
+    gac:modelElixirModuleSuffix "Model.Plan" ;
     gac:modelName "Plan" ;
     gac:modelOrder 5 ;
     gac:modelRustPath "graphlaw::plan::Plan" .
@@ -779,6 +914,7 @@
     a gac:Model ;
     gac:modelDoc "One FOND policy entry." ;
     gac:modelElixirModule "AshGraphLaw.Model.PolicyEntry" ;
+    gac:modelElixirModuleSuffix "Model.PolicyEntry" ;
     gac:modelName "PolicyEntry" ;
     gac:modelOrder 7 ;
     gac:modelRustPath "graphlaw::policy::Entry" .
@@ -807,6 +943,7 @@
     a gac:Model ;
     gac:modelDoc "One possible outcome of a policy action." ;
     gac:modelElixirModule "AshGraphLaw.Model.PolicyOutcome" ;
+    gac:modelElixirModuleSuffix "Model.PolicyOutcome" ;
     gac:modelName "PolicyOutcome" ;
     gac:modelOrder 8 ;
     gac:modelRustPath "graphlaw::policy::Outcome" .
@@ -905,6 +1042,7 @@
     a gac:Model ;
     gac:modelDoc "Record of one executed law step." ;
     gac:modelElixirModule "AshGraphLaw.Model.Receipt" ;
+    gac:modelElixirModuleSuffix "Model.Receipt" ;
     gac:modelName "Receipt" ;
     gac:modelOrder 3 ;
     gac:modelRustPath "graphlaw::law::Receipt" .
@@ -933,6 +1071,7 @@
     a gac:Model ;
     gac:modelDoc "A lease with its Ed25519 attestation." ;
     gac:modelElixirModule "AshGraphLaw.Model.SignedLease" ;
+    gac:modelElixirModuleSuffix "Model.SignedLease" ;
     gac:modelName "SignedLease" ;
     gac:modelOrder 2 ;
     gac:modelRustPath "graphlaw::law::SignedLease" .
@@ -2592,14 +2731,59 @@
     gac:refusalCodeName "UnverifiedLeaseRefused" ;
     gac:refusalCodeOrder 9 .
 
+<https://graphlaw.dev/registry#refusalKind/Ambiguous>
+    a gac:RefusalKindClass ;
+    gac:errorClass "invalid" ;
+    gac:refusalKindName "Ambiguous" .
+
+<https://graphlaw.dev/registry#refusalKind/BareSql>
+    a gac:RefusalKindClass ;
+    gac:errorClass "invalid" ;
+    gac:refusalKindName "BareSql" .
+
+<https://graphlaw.dev/registry#refusalKind/DuckDb>
+    a gac:RefusalKindClass ;
+    gac:errorClass "invalid" ;
+    gac:refusalKindName "DuckDb" .
+
+<https://graphlaw.dev/registry#refusalKind/EngineRejected>
+    a gac:RefusalKindClass ;
+    gac:errorClass "invalid" ;
+    gac:refusalKindName "EngineRejected" .
+
+<https://graphlaw.dev/registry#refusalKind/Fuse>
+    a gac:RefusalKindClass ;
+    gac:errorClass "forbidden" ;
+    gac:refusalKindName "Fuse" .
+
+<https://graphlaw.dev/registry#refusalKind/NotSemanticContent>
+    a gac:RefusalKindClass ;
+    gac:errorClass "invalid" ;
+    gac:refusalKindName "NotSemanticContent" .
+
+<https://graphlaw.dev/registry#refusalKind/ResourceLimit>
+    a gac:RefusalKindClass ;
+    gac:errorClass "forbidden" ;
+    gac:refusalKindName "ResourceLimit" .
+
+<https://graphlaw.dev/registry#refusalKind/TierMismatch>
+    a gac:RefusalKindClass ;
+    gac:errorClass "forbidden" ;
+    gac:refusalKindName "TierMismatch" .
+
+<https://graphlaw.dev/registry#refusalKind/Unsupported>
+    a gac:RefusalKindClass ;
+    gac:errorClass "unknown" ;
+    gac:refusalKindName "Unsupported" .
+
 <https://graphlaw.dev/registry#registry>
     a gac:Registry ;
     gac:abiVersion 1 ;
     gac:dialectCount 14 ;
-    gac:graphlawVersion "26.10.28" ;
+    gac:graphlawVersion "26.11.25" ;
     gac:opCount 14 ;
-    gac:receiptSurfaceBlake3 "blake3:11fb8f9ab810b8f387fb162da274cb53717752238b8d58b30fbb29e53042b5ca" ;
-    gac:registryBlake3 "blake3:6e1103673508ade20f2276e93c7c948dd4f7c31689a25a325fac4a308856035d" ;
+    gac:receiptSurfaceBlake3 "blake3:8901820e9097d8fb17afde182dc30a5ac4b597662c9853e88c4e234747d365d9" ;
+    gac:registryBlake3 "blake3:5a0ca3cd5f8dba59392eac9f2feed93622e99bd74bc7f97216fcfdc22fda5acc" ;
     gac:schemaId "graphlaw.capability-registry/1" ;
     gac:surfaceBlake3 "blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9" .
 
@@ -2746,6 +2930,30 @@
     gac:vocabOf "refusal_kinds" ;
     gac:vocabOrder 5 ;
     gac:vocabValue "ResourceLimit" .
+
+<https://graphlaw.dev/registry#vocab/refusal_kinds/6>
+    a gac:VocabularyEntry ;
+    gac:vocabOf "refusal_kinds" ;
+    gac:vocabOrder 6 ;
+    gac:vocabValue "TierMismatch" .
+
+<https://graphlaw.dev/registry#vocab/refusal_kinds/7>
+    a gac:VocabularyEntry ;
+    gac:vocabOf "refusal_kinds" ;
+    gac:vocabOrder 7 ;
+    gac:vocabValue "DuckDb" .
+
+<https://graphlaw.dev/registry#vocab/refusal_kinds/8>
+    a gac:VocabularyEntry ;
+    gac:vocabOf "refusal_kinds" ;
+    gac:vocabOrder 8 ;
+    gac:vocabValue "BareSql" .
+
+<https://graphlaw.dev/registry#vocab/refusal_kinds/9>
+    a gac:VocabularyEntry ;
+    gac:vocabOf "refusal_kinds" ;
+    gac:vocabOrder 9 ;
+    gac:vocabValue "Fuse" .
 
 <https://graphlaw.dev/registry#vocab/regimes/1>
     a gac:VocabularyEntry ;

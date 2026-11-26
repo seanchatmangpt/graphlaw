@@ -1174,15 +1174,18 @@ fn l163_msg_literal_not_int_is_verbatim_with_truncated_ident() {
     );
 
     // Truncation pin: a lexical form exceeding REFUSAL_IDENT_BYTES renders as
-    // exactly the first REFUSAL_IDENT_BYTES bytes, verbatim.
+    // the first REFUSAL_IDENT_BYTES bytes, verbatim, followed by an explicit
+    // `…[truncated N bytes]` marker (2026-11-25 audit R4: silent truncation
+    // read as a complete value).
     let long = "x".repeat(REFUSAL_IDENT_BYTES + 64);
     let msg = compile_turtle(&lit(&long))
         .expect_err("must refuse")
         .to_string();
     let expected_prefix = format!(
         "SHACL AST structural violation: [REFUSAL-01] MalformedAstRefusal:\
-         xsd:integer literal '{}' on ",
-        "x".repeat(REFUSAL_IDENT_BYTES)
+         xsd:integer literal '{}…[truncated {} bytes]' on ",
+        "x".repeat(REFUSAL_IDENT_BYTES),
+        64
     );
     assert!(
         msg.starts_with(&expected_prefix),

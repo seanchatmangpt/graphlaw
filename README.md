@@ -6,9 +6,15 @@ over three pinned upstream engines, without reimplementing any standards algorit
 
 ## Install
 
-```sh
-cargo add graphlaw
+`graphlaw` is not published on crates.io; depend on it from git:
+
+```toml
+[dependencies]
+graphlaw = { git = "https://github.com/seanchatmangpt/graphlaw" }
 ```
+
+Elixir consumers: the `graphlaw_ex/` wrapper runs the same wasm artifact under wasmtime;
+see [graphlaw_ex/README.md](graphlaw_ex/README.md).
 
 MSRV 1.98 (pinned by `rust-toolchain.toml` at 1.98.0; the purrdf fork declares MSRV 1.98). Feature flags: `abi` (JSON ABI, registry, verification binaries),
 `pack-tools` (self-monitoring pack tooling).
@@ -33,7 +39,7 @@ cargo test --test differential
 # N3 (purrdf::n3), Datalog and OWL-RL (PurRDF) must agree on a transitive closure
 
 cargo test --test wasm_abi          # builds the WASI module and drives the hashed 14-op table (the module dispatches 15 ops, `src/abi.rs:319-333`; `duckdb` is dispatched but omitted from the hashed table until a digest bump)
-                                    #   prerequisite: the canonical relink recipe — WASI_SDK_PATH at the unpacked frozen-duckdb cache SDK (~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1; its legacy-EH sysroot matches libduckdb.a; the published wasi-sdk-34 sysroot fails the link) plus the in-tree wrap shim compiled from tests/fixtures/wasm-shim/. Alternatively point GRAPHLAW_WASM at a prebuilt module. Recipe: docs/WASM.md.
+                                    #   prerequisite: WASI_SDK_PATH at a wasi-sdk root (bin/clang + share/cmake/wasi-sdk-p1.cmake; CI installs wasi-sdk 34 at /opt/wasi-sdk, local /Users/sac/wasi-sdks/wasi-sdk-34) and CARGO_TARGET_WASM32_WASIP1_RUSTFLAGS="-C target-feature=+exception-handling"; the frozen-duckdb cache dir ~/.frozen-duckdb/cache/v2.0.0-dev-wasm32-wasip1 is the engine archive, not a wasi-sdk. Alternatively point GRAPHLAW_WASM at a prebuilt module. Recipe: docs/WASM.md.
 
 cargo test --test sql_rdf_dialect   # SQL-in-RDF compile + admission courts
 cargo test --test chicago_validation  # Chicago receipt/execution courts
@@ -42,7 +48,8 @@ cargo test --test duckdb_statement_kinds  # 35 PEG statement kinds on real froze
 
 ## Documentation
 
-Organized Diataxis-style; the hub is [docs/index.md](docs/index.md).
+Organized Diataxis-style; the hub is [docs/index.md](docs/index.md). Start with the
+[Quickstart](docs/quickstart.md), then pick a how-to from the index.
 
 | | |
 |---|---|

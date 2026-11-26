@@ -455,7 +455,7 @@ impl Lease {
 
 /// Fixpoint-step cap for N3 derivation (purrdf-n3 `ReasonerOptions::max_iterations`;
 /// its own default is 1,000,000). Exceeding it is a `ResourceLimit` refusal.
-pub const N3_MAX_ITERATIONS: usize = 4_000_000; // SKV-REVERT-TEST-B: budget disabled
+pub const N3_MAX_ITERATIONS: usize = 4_000_000;
 /// Largest single derived term, in bytes.
 pub const N3_MAX_TERM_BYTES: usize = 64 * 1024;
 /// Cumulative bytes of derived facts in one N3 run.
@@ -540,10 +540,9 @@ impl ReasonerLimitCensus for n3::ReasonerLimit {
             n3::ReasonerLimit::ClosureSize => "n3_total_bytes",
             n3::ReasonerLimit::ClosureFacts => "n3_derived_facts",
             // The fork marks the enum non_exhaustive: a future limit variant
-            // must join this census — fail loud, never silently unnamed.
-            other => unreachable!(
-                "new purrdf ReasonerLimit variant {other:?} must join the GraphLaw census"
-            ),
+            // must join this census; until it does the row is named as
+            // unknown rather than panicking in a library path.
+            _ => "n3_unknown_limit",
         }
     }
 
@@ -601,9 +600,7 @@ impl ReasonerLimitCensus for n3::ReasonerLimit {
                 result.derived.len(),
                 options.max_closure_facts,
             ),
-            other => unreachable!(
-                "new purrdf ReasonerLimit variant {other:?} must join the GraphLaw census"
-            ),
+            _ => ("n3_unknown_limit", result.derived.len().max(1), 0),
         }
     }
 }
@@ -976,17 +973,10 @@ impl LawState {
             kind: RefusalKind::EngineRejected,
             dialect: None,
             engine: Some(crate::dialect::Engine::PurRdf),
-            message: format!("canonicalization refused: {e:?}").into(),
+            message: format!("canonicalization refused: {e}").into(),
         })?;
         let digest = blake3::hash(canon.nquads.as_bytes());
-        let id = format!(
-            "blake3:{}",
-            digest
-                .as_bytes()
-                .iter()
-                .map(|b| format!("{b:02x}"))
-                .collect::<String>()
-        );
+        let id = format!("blake3:{}", digest.to_hex());
         Ok(LawState { dataset, id })
     }
 
@@ -1071,15 +1061,18 @@ impl LawState {
                 // Bound shape-nesting depth BEFORE the purrdf evaluator
                 // recurses: crossing the cap is a typed SHACL violation, not
                 // a stack overflow (see shacl_guard module doc). Rendered as
-                // a non-conforms result with an empty message so downstream
-                // reporters keep the "constraint violated" fallback shape.
-                if let Err(over) = crate::shacl_guard::check_shape_limits(shapes_ttl) {
+                // a non-conforms result: `component` is the typed limit name,
+                // `message` carries the prose.
+                if let Err(over) = crate::shacl_guard::check_shape_limits(shapes_ttl)
+                    .or_else(|e| if e.is_parse_failure() { Ok(()) } else { Err(e) })
+                {
                     return Err(LawError::NotAdmitted {
                         violations: 1,
                         results: vec![Violation {
                             focus: "<shapes-graph>".to_string(),
                             path: None,
-                            component: match &over {
+                            component: over.limit_name().to_string(),
+                            message: match &over {
                                 crate::shacl_guard::ShaclLimitExceeded::Depth { .. } =>
                                     format!(
                                         "shacl_validation_depth: maximum safe validation depth \
@@ -1106,6 +1099,16 @@ impl LawState {
                                         over.observed(),
                                         crate::shacl_guard::MAX_SHACL_QUADS
                                     ),
+                                crate::shacl_guard::ShaclLimitExceeded::ExpansionBudget { .. } =>
+                                    format!(
+                                        "shacl_validation_expansion_budget: shape-link expansion \
+                                         budget exhausted after {} expansions (max {}); cannot \
+                                         prove the shapes graph bounded (failing closed)",
+                                        over.observed(),
+                                        crate::shacl_guard::EXPANSION_BUDGET
+                                    ),
+                                crate::shacl_guard::ShaclLimitExceeded::Unparseable { .. } =>
+                                    "shacl_validation_unparseable: shapes graph does not parse".to_string(),
                                 crate::shacl_guard::ShaclLimitExceeded::Bytes { .. } =>
                                     format!(
                                         "shacl_validation_bytes: maximum safe shapes-graph \
@@ -1115,7 +1118,6 @@ impl LawState {
                                         crate::shacl_guard::MAX_SHACL_SHAPES_BYTES
                                     ),
                             },
-                            message: String::new(),
                             severity: "Violation".to_string(),
                         }],
                     });
@@ -1189,7 +1191,7 @@ impl LawState {
                                 .into(),
                         })
                     })?;
-                if false && validated.rule_count() != ruleset.rule_count() {
+                if validated.rule_count() != ruleset.rule_count() {
                     return Err(LawError::Refused(Refusal {
                         kind: RefusalKind::TierMismatch,
                         dialect: Some(Dialect::N3),

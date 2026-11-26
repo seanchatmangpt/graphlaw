@@ -307,24 +307,20 @@ impl HookPack {
         for round in 1..=MAX_ROUNDS {
             let mut progressed = false;
             for hook in &self.hooks {
-                let vars = trigger_vars(&current, hook)?;
-                let rows = select(&current, &hook.trigger, &[])?;
+                let (vars, rows) = trigger_solutions(&current, &hook.trigger)?;
                 for row in rows {
                     let bound: Vec<(String, TermValue)> = vars
                         .iter()
                         .zip(row)
                         .filter_map(|(v, t)| t.map(|t| (v.clone(), t)))
                         .collect();
-                    let digest = blake3::hash(format!("{}\0{bound:?}", hook.iri).as_bytes());
-                    let marker = format!(
-                        "urn:graphlaw:hook-firing:{}",
-                        digest
-                            .as_bytes()
-                            .iter()
-                            .map(|b| format!("{b:02x}"))
-                            .collect::<String>()
-                    );
-                    if !fired.insert(marker.clone()) {
+                    let marker = firing_marker(&hook.iri, &bound);
+                    // Refuse hooks are fuses and always evaluate: a caller-supplied
+                    // `kh:Firing` marker can never pre-suppress them. For other
+                    // effects the seeded markers are ADVISORY idempotency only
+                    // (no receipt-attested prior-state notion exists here).
+                    let seen = !fired.insert(marker.clone());
+                    if seen && hook.effect != Effect::Refuse {
                         continue;
                     }
                     if firings.len() >= MAX_FIRINGS {
@@ -334,45 +330,39 @@ impl HookPack {
                         ));
                     }
                     progressed = true;
-                    // A refuse firing merges no delta — it is a named,
-                    // pack-declared fuse: the marker alone advances the state
-                    // so the row fires once per lineage, and the verdict is
-                    // surfaced, never turned into an error here.
-                    let refuse_reason = if hook.effect == Effect::Refuse {
-                        Some(hook.reason.clone().unwrap_or_else(|| hook.name.clone()))
-                    } else {
-                        None
-                    };
+                    // A refuse firing is a fuse: it halts the transaction. The
+                    // typed refusal is returned and no state is committed —
+                    // `state` is borrowed and `current` is dropped, so the
+                    // caller's prior state is unchanged.
+                    if hook.effect == Effect::Refuse {
+                        let reason = hook.reason.clone().unwrap_or_else(|| hook.name.clone());
+                        return Err(refuse(
+                            RefusalKind::Unsupported,
+                            format!("hook-refused: {}: {reason}", hook.iri),
+                        ));
+                    }
                     let mut b = RdfDatasetBuilder::new();
                     b.push_dataset(current.dataset())
                         .map_err(|e| Refusal::engine(Dialect::NQuads, e))?;
-                    if refuse_reason.is_some() {
-                        // Refusal hook: the firing is recorded over the current
-                        // state alone — no delta is merged.
-                    } else {
-                        match NativeSparqlEngine::new()
-                            .query(
-                                current.dataset(),
-                                SparqlRequest {
-                                    query: &hook.construct,
-                                    base_iri: None,
-                                    substitutions: &bound,
-                                },
-                            )
-                            .map_err(|e| Refusal::engine(Dialect::Sparql, e))?
-                        {
-                            SparqlResult::Graph(g) => b
-                                .push_dataset(&g)
-                                .map_err(|e| Refusal::engine(Dialect::NQuads, e))?,
-                            other => {
-                                return Err(refuse(
-                                    RefusalKind::Unsupported,
-                                    format!(
-                                        "{}: action must be CONSTRUCT, got {other:?}",
-                                        hook.iri
-                                    ),
-                                ));
-                            }
+                    match NativeSparqlEngine::new()
+                        .query(
+                            current.dataset(),
+                            SparqlRequest {
+                                query: &hook.construct,
+                                base_iri: None,
+                                substitutions: &bound,
+                            },
+                        )
+                        .map_err(|e| Refusal::engine(Dialect::Sparql, e))?
+                    {
+                        SparqlResult::Graph(g) => b
+                            .push_dataset(&g)
+                            .map_err(|e| Refusal::engine(Dialect::NQuads, e))?,
+                        other => {
+                            return Err(refuse(
+                                RefusalKind::Unsupported,
+                                format!("{}: action must be CONSTRUCT, got {other:?}", hook.iri),
+                            ));
                         }
                     }
                     let (f, ty, class, hook_p, hook_o) = (
@@ -408,7 +398,7 @@ impl HookPack {
                     }
                     let row: Vec<(String, String)> = bound
                         .iter()
-                        .map(|(v, t)| (v.clone(), format!("{t:?}")))
+                        .map(|(v, t)| (v.clone(), canonical_term(t)))
                         .collect();
                     firings.push(Firing {
                         hook: hook.iri.clone(),
@@ -420,10 +410,7 @@ impl HookPack {
                         hook: hook.iri.clone(),
                         round,
                         row,
-                        verdict: match refuse_reason {
-                            Some(reason) => Verdict::Refuse(reason),
-                            None => Verdict::Fired,
-                        },
+                        verdict: Verdict::Fired,
                     });
                     current = next;
                 }
@@ -444,23 +431,94 @@ impl HookPack {
     }
 }
 
-/// The trigger's projected variable names, in projection order.
-fn trigger_vars(state: &LawState, hook: &Hook) -> Result<Vec<String>, Refusal> {
+fn put(out: &mut String, tag: char, text: &str) {
+    // length-prefixed: no separator collision is possible
+    out.push(tag);
+    out.push_str(&text.len().to_string());
+    out.push(':');
+    out.push_str(text);
+}
+
+fn encode_term(out: &mut String, t: &TermValue) {
+    match t {
+        TermValue::Iri(i) => put(out, 'I', i),
+        TermValue::Blank { label, scope } => {
+            put(out, 'B', label);
+            put(out, 'S', &scope.ordinal().to_string());
+        }
+        TermValue::Literal {
+            lexical_form,
+            datatype,
+            language,
+            direction,
+        } => {
+            put(out, 'L', lexical_form);
+            put(out, 'D', datatype);
+            put(out, 'G', language.as_deref().unwrap_or(""));
+            put(out, 'R', direction.map_or("", |d| d.as_str()));
+        }
+        TermValue::Triple { s, p, o } => {
+            out.push('T');
+            encode_term(out, &**s);
+            encode_term(out, &**p);
+            encode_term(out, &**o);
+            out.push('.');
+        }
+    }
+}
+
+/// Canonical, explicit encoding of one term (no `Debug`).
+pub fn canonical_term(t: &TermValue) -> String {
+    let mut out = String::new();
+    encode_term(&mut out, t);
+    out
+}
+
+/// The idempotency marker IRI of one hook firing: BLAKE3 over the hook IRI and
+/// the bound variables sorted by name, each explicitly length-prefix encoded.
+/// Independent of projection/row order and of Rust `Debug` formatting.
+pub fn firing_marker(hook_iri: &str, bound: &[(String, TermValue)]) -> String {
+    let mut vars: Vec<(&String, String)> =
+        bound.iter().map(|(v, t)| (v, canonical_term(t))).collect();
+    vars.sort();
+    let mut buf = String::new();
+    put(&mut buf, 'H', hook_iri);
+    for (v, t) in vars {
+        put(&mut buf, 'V', v);
+        buf.push_str(&t);
+    }
+    format!(
+        "urn:graphlaw:hook-firing:{}",
+        blake3::Hash::from_bytes(blake3::derive_key(
+            "graphlaw hooks firing v1",
+            buf.as_bytes()
+        ))
+        .to_hex()
+    )
+}
+
+/// Run a trigger SELECT exactly once, returning its variables and rows together.
+pub fn trigger_solutions(
+    state: &LawState,
+    trigger: &str,
+) -> Result<(Vec<String>, Vec<Vec<Option<TermValue>>>), Refusal> {
     match NativeSparqlEngine::new()
         .query(
             state.dataset(),
             SparqlRequest {
-                query: &hook.trigger,
+                query: trigger,
                 base_iri: None,
                 substitutions: &[],
             },
         )
         .map_err(|e| Refusal::engine(Dialect::Sparql, e))?
     {
-        SparqlResult::Solutions { variables, .. } => Ok(variables),
+        SparqlResult::Solutions {
+            variables, rows, ..
+        } => Ok((variables, rows)),
         other => Err(refuse(
             RefusalKind::Unsupported,
-            format!("{}: trigger must be SELECT, got {other:?}", hook.iri),
+            format!("trigger must be SELECT, got {other:?}"),
         )),
     }
 }

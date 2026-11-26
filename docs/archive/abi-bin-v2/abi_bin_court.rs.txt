@@ -1,0 +1,188 @@
+//! Court tests for the fixed-header binary ABI v2 recognizer and dispatcher.
+
+use graphlaw::abi_bin::{
+    ABI_VERSION, FLAG_HAS_RECEIPT, FLAG_RESPONSE, HEADER_LEN, MAGIC, MAX_SECTIONS, Opcode,
+    REFUSE_BAD_DIGEST, REFUSE_BAD_MAGIC, REFUSE_BAD_VERSION, REFUSE_NONZERO_RESERVED,
+    REFUSE_PAYLOAD_LENGTH_MISMATCH, REFUSE_SECTION_OUT_OF_BOUNDS, REFUSE_SECTION_OVERLAP,
+    REFUSE_SECTION_RESERVED_NONZERO, REFUSE_TOO_MANY_SECTIONS, REFUSE_TRUNCATED,
+    REFUSE_UNKNOWN_FLAGS, REFUSE_UNKNOWN_OPCODE, REFUSE_UNKNOWN_SECTION_FLAGS, SECTION_DESC_LEN,
+    TRAILER_LEN, dispatch_frame, encode_frame, encode_response, recognize_frame,
+};
+
+fn re_sign(frame: &mut [u8]) {
+    let body_end = frame.len() - TRAILER_LEN;
+    let hash = blake3::hash(&frame[..body_end]);
+    frame[body_end..].copy_from_slice(hash.as_bytes());
+}
+
+#[test]
+fn valid_round_trip_and_dispatch() {
+    let ontology_hash = [0xAB; 32];
+    let sec0 = b"SELECT * FROM t";
+    let sec1 = b"{\"k\":\"v\"}";
+
+    let encoded = encode_frame(
+        Opcode::Query,
+        FLAG_HAS_RECEIPT,
+        ontology_hash,
+        &[(1, 0, sec0), (2, 1, sec1)],
+    )
+    .expect("valid frame should encode");
+
+    let rec = recognize_frame(&encoded).expect("valid frame should recognize");
+    assert_eq!(rec.header.abi_version, ABI_VERSION);
+    assert_eq!(rec.header.opcode, Opcode::Query);
+    assert_eq!(rec.header.flags, FLAG_HAS_RECEIPT);
+    assert_eq!(rec.header.section_count, 2);
+    assert_eq!(rec.header.ontology_hash, ontology_hash);
+    assert_eq!(rec.header.payload_bytes, (sec0.len() + sec1.len()) as u64);
+    assert_eq!(rec.sections.len(), 2);
+    assert_eq!(rec.sections[0].desc.kind, 1);
+    assert_eq!(rec.sections[0].data, sec0);
+    assert_eq!(rec.sections[1].desc.kind, 2);
+    assert_eq!(rec.sections[1].desc.flags, 1);
+    assert_eq!(rec.sections[1].data, sec1);
+
+    let resp_bytes = dispatch_frame(&encoded);
+    let resp = recognize_frame(&resp_bytes).expect("dispatched response must be valid");
+    assert_eq!(resp.header.opcode, Opcode::Response);
+    assert_eq!(resp.header.flags, FLAG_HAS_RECEIPT | FLAG_RESPONSE);
+    assert_eq!(resp.header.ontology_hash, ontology_hash);
+    assert_eq!(resp.sections.len(), 2);
+    assert_eq!(resp.sections[0].data, sec0);
+    assert_eq!(resp.sections[1].data, sec1);
+}
+
+#[test]
+fn encode_response_sets_response_flag_and_refuses_invalid() {
+    let ontology_hash = [0x11; 32];
+    let ok = encode_response(Opcode::Response, 0, ontology_hash, &[(7, 0, b"ok")]);
+    let rec = recognize_frame(&ok).expect("response should recognize");
+    assert_eq!(rec.header.flags, FLAG_RESPONSE);
+    assert_eq!(rec.sections[0].data, b"ok");
+
+    // Passing an unknown flag to encode_response must fail closed with a Refusal frame.
+    let refused = encode_response(Opcode::Response, 0x8000_0000, ontology_hash, &[]);
+    let rec_ref = recognize_frame(&refused).expect("refusal frame must itself be valid");
+    assert_eq!(rec_ref.header.opcode, Opcode::Refusal);
+    assert_eq!(rec_ref.sections.len(), 1);
+    let code = u16::from_le_bytes([rec_ref.sections[0].data[0], rec_ref.sections[0].data[1]]);
+    assert_eq!(code, REFUSE_UNKNOWN_FLAGS);
+}
+
+#[test]
+fn refuse_truncated_frame() {
+    assert_eq!(recognize_frame(&[]), Err(REFUSE_TRUNCATED));
+    assert_eq!(
+        recognize_frame(&[0u8; HEADER_LEN + TRAILER_LEN - 1]),
+        Err(REFUSE_TRUNCATED)
+    );
+
+    let mut frame = encode_frame(Opcode::Ping, 0, [0u8; 32], &[(1, 0, b"hello")]).unwrap();
+    frame.pop();
+    assert_eq!(recognize_frame(&frame), Err(REFUSE_TRUNCATED));
+}
+
+#[test]
+fn refuse_bad_magic() {
+    let mut frame = encode_frame(Opcode::Ping, 0, [0u8; 32], &[]).unwrap();
+    frame[0] = 0x00;
+    re_sign(&mut frame);
+    assert_eq!(recognize_frame(&frame), Err(REFUSE_BAD_MAGIC));
+    assert_eq!(MAGIC, [0x89, b'G', b'L', b'B']);
+}
+
+#[test]
+fn refuse_bad_version() {
+    let mut frame = encode_frame(Opcode::Ping, 0, [0u8; 32], &[]).unwrap();
+    frame[4..6].copy_from_slice(&1u16.to_le_bytes());
+    re_sign(&mut frame);
+    assert_eq!(recognize_frame(&frame), Err(REFUSE_BAD_VERSION));
+}
+
+#[test]
+fn refuse_unknown_opcode() {
+    let mut frame = encode_frame(Opcode::Ping, 0, [0u8; 32], &[]).unwrap();
+    frame[6..8].copy_from_slice(&0x00FFu16.to_le_bytes());
+    re_sign(&mut frame);
+    assert_eq!(recognize_frame(&frame), Err(REFUSE_UNKNOWN_OPCODE));
+}
+
+#[test]
+fn refuse_unknown_flags() {
+    let mut frame = encode_frame(Opcode::Ping, 0, [0u8; 32], &[]).unwrap();
+    frame[8..12].copy_from_slice(&0x0000_0004u32.to_le_bytes());
+    re_sign(&mut frame);
+    assert_eq!(recognize_frame(&frame), Err(REFUSE_UNKNOWN_FLAGS));
+}
+
+#[test]
+fn refuse_too_many_sections() {
+    let mut frame = encode_frame(Opcode::Ping, 0, [0u8; 32], &[]).unwrap();
+    frame[12..14].copy_from_slice(&(MAX_SECTIONS + 1).to_le_bytes());
+    re_sign(&mut frame);
+    assert_eq!(recognize_frame(&frame), Err(REFUSE_TOO_MANY_SECTIONS));
+}
+
+#[test]
+fn refuse_nonzero_reserved_fields() {
+    let mut frame1 = encode_frame(Opcode::Ping, 0, [0u8; 32], &[]).unwrap();
+    frame1[14..16].copy_from_slice(&1u16.to_le_bytes());
+    re_sign(&mut frame1);
+    assert_eq!(recognize_frame(&frame1), Err(REFUSE_NONZERO_RESERVED));
+
+    let mut frame2 = encode_frame(Opcode::Ping, 0, [0u8; 32], &[]).unwrap();
+    frame2[56..64].copy_from_slice(&1u64.to_le_bytes());
+    re_sign(&mut frame2);
+    assert_eq!(recognize_frame(&frame2), Err(REFUSE_NONZERO_RESERVED));
+}
+
+#[test]
+fn refuse_payload_length_mismatch() {
+    let mut frame = encode_frame(Opcode::Ping, 0, [0u8; 32], &[(1, 0, b"abcd")]).unwrap();
+    // Append an extra trailing byte so frame.len() > expected_len.
+    frame.push(0xFF);
+    assert_eq!(recognize_frame(&frame), Err(REFUSE_PAYLOAD_LENGTH_MISMATCH));
+}
+
+#[test]
+fn refuse_section_reserved_nonzero_and_unknown_flags() {
+    let mut frame = encode_frame(Opcode::Ping, 0, [0u8; 32], &[(1, 0, b"abcd")]).unwrap();
+    // Section 0 reserved sits at HEADER_LEN + 12..16.
+    frame[HEADER_LEN + 12..HEADER_LEN + 16].copy_from_slice(&1u32.to_le_bytes());
+    re_sign(&mut frame);
+    assert_eq!(recognize_frame(&frame), Err(REFUSE_SECTION_RESERVED_NONZERO));
+
+    let mut frame2 = encode_frame(Opcode::Ping, 0, [0u8; 32], &[(1, 0, b"abcd")]).unwrap();
+    frame2[HEADER_LEN + 2..HEADER_LEN + 4].copy_from_slice(&0x0002u16.to_le_bytes());
+    re_sign(&mut frame2);
+    assert_eq!(recognize_frame(&frame2), Err(REFUSE_UNKNOWN_SECTION_FLAGS));
+}
+
+#[test]
+fn refuse_section_out_of_bounds() {
+    let mut frame = encode_frame(Opcode::Ping, 0, [0u8; 32], &[(1, 0, b"abcd")]).unwrap();
+    // Set section 0 len = 5 while payload_bytes = 4.
+    frame[HEADER_LEN + 8..HEADER_LEN + 12].copy_from_slice(&5u32.to_le_bytes());
+    re_sign(&mut frame);
+    assert_eq!(recognize_frame(&frame), Err(REFUSE_SECTION_OUT_OF_BOUNDS));
+}
+
+#[test]
+fn refuse_overlapping_sections() {
+    let mut frame =
+        encode_frame(Opcode::Ping, 0, [0u8; 32], &[(1, 0, b"abcd"), (2, 0, b"efgh")]).unwrap();
+    // Move section 1 offset from 4 to 2 so it overlaps section 0 (0..4).
+    let sec1_base = HEADER_LEN + SECTION_DESC_LEN;
+    frame[sec1_base + 4..sec1_base + 8].copy_from_slice(&2u32.to_le_bytes());
+    re_sign(&mut frame);
+    assert_eq!(recognize_frame(&frame), Err(REFUSE_SECTION_OVERLAP));
+}
+
+#[test]
+fn refuse_bad_blake3_digest() {
+    let mut frame = encode_frame(Opcode::Ping, 0, [0u8; 32], &[(1, 0, b"abcd")]).unwrap();
+    let last = frame.len() - 1;
+    frame[last] ^= 0x01;
+    assert_eq!(recognize_frame(&frame), Err(REFUSE_BAD_DIGEST));
+}

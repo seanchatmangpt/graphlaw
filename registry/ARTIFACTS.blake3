@@ -15,11 +15,11 @@
 # historical pin (superseded 2026-10-28 purrdf fork-swap rebuild @ 2223f894): wasm 0858a760f9df87c66cdc01a04f6f4ce15926f400cb974b67a7d14513a5ddd2f1 60895924 graphlaw_wasm.wasm
 # historical pin (superseded 2026-10-28 v26.10.28 release re-mint): wasm 348c97fd826f0fe93d353690ea09976be500f31955e526b1ae2e36ca4ec2bb1e 74097211 graphlaw_wasm.wasm
 # historical pin (superseded 2026-10-29 GL28-13 ICU-root-removal relink; wrap-fcntl shim recipe): wasm c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c 74097211 graphlaw_wasm.wasm
-wasm c92caeb6d56792587f2939769678e02b77c868f2919ef8566060e02f3c6c1b9c 62909537 graphlaw_wasm.wasm
-registry blake3:6e1103673508ade20f2276e93c7c948dd4f7c31689a25a325fac4a308856035d - capability-registry.json
+wasm 66369e37ad71d8c19817951565aad669379aa9b97ef5dacf7dda403f304cb117 62909469 graphlaw_wasm.wasm
+registry blake3:5a0ca3cd5f8dba59392eac9f2feed93622e99bd74bc7f97216fcfdc22fda5acc - capability-registry.json
 surface blake3:da96e1375a76610b5d91aedb9b01d5ac0807b0f850ce4440628c37a3b96b9ee9 - capability-registry.json
-receipt-surface blake3:11fb8f9ab810b8f387fb162da274cb53717752238b8d58b30fbb29e53042b5ca - src/duckdb_eval.rs+src/sql_ast.rs
-mcp-manifest blake3:3657a30eda86b76b8e1778d0bcf3ca9f2abb12e34137ad2ab0a2b69d4125aaf3 - registry/mcp-manifest.json
+receipt-surface blake3:8901820e9097d8fb17afde182dc30a5ac4b597662c9853e88c4e234747d365d9 - src/duckdb_eval.rs+src/sql_ast.rs
+mcp-manifest blake3:17a94758ee2a3e58e496105cb8a2f6d21871bfc210b85641f2f968fed472d60a - registry/mcp-manifest.json
 # receipt-surface: blake3 of the canonical graphlaw.receipt-surface/1 document
 #   (per-file blake3+bytes for src/duckdb_eval.rs and src/sql_ast.rs, the receipt-minting
 #   surface); recomputed by graphlaw::registry::receipt_surface_blake3(). Re-pin via

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sean Chatman <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
 defmodule GraphlawEx.PoolTest do
   use ExUnit.Case, async: false
 
@@ -23,7 +26,9 @@ defmodule GraphlawEx.PoolTest do
 
     @impl GenServer
     def init(opts) do
-      {:ok, _} = Registry.register(opts[:registry], Keyword.get(opts, :availability, :members), nil)
+      {:ok, _} =
+        Registry.register(opts[:registry], Keyword.get(opts, :availability, :members), nil)
+
       {:ok, %{registry: opts[:registry], script: opts[:script], calls: 0}}
     end
 
@@ -35,7 +40,8 @@ defmodule GraphlawEx.PoolTest do
     end
 
     @impl GenServer
-    def handle_call({:request, _body, _op, _timeout}, _from, state) do
+    # The host request protocol: {:request, body, op, timeout, fuel, deadline}.
+    def handle_call({:request, _body, _op, _timeout, _fuel, _deadline}, _from, state) do
       case state.script do
         fun when is_function(fun, 1) -> {:reply, fun.(state), %{state | calls: state.calls + 1}}
         reply -> {:reply, reply, %{state | calls: state.calls + 1}}
@@ -55,7 +61,8 @@ defmodule GraphlawEx.PoolTest do
       {:ok, idle} =
         start_supervised(
           Supervisor.child_spec(
-            {ScriptedMember, registry: @registry, script: fn _state -> {:ok, %{"ok" => true, "who" => "idle"}} end},
+            {ScriptedMember,
+             registry: @registry, script: fn _state -> {:ok, %{"ok" => true, "who" => "idle"}} end},
             id: {:scripted, :idle}
           )
         )
@@ -63,7 +70,8 @@ defmodule GraphlawEx.PoolTest do
       {:ok, busy} =
         start_supervised(
           Supervisor.child_spec(
-            {ScriptedMember, registry: @registry, script: fn _state -> {:ok, %{"ok" => true, "who" => "busy"}} end},
+            {ScriptedMember,
+             registry: @registry, script: fn _state -> {:ok, %{"ok" => true, "who" => "busy"}} end},
             id: {:scripted, :busy}
           )
         )
@@ -91,7 +99,8 @@ defmodule GraphlawEx.PoolTest do
           spec =
             Supervisor.child_spec(
               {ScriptedMember,
-               registry: @registry, script: fn _state -> {:ok, %{"ok" => true, "who" => "m#{i}"}} end},
+               registry: @registry,
+               script: fn _state -> {:ok, %{"ok" => true, "who" => "m#{i}"}} end},
               id: {:scripted, i}
             )
 
@@ -103,10 +112,12 @@ defmodule GraphlawEx.PoolTest do
       # of a 30-run missing one is (2/3)^30 < 1e-5, and a wedge (min_by always
       # picking the first) would pin ~all of them on member one.
       served =
-        MapSet.new(for _ <- 1..30 do
-                     {:ok, %{"who" => who}} = Pool.request(%{"op" => "capabilities"})
-                     who
-                   end)
+        MapSet.new(
+          for _ <- 1..30 do
+            {:ok, %{"who" => who}} = Pool.request(%{"op" => "capabilities"})
+            who
+          end
+        )
 
       assert MapSet.size(served) == 3
       assert Enum.all?(members, &(GenServer.call(&1, :calls) > 0))
@@ -122,18 +133,150 @@ defmodule GraphlawEx.PoolTest do
           {ScriptedMember,
            registry: @registry,
            availability: :unavailable,
-           script: fn _state -> {:error, Refusal.new(:call_exited, "engine instance exited during the call")} end}
+           script: fn _state ->
+             {:error, Refusal.new(:call_exited, "engine instance exited during the call")}
+           end}
         )
 
       assert {:error, %Refusal{code: :call_exited}} = Pool.request(%{"op" => "capabilities"})
 
       # And the member routes again the moment it is healthy.
-      :ok = GenServer.call(healing, {:set_availability, :members, fn _state -> {:ok, %{"ok" => true}} end})
+      :ok =
+        GenServer.call(
+          healing,
+          {:set_availability, :members, fn _state -> {:ok, %{"ok" => true}} end}
+        )
+
       assert {:ok, %{"ok" => true}} = Pool.request(%{"op" => "capabilities"})
     end
 
     test "with no registry at all the pool refuses typed instead of crashing" do
       assert {:error, %Refusal{code: :call_exited}} = Pool.request(%{"op" => "capabilities"})
+    end
+  end
+
+  describe "admission gate under fault injection" do
+    setup do
+      start_supervised!({Registry, keys: :duplicate, name: @registry})
+      start_supervised!({Pool.Leases, capacity: 2})
+      test = self()
+
+      # A real member whose handler parks until the court releases it, so
+      # requests are observably in flight.
+      blocking = fn _state ->
+        send(test, {:entered, self()})
+
+        receive do
+          :go -> {:ok, %{"ok" => true}}
+        end
+      end
+
+      member =
+        start_supervised!(
+          Supervisor.child_spec({ScriptedMember, registry: @registry, script: blocking},
+            id: {:scripted, :blocking}
+          )
+        )
+
+      %{member: member}
+    end
+
+    test "killed callers leak no slot: available returns to capacity", %{member: member} do
+      assert Pool.available() == 2
+
+      callers =
+        for _ <- 1..2 do
+          {pid, mref} = spawn_monitor(fn -> Pool.request(%{"op" => "capabilities"}) end)
+          {pid, mref}
+        end
+
+      assert poll(fn -> Pool.available() == 0 end), "both slots never became leased"
+
+      for {pid, _} <- callers, do: Process.exit(pid, :kill)
+
+      for {pid, mref} <- callers do
+        assert_receive {:DOWN, ^mref, :process, ^pid, :killed}, 5_000
+      end
+
+      assert poll(fn -> Pool.available() == 2 end), "slots leaked after callers were killed"
+
+      # Release the parked member so teardown is clean.
+      send(member, :go)
+    end
+
+    test "a killed worker mid-call leaks no slot and its caller terminates", %{member: member} do
+      mref_member = Process.monitor(member)
+      {caller, cref} = spawn_monitor(fn -> Pool.request(%{"op" => "capabilities"}) end)
+
+      assert_receive {:entered, ^member}, 5_000
+      assert Pool.available() == 1
+
+      Process.exit(member, :kill)
+      assert_receive {:DOWN, ^mref_member, :process, ^member, :killed}, 5_000
+
+      # The pool retries once through a live member; the supervisor may already
+      # have restarted the blocking member, in which case the retry parks there
+      # and the court releases it. The caller must terminate either way.
+      await_caller_down(cref, caller)
+
+      assert poll(fn -> Pool.available() == 2 end), "slot leaked after worker kill"
+    end
+
+    defp await_caller_down(cref, caller) do
+      receive do
+        {:DOWN, ^cref, :process, ^caller, _reason} ->
+          :ok
+
+        {:entered, retried} ->
+          send(retried, :go)
+          await_caller_down(cref, caller)
+      after
+        5_000 -> flunk("caller did not terminate after its worker was killed")
+      end
+    end
+
+    test "saturation refuses typed and the refused attempt holds no slot", %{member: member} do
+      callers =
+        for _ <- 1..2 do
+          spawn_monitor(fn -> Pool.request(%{"op" => "capabilities"}) end)
+        end
+
+      assert poll(fn -> Pool.available() == 0 end)
+
+      assert {:error, %GraphlawEx.Refusal{code: :saturated}} =
+               Pool.request(%{"op" => "capabilities"})
+
+      assert Pool.available() == 0
+
+      send(member, :go)
+      send(member, :go)
+
+      for {pid, mref} <- callers do
+        assert_receive {:DOWN, ^mref, :process, ^pid, :normal}, 5_000
+      end
+
+      assert poll(fn -> Pool.available() == 2 end)
+    end
+  end
+
+  # Bounded poll on an observable; monotonic deadline, typed false on expiry.
+  defp poll(fun, deadline_ms \\ 5_000) do
+    do_poll(fun, System.monotonic_time(:millisecond) + deadline_ms)
+  end
+
+  defp do_poll(fun, deadline) do
+    cond do
+      fun.() ->
+        true
+
+      System.monotonic_time(:millisecond) >= deadline ->
+        false
+
+      true ->
+        receive do
+        after
+          5 -> do_poll(fun, deadline)
+        end
     end
   end
 end

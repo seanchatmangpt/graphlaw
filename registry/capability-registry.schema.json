@@ -175,7 +175,10 @@
             "n3",
             "plan",
             "hooks",
-            "wasm"
+            "wasm",
+            "law",
+            "shacl",
+            "duckdb"
           ]
         },
         "source": {
@@ -189,7 +192,8 @@
             "rounds",
             "firings",
             "quads",
-            "steps"
+            "steps",
+            "secs"
           ]
         }
       },
@@ -568,14 +572,66 @@
         "n3_max_total_steps": {
           "type": "integer",
           "description": "Matcher steps summed over one N3 run (purrdf fork census)."
+        },
+        "shacl_validation_depth": {
+          "type": "integer"
+        },
+        "shacl_shapes_bytes": {
+          "type": "integer"
+        },
+        "shacl_degree": {
+          "type": "integer"
+        },
+        "shacl_quads": {
+          "type": "integer"
+        },
+        "duckdb_memory_limit_bytes": {
+          "type": "integer"
+        },
+        "duckdb_max_chunk_rows": {
+          "type": "integer"
+        },
+        "duckdb_max_chunk_bytes": {
+          "type": "integer"
+        },
+        "max_law_steps": {
+          "type": "integer"
+        },
+        "max_datalog_rules": {
+          "type": "integer"
+        },
+        "max_datalog_facts": {
+          "type": "integer"
+        },
+        "datalog_derived_facts": {
+          "type": "integer"
+        },
+        "datalog_join_steps": {
+          "type": "integer"
+        },
+        "datalog_output_bytes": {
+          "type": "integer"
+        },
+        "default_max_skew_secs": {
+          "type": "integer"
         }
       },
       "required": [
+        "datalog_derived_facts",
+        "datalog_join_steps",
+        "datalog_output_bytes",
+        "default_max_skew_secs",
+        "duckdb_max_chunk_bytes",
+        "duckdb_max_chunk_rows",
+        "duckdb_memory_limit_bytes",
         "hooks_max_firings",
         "hooks_max_rounds",
         "hooks_max_state_quads",
         "max_atoms_per_field",
+        "max_datalog_facts",
+        "max_datalog_rules",
         "max_json_depth",
+        "max_law_steps",
         "max_outstanding_alloc_bytes",
         "max_plan_actions",
         "max_plan_total_atoms",
@@ -589,7 +645,11 @@
         "n3_max_term_bytes",
         "n3_max_term_depth",
         "n3_max_total_bytes",
-        "n3_max_total_steps"
+        "n3_max_total_steps",
+        "shacl_degree",
+        "shacl_quads",
+        "shacl_shapes_bytes",
+        "shacl_validation_depth"
       ],
       "type": "object"
     },

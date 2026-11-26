@@ -45,8 +45,11 @@ untouched by that pass.
 | `ReceiptRefused` | `LawError::ReceiptRefused` | `step`, `reason` (`unattested`, `bad_signature`, `untrusted_key`) | Raised by `require-signed-receipt`. `unattested`: the receipt has no attestation; `bad_signature`: the signature does not verify; `untrusted_key`: the signing key is not in the step's `trusted_keys`. |
 | `LeaseRefused` | `LawError::LeaseRefused` | `reason`, `lease_id`, `step` | See lease reasons below. |
 | `UnverifiedLeaseRefused` | ABI request check | none | A `law` request carried an unsigned `lease` without `"unverified_lease": true`. Supply `signed_lease` + `trusted_keys`, or opt in explicitly (with `now_unix`). The envelope `kind` is `Unsupported`. |
+| `RECEIPT-IRI-INVALID` | `LawError::Refused` (`RefusalKind::Unsupported`), `src/receipt.rs:34` const, raised in `check_iri` (`src/receipt.rs:98`) | message tag `[RECEIPT-IRI-INVALID]`; `details` = `{code: "Refused", kind: "Unsupported"}` | `receipt::record` was given a `child` whose receipt-subject IRI contains a character forbidden in an N-Triples IRI (`< > " { } \| \ ^`, backtick, space, control <= 0x20, DEL/C1 0x7f-0x9f). Refused before any triple text is built, so a hostile id cannot forge triples. Use a well-formed child IRI. |
+| `LeaseRequired` | `LeaseContext::admit` (`src/abi/lease.rs:109`), envelope `kind` `Unsupported` | `code` only (no `step`) | The effective lease policy is `Required` (host `abi::set_lease_policy(LeasePolicy::Required)`, or a request-level `"lease_policy": "required"`, which can tighten but never loosen the host policy — `src/abi/lease.rs` `effective_policy`) and the `law` request carried neither `signed_lease` nor `lease`. Refused before any step runs. Present `signed_lease` + `trusted_keys`. Host default is `NoneAllowed` (`LEASE_REQUIRED` starts `false`); the Elixir wrapper defaults to `:required` (test env `:none_allowed`) and refuses client-side first as `:ceiling_unmet` (`graphlaw_ex/lib/graphlaw_ex/authority.ex:437-440`). |
+| `hook-refused` | `LawError::Refused` (`RefusalKind::Unsupported`), `src/hooks.rs:295` | `details` = `{code: "Refused", kind: "Unsupported"}`; message `hook-refused: <hook iri>: <reason>` (reason = hook `reason`, else hook name) | A `kh:Effect "refuse"` hook fired during `materialize`; the transaction halts and no state is committed. The already-fired marker skip is bypassed for refuse hooks (`src/hooks.rs:295`: `seen && hook.effect != Effect::Refuse`), so a forged caller-supplied `kh:Firing` marker cannot suppress them. Fix the data that triggers the hook, or the hook pack. Match on the message prefix; there is no dedicated `details.code`. |
 | `NotAdmitted` | `LawError::NotAdmitted` | `violations[]`: `focus`, `path`, `component`, `message`, `severity` | Fix the data or the shapes; each entry is one SHACL result. The envelope `kind` is `EngineRejected`, dialect `Turtle`, engine `PurRdf`. |
-| `ResourceLimit` | `RefusalKind::ResourceLimit` | `limit`, `observed`, `max` (N3 limits always carry `max`) | Shrink the request. Limits: `request_bytes`, `json_depth`, `atoms_per_field`, `plan_actions`, `policy_entries` (constants `abi::MAX_*`), plus the N3 reasoner limits `n3_iterations`, `n3_match_steps`, `n3_term_bytes`, `n3_total_bytes`, `n3_derived_facts` (constants `law::N3_*`), plus the DuckDB result-row envelope `duckdb_result_rows` (2026-10-26, lane P08-sieve — see the appended section below; `src/duckdb_eval.rs` `DEFAULT_ROW_ENVELOPE`). |
+| `ResourceLimit` | `RefusalKind::ResourceLimit` | `limit`, `observed`, `max` (N3 limits always carry `max`) | Shrink the request. Limits: `request_bytes`, `json_depth`, `atoms_per_field`, `plan_actions`, `policy_entries` (constants `abi::MAX_*`), plus the N3 reasoner limits `n3_iterations`, `n3_match_steps`, `n3_term_bytes`, `n3_total_bytes`, `n3_derived_facts` (constants `law::N3_*`), plus the Datalog budgets `datalog_derived_facts` (200000), `datalog_join_steps` (50000000) and `datalog_output_bytes` (8 MiB) from `op_datalog` (`src/abi.rs:74-78`, `src/abi/ops/query_engines.rs:172`; an unmapped budget resource reports `datalog_budget`), plus the DuckDB result-row envelope `duckdb_result_rows` (2026-10-26, lane P08-sieve — see the appended section below; `src/duckdb_eval.rs` `DEFAULT_ROW_ENVELOPE`). |
 | `Refused` | `LawError::Refused` | `kind` | Upstream engine or routing refusal raised inside a `law` step; `kind` is a `RefusalKind` name (below). |
 | `PolicyRefused` | `policy::PolicyRefused` | `policy_kind`, `state`, `action` | See policy kinds below. |
 | `DuckDb` | `RefusalKind::DuckDb` | `message` | The DuckDB substrate (ABI op `duckdb`, `src/duckdb_op.rs`) failed or the request misused it — unknown/expired cursor, bad view mount, unsupported param, engine error. Never traps. Chunk limits ride `ResourceLimit` with `limit` = `duckdb_chunk_rows` / `duckdb_chunk_bytes` / `duckdb_views`. Absence from the hashed 14-op list is not this refusal. Promoted 2026-10-23 (in-module execution, wasmtime 48 + new W3C EH archive): the op now dispatches inside the wasm unit on every target, and `RefusalKind::DuckDb` fires in-module too — a wasm caller no longer gets `Unsupported` / `unknown op`. Receipt: `receipts/2026-10-23-eh-closure-wave.md` §4/§8 (duckdb_op 16/0 W46, duckdb_eval 18/0, sql_ast 32/0 W48; canonical pin §8) and `receipts/2026-10-23-wave-close.md` §2. |
@@ -75,7 +78,7 @@ guarantees yet.
 |---|---|---|---|---|
 | `REFUSAL-01` | `MalformedAstRefusal` | The graph AST fails strict closed-world SHACL shape validation before admission: missing or non-integer `sql:statementIndex`, empty/missing `sql:from`, missing projection list, malformed/unclosed RDF list, unexpected terminal node, recursion-limit breach, more than one expression discriminator per node, a token outside the §4 operator enum (`Operator::from_token`), or a non-`sql:Scope` individual. | `sql_ast::AstError::ShaclViolation` (operator tokens, scope individuals, and shape failures — message carries `[REFUSAL-01]`), plus `MissingProperty`, `MalformedNode`, `MalformedList`, `RecursionLimitExceeded`, `InvalidIdentifier` for the non-shape malformed cases. Unrecognized *function* IRIs use `UnsupportedTerm` with no `[REFUSAL-nn]` marker today (unclassified — pinned as a known gap). | Fix the AST to satisfy the shapes (`ontologies/sql-ast.ttl`); re-admit. |
 | `REFUSAL-02` | `UnimplementedStatementRefusal` | A dialect statement kind parsed from the grammar (`ggen/sql-dialect/sql_statement_kinds.rs`) is recognized but has no evaluation path in this DuckDB build — currently `ConnectStatement`, `DisconnectStatement`. | `sql_ast::AstError::UnsupportedTerm` carrying the decorated string `compile refusal: http://graphlaw.org/sql#<Kind> [REFUSAL-02] UnimplementedStatementRefusal: not implemented by this DuckDB build` | Rewrite the query using admitted statement kinds, or implement the evaluation path behind a receipted ticket. |
-| `REFUSAL-03` | `ScopeIntegrityRefusal` | Scope discrimination boundary violated (rec §1.3): an aggregate in a `WHERE`/`JOIN`/`GROUP BY` position, a `sql:ProcessScope` column in the projection list, or a `sql:ViewScope` column inside a predicate — including `HAVING` (`ViewScope` at `src/sql_ast.rs:284-295`, arm `VIEW_SCOPE_IN_PREDICATE = 5`), an explicit scope annotation on an aggregate argument beneath a predicate-rooted aggregate (arm `SCOPE_IN_PRED_AGG_ARG = 6`, `src/sql_ast.rs:304-311` — laundering marker: the argument position is process-only, so the annotation can only re-scope the aggregate's output past the gate; recovery: drop the scope annotation on the aggregate argument), or a MERGE `ON` condition referencing no target-qualified column (`MERGE_ON_NO_TARGET_COLUMN = 7`, `src/sql_ast.rs:987-993` — a constant-only ON like `$1 = $2` matches every target row and makes WHEN MATCHED fan-out unbounded; recovery: qualify the ON condition to at least one target column, e.g. `t.id = s.id`). | `sql_ast::AstError::ShaclViolation` (message carries `[REFUSAL-03]`); the appended arms carry `code: RefusalCode::ScopeIntegrity` with `shape_id` = the `refusal_arm` constant. | Move the aggregate into `SELECT`/`HAVING` as shapes permit; keep `sql:ProcessScope` columns out of the projection and `sql:ViewScope` columns out of predicate/`GROUP BY`/`HAVING` positions; drop scope annotations on aggregate arguments under predicates; qualify MERGE `ON` to a target column. |
+| `REFUSAL-03` | `ScopeIntegrityRefusal` | Scope discrimination boundary violated (rec §1.3): an aggregate in a `WHERE`/`JOIN`/`GROUP BY` position, a `sql:ProcessScope` column in the projection list, or a `sql:ViewScope` column inside a predicate — including `HAVING` (`ViewScope` at `src/sql_ast.rs:286`, arm `VIEW_SCOPE_IN_PREDICATE = 5`), an explicit scope annotation on an aggregate argument beneath a predicate-rooted aggregate (arm `SCOPE_IN_PRED_AGG_ARG = 6`, `src/sql_ast.rs:286` — laundering marker: the argument position is process-only, so the annotation can only re-scope the aggregate's output past the gate; recovery: drop the scope annotation on the aggregate argument), or a MERGE `ON` condition referencing no target-qualified column (`MERGE_ON_NO_TARGET_COLUMN = 7`, `src/sql_ast.rs:987-993` — a constant-only ON like `$1 = $2` matches every target row and makes WHEN MATCHED fan-out unbounded; recovery: qualify the ON condition to at least one target column, e.g. `t.id = s.id`). | `sql_ast::AstError::ShaclViolation` (message carries `[REFUSAL-03]`); the appended arms carry `code: RefusalCode::ScopeIntegrity` with `shape_id` = the `refusal_arm` constant. | Move the aggregate into `SELECT`/`HAVING` as shapes permit; keep `sql:ProcessScope` columns out of the projection and `sql:ViewScope` columns out of predicate/`GROUP BY`/`HAVING` positions; drop scope annotations on aggregate arguments under predicates; qualify MERGE `ON` to a target column. |
 | `REFUSAL-04` | `CapabilityRefusal` | Builtin SQL eval was given a reader that is not document-backed. The wasm module still admits and compiles SQL-in-RDF through `compile_turtle`, the same path as the other dialects. | `rules::builtins`: `BuiltinError::AstError` whose text starts with the marker `REFUSAL-04` (value of the typed constant `tier::REFUSAL_04_CAPABILITY_REFUSAL`; the current call site `src/rules/builtins.rs` uses the literal string — same text, verified 2026-10-22 lane V-L11) | Supply the admitted Turtle document (`query_document_turtle`) and compile with `compile_turtle`. |
 | `REFUSAL-05` | `UnboundedMutationRefusal` | UPDATE/DELETE statement node with neither `sql:whereColumn` nor `sql:whereValue` — refused at compile, zero engine contact. (Appended 2026-10-23, append-only per convention — never renumbered.) Receipt: `receipts/2026-10-23-eh-closure-wave.md` (W11/W18: REFUSAL-05 pins re-landed 36/0; register row landed W7/W25, no renumbering). | `sql_ast::AstError` (`src/sql_ast/refusals.rs`), raised before any engine call | Add a WHERE clause (`sql:whereColumn`/`sql:whereValue`) bounding the mutation. |
 
@@ -139,7 +142,7 @@ duplicate block was byte-identical to rows 127-129 under `diff`.)
 
 (ii) **Arm-38 note**: the 37→39 skip in the arm namespace is a NAMESPACE
 fact, not a gap: `refusal_arm::UNBOUNDED_MUTATION = 38`
-(`src/sql_ast/refusals.rs:69`) is the internal rendering-arm `shape_id`
+(`src/sql_ast/refusals.rs:68`) is the internal rendering-arm `shape_id`
 behind REFUSAL-05 (a WHERE-less UPDATE/DELETE), NOT a `RefusalCode` enum
 discriminant (enum arms are 1-5, 16-21, 36, 37). Recovery: see the
 REFUSAL-05 row.
@@ -147,7 +150,7 @@ REFUSAL-05 row.
 ### Appended set-operation discriminants (v26.10.23, SQLRDF-27 gap #1) — appended, never renumbered
 
 MalformedAst (REFUSAL-01) rendering arms appended at
-`src/sql_ast/refusals.rs:150-165` (`refusal_arm` table, SQLRDF-27 dialect
+`src/sql_ast/refusals.rs:163-178` (`refusal_arm` table, SQLRDF-27 dialect
 gap #1). Each is `sql_ast::AstError` with `code: RefusalCode::MalformedAst`
 + `shape_id` naming the arm; the message carries the `[REFUSAL-01]` marker;
 refused at compile, zero engine contact. Witness court:
@@ -237,7 +240,7 @@ here, for example blank nodes in plan atoms, or a malformed ABI request), `Resou
 RDF parser — see `src/tier.rs`),
 `DuckDb` (the DuckDB substrate failed; op `duckdb` — dispatched inside the wasm unit on every target as of the 2026-10-23 promotion; receipt: `receipts/2026-10-23-eh-closure-wave.md` §4/§8).
 `BareSql` (SNIFF-01, `docs/reference/design-sniff-fixes.md` fix 4; registered 2026-10-24 — append-only, never renumbered): the document is bare SQL — a leading SQL keyword (`SELECT`/`INSERT`/`UPDATE`, `DELETE FROM`, `CREATE TABLE`) plus a SQL clause keyword (`FROM`/`INTO`/`SET`/`VALUES`) and none of the SPARQL markers (`WHERE`, `FILTER`, graph-pattern `{`, `a` type token, `sql:` vocabulary). Typed refusal at routing (`src/dialect/sniff.rs::bare_sql`) instead of admitting the text as `Dialect::Sparql` and failing SPARQL parse with a generic engine error. Court: `tests/sniff_court.rs` rows 4/4b (flip: delete the `BareSql` arm from `sniff()`), guards 4c/4d (the arm must not capture SPARQL).
-Source of truth: `src/dialect/refusal.rs` `RefusalKind` (9 arms enumerated above; the N3 `Fuse` arm's register row landed 2026-10-24, lane E16 — see the appended N3 inference-fuse section).
+Source of truth: `src/dialect/refusal.rs` `RefusalKind` (10 arms: the 9 enumerated above plus `Fuse`; the N3 `Fuse` arm's register row landed 2026-10-24, lane E16 — see the appended N3 inference-fuse section).
 
 ## Lease reasons (`LeaseRefused.reason`)
 
@@ -250,7 +253,7 @@ Source of truth: `src/dialect/refusal.rs` `RefusalKind` (9 arms enumerated above
 | `untrusted_key` | The attestation key is not in `trusted_keys`. Signed leases only. |
 | `clock_skew` | `issued_unix` leads the verifier's clock by more than `max_skew_secs` (default 60). Signed leases only. |
 
-Required ceilings per step are in the [ABI reference](abi-reference.md#13-law).
+Required ceilings per step are in the [ABI reference](abi-reference.md#law).
 
 ## Receipt reasons (`ReceiptRefused.reason`)
 
@@ -301,10 +304,10 @@ Probe re-run 2026-11-09: `CARGO_TARGET_DIR=a lane-local CARGO_TARGET_DIR cargo r
 byte-identical to the 2026-10-22 capture (see [refusal-playbook.md](refusal-playbook.md)).
 Anchor drift versus the T4 re-audit paragraph above (re-read on disk 2026-11-09; the T4 line
 numbers are historical): `RefusalCode::LiteralNotInt = 36` is now at
-`src/sql_ast/refusals.rs:237` (LiteralNotFloat = 37 at 240); `refusal_arm::JOIN_TYPE_IRI = 37`
+`src/sql_ast/refusals.rs:236` (LiteralNotFloat = 37 at 239); `refusal_arm::JOIN_TYPE_IRI = 37`
 at `:64`; `REFUSAL_04_CAPABILITY_REFUSAL` at `src/tier.rs:26`; the `NoCanonicalGraph` Display
-arm at `src/duckdb_eval.rs:272` (variant at `:225`). Unchanged: constants at
-`src/sql_ast/refusals.rs:9-11`, `pub use refusals::*` at `src/sql_ast.rs:24`, the literal
+arm at `src/duckdb_eval.rs:267` (variant at `:256`). Unchanged: constants at
+`src/sql_ast/refusals.rs:8-10`, `pub use refusals::*` at `src/sql_ast.rs:24`, the literal
 `REFUSAL-04` marker at `src/rules/builtins.rs`, `AttestError` `#[non_exhaustive]` at
 `src/attest.rs`.
 
@@ -319,6 +322,24 @@ prefix. Both source comments defer registration until the egress path is wired i
 this register therefore claims no egress code yet. When the egress op lands
 (`docs/jira/v26.10.22/ADR-canonarrow-dual-witness-egress.md`), append the family here with
 receipts.
+
+## Elixir-side mapping of the 2026-11 codes (graphlaw_ex, re-read 2026-11-25)
+
+Wire code to Elixir code is the `@engine_codes` map in
+`graphlaw_ex/lib/graphlaw_ex/refusal/table.ex:141-154`. It has no entry for `LeaseRequired`;
+an engine `LeaseRequired` therefore decodes as `:engine_unclassified` (class `:unsupported`),
+carried verbatim in `raw`. Under the default `:required` policy the wrapper pre-gates first
+(`Authority.check_lease_policy/3`), so the engine code is reached only when that gate is
+bypassed. `hook-refused` and `RECEIPT-IRI-INVALID` arrive as `Refused` and map to
+`:engine_refused`; match on the message text. No Elixir code was added for them (UNVERIFIED
+whether that is intended; the table is generated, so change it at its source, not by hand).
+
+## Receipt feedback and ledger codes (R2-receipts, 2026-11-25)
+
+| Code | Raised as | Trigger and recovery |
+|---|---|---|
+| `RECEIPT-RECORD-CONFLICT` | `LawError::Refused` (`RefusalKind::Unsupported`), const `REFUSAL_RECEIPT_RECORD_CONFLICT` in `src/receipt.rs` | `receipt::record_signed` was given a `child` already recorded with a different value for a field, or without an optional field the state holds. An exact re-record is a no-op; attaching an attestation to an unattested record is a pure extension. Recovery: use the original receipt, or a new child id. |
+| `RECEIPT-STORE-CORRUPT` | `CoreError::Io` message tag from `ReceiptStore::append_with` (`SerializationFailed` from `load_all`) | A newline-terminated ledger line does not parse as a `ReceiptRecord`. An unterminated trailing fragment is crash residue (ignored by readers, repaired by the next append) and is not this refusal. Recovery: restore the ledger from backup; never hand-edit. |
 
 ## See Also
 

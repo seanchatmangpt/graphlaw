@@ -1,6 +1,6 @@
 [package]
 name = "graphlaw"
-version = "26.10.28"
+version = "26.11.25"
 edition = "2024"
 rust-version = "1.98"
 authors = ["Sean Chatman"]
@@ -186,8 +186,8 @@ features = ["abi", "evidentiary-ring", "pack-tools"]
 # abi integration tests. Optional in [dependencies] (bins cannot see dev-deps);
 # tests keep their unconditional dev-dependency below.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-wasmtime = { version = "48", optional = true, features = ["runtime"] }
-wasmtime-wasi = { version = "48", optional = true }
+wasmtime = { version = "48.0.10", optional = true, features = ["runtime"] }
+wasmtime-wasi = { version = "48.0.10", optional = true }
 # GWS-18 successor: hosts the DuckDB-linked wasm artifact with wasmtime 48
 # new-style EH (Config::wasm_exceptions). The frozen-duckdb wasm static
 # archive is rebuilt with -fwasm-exceptions -mllvm -wasm-use-legacy-eh=0
@@ -198,8 +198,8 @@ divan = "0.1"
 
 # EH lifecycle court (tests/wasm_duckdb_lifecycle_eh.rs): hosts the
 # DuckDB-linked artifact under wasmtime 48 with new W3C exceptions.
-wasmtime = { version = "48", features = ["runtime"] }
-wasmtime-wasi = "48"
+wasmtime = { version = "48.0.10", features = ["runtime"] }
+wasmtime-wasi = "48.0.10"
 serde_json = "1"
 hdrhistogram = "7"
 

@@ -12,18 +12,26 @@ ignore = [
     # transitive via frozen-duckdb -> reqwest ^0.11; h2 0.4 is
     # semver-incompatible with that pin. NOT on the in-WASM runtime
     # execution or receipt-signing path (host tooling only).
-    # Expiry: 2026-11-23 (30-day window for upstream reconciliation).
+    # h2 0.3.27 still in Cargo.lock via reqwest 0.11.27, so kept (verified 2026-11-25).
+    # EXPIRES 2026-12-25 -- tracking: frozen-duckdb reqwest 0.11 -> 0.12 bump.
     "RUSTSEC-2026-0258",
-    # unmaintained warnings (transitive, host tooling only); expiry 2026-11-23
+    # unmaintained warnings (transitive, host tooling only).
+    # EXPIRES 2026-12-25 (prior 2026-11-23 lapsed; re-reviewed 2026-11-25). Tracking: same
+    # frozen-duckdb/reqwest 0.11 upstream bump as RUSTSEC-2026-0258.
+    # RUSTSEC-2025-0134 = rustls-pemfile 1.0.4 (in Cargo.lock via reqwest 0.11.27,
+    # verified 2026-11-25). RUSTSEC-2024-0449: holder crate not identified here
+    # (UNVERIFIED); kept, not removed, until cargo-deny confirms it unused.
     "RUSTSEC-2025-0134",
     "RUSTSEC-2024-0449",
     # RUSTSEC-2026-0391 (zstd 0.13.3) + RUSTSEC-2026-0398/0403 (zstd-safe
-    # 7.3.0): sole holder is wasmtime-internal-cache 48.0.7 (its manifest
+    # 7.3.0): sole holder is wasmtime-internal-cache 48.0.10 (Cargo.lock,
+    # verified 2026-11-25; was 48.0.7 when first accepted; manifest
     # pins zstd "0.13.0"; not bumpable by cargo update — the patched
     # zstd 0.14.3 / zstd-safe 8.2.0 already sit in the lock via zip 9.1.3).
     # Host tooling only (wasmtime cache layer), not the in-WASM runtime or
     # receipt-signing path. Fix tracks the wasmtime upstream bump.
-    # accepted 2026-10-29, expiry 2026-11-28, re-review on expiry.
+    # accepted 2026-10-29. EXPIRES 2026-11-28 -- tracking: wasmtime-internal-cache zstd bump;
+    # still in Cargo.lock (verified), so kept.
     "RUSTSEC-2026-0391",
     "RUSTSEC-2026-0398",
     "RUSTSEC-2026-0403",

@@ -7,7 +7,10 @@
 #   scripts/mutation_court.sh --check    run the court; exit 3 when any mutant in
 #                                        src/registry.rs, in src/registry/*.rs,
 #                                        or in the capabilities()/dispatch()
-#                                        bodies of src/abi.rs is MISSED
+#                                        bodies of src/abi.rs is MISSED; exit 9
+#                                        when timeout.txt has any entry not listed
+#                                        verbatim in scripts/mutation_timeout_allowlist.txt
+#                                        (# comments and blank lines ignored)
 #   scripts/mutation_court.sh --leg callsite-revert
 #                                        run ONLY the callsite-revert leg: patch
 #                                        law.rs authority_for_capability to return
@@ -62,7 +65,7 @@ while [ $# -gt 0 ]; do
     --case)
       [ $# -ge 2 ] || { echo "mutation_court: --case requires a mutant-name argument" >&2; exit 2; }
       CASES+=("$2"); shift 2 ;;
-    -h|--help) sed -n '2,40p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,43p' "$0"; exit 0 ;;
     *) echo "mutation_court: unknown argument: $1 (use --list | --check | --log F | --case N | --force)" >&2; exit 2 ;;
   esac
 done
@@ -333,3 +336,24 @@ if [ -n "$GATED" ]; then
   exit 3
 fi
 echo "mutation_court: no MISSED mutants in src/registry.rs, src/registry/*.rs, or capabilities()/dispatch()" >&2
+
+# Timeouts are unproven kills, not caught mutants (cargo-mutants exit 3). Every
+# timeout.txt entry must be covered by an exact-line allowlist entry; else exit 9.
+TIMEOUTS="$OUT/timeout.txt"
+ALLOWLIST="$ROOT/scripts/mutation_timeout_allowlist.txt"
+if [ -s "$TIMEOUTS" ]; then
+  UNCOVERED=""
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    if [ ! -f "$ALLOWLIST" ] || ! grep -qxF -- "$line" <(grep -vE '^[[:space:]]*(#|$)' "$ALLOWLIST"); then
+      UNCOVERED="${UNCOVERED}${line}"$'\n'
+    fi
+  done <"$TIMEOUTS"
+  if [ -n "$UNCOVERED" ]; then
+    echo "mutation_court: REFUSED [MUTATION-COURT-TIMEOUT]: timed-out mutants not in" >&2
+    echo "  scripts/mutation_timeout_allowlist.txt (exact timeout.txt lines):" >&2
+    printf '%s' "$UNCOVERED" >&2
+    exit 9
+  fi
+  echo "mutation_court: all timeout.txt entries covered by the allowlist" >&2
+fi

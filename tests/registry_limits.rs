@@ -1,6 +1,6 @@
 //! Limits-registry parity court (feature `abi`, Chicago: real `graphlaw::registry`, no doubles).
 //!
-//! The `limits` map of `graphlaw.capability-registry/1` must list all 19 engine limits,
+//! The `limits` map of `graphlaw.capability-registry/1` must list all 33 engine limits (19 legacy + 14 added in v26.11.25),
 //! each read from its real source constant, and each entry in `limit_meta` must carry
 //! `scope`, `unit`, `source` and (where one exists) the machine `refusal_name`.
 #![cfg(feature = "abi")]
@@ -45,7 +45,7 @@ fn registry_surfaces_all_15_engine_limits_at_their_source_values() {
         .and_then(Value::as_object)
         .expect("registry document has a `limits` object");
 
-    assert_eq!(limits.len(), 19, "registry must surface exactly 19 limits");
+    assert_eq!(limits.len(), 33, "registry must surface exactly 33 limits (19 legacy + 14 added in v26.11.25)");
     for (name, value) in EXPECTED {
         let emitted = limits
             .get(*name)
@@ -70,8 +70,8 @@ fn registry_surfaces_all_15_engine_limits_at_their_source_values() {
         .collect();
     assert_eq!(
         scopes,
-        ["abi", "hooks", "n3", "plan", "wasm"].into_iter().collect(),
-        "limit scopes must cover abi, n3, plan, hooks and wasm"
+        ["abi", "duckdb", "hooks", "law", "n3", "plan", "shacl", "wasm"].into_iter().collect(),
+        "limit scopes must cover abi, duckdb, hooks, law, n3, plan, shacl and wasm"
     );
 }
 
@@ -83,7 +83,7 @@ fn limit_meta_carries_scope_unit_source_refusal_for_every_limit() {
         .and_then(Value::as_object)
         .expect("registry document has a `limit_meta` object");
 
-    assert_eq!(meta.len(), 19);
+    assert_eq!(meta.len(), 33);
     let limits: Vec<&str> = EXPECTED.iter().map(|(n, _)| *n).collect();
     for name in limits {
         let entry = meta

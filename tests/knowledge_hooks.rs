@@ -175,19 +175,13 @@ fn refuse_hook_fires_with_reason_and_emits_no_delta() {
     )
     .unwrap();
     let before = state.quad_count();
-    let m = pack.materialize(&state).unwrap();
-    assert_eq!(m.firings.len(), 1);
-    assert_eq!(m.verdicts.len(), 1);
-    assert_eq!(
-        m.verdicts[0].verdict,
-        graphlaw::hooks::Verdict::Refuse("unattended writes are refused".into())
-    );
-    assert_eq!(m.verdicts[0].hook, "https://e/no-writes");
-    // marker only: no CONSTRUCT delta merged
-    assert_eq!(m.state.quad_count(), before + 2);
-    // a refuse firing is once-per-lineage like any firing: fixpoint holds
-    let again = pack.materialize(&m.state).unwrap();
-    assert!(again.firings.is_empty() && again.verdicts.is_empty());
+    // Re-pinned: a refuse effect used to be advisory (verdict + marker, state
+    // advanced). It now halts the transaction with a typed refusal.
+    let err = pack.materialize(&state).expect_err("refuse halts");
+    let msg = format!("{err:?}");
+    assert!(msg.contains("hook-refused") && msg.contains("unattended writes are refused"));
+    assert!(msg.contains("https://e/no-writes"));
+    assert_eq!(state.quad_count(), before, "prior state unchanged");
 }
 
 #[test]

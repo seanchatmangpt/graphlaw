@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "f2e7254a3d74a672fccfc7a90c198062cb2c99c8a71434e1b740a820ed4acaa1",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-11-25T213012Z-Edit-f2e7254a.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/docs/how-to/authorize-with-signed-leases.md",
+  "timestamp_utc": "2026-11-25T213012Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

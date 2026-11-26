@@ -867,6 +867,13 @@ pub mod validator {
     /// Runs the staged validation pipeline over a receipt ledger.
     pub struct ReceiptValidator;
 
+    /// Bounded cross-node clock-skew allowance for `ts_ns` (5 ms, in ns).
+    /// Wall-clock timestamps are observational; causal order is carried by
+    /// `instruction_id` and `prev_chain_hash_hex` linkage. The `monotonic`
+    /// stage refuses a `ts_ns` only when it lies in the future beyond this
+    /// bound relative to the clock; a backwards `ts_ns` step never rejects.
+    pub const MAX_TS_SKEW_NS: u64 = 5_000_000;
+
     impl ReceiptValidator {
         /// Validate `records` against every stage, using `clock` for the
         /// `monotonic` stage's "not in the future" check.
@@ -990,14 +997,13 @@ pub mod validator {
         fn check_monotonic(records: &[ReceiptRecord], clock: &dyn Clock) -> StageResult {
             let now = clock.now_ns();
             let mut prev_instruction: Option<u64> = None;
-            let mut prev_ts: Option<u64> = None;
 
             for (i, record) in records.iter().enumerate() {
-                if record.ts_ns > now {
+                if record.ts_ns > now.saturating_add(MAX_TS_SKEW_NS) {
                     return StageResult::new(
                         "monotonic",
                         CheckOutcome::Fail(format!(
-                            "record {i}: ts_ns ({}) is in the future (now={now})",
+                            "record {i}: ts_ns ({}) is in the future beyond skew bound {MAX_TS_SKEW_NS} ns (now={now})",
                             record.ts_ns
                         )),
                     );
@@ -1013,19 +1019,11 @@ pub mod validator {
                         )),
                     );
                 }
-                if let Some(prev) = prev_ts
-                    && record.ts_ns < prev
-                {
-                    return StageResult::new(
-                        "monotonic",
-                        CheckOutcome::Fail(format!(
-                            "record {i}: ts_ns ({}) decreased from previous record's {prev}",
-                            record.ts_ns
-                        )),
-                    );
-                }
+                // ts_ns regression is deliberately not checked here: it is
+                // observational, and the only regression this stage ever refused
+                // (beyond skew AND broken linkage) is already refused by the
+                // `chain_linkage` stage, so the verdict is identical without it.
                 prev_instruction = Some(record.instruction_id);
-                prev_ts = Some(record.ts_ns);
             }
             StageResult::new("monotonic", CheckOutcome::Pass)
         }

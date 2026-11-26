@@ -181,8 +181,7 @@ ex:s a sql:SelectStatement ;
 ```
 
 Request sent as one packet-4 frame to
-`target-lane-doc/debug/graphlaw-run-eh --wasm
-target-auto/wasm32-wasip1/wasm/graphlaw_wasm.wasm` (historical run,
+`graphlaw-run-eh --wasm priv/graphlaw.wasm` (historical run,
 2026-10-23; to reproduce today build `graphlaw-run-eh` with
 `--features runner-eh` and point `--wasm` at `priv/graphlaw.wasm`).
 Real success reply (trimmed to the load-bearing fields):
@@ -240,4 +239,5 @@ document are deterministic on a fresh per-call connection.
 
 - `docs/jira/v26.10.22/designs/statement-sequence-design.md`
 - `docs/how-to/run-the-wasm-module.md`
+- `docs/how-to/authorize-with-signed-leases.md` (lease policy applies to `law` requests)
 - `docs/refusals.md`

@@ -131,7 +131,18 @@ impl Refusal {
             kind: RefusalKind::EngineRejected,
             dialect: Some(dialect),
             engine: Some(dialect.engine()),
-            message: RefusalMessage::Dynamic(format!("{message:?}")),
+            message: RefusalMessage::Dynamic(engine_summary(&format!("{message:?}"))),
+        }
+    }
+
+    /// Engine refusal from a `Display` error: the human-readable text, bounded.
+    #[allow(dead_code)]
+    pub(crate) fn engine_display(dialect: Dialect, message: impl std::fmt::Display) -> Self {
+        Refusal {
+            kind: RefusalKind::EngineRejected,
+            dialect: Some(dialect),
+            engine: Some(dialect.engine()),
+            message: RefusalMessage::Dynamic(bound_text(&message.to_string())),
         }
     }
 
@@ -143,6 +154,32 @@ impl Refusal {
             message: RefusalMessage::Static(message),
         }
     }
+}
+
+const ENGINE_MESSAGE_MAX_BYTES: usize = 512;
+
+/// Bound a diagnostic to `ENGINE_MESSAGE_MAX_BYTES`, marking truncation.
+fn bound_text(s: &str) -> String {
+    if s.len() <= ENGINE_MESSAGE_MAX_BYTES {
+        return s.to_owned();
+    }
+    let mut n = ENGINE_MESSAGE_MAX_BYTES;
+    while n > 0 && !s.is_char_boundary(n) {
+        n -= 1;
+    }
+    format!("{}…[truncated {} bytes]", &s[..n], s.len() - n)
+}
+
+/// Bounded rendering of a `Debug`-formatted engine error. A Debug-quoted string
+/// (callers that pass pre-rendered text) is unquoted; any other Debug text is kept
+/// verbatim, because engine diagnostics (e.g. N3's `quantifiers must precede ...`)
+/// are the typed phrases callers and courts match on. The length bound is the
+/// guard, not a collapse to the type name.
+fn engine_summary(dbg: &str) -> String {
+    if let Some(inner) = dbg.strip_prefix('"').and_then(|r| r.strip_suffix('"')) {
+        return bound_text(&inner.replace("\\\"", "\"").replace("\\n", " "));
+    }
+    bound_text(dbg)
 }
 
 impl std::fmt::Display for Refusal {

@@ -9,11 +9,13 @@ change rather than as silent drift.
 Schema id: `graphlaw.capability-registry/1`. The schema is frozen for v26.9.29; changes are
 additive only. `ABI_VERSION` stays `1`.
 
-Status of this page: re-verified 2026-11-09 against crate 26.10.28 (registry contract introduced in v26.9.29). The emitter
+Status of this page: field names and limits re-read 2026-11-25 against
+`registry/capability-registry.json` (`graphlaw_version` 26.11.25, `abi_version` 1); `--check` was
+not run for this edit. Registry contract introduced in v26.9.29. The emitter
 (`src/registry/definitions.rs`, `src/bin/graphlaw_registry.rs`), the `registry/` directory and the
 registry-vs-dispatch tests (`tests/registry_dispatch.rs`, `tests/registry_artifacts.rs`,
 `tests/op_examples.rs`) are present and green on the current tree:
-`cargo run --features abi --bin graphlaw-registry -- --check` exits 0.
+`graphlaw-registry --check` exited 0 on 2026-11-09 (not re-run 2026-11-25).
 
 ## Files under `registry/`
 
@@ -54,30 +56,35 @@ with a `.blake3` file.
 ```json
 {
   "schema": "graphlaw.capability-registry/1",
-  "graphlaw_version": "<CARGO_PKG_VERSION, e.g. 26.10.10>",
+  "graphlaw_version": "<CARGO_PKG_VERSION, e.g. 26.11.25>",
   "abi_version": 1,
   "surface_blake3": "blake3:<64 lowercase hex>",
   "registry_blake3": "blake3:<64 lowercase hex>",
   "authorities": [{"capability": "...", "authority": "..."}],
   "engines": ["PurRdf", "FrozenDuckdb"],
-  "refusal_kinds": ["NotSemanticContent", "Ambiguous", "EngineRejected", "Unsupported", "ResourceLimit"],
+  "refusal_kinds": ["NotSemanticContent", "Ambiguous", "EngineRejected", "Unsupported", "ResourceLimit",
+                    "TierMismatch", "DuckDb", "BareSql", "Fuse"],
   "rdf_dialects": [], "other_dialects": [],
   "regimes": ["simple", "rdf", "rdfs", "owl-rl", "d"],
   "lease_ceilings": ["observe", "select", "construct"],
   "lease_reasons": ["expired", "out_of_scope", "ceiling", "bad_signature", "untrusted_key", "clock_skew"],
   "receipt_reasons": ["unattested", "bad_signature", "untrusted_key"],
   "policy_refusal_kinds": ["MissingEntry", "InventedOutcome", "BadMass", "DeadEnd", "Malformed"],
-  "limits": {"hooks_max_firings": 10000, "hooks_max_rounds": 64, "hooks_max_state_quads": 1000000,
-             "max_atoms_per_field": 10000, "max_json_depth": 64, "max_outstanding_alloc_bytes": 268435456,
-             "max_plan_actions": 1000, "max_plan_total_atoms": 100000, "max_policy_entries": 100000,
-             "max_request_bytes": 16777216, "n3_max_derived_facts": 500000, "n3_max_iterations": 4000,
-             "n3_max_match_steps": 200000, "n3_max_term_bytes": 65536, "n3_max_total_bytes": 268435456},
+  "limits": {"<name>": <integer>},
   "refusal_codes": [{"code": "...", "order": 1, "kind": null, "fields": []}],
   "law_steps": [{"name": "...", "order": 1, "ceiling": "observe", "fields": []}],
   "ops": []
 }
 ```
 
+- `limits` (integers; 33 keys on 2026-11-25) includes `datalog_derived_facts` 200000,
+  `datalog_join_steps` 50000000, `datalog_output_bytes` 8388608, `max_datalog_rules` 10000,
+  `max_datalog_facts` 100000, `max_law_steps` 1000, `n3_max_iterations` 4000000,
+  `max_outstanding_alloc_bytes` 16777216, plus `hooks_*`, `n3_*`, `shacl_*`, `duckdb_*` keys.
+  Values: see [ABI reference](abi-reference.md#Constants); per-key scope, source and unit are in
+  the top-level `limit_meta`.
+- Further top-level keys present: `limit_meta`, `model_enums`, `models`, `receipt_surface`,
+  `receipt_surface_blake3`, `refusal_kind_classes`.
 - `authorities` is built from `BACKEND_AUTHORITIES`; the upstream `revision` is intentionally
   omitted.
 - `rdf_dialects` and `other_dialects` hold `Dialect` objects: `name`, global `order` (RDF dialects
@@ -85,7 +92,8 @@ with a `.blake3` file.
   (`rdf` or `other`).
 - `refusal_codes` lists the `details.code` values: `Refused`, `ResourceLimit`, `PlanRefused`,
   `ReceiptRequired`, `ReceiptRefused`, `LeaseRefused`, `NotAdmitted`, `DuckDb`, `UnverifiedLeaseRefused`,
-  `PolicyRefused`, each with its `details` fields.
+  `PolicyRefused`, each with its `details` fields. `LeaseRequired` is emitted by
+  `src/abi/lease.rs:109` but is not in this list on 2026-11-25.
 - `law_steps` uses wire names (`owl-rl`, `record-receipts`, ...) with the lease ceiling a step
   needs, or null when it needs none.
 - Each `ops` entry has `name`, `order` (1..14), `summary`, `request.fields`, `responses`

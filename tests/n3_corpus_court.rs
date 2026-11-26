@@ -22,6 +22,7 @@ use serde_json::Value;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
+// MACHINE-PINNED: operator purrdf checkout; the court skips loudly when absent
 const CORPUS: &str = "/Users/sac/purrdf/corpora/n3";
 
 fn corpus_root() -> PathBuf {

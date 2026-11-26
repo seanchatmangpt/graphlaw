@@ -1,75 +1,241 @@
-//! Lane L67 Phase D — lease-verification isolation DRAFT (NEW design, UNWIRED).
+//! Lease admission: **Phi_lease => Valid before dispatch**.
 //!
-//! Law being enacted: **Phi_lease => Valid before dispatch**. A `law` request's
-//! lease is validated exactly once, upfront, into an opaque proof object; the
-//! step loop then consumes the proof without re-deriving trust. No lazy
-//! validation inside op loops.
+//! A `law` request's lease is validated exactly once, up front, into an
+//! opaque [`LeaseContext`]; the step loop then consumes the proof and runs a
+//! pure scope/ceiling predicate only. No signature check, no clock read and
+//! no expiry judgement happens inside the step loop, so an invalid lease can
+//! never pass step N-1 and refuse at step N.
 //!
-//! This file is a design draft. `mod lease` includes it so the draft sits
-//! with the ops it describes. The types below are inside a doc fence, so
-//! `LeaseContext` is not a compiled item and no op calls it. The
-//! `unimplemented!` lines are not compiled. It documents the lazy-validation
-//! sites in `src/abi.rs` that a later dispatch change would replace.
-//!
-//! # Current lazy-validation sites (replaced by this design)
-//!
-//! | Site | abi.rs lines | Lazy behavior today |
-//! |---|---|---|
-//! | `LeaseAuth::authorize` | 892-902 | Per-step: signature/expiry/scope re-judged inside the step loop (`op_law`, called at 1063-1065 and via `transition` at 1135). An invalid lease can pass N-1 steps before refusing at step N. |
-//! | `LeaseAuth::transition` | 904-918 | Per-step re-dispatch to `transition_leased_unverified` / `transition_authorized`; the clock is consulted on every step (`SystemClock` at 900, 916). |
-//! | `LeaseAuth::id` | 884-890 | Identity re-derived per receipt instead of fixed at admission. |
-//! | `lease_auth_of` | 936-988 | Wire parsing only; attestation signature is verified lazily inside `SignedLease::authorize` (law.rs), not at the boundary. |
-//! | expiry/skew check | (law.rs, via 900/916) | `expires_unix` judged per step against the module clock; an unverified lease re-trusts caller `now_unix` on every authorize. |
-//!
-//! # New design
-//!
-//! ```
-//! /// Validated execution proof, returned upfront or refused. No op loop
-//! /// sees an un-verified lease.
-//! pub struct LeaseContext {
-//!     lease_id: String,
-//!     ceiling: Ceiling,
-//!     scope: Vec<String>,
-//!     expires_unix: u64,
-//!     kind: LeaseContextKind,
-//! }
-//!
-//! enum LeaseContextKind {
-//!     /// No lease supplied: steps run unleased (authorization is a no-op).
-//!     None,
-//!     /// Ed25519 attestation VERIFIED at construction; expiry/skew judged
-//!     /// once against the module's own clock at construction.
-//!     SignedVerified,
-//!     /// Explicitly unsigned (`unverified_lease: true`); carries the caller
-//!     /// clock it was pinned to. Proves nothing about authority — retained
-//!     /// only as a typed, loud downgrade.
-//!     UnverifiedPinned { now_unix: u64 },
-//! }
-//!
-//! impl LeaseContext {
-//!     /// Total function wire -> proof. Refuses here (UnverifiedLeaseRefused,
-//!     /// LeaseRefused) or returns a proof that is Valid for the whole request.
-//!     /// No validation happens after this returns Ok.
-//!     pub fn admit(v: &serde_json::Value) -> Result<LeaseContext, Fail> { unimplemented!("L67 draft") }
-//!
-//!     /// Pure predicate over already-validated facts (scope/ceiling lookup);
-//!     /// never re-checks signatures, never reads a clock.
-//!     pub fn authorize(&self, step: &str, required: Ceiling) -> Result<(), LawError> { unimplemented!("L67 draft") }
-//! }
-//! ```
-//!
-//! Dispatch shape after wiring:
-//!
-//! ```text
-//! let ctx = LeaseContext::admit(v)?;      // Phi_lease decided HERE, once
-//! for step in steps {                      // loop contains no validation
-//!     ctx.authorize(step.name, step.ceiling)?;
-//!     let (child, receipt) = state.transition_leased(&ctx, step)?; // proof-consuming
-//! }
-//! ```
-//!
-//! Wire surface is unchanged (same JSON fields, same refusal codes), so this
-//! is a refactor of the trust boundary, not the ABI.
-//!
-//! See Also: `ops/governance.rs` (current sliced code), `docs/refusals.md`
-//! (`LeaseRefused`, `UnverifiedLeaseRefused`), `src/law.rs` (`SignedLease`).
+//! Lease policy (explicit, typed): [`LeasePolicy::NoneAllowed`] (the default,
+//! preserving every lease-less rdfs/shacl/n3 chain) lets a request carry no
+//! lease; [`LeasePolicy::Required`] refuses a lease-less request with
+//! `LeaseRequired` before any step runs. A host sets the process-wide policy
+//! with [`set_lease_policy`]; a request may only tighten it with
+//! `"lease_policy": "required"` (it can never loosen a `Required` host).
+
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use serde_json::{Value, json};
+
+use super::ops::governance::{lease_obj, trusted_keys_of};
+use super::{Fail, Res, bad, bad_refusal, str_field};
+use crate::attest::Attestation;
+use crate::law::{
+    Ceiling, Clock, DEFAULT_MAX_SKEW_SECS, LawError, Lease, LeaseReason, SignedLease,
+};
+
+/// Whether a `law` request may run without any lease.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LeasePolicy {
+    /// A request without a lease runs unleased (compatibility default).
+    NoneAllowed,
+    /// A request without a lease is refused (`LeaseRequired`) before any step.
+    Required,
+}
+
+static LEASE_REQUIRED: AtomicBool = AtomicBool::new(false);
+
+/// Set the process-wide lease policy (host-owned; default `NoneAllowed`).
+pub fn set_lease_policy(policy: LeasePolicy) {
+    LEASE_REQUIRED.store(policy == LeasePolicy::Required, Ordering::SeqCst);
+}
+
+/// The current process-wide lease policy.
+pub fn lease_policy() -> LeasePolicy {
+    if LEASE_REQUIRED.load(Ordering::SeqCst) {
+        LeasePolicy::Required
+    } else {
+        LeasePolicy::NoneAllowed
+    }
+}
+
+/// Process policy tightened (never loosened) by the request's `lease_policy`.
+fn effective_policy(v: &Value) -> Res<LeasePolicy> {
+    let host = lease_policy();
+    match v.get("lease_policy") {
+        None | Some(Value::Null) => Ok(host),
+        Some(Value::String(s)) if s == "none-allowed" => Ok(host),
+        Some(Value::String(s)) if s == "required" => Ok(LeasePolicy::Required),
+        Some(_) => Err(bad("`lease_policy` must be \"none-allowed\" or \"required\"")),
+    }
+}
+
+/// How the lease in a [`LeaseContext`] was validated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::abi) enum LeaseContextKind {
+    /// No lease supplied and policy is `NoneAllowed`: authorization is a no-op.
+    None,
+    /// Ed25519 attestation verified; skew and expiry judged once against the
+    /// module clock at admission.
+    SignedVerified,
+    /// Unsigned (`unverified_lease: true`), pinned to the caller's clock.
+    /// Proves nothing about authority; a typed, loud downgrade.
+    UnverifiedPinned { now_unix: u64 },
+}
+
+/// Validated execution proof. Constructed only by [`LeaseContext::admit`].
+#[derive(Debug, Clone)]
+pub(in crate::abi) struct LeaseContext {
+    lease: Option<Lease>,
+    kind: LeaseContextKind,
+}
+
+fn refuse(lease: &Lease, step: &str, reason: LeaseReason) -> LawError {
+    LawError::LeaseRefused {
+        lease_id: lease.id.clone(),
+        step: step.to_string(),
+        reason,
+    }
+}
+
+impl LeaseContext {
+    /// Total function wire -> proof. Signature, key trust, issuer skew and
+    /// expiry are decided HERE, once, at `clock`; `first_step` only labels a
+    /// refusal. Returns `Ok` only if the lease is valid for the whole request.
+    pub(in crate::abi) fn admit(
+        v: &Value,
+        clock: &dyn Clock,
+        first_step: &str,
+    ) -> Result<LeaseContext, Fail> {
+        let policy = effective_policy(v)?;
+        match (v.get("signed_lease"), v.get("lease")) {
+            (None, None) => {
+                if policy == LeasePolicy::Required {
+                    return Err(Fail {
+                        refusal: bad_refusal(
+                            "a lease is required: supply `signed_lease` + `trusted_keys` \
+                             (lease policy `required`)",
+                        ),
+                        details: Some(json!({"code": "LeaseRequired"})),
+                    });
+                }
+                Ok(LeaseContext {
+                    lease: None,
+                    kind: LeaseContextKind::None,
+                })
+            }
+            (Some(_), Some(_)) => Err(bad("give `signed_lease` or `lease`, not both")),
+            (Some(sl), None) => {
+                let a = sl
+                    .get("attestation")
+                    .ok_or_else(|| bad("`signed_lease` needs an `attestation`"))?;
+                let attestation = Attestation::from_json(
+                    &json!({
+                        "key_id": str_field(a, "key_id")?,
+                        "payload_blake3": str_field(a, "payload_blake3")?,
+                        "signature": str_field(a, "signature")?,
+                    })
+                    .to_string(),
+                )
+                .map_err(|e| bad(format!("`attestation`: {e}")))?;
+                let max_skew_secs = match v.get("max_skew_secs") {
+                    None | Some(Value::Null) => DEFAULT_MAX_SKEW_SECS,
+                    Some(n) => n
+                        .as_u64()
+                        .ok_or_else(|| bad("`max_skew_secs` must be an unsigned integer"))?,
+                };
+                let signed = SignedLease {
+                    lease: lease_obj(
+                        sl.get("lease")
+                            .ok_or_else(|| bad("`signed_lease` needs a `lease`"))?,
+                    )?,
+                    attestation,
+                };
+                let trusted = trusted_keys_of(v)?;
+                crate::attest::verify_lease(&signed, &trusted).map_err(|e| {
+                    super::ops::governance::law_err(refuse(
+                        &signed.lease,
+                        first_step,
+                        match e {
+                            crate::attest::AttestError::UnknownKey => LeaseReason::UntrustedKey,
+                            _ => LeaseReason::BadSignature,
+                        },
+                    ))
+                })?;
+                let now = clock.now_unix();
+                if signed.lease.issued_unix > now.saturating_add(max_skew_secs) {
+                    return Err(super::ops::governance::law_err(refuse(
+                        &signed.lease,
+                        first_step,
+                        LeaseReason::ClockSkew,
+                    )));
+                }
+                if now >= signed.lease.expires_unix {
+                    return Err(super::ops::governance::law_err(refuse(
+                        &signed.lease,
+                        first_step,
+                        LeaseReason::Expired,
+                    )));
+                }
+                Ok(LeaseContext {
+                    lease: Some(signed.lease),
+                    kind: LeaseContextKind::SignedVerified,
+                })
+            }
+            (None, Some(l)) => {
+                if v.get("unverified_lease") != Some(&Value::Bool(true)) {
+                    return Err(Fail {
+                        refusal: bad_refusal(
+                            "an unsigned `lease` is refused: supply `signed_lease` + \
+                             `trusted_keys`, or set `\"unverified_lease\": true` to accept a \
+                             lease no one signed",
+                        ),
+                        details: Some(json!({"code": "UnverifiedLeaseRefused"})),
+                    });
+                }
+                let now = v
+                    .get("now_unix")
+                    .and_then(Value::as_u64)
+                    .ok_or_else(|| bad("an unverified `lease` requires integer `now_unix`"))?;
+                let lease = lease_obj(l)?;
+                if now >= lease.expires_unix {
+                    return Err(super::ops::governance::law_err(refuse(
+                        &lease,
+                        first_step,
+                        LeaseReason::Expired,
+                    )));
+                }
+                Ok(LeaseContext {
+                    lease: Some(lease),
+                    kind: LeaseContextKind::UnverifiedPinned { now_unix: now },
+                })
+            }
+        }
+    }
+
+    /// Id of the admitted lease, if any.
+    pub(in crate::abi) fn id(&self) -> Option<String> {
+        self.lease.as_ref().map(|l| l.id.clone())
+    }
+
+    #[allow(dead_code)]
+    pub(in crate::abi) fn kind(&self) -> LeaseContextKind {
+        self.kind
+    }
+
+    /// Pure predicate over admitted facts: scope then ceiling. Never checks a
+    /// signature and never reads a clock.
+    pub(in crate::abi) fn authorize(&self, step: &str, required: Ceiling) -> Result<(), LawError> {
+        let Some(l) = &self.lease else { return Ok(()) };
+        if !l.scope.iter().any(|s| s == step) {
+            return Err(refuse(l, step, LeaseReason::OutOfScope));
+        }
+        if required > l.ceiling {
+            return Err(refuse(l, step, LeaseReason::Ceiling));
+        }
+        Ok(())
+    }
+
+    /// Ceiling-only predicate for steps with no scope row (`record-receipts`):
+    /// a presented lease must still reach `required`; no lease is a no-op.
+    pub(in crate::abi) fn authorize_unscoped(
+        &self,
+        step: &str,
+        required: Ceiling,
+    ) -> Result<(), LawError> {
+        match &self.lease {
+            Some(l) if required > l.ceiling => Err(refuse(l, step, LeaseReason::Ceiling)),
+            _ => Ok(()),
+        }
+    }
+}

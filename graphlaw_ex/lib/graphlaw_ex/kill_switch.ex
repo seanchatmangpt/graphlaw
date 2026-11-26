@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sean Chatman <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
 defmodule GraphlawEx.KillSwitch do
   @moduledoc """
   Art.14 operator kill-switch (GL28-6): a signed Ed25519 revocation, verified
@@ -31,6 +34,18 @@ defmodule GraphlawEx.KillSwitch do
   Trusted operator keys come only from the `install/2` second argument
   (runtime config) — a caller-supplied document can never introduce its own
   trust anchor.
+
+  ## As an authority input
+
+  The kill-switch is the operator-level, revoking half of the authority model.
+  `GraphlawEx.Authority.authorize/2` decides whether a caller *presented* enough
+  (a signed lease's ceiling and scope); `check/1` decides whether the operator has
+  *withdrawn* authority for an engine (`"all"` or one `wasm_sha256`). A call is
+  authorized only when both pass; revocation always wins. `check/1` is pure with
+  respect to its arguments (it reads one `:persistent_term`), and its refusal maps
+  through `GraphlawEx.Error.wrap/1` like any other, so downstream policy layers can
+  treat a revoked engine as a forbidden-class denial via `evidence["refusal_code"]
+  == "lease_revoked"`.
   """
 
   alias GraphlawEx.Refusal
@@ -50,41 +65,135 @@ defmodule GraphlawEx.KillSwitch do
   Verifies a revocation document against `trusted_keys` and, on success,
   installs its epoch under `{GraphlawEx.KillSwitch, :epoch}`.
 
-  Returns `{:ok, installed}` with `%{epoch, scope, key_id, reason, installed_at}`
-  or `{:error, %GraphlawEx.Refusal{code: :lease_revoked}}` — a malformed,
-  untrusted, badly-signed or stale document is refused at publication and the
-  epoch term is left untouched.
+  Returns `{:ok, %{epoch, scope}}` (the reason and key id are never handed
+  back to callers) or `{:error, %GraphlawEx.Refusal{code: :lease_revoked}}` — a
+  malformed, untrusted, badly-signed or stale document is refused at
+  publication and the epoch term is left untouched. `scope` must be `"all"` or
+  a 64-hex wasm digest (normalized to lower case). Installs are serialized, so
+  the epoch never regresses under concurrent publication.
   """
   @spec install(map(), trusted_keys()) :: {:ok, map()} | {:error, Refusal.t()}
   def install(doc, trusted_keys) when is_map(doc) and is_map(trusted_keys) do
+    doc |> safe_install(trusted_keys) |> emit_install(doc)
+  end
+
+  def install(_doc, _trusted_keys) do
+    {:error,
+     Refusal.new(:lease_revoked, "install requires a document map and a trusted-keys map", %{
+       reason: :malformed
+     })}
+  end
+
+  defp safe_install(doc, trusted_keys) do
+    do_install(doc, trusted_keys)
+  rescue
+    # Unencodable revocation values (tuples, pids, ...) must refuse, not crash.
+    _ in [FunctionClauseError, ArgumentError, Protocol.UndefinedError, Jason.EncodeError] ->
+      {:error,
+       Refusal.new(:lease_revoked, "revocation document is not canonicalizable", %{
+         reason: :malformed
+       })}
+  end
+
+  # Telemetry: [:graphlaw_ex, :kill_switch, :installed | :refused]. Telemetry
+  # must never break an install, so emission failures are swallowed.
+  defp emit_install({:ok, %{epoch: epoch, scope: scope}} = result, _doc) do
+    safe_emit(:installed, %{epoch: epoch, scope: scope})
+    result
+  end
+
+  defp emit_install({:error, %Refusal{details: details}} = result, doc) do
+    safe_emit(:refused, %{
+      reason: Map.get(details || %{}, :reason),
+      epoch: get_in_epoch(doc)
+    })
+
+    result
+  end
+
+  defp get_in_epoch(%{"revocation" => %{"epoch" => e}}) when is_integer(e), do: e
+  defp get_in_epoch(_), do: nil
+
+  defp safe_emit(kind, metadata) do
+    GraphlawEx.Telemetry.emit([:graphlaw_ex, :kill_switch, kind], %{count: 1}, metadata)
+  rescue
+    _ -> :ok
+  catch
+    _, _ -> :ok
+  end
+
+  @doc """
+  TEST-ONLY. Clears the installed revocation (epoch back to `0`). Refused with a
+  typed refusal unless `Application.get_env(:graphlaw_ex, :kill_switch_test_mode)`
+  is `true` (set in `config/test.exs`). A tripped switch stays tripped across
+  worker recycles because the state lives in `:persistent_term`.
+  """
+  @spec reset() :: :ok | {:error, Refusal.t()}
+  def reset, do: erase()
+
+  defp do_install(doc, trusted_keys) do
     with {:ok, rev} <- revocation_of(doc),
          {:ok, att} <- attestation_of(doc),
          :ok <- alg_of(att),
          {:ok, pk} <- key_of(att, trusted_keys),
-         :ok <- signature_of(att, rev, pk),
-         :ok <- monotone_epoch(rev) do
-      installed = %{
-        epoch: rev["epoch"],
-        scope: rev["scope"],
-        key_id: att.key_id,
-        reason: rev["reason"],
-        installed_at: System.system_time(:second)
-      }
+         :ok <- signature_of(att, rev, pk) do
+      scope = normalize_scope(rev["scope"])
+      epoch = rev["epoch"]
 
-      :persistent_term.put(@pt_key, installed)
-      {:ok, installed}
+      # Compare-and-put under a lock restricted to `[node()]`: the epoch check
+      # and the put are one critical section, so a concurrent lower epoch can
+      # never overwrite. The scope is deliberately NODE-LOCAL (the epoch lives
+      # in this node's :persistent_term); cluster-wide propagation is the job of
+      # the `:kill_switch_propagate` hook in `KillSwitch.Server`, and
+      # `KillSwitch.Server` is the sole durable writer.
+      :global.trans({{__MODULE__, :install}, self()}, fn -> compare_and_put(epoch, scope) end, [
+        node()
+      ])
+      |> case do
+        :aborted ->
+          {:error,
+           Refusal.new(:lease_revoked, "install could not be serialized", %{reason: :lock_failed})}
+
+        result ->
+          result
+      end
     end
   end
+
+  defp compare_and_put(epoch, scope) do
+    with :ok <- monotone_epoch(%{"epoch" => epoch}) do
+      :persistent_term.put(@pt_key, %{
+        epoch: epoch,
+        scope: scope,
+        installed_at: System.system_time(:second)
+      })
+
+      {:ok, %{epoch: epoch, scope: scope}}
+    end
+  end
+
+  defp normalize_scope("all"), do: "all"
+  defp normalize_scope(scope), do: String.downcase(scope)
+
+  defp valid_scope?("all"), do: true
+
+  defp valid_scope?(scope) when is_binary(scope),
+    do: Regex.match?(~r/\A[0-9a-f]{64}\z/, String.downcase(scope))
 
   @doc """
   The per-call gate. `:ok` when no revocation is installed or the installed
   scope does not cover `wasm_sha256`; otherwise
   `{:error, %GraphlawEx.Refusal{code: :lease_revoked, class: :refused_identity,
   broken_term: :R_missing_standing}}` with details
-  `%{epoch, key_id, scope, wasm_sha256, reason}`.
+  `%{epoch, scope, wasm_sha256}`. An exception while checking is treated as
+  tripped (fail closed).
   """
   @spec check(String.t() | nil) :: :ok | {:error, Refusal.t()}
   def check(wasm_sha256) do
+    # Normalize like the installed scope (lower case) so a differently-cased
+    # digest cannot slip past a scoped revocation (fail open).
+    wasm_sha256 = if is_binary(wasm_sha256), do: String.downcase(wasm_sha256), else: wasm_sha256
+
     case :persistent_term.get(@pt_key, nil) do
       nil ->
         :ok
@@ -98,6 +207,10 @@ defmodule GraphlawEx.KillSwitch do
       _scope_mismatch ->
         :ok
     end
+  rescue
+    _ -> {:error, revoked_refusal(%{epoch: nil, scope: nil}, wasm_sha256)}
+  catch
+    _kind, _reason -> {:error, revoked_refusal(%{epoch: nil, scope: nil}, wasm_sha256)}
   end
 
   @doc "The installed epoch, or `0` when nothing is installed."
@@ -114,13 +227,22 @@ defmodule GraphlawEx.KillSwitch do
   def canonical_json(value), do: value |> canonical_iodata() |> IO.iodata_to_binary()
 
   @doc """
-  Erases the installed epoch (back to `0`). Court seam only: an operator
-  re-admits by installing a *higher* epoch whose scope misses the engine, or a
-  signed re-admission document — production never calls this.
+  TEST-ONLY court seam: erases the installed epoch (back to `0`). Refused unless
+  `Application.get_env(:graphlaw_ex, :kill_switch_test_mode)` is `true`. An
+  operator re-admits by installing a *higher* epoch whose scope misses the
+  engine — production never calls this.
   """
+  @spec erase() :: :ok | {:error, Refusal.t()}
   def erase do
-    :persistent_term.erase(@pt_key)
-    :ok
+    if Application.get_env(:graphlaw_ex, :kill_switch_test_mode, false) == true do
+      :persistent_term.erase(@pt_key)
+      :ok
+    else
+      {:error,
+       Refusal.new(:lease_revoked, "kill-switch erase/reset is test-only", %{
+         reason: :test_only
+       })}
+    end
   end
 
   # ------------------------------------------------------------------
@@ -131,13 +253,24 @@ defmodule GraphlawEx.KillSwitch do
     case doc do
       %{"revocation" => %{"epoch" => epoch, "scope" => scope} = rev}
       when is_integer(epoch) and epoch > 0 and is_binary(scope) and scope != "" ->
-        {:ok, rev}
+        if valid_scope?(scope) do
+          {:ok, rev}
+        else
+          {:error,
+           Refusal.new(:lease_revoked, "revocation scope must be \"all\" or a 64-hex digest", %{
+             reason: :bad_scope
+           })}
+        end
 
       _ ->
         {:error,
-         Refusal.new(:lease_revoked, "revocation document lacks {revocation: {epoch > 0, scope}}", %{
-           reason: :malformed
-         })}
+         Refusal.new(
+           :lease_revoked,
+           "revocation document lacks {revocation: {epoch > 0, scope}}",
+           %{
+             reason: :malformed
+           }
+         )}
     end
   end
 
@@ -148,40 +281,49 @@ defmodule GraphlawEx.KillSwitch do
 
   defp attestation_of(_) do
     {:error,
-     Refusal.new(:lease_revoked, "revocation document lacks {attestation: {key_id, alg, signature}}", %{
-       reason: :malformed
-     })}
+     Refusal.new(
+       :lease_revoked,
+       "revocation document lacks {attestation: {key_id, alg, signature}}",
+       %{
+         reason: :malformed
+       }
+     )}
   end
 
   defp alg_of(%{alg: "ed25519"}), do: :ok
 
   defp alg_of(%{alg: other}) do
     {:error,
-     Refusal.new(:lease_revoked, "unsupported attestation alg #{inspect(other)}", %{reason: :bad_alg})}
+     Refusal.new(:lease_revoked, "unsupported attestation alg #{bounded(other)}", %{
+       reason: :bad_alg
+     })}
   end
 
   defp key_of(%{key_id: key_id}, trusted_keys) do
     case Map.fetch(trusted_keys, key_id) do
       {:ok, raw} ->
         case decode_key(raw) do
-          {:ok, pk} -> {:ok, pk}
-          :error -> {:error, untrusted("trusted key #{inspect(key_id)} is not a 32-byte Ed25519 public key")}
+          {:ok, pk} ->
+            {:ok, pk}
+
+          _not_a_key ->
+            {:error,
+             untrusted("trusted key for #{bounded(key_id)} is not a 32-byte Ed25519 public key")}
         end
 
       :error ->
-        {:error, untrusted("attestation key_id #{inspect(key_id)} is not a trusted operator key")}
+        {:error, untrusted("attestation key_id #{bounded(key_id)} is not a trusted operator key")}
     end
   end
 
-  defp signature_of(%{key_id: key_id, signature: signature}, rev, pk) do
+  defp signature_of(%{signature: signature}, rev, pk) do
     with {:ok, sig} <- decode_signature(signature) do
       if Ed25519.valid_signature?(sig, canonical_json(rev), pk) do
         :ok
       else
         {:error,
          Refusal.new(:lease_revoked, "revocation signature does not verify", %{
-           reason: :invalid_signature,
-           key_id: key_id
+           reason: :invalid_signature
          })}
       end
     end
@@ -194,28 +336,43 @@ defmodule GraphlawEx.KillSwitch do
       :ok
     else
       {:error,
-       Refusal.new(:lease_revoked, "epoch #{epoch} is not above the installed epoch #{current}", %{
-         reason: :stale_epoch,
-         epoch: epoch,
-         current_epoch: current
-       })}
+       Refusal.new(
+         :lease_revoked,
+         "epoch #{epoch} is not above the installed epoch #{current}",
+         %{
+           reason: :stale_epoch,
+           epoch: epoch,
+           current_epoch: current
+         }
+       )}
     end
   end
 
   defp revoked_refusal(installed, wasm_sha256) do
-    Refusal.new(:lease_revoked, "operator revocation epoch #{installed.epoch} covers this engine", %{
-      epoch: installed.epoch,
-      key_id: installed.key_id,
-      scope: installed.scope,
-      wasm_sha256: wasm_sha256,
-      reason: installed.reason
-    })
+    Refusal.new(
+      :lease_revoked,
+      "operator revocation epoch #{installed.epoch} covers this engine",
+      %{
+        epoch: installed.epoch,
+        scope: installed.scope,
+        wasm_sha256: wasm_sha256
+      }
+    )
   end
+
+  defp bounded(value), do: inspect(value, printable_limit: 64, limit: 8)
 
   defp untrusted(message), do: Refusal.new(:lease_revoked, message, %{reason: :unknown_key_id})
 
   defp decode_key(pk) when is_binary(pk) and byte_size(pk) == 32, do: {:ok, pk}
-  defp decode_key(pk) when is_binary(pk), do: hex_decode(pk)
+
+  defp decode_key(pk) when is_binary(pk) do
+    case hex_decode(pk) do
+      {:ok, raw} when byte_size(raw) == 32 -> {:ok, raw}
+      _ -> :error
+    end
+  end
+
   defp decode_key(_), do: :error
 
   defp decode_signature(sig) when is_binary(sig) do
@@ -224,12 +381,18 @@ defmodule GraphlawEx.KillSwitch do
 
   defp hex_decode(binary) when is_binary(binary) and rem(byte_size(binary), 2) == 0 do
     case Base.decode16(binary, case: :mixed) do
-      {:ok, raw} -> {:ok, raw}
-      :error -> {:error, Refusal.new(:lease_revoked, "attestation field is not hex", %{reason: :malformed})}
+      {:ok, raw} ->
+        {:ok, raw}
+
+      :error ->
+        {:error,
+         Refusal.new(:lease_revoked, "attestation field is not hex", %{reason: :malformed})}
     end
   end
 
-  defp hex_decode(_), do: {:error, Refusal.new(:lease_revoked, "attestation field is not hex", %{reason: :malformed})}
+  defp hex_decode(_),
+    do:
+      {:error, Refusal.new(:lease_revoked, "attestation field is not hex", %{reason: :malformed})}
 
   # ------------------------------------------------------------------
   # Canonical JSON (sorted keys; the sign-over form of the revocation map)

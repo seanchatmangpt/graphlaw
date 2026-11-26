@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Sean Chatman <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
+#
+# SPDX-License-Identifier: MIT
 defmodule GraphlawEx.KillSwitchTest do
   @moduledoc """
   GL28-6 `art14_killswitch_court` (flip-twin pattern, real engine collaborator).
@@ -6,8 +9,8 @@ defmodule GraphlawEx.KillSwitchTest do
   mutant twins prove each gate flips. Zero-mutation witnesses: `Host.info/2`
   `recycles` unchanged, `Host.memory_size/2` byte-identical across a refused
   call. A loud skip is not a pass: without the wasm artifact the wasm-tagged
-  cases SKIP loudly; the Ed25519 + install-pipeline cases run engine-free and
-  must always pass.
+  cases are excluded loudly (test_helper.exs); the Ed25519 + install-pipeline cases run engine-free and
+  must always pass. Under GRAPHLAW_REQUIRE_ENGINE=1 a missing artifact FAILS.
   """
 
   use ExUnit.Case, async: false
@@ -15,8 +18,7 @@ defmodule GraphlawEx.KillSwitchTest do
   alias GraphlawEx.KillSwitch
   alias GraphlawEx.Refusal
 
-  @wasm_path GraphlawEx.TestEngine.wasm_path()
-  @require_engine System.get_env("GRAPHLAW_REQUIRE_ENGINE") == "1"
+  @moduletag timeout: 300_000
 
   setup do
     :ok = KillSwitch.erase()
@@ -29,8 +31,16 @@ defmodule GraphlawEx.KillSwitchTest do
   # ------------------------------------------------------------------
 
   test "ed25519 kernel: RFC 8032 test vector 1 signs and verifies byte-exact" do
-    seed = Base.decode16!("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60", case: :lower)
-    pk_expect = Base.decode16!("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", case: :lower)
+    seed =
+      Base.decode16!("9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+        case: :lower
+      )
+
+    pk_expect =
+      Base.decode16!("d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+        case: :lower
+      )
+
     sig_expect =
       Base.decode16!(
         "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8" <>
@@ -50,7 +60,9 @@ defmodule GraphlawEx.KillSwitchTest do
 
   test "install: a well-formed revocation installs its monotone epoch" do
     {pub, seed} = keypair()
-    {:ok, installed} = KillSwitch.install(revocation(7, "all", key_id(), seed), %{key_id() => pub})
+
+    {:ok, installed} =
+      KillSwitch.install(revocation(7, "all", key_id(), seed), %{key_id() => pub})
 
     assert installed.epoch == 7
     assert installed.scope == "all"
@@ -67,10 +79,12 @@ defmodule GraphlawEx.KillSwitchTest do
     # the Ed25519 verify stage.)
     sig = doc["attestation"]["signature"]
     <<b, rest::binary>> = Base.decode16!(sig, case: :mixed)
-    flipped = (:erlang.bxor(b, 1) |> :binary.encode_unsigned()) |> String.pad_leading(2, "0")
+    flipped = :erlang.bxor(b, 1) |> :binary.encode_unsigned() |> String.pad_leading(2, "0")
     doc = put_in(doc, ["attestation", "signature"], Base.encode16(flipped <> rest, case: :lower))
 
-    assert {:error, %Refusal{code: :lease_revoked} = refusal} = KillSwitch.install(doc, %{key_id() => pub})
+    assert {:error, %Refusal{code: :lease_revoked} = refusal} =
+             KillSwitch.install(doc, %{key_id() => pub})
+
     assert refusal.details.reason == :invalid_signature
     assert KillSwitch.current_epoch() == 0
   end
@@ -80,7 +94,9 @@ defmodule GraphlawEx.KillSwitchTest do
     {other_pub, other_seed} = keypair()
     doc = revocation(7, "all", key_id(), other_seed)
 
-    assert {:error, %Refusal{code: :lease_revoked} = refusal} = KillSwitch.install(doc, %{key_id() => pub})
+    assert {:error, %Refusal{code: :lease_revoked} = refusal} =
+             KillSwitch.install(doc, %{key_id() => pub})
+
     assert refusal.details.reason == :invalid_signature
     assert byte_size(other_pub) == 32
     assert KillSwitch.current_epoch() == 0
@@ -90,7 +106,9 @@ defmodule GraphlawEx.KillSwitchTest do
     {pub, seed} = keypair()
     doc = revocation(7, "all", key_id(), seed)
 
-    assert {:error, %Refusal{code: :lease_revoked} = refusal} = KillSwitch.install(doc, %{"other-ops" => pub})
+    assert {:error, %Refusal{code: :lease_revoked} = refusal} =
+             KillSwitch.install(doc, %{"other-ops" => pub})
+
     assert refusal.details.reason == :unknown_key_id
     assert KillSwitch.current_epoch() == 0
   end
@@ -113,10 +131,14 @@ defmodule GraphlawEx.KillSwitchTest do
     assert {:error, %Refusal{code: :lease_revoked}} =
              KillSwitch.install(Map.delete(doc, "attestation"), %{key_id() => pub})
 
-    assert {:error, %Refusal{code: :lease_revoked}} = KillSwitch.install(Map.delete(doc, "revocation"), %{key_id() => pub})
+    assert {:error, %Refusal{code: :lease_revoked}} =
+             KillSwitch.install(Map.delete(doc, "revocation"), %{key_id() => pub})
 
     bad_alg = put_in(doc, ["attestation", "alg"], "rsa2048")
-    assert {:error, %Refusal{code: :lease_revoked} = refusal} = KillSwitch.install(bad_alg, %{key_id() => pub})
+
+    assert {:error, %Refusal{code: :lease_revoked} = refusal} =
+             KillSwitch.install(bad_alg, %{key_id() => pub})
+
     assert refusal.details.reason == :bad_alg
     assert KillSwitch.current_epoch() == 0
   end
@@ -124,7 +146,9 @@ defmodule GraphlawEx.KillSwitchTest do
   test "check: scope digest not matching the engine leaves the call admitted" do
     {pub, seed} = keypair()
     other_digest = String.duplicate("ab", 32)
-    assert {:ok, _} = KillSwitch.install(revocation(4, other_digest, key_id(), seed), %{key_id() => pub})
+
+    assert {:ok, _} =
+             KillSwitch.install(revocation(4, other_digest, key_id(), seed), %{key_id() => pub})
 
     assert KillSwitch.check("c0ffee") == :ok
     assert KillSwitch.current_epoch() == 4
@@ -164,7 +188,9 @@ defmodule GraphlawEx.KillSwitchTest do
       <<b, rest::binary>> = doc["attestation"]["signature"]
       doc = put_in(doc, ["attestation", "signature"], <<:erlang.bxor(b, 1), rest::binary>>)
 
-      assert {:error, %Refusal{code: :lease_revoked}} = KillSwitch.install(doc, %{key_id() => pub})
+      assert {:error, %Refusal{code: :lease_revoked}} =
+               KillSwitch.install(doc, %{key_id() => pub})
+
       assert KillSwitch.current_epoch() == 0
 
       assert {:ok, %{"ok" => true}} = GraphlawEx.Host.request(host, %{"op" => "capabilities"})
@@ -180,20 +206,28 @@ defmodule GraphlawEx.KillSwitchTest do
       {:ok, before} = GraphlawEx.Host.memory_size(host)
 
       {pub, seed} = keypair()
-      assert {:ok, _} = KillSwitch.install(revocation(7, "all", key_id(), seed), %{key_id() => pub})
+
+      assert {:ok, _} =
+               KillSwitch.install(revocation(7, "all", key_id(), seed), %{key_id() => pub})
 
       ref = make_ref()
       :ok = attach(ref)
 
       assert {:error,
-              %Refusal{code: :lease_revoked, class: :refused_identity, broken_term: :R_missing_standing} = refusal} =
+              %Refusal{
+                code: :lease_revoked,
+                class: :refused_identity,
+                broken_term: :R_missing_standing
+              } = refusal} =
                GraphlawEx.Host.request(host, %{"op" => "capabilities"})
 
       assert refusal.details.epoch == 7
       assert refusal.details.scope == "all"
       assert refusal.details.wasm_sha256 == info_sha(host)
 
-      assert_receive {^ref, [:graphlaw_ex, :host, :call, :stop], _, %{code: :lease_revoked}}, 1_000
+      assert_receive {^ref, [:graphlaw_ex, :host, :call, :stop], _, %{code: :lease_revoked}},
+                     1_000
+
       :ok = :telemetry.detach(ref)
 
       # Zero-mutation witness: the engine instance was never touched.
@@ -209,13 +243,18 @@ defmodule GraphlawEx.KillSwitchTest do
     with_engine(fn path ->
       host = start_host!(path)
       {pub, seed} = keypair()
-      assert {:ok, _} = KillSwitch.install(revocation(5, "all", key_id(), seed), %{key_id() => pub})
 
-      assert {:error, %Refusal{code: :lease_revoked}} = GraphlawEx.Host.request(host, %{"op" => "capabilities"})
+      assert {:ok, _} =
+               KillSwitch.install(revocation(5, "all", key_id(), seed), %{key_id() => pub})
+
+      assert {:error, %Refusal{code: :lease_revoked}} =
+               GraphlawEx.Host.request(host, %{"op" => "capabilities"})
 
       # Honest survivor: a higher epoch whose scope misses this engine re-admits.
       assert {:ok, _} =
-               KillSwitch.install(revocation(6, String.duplicate("cd", 32), key_id(), seed), %{key_id() => pub})
+               KillSwitch.install(revocation(6, String.duplicate("cd", 32), key_id(), seed), %{
+                 key_id() => pub
+               })
 
       assert KillSwitch.check(info_sha(host)) == :ok
       assert {:ok, %{"ok" => true}} = GraphlawEx.Host.request(host, %{"op" => "capabilities"})
@@ -229,12 +268,15 @@ defmodule GraphlawEx.KillSwitchTest do
       {other_pub, other_seed} = keypair()
 
       assert {:error, %Refusal{code: :lease_revoked}} =
-               KillSwitch.install(revocation(5, "all", key_id(), other_seed), %{key_id() => good_pub})
+               KillSwitch.install(revocation(5, "all", key_id(), other_seed), %{
+                 key_id() => good_pub
+               })
 
       assert KillSwitch.current_epoch() == 0
 
       # Mutant B: non-monotone epoch (replay of an older epoch).
-      assert {:ok, _} = KillSwitch.install(revocation(5, "all", key_id(), seed), %{key_id() => pub})
+      assert {:ok, _} =
+               KillSwitch.install(revocation(5, "all", key_id(), seed), %{key_id() => pub})
 
       assert {:error, %Refusal{code: :lease_revoked} = stale} =
                KillSwitch.install(revocation(4, "all", key_id(), seed), %{key_id() => pub})
@@ -245,7 +287,10 @@ defmodule GraphlawEx.KillSwitchTest do
       doc = revocation(8, "all", key_id(), seed)
       <<b, rest::binary>> = doc["attestation"]["signature"]
       doc = put_in(doc, ["attestation", "signature"], <<:erlang.bxor(b, 1), rest::binary>>)
-      assert {:error, %Refusal{code: :lease_revoked}} = KillSwitch.install(doc, %{key_id() => pub})
+
+      assert {:error, %Refusal{code: :lease_revoked}} =
+               KillSwitch.install(doc, %{key_id() => pub})
+
       assert byte_size(other_pub) == 32
 
       :ok = GraphlawEx.stop(host)
@@ -262,18 +307,9 @@ defmodule GraphlawEx.KillSwitchTest do
     )
   end
 
-  defp with_engine(fun) do
-    if File.regular?(@wasm_path) do
-      fun.(@wasm_path)
-    else
-      message =
-        "[SKIP] kill-switch courts: wasm artifact not found at #{@wasm_path} (set PRIV_WASM). " <>
-          "A loud skip is not a pass."
-
-      if @require_engine, do: flunk(message)
-      IO.puts(message)
-    end
-  end
+  # Raises when the artifact is missing; :wasm tests are excluded by
+  # test_helper.exs unless GRAPHLAW_REQUIRE_ENGINE=1.
+  defp with_engine(fun), do: fun.(GraphlawEx.TestEngine.engine_path!())
 
   defp info_sha(host) do
     {:ok, %{wasm_sha256: sha}} = GraphlawEx.Host.info(host)

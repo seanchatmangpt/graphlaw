@@ -19,7 +19,7 @@
 //! and per-shape link out-degree ([`MAX_SHACL_DEGREE`]) — each value picked
 //! from the measured boundary cliff, not guessed. [`check_shape_limits`]
 //! enforces all four in O(1)-to-O(graph) order (bytes before parse); the
-//! legacy [`check_shape_depth`] keeps its exact depth-only semantics for
+//! legacy [`check_shape_depth`] now delegates to it (no bypass) for
 //! the shipped depth court.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -91,7 +91,7 @@ pub const MAX_SHACL_QUADS: usize = 16_384;
 /// number of distinct shape-link paths could otherwise make the guard itself
 /// a denial-of-service. Exceeding the budget is a fail-closed `ResourceLimit`
 /// refusal.
-const EXPANSION_BUDGET: u64 = 200_000;
+pub const EXPANSION_BUDGET: u64 = 200_000;
 
 const SH: &str = "http://www.w3.org/ns/shacl#";
 /// `sh:` predicates whose object is another shape the validator recurses
@@ -155,6 +155,20 @@ pub enum ShaclLimitExceeded {
         /// Observed nesting depth.
         observed: usize,
     },
+    /// The shapes graph did not parse under the engine's own parser. Not a
+    /// size cap: callers fall through to `parse_shapes` for the engine's typed
+    /// parse refusal (see [`ShaclLimitExceeded::is_parse_failure`]).
+    Unparseable {
+        /// Number of parse errors reported.
+        observed: usize,
+    },
+    /// The guard's own depth-search expansion budget ([`EXPANSION_BUDGET`])
+    /// ran out before boundedness could be proven — fail closed, reported as
+    /// its own limit rather than a fabricated depth.
+    ExpansionBudget {
+        /// Expansions consumed when the budget ran out.
+        observed: usize,
+    },
 }
 
 impl ShaclLimitExceeded {
@@ -167,7 +181,16 @@ impl ShaclLimitExceeded {
             Self::Quads { .. } => "shacl_validation_quads",
             Self::Degree { .. } => "shacl_validation_degree",
             Self::Depth { .. } => "shacl_validation_depth",
+            Self::ExpansionBudget { .. } => "shacl_validation_expansion_budget",
+            Self::Unparseable { .. } => "shacl_validation_unparseable",
         }
+    }
+
+    /// True when the guard refused because the engine's parser rejects the
+    /// shapes graph; the caller's `parse_shapes` then yields the typed
+    /// engine refusal.
+    pub fn is_parse_failure(&self) -> bool {
+        matches!(self, Self::Unparseable { .. })
     }
 
     /// Observed value that crossed the cap.
@@ -176,7 +199,9 @@ impl ShaclLimitExceeded {
             Self::Bytes { observed }
             | Self::Quads { observed }
             | Self::Degree { observed }
-            | Self::Depth { observed } => *observed,
+            | Self::Depth { observed }
+            | Self::Unparseable { observed }
+            | Self::ExpansionBudget { observed } => *observed,
         }
     }
 
@@ -187,6 +212,8 @@ impl ShaclLimitExceeded {
             Self::Quads { .. } => MAX_SHACL_QUADS,
             Self::Degree { .. } => MAX_SHACL_DEGREE,
             Self::Depth { .. } => MAX_SHACL_VALIDATION_DEPTH,
+            Self::Unparseable { .. } => 0,
+            Self::ExpansionBudget { .. } => EXPANSION_BUDGET as usize,
         }
     }
 }
@@ -205,21 +232,10 @@ impl std::fmt::Display for ShaclLimitExceeded {
 
 impl std::error::Error for ShaclLimitExceeded {}
 
-/// Refuse `shapes_ttl` if its shape-nesting depth exceeds
-/// [`MAX_SHACL_VALIDATION_DEPTH`], returning the observed depth.
-///
-/// The guard's own recursion is bounded at `MAX_SHACL_VALIDATION_DEPTH + 2`
-/// frames, so the guard can never overflow the stack on any input.
-pub fn check_shape_depth(shapes_ttl: &str) -> Result<(), DepthExceeded> {
-    // A parse error here is NOT a depth violation: let the real parse
-    // surface from `parse_shapes` below as its own engine refusal.
-    match purrdf::parse_dataset(shapes_ttl.as_bytes(), "text/turtle", None) {
-        Ok(ds) => check_dataset_inner(&ds, GuardProfile::DepthOnly)
-            .map_err(|over| DepthExceeded {
-                observed: over.observed(),
-            }),
-        Err(_) => Ok(()),
-    }
+/// Legacy entry point. Routes through [`check_shape_limits`] so no entry
+/// point bypasses the byte/quad/degree/depth/expansion caps.
+pub fn check_shape_depth(shapes_ttl: &str) -> Result<(), ShaclLimitExceeded> {
+    check_shape_limits(shapes_ttl)
 }
 
 /// Refuse `shapes_ttl` at the first hard physical cap it crosses: bytes
@@ -229,36 +245,50 @@ pub fn check_shape_depth(shapes_ttl: &str) -> Result<(), DepthExceeded> {
 /// [`ShaclLimitExceeded`] — fail closed, never a stack overflow, never an
 /// unbounded engine call.
 pub fn check_shape_limits(shapes_ttl: &str) -> Result<(), ShaclLimitExceeded> {
+    check_shape_limits_with_base(shapes_ttl, None)
+}
+
+/// [`check_shape_limits`] parsing with the same `base` IRI the caller's
+/// later `parse_shapes` uses, so relative-IRI shapes graphs that only parse
+/// under a base are measured, not skipped.
+pub fn check_shape_limits_with_base(
+    shapes_ttl: &str,
+    base: Option<&str>,
+) -> Result<(), ShaclLimitExceeded> {
     if shapes_ttl.len() > MAX_SHACL_SHAPES_BYTES {
         return Err(ShaclLimitExceeded::Bytes {
             observed: shapes_ttl.len(),
         });
     }
-    // A parse error here is NOT a limit violation: let the real parse
-    // surface from `parse_shapes` below as its own engine refusal.
-    match purrdf::parse_dataset(shapes_ttl.as_bytes(), "text/turtle", None) {
-        Ok(ds) => check_dataset_inner(&ds, GuardProfile::AllLimits),
-        Err(_) => Ok(()),
+    // ONE parse function: the exact one `parse_shapes` runs
+    // (`text_ingest::parse_turtle_document`, same text, same base). A parse
+    // failure is never `Ok` -- that was a parser differential letting inputs
+    // skip every cap. It is reported as `Unparseable`; callers fall through
+    // to `parse_shapes`, which fails identically with the engine's own typed
+    // refusal.
+    match parse_shapes_for_guard(shapes_ttl, base) {
+        Ok(ds) => check_dataset_inner(&ds),
+        Err(errors) => Err(ShaclLimitExceeded::Unparseable {
+            observed: errors.len().max(1),
+        }),
     }
 }
 
-/// Which caps a check enforces: the legacy depth-only profile
-/// (`check_shape_depth`, kept compatible for the shipped depth court) or the
-/// full physical-cap set (`check_shape_limits`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum GuardProfile {
-    DepthOnly,
-    AllLimits,
+/// The single shapes-graph parse shared by the guard and the engine: exactly
+/// the function and arguments `purrdf::shapes::engine::parse_shapes` uses.
+pub fn parse_shapes_for_guard(
+    shapes_ttl: &str,
+    base: Option<&str>,
+) -> Result<std::sync::Arc<RdfDataset>, Vec<String>> {
+    purrdf::shapes::text_ingest::parse_turtle_document(shapes_ttl, base).map(|d| d.dataset)
 }
 
 /// Build the shape-link adjacency over `ds` and refuse at the first cap the
 /// profile enforces.
-fn check_dataset_inner(ds: &RdfDataset, profile: GuardProfile) -> Result<(), ShaclLimitExceeded> {
-    if profile == GuardProfile::AllLimits {
-        let quads = ds.quads().count();
-        if quads > MAX_SHACL_QUADS {
-            return Err(ShaclLimitExceeded::Quads { observed: quads });
-        }
+fn check_dataset_inner(ds: &RdfDataset) -> Result<(), ShaclLimitExceeded> {
+    let quads = ds.quads().count();
+    if quads > MAX_SHACL_QUADS {
+        return Err(ShaclLimitExceeded::Quads { observed: quads });
     }
 
     // Shape-link adjacency: shape -> shapes the validator recurses into.
@@ -315,14 +345,11 @@ fn check_dataset_inner(ds: &RdfDataset, profile: GuardProfile) -> Result<(), Sha
 
     // Degree cap: the widest expanded child set of any shape. Checked on the
     // expanded map so list members count individually (AllLimits only — the
-    // legacy depth-only profile never refuses on degree).
-    if profile == GuardProfile::AllLimits {
-        for children in edges.values() {
-            if children.len() > MAX_SHACL_DEGREE {
-                return Err(ShaclLimitExceeded::Degree {
-                    observed: children.len(),
-                });
-            }
+    for children in edges.values() {
+        if children.len() > MAX_SHACL_DEGREE {
+            return Err(ShaclLimitExceeded::Degree {
+                observed: children.len(),
+            });
         }
     }
 
@@ -357,9 +384,9 @@ fn dfs(
         for &child in children {
             if *budget == 0 {
                 // Fail closed: cannot prove the graph is bounded within
-                // budget. Signal depth cap exceeded.
-                return Err(ShaclLimitExceeded::Depth {
-                    observed: MAX_SHACL_VALIDATION_DEPTH + 1,
+                // budget; typed as its own limit, not a fabricated depth.
+                return Err(ShaclLimitExceeded::ExpansionBudget {
+                    observed: EXPANSION_BUDGET as usize,
                 });
             }
             *budget -= 1;

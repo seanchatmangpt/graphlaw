@@ -62,27 +62,46 @@ fn bare_sql(skel: &str, first_keyword: &str) -> bool {
 /// and `\n` clear it, and a `#` inside an unclosed IRI span is pushed as data
 /// (a fragment separator), not treated as a comment start.
 pub(super) fn skeleton(text: &str) -> String {
-    let c: Vec<char> = text.chars().collect();
-    let mut out = String::with_capacity(text.len());
+    skeleton_bounded(text, None)
+}
+
+/// [`skeleton`] over the byte slice without a full-document char vector.
+/// Structural characters are all ASCII, so scanning is by byte index and
+/// non-ASCII characters are decoded only where they are copied. With
+/// `Some(limit)` the scan stops once `limit` non-whitespace skeleton
+/// characters have been emitted: the first `limit` characters of the
+/// whitespace-collapsed output are then identical to the unbounded result.
+fn skeleton_bounded(text: &str, limit: Option<usize>) -> String {
+    let c = text.as_bytes();
+    let mut out = String::with_capacity(text.len().min(limit.map_or(text.len(), |l| l * 2)));
     let mut i = 0;
     let mut in_iri = false;
+    let mut scanned = 0;
+    let mut nonws = 0usize;
     while i < c.len() {
+        if let Some(l) = limit {
+            nonws += out[scanned..].chars().filter(|ch| !ch.is_whitespace()).count();
+            scanned = out.len();
+            if nonws >= l {
+                break;
+            }
+        }
         match c[i] {
-            '#' if !in_iri => {
-                while i < c.len() && c[i] != '\n' {
+            b'#' if !in_iri => {
+                while i < c.len() && c[i] != b'\n' {
                     i += 1;
                 }
             }
             // Inside an unclosed `<...>` span: data, not a comment.
-            '#' => {
+            b'#' => {
                 out.push('#');
                 i += 1;
             }
-            q @ ('"' | '\'') => {
+            q @ (b'"' | b'\'') => {
                 let triple = c.get(i + 1) == Some(&q) && c.get(i + 2) == Some(&q);
                 i += if triple { 3 } else { 1 };
                 while i < c.len() {
-                    if c[i] == '\\' {
+                    if c[i] == b'\\' {
                         i += 2;
                         continue;
                     }
@@ -95,20 +114,20 @@ pub(super) fn skeleton(text: &str) -> String {
                             i += 3;
                             break;
                         }
-                    } else if !triple && c[i] == '\n' {
+                    } else if !triple && c[i] == b'\n' {
                         break;
                     }
                     i += 1;
                 }
                 out.push_str("\"\"");
             }
-            '<' => {
-                let end = c[i + 1..].iter().position(|ch| {
+            b'<' => {
+                let end = text[i + 1..].char_indices().find(|(_, ch)| {
                     matches!(ch, '>' | '<' | '"' | '{' | '}' | '|' | '^' | '`' | '\\')
                         || ch.is_whitespace()
                 });
                 match end {
-                    Some(n) if c[i + 1 + n] == '>' => {
+                    Some((n, '>')) => {
                         out.push_str("<>");
                         i += n + 2;
                         in_iri = false;
@@ -122,20 +141,50 @@ pub(super) fn skeleton(text: &str) -> String {
                     }
                 }
             }
-            '>' => {
+            b'>' => {
                 in_iri = false;
                 out.push('>');
                 i += 1;
             }
-            '\n' => {
+            b'\n' => {
                 in_iri = false;
                 out.push('\n');
                 i += 1;
             }
-            ch => {
-                out.push(ch);
-                i += 1;
+            _ => {
+                // `i` is on a char boundary here: only ASCII arms advance by
+                // fixed amounts, and literal scans end on an ASCII byte.
+                match text.get(i..).and_then(|t| t.chars().next()) {
+                    Some(ch) => {
+                        out.push(ch);
+                        i += ch.len_utf8();
+                    }
+                    None => i += 1,
+                }
             }
+        }
+    }
+    out
+}
+
+/// Collapse runs of horizontal whitespace to one space per line, keeping line
+/// structure (newlines) and dropping blank lines, so line-based routing
+/// (`body_lines`, directive detection, truncation at a line boundary) sees
+/// real lines.
+fn collapse_horizontal(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for line in s.lines() {
+        let mut first = true;
+        let start = out.len();
+        for tok in line.split_whitespace() {
+            if !first {
+                out.push(' ');
+            }
+            out.push_str(tok);
+            first = false;
+        }
+        if out.len() > start {
+            out.push('\n');
         }
     }
     out
@@ -249,7 +298,11 @@ pub fn sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> {
         .take(4)
         .collect();
     if compact.starts_with("{\"") || compact.starts_with("[{") || compact.starts_with("{}") {
-        let compact: String = head.chars().filter(|c| !c.is_whitespace()).collect();
+        let compact: String = head
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .take(HEAD_BUDGET)
+            .collect();
         return Ok(if compact.contains("\"type\":\"Schema\"") {
             Dialect::ShExJ
         } else {
@@ -265,12 +318,13 @@ pub fn sniff(bytes: &[u8], hint: Option<&str>) -> Result<Dialect, Refusal> {
     // `ontologies/schema-org/schema_all_https.nt`, 2.37 MB of N-Triples,
     // classified Turtle when the cut landed mid-line).
     let skel = {
-        let full = skeleton(head);
-        let collapsed = full.split_whitespace().collect::<Vec<_>>().join(" ");
+        let full = skeleton_bounded(head, Some(HEAD_BUDGET));
+        let collapsed = collapse_horizontal(&full);
+        let truncated = collapsed.chars().count() >= HEAD_BUDGET;
         let window: String = collapsed.chars().take(HEAD_BUDGET).collect();
         match window.rfind('\n') {
-            Some(n) => window[..=n].to_string(),
-            None => window,
+            Some(n) if truncated => window[..=n].to_string(),
+            _ => window,
         }
     };
     let body: Vec<&str> = body_lines(&skel).collect();
@@ -356,14 +410,26 @@ fn route_sql_rdf(head: &str) -> Option<Result<Dialect, Refusal>> {
     // replacing each literal span with a `""` placeholder — so a `sql:` token
     // inside `"..."`, `'...'` or `"""..."""` is data, never usage, and a `#`
     // inside a literal is data, not a comment.
-    let c: Vec<char> = head.chars().collect();
-    let mut stripped = String::with_capacity(head.len());
+    let c = head.as_bytes();
+    let mut stripped = String::with_capacity(head.len().min(HEAD_BUDGET * 2));
     let mut i = 0;
     let mut in_iri = false;
     let mut in_comment = false;
+    let mut scanned = 0;
+    let mut nonws = 0usize;
     while i < c.len() {
+        // Bounded scan: the view below keeps only HEAD_BUDGET characters, so
+        // stop once that many non-whitespace characters are emitted.
+        nonws += stripped[scanned..]
+            .chars()
+            .filter(|ch| !ch.is_whitespace())
+            .count();
+        scanned = stripped.len();
+        if nonws >= HEAD_BUDGET {
+            break;
+        }
         if in_comment {
-            if c[i] == '\n' {
+            if c[i] == b'\n' {
                 in_comment = false;
                 stripped.push('\n');
             }
@@ -371,11 +437,11 @@ fn route_sql_rdf(head: &str) -> Option<Result<Dialect, Refusal>> {
             continue;
         }
         match c[i] {
-            q @ ('"' | '\'') => {
+            q @ (b'"' | b'\'') => {
                 let triple = c.get(i + 1) == Some(&q) && c.get(i + 2) == Some(&q);
                 i += if triple { 3 } else { 1 };
                 while i < c.len() {
-                    if c[i] == '\\' {
+                    if c[i] == b'\\' {
                         i += 2;
                         continue;
                     }
@@ -388,36 +454,39 @@ fn route_sql_rdf(head: &str) -> Option<Result<Dialect, Refusal>> {
                             i += 3;
                             break;
                         }
-                    } else if !triple && c[i] == '\n' {
+                    } else if !triple && c[i] == b'\n' {
                         break;
                     }
                     i += 1;
                 }
                 stripped.push_str("\"\"");
             }
-            '<' => {
+            b'<' => {
                 in_iri = true;
                 stripped.push('<');
                 i += 1;
             }
-            '>' => {
+            b'>' => {
                 in_iri = false;
                 stripped.push('>');
                 i += 1;
             }
-            '#' if !in_iri => {
+            b'#' if !in_iri => {
                 in_comment = true;
                 i += 1;
             }
-            '\n' => {
+            b'\n' => {
                 in_iri = false;
                 stripped.push('\n');
                 i += 1;
             }
-            ch => {
-                stripped.push(ch);
-                i += 1;
-            }
+            _ => match head.get(i..).and_then(|t| t.chars().next()) {
+                Some(ch) => {
+                    stripped.push(ch);
+                    i += ch.len_utf8();
+                }
+                None => i += 1,
+            },
         }
     }
     // Fix 5: the token view is charged against [`HEAD_BUDGET`] after

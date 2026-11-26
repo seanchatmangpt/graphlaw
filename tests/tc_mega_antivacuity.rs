@@ -16,7 +16,7 @@ use graphlaw::dialect::Dialect;
 use graphlaw::law::{LawError, LawState, Receipt, Step};
 use graphlaw::receipt_store::receipt_digest;
 
-const MEGA: &str = "docs/jira/v26.10.22/mega/tc-mega-fibo-01";
+const MEGA: &str = "docs/archive/jira/v26.10.22/mega/tc-mega-fibo-01";
 
 fn read(p: &str) -> String {
     std::fs::read_to_string(format!("{MEGA}/{p}")).expect("mega fixture")

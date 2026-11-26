@@ -1,0 +1,3 @@
+<https://x/a> <https://x/p> <https://x/b> .
+<https://x/b> <https://x/p> <https://x/c> .
+<https://x/a> <https://x/q> "lit" .

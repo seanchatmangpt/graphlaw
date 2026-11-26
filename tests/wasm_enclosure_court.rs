@@ -511,8 +511,8 @@ fn campaign_9ops_1000_leaking_calls_windows_fenced_typed_and_respawn_serves() {
         }
         let curve = &curves[op];
         let deltas: Vec<u64> = curve.windows(2).map(|d| d[1] - d[0]).collect();
-        let worst = *deltas.iter().max().unwrap_or(&0);
-        let first_delta = deltas.first().copied().unwrap_or(0);
+        let worst = *deltas.iter().max().expect("campaign yields >= 2 window samples");
+        let first_delta = *deltas.first().expect("campaign yields >= 2 window samples");
         eprintln!("campaign {op}: pages {curve:?} deltas {deltas:?}");
         assert!(
             worst <= FENCE_PAGES_PER_WINDOW,
@@ -563,7 +563,9 @@ fn stack_probes_formula_nesting_63_64_and_backward_depth_31_33() {
         refuse["error"]["kind"], json!("EngineRejected"),
         "the in-module parse guard must answer (a host fuel envelope would be ResourceLimit): {refuse}"
     );
-    let msg = refuse["error"]["message"].as_str().unwrap_or("");
+    let msg = refuse["error"]["message"]
+        .as_str()
+        .expect("refusal envelope carries a string error.message");
     assert!(
         msg.contains("nested more than"),
         "refusal must name the nesting guard: {msg}"

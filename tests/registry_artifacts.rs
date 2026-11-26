@@ -756,7 +756,7 @@ fn limits_track_source_constants() {
     let doc = json_doc();
     let s = schema();
     let limits = doc["limits"].as_object().expect("limits object");
-    let expected: [(&str, usize); 19] = [
+    let expected: [(&str, usize); 33] = [
         ("max_request_bytes", graphlaw::abi::MAX_REQUEST_BYTES),
         ("max_json_depth", graphlaw::abi::MAX_JSON_DEPTH),
         ("max_plan_actions", graphlaw::abi::MAX_PLAN_ACTIONS),
@@ -785,7 +785,22 @@ fn limits_track_source_constants() {
             "max_outstanding_alloc_bytes",
             graphlaw::abi::MAX_OUTSTANDING_ALLOC_BYTES,
         ),
+        ("shacl_validation_depth", graphlaw::shacl_guard::MAX_SHACL_VALIDATION_DEPTH),
+        ("shacl_shapes_bytes", graphlaw::shacl_guard::MAX_SHACL_SHAPES_BYTES),
+        ("shacl_degree", graphlaw::shacl_guard::MAX_SHACL_DEGREE),
+        ("shacl_quads", graphlaw::shacl_guard::MAX_SHACL_QUADS),
+        ("duckdb_max_chunk_rows", graphlaw::duckdb_op::MAX_CHUNK_ROWS),
+        ("duckdb_max_chunk_bytes", graphlaw::duckdb_op::MAX_CHUNK_BYTES),
+        ("max_law_steps", graphlaw::abi::MAX_LAW_STEPS),
+        ("max_datalog_rules", graphlaw::abi::MAX_DATALOG_RULES),
+        ("max_datalog_facts", graphlaw::abi::MAX_DATALOG_FACTS),
+        ("datalog_derived_facts", graphlaw::abi::MAX_DATALOG_DERIVED_FACTS),
+        ("datalog_join_steps", graphlaw::abi::MAX_DATALOG_JOIN_STEPS as usize),
+        ("datalog_output_bytes", graphlaw::abi::MAX_DATALOG_OUTPUT_BYTES),
+        ("default_max_skew_secs", graphlaw::law::DEFAULT_MAX_SKEW_SECS as usize),
+        ("duckdb_memory_limit_bytes", 32 * 1024 * 1024),
     ];
+    assert_eq!(graphlaw::duckdb_op::DUCKDB_MEMORY_LIMIT, "32MiB");
     for (name, value) in expected {
         assert_eq!(
             limits[name],
@@ -821,7 +836,20 @@ fn limit_meta_keys_equal_limit_keys() {
         // refusal_name is present only where the source emits a machine name.
         let unnamed = matches!(
             name.as_str(),
-            "hooks_max_rounds" | "hooks_max_firings" | "max_outstanding_alloc_bytes"
+            "hooks_max_rounds"
+                | "hooks_max_firings"
+                | "max_outstanding_alloc_bytes"
+                | "shacl_validation_depth"
+                | "shacl_shapes_bytes"
+                | "shacl_degree"
+                | "shacl_quads"
+                | "duckdb_memory_limit_bytes"
+                | "duckdb_max_chunk_rows"
+                | "duckdb_max_chunk_bytes"
+                | "max_law_steps"
+                | "max_datalog_rules"
+                | "max_datalog_facts"
+                | "default_max_skew_secs"
         );
         match m.get("refusal_name") {
             None => assert!(unnamed, "limit_meta.{name} lost its refusal_name"),
@@ -892,8 +920,41 @@ fn models_cover_the_typed_surface() {
             }
         }
     }
+    for m in doc["models"].as_array().unwrap() {
+        assert_eq!(
+            m["elixir_module_suffix"],
+            json!(format!("Model.{}", m["name"].as_str().unwrap()))
+        );
+    }
+    let classes = doc["refusal_kind_classes"].as_object().unwrap();
+    for k in doc["refusal_kinds"].as_array().unwrap() {
+        assert!(classes.contains_key(k.as_str().unwrap()), "{k} has a class");
+    }
+    assert_eq!(classes["DuckDb"]["error_class"], "invalid");
+    assert_eq!(classes["Fuse"]["error_class"], "forbidden");
     assert_eq!(doc["model_enums"][0]["values"], doc["lease_ceilings"]);
-    assert_eq!(doc["model_enums"][3]["values"], doc["policy_refusal_kinds"]);
+    let policy_enum = doc["model_enums"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["name"] == "PolicyRefusalKind")
+        .expect("PolicyRefusalKind enum present");
+    assert_eq!(policy_enum["values"], doc["policy_refusal_kinds"]);
+    // The registry-wide vocabulary (9 kinds) is distinct from the policy one.
+    assert_eq!(
+        doc["refusal_kinds"],
+        json!([
+            "NotSemanticContent",
+            "Ambiguous",
+            "EngineRejected",
+            "Unsupported",
+            "ResourceLimit",
+            "TierMismatch",
+            "DuckDb",
+            "BareSql",
+            "Fuse"
+        ])
+    );
 }
 
 #[test]

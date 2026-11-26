@@ -1,7 +1,7 @@
 <!--
 SPDX-FileCopyrightText: 2026 graphlaw contributors <https://github.com/seanchatmangpt/graphlaw/graphs/contributors>
 
-SPDX-License-Identifier: Apache-2.0
+SPDX-License-Identifier: MIT
 -->
 
 # graphlaw_ex: admission through the wasm turnstile from BEAM
@@ -10,15 +10,13 @@ SPDX-License-Identifier: Apache-2.0
 Mix.install(
   [
     {:graphlaw_ex, path: __DIR__},
-    {:wasmex, "~> 0.15.1"},
+    {:wasmex, "~> 0.18.1"},
     {:jason, "~> 1.4"},
     {:telemetry, "~> 1.2"}
   ],
   consolidate_protocols: false
 )
 ```
-
-    18:31:59.436 [debug] Copying NIF from cache and extracting to .../libwasmex-v0.15.1-nif-2.15-aarch64-apple-darwin.so
 
 ## The idea
 
@@ -35,44 +33,46 @@ BEAM caller
 GraphlawEx (GenServer) ---> packet-4 frame ---> wasm module (digest-pinned artifact)
     |                                              |
     v                                              v
-{:ok, response_map}  <--- ok: true          {:error, {:refused, error_map}}
+{:ok, response_map}  <--- ok: true          {:ok, %{"ok" => false}}
                             (typed refusal raised inside the module)
 ```
 
 This notebook installs the checkout you opened it from (`path: __DIR__`). Every output below is
 produced when you evaluate the cell; none is pre-filled.
 
-## The pinned artifact
+## Fetch the pinned artifact
 
-The engine is a pinned artifact, not a dependency. The bridge refuses to start on a missing
-file and answers with a typed error instead of a linked-process exit. The pin lives in
-`priv/graphlaw.wasm.blake3`; verify the bytes you are about to load against it before starting
-the bridge:
+The engine is a pinned artifact, not a dependency, and the Hex package does not ship it. This
+cell runs `mix graphlaw_ex.fetch` from the notebook's directory, which downloads the engine and
+checks it against the pins in `priv/graphlaw/MANIFEST.json`. Skip it if you already vendored the
+file or set `GRAPHLAW_WASM_PATH`.
 
-```bash
-b3sum ../priv/graphlaw.wasm   # from this notebook's directory (graphlaw_ex/)
+```elixir
+{output, status} =
+  System.cmd("mix", ["graphlaw_ex.fetch"], cd: __DIR__, stderr_to_stdout: true)
+
+{status, output}
 ```
 
-    c38b1fdb97ba462dc96000301d7ddf6a5109a7208c68a52f5ddd63ccbd6fda2c  priv/graphlaw.wasm
+`GraphlawEx.WasmConfig.wasm_path/0` resolves where the bridge will look: the
+`GRAPHLAW_WASM_PATH` env var, app config, the vendored `priv` file, then the user cache.
 
-Any other digest means the bytes are not the pinned artifact — do not admit through them.
+```elixir
+GraphlawEx.WasmConfig.wasm_path()
+```
 
 ## Start the bridge
 
 The application starts no engine by default (`:auto_start` is opt-in), so depending on the
-library never instantiates wasm implicitly. Start the bridge yourself against the pinned
+library never instantiates wasm implicitly. Start the bridge yourself against the resolved
 artifact:
 
 ```elixir
-wasm_path = Path.expand("../priv/graphlaw.wasm", __DIR__)
-
-case GraphlawEx.start_link(wasm_path: wasm_path) do
+case GraphlawEx.start_link(wasm_path: GraphlawEx.WasmConfig.wasm_path()) do
   {:ok, _bridge} -> :bridge_started
   {:error, {:already_started, _}} -> :already_running
 end
 ```
-
-    :bridge_started
 
 A missing artifact is a typed failure returned from `start_link/1`, never a crash:
 
@@ -83,7 +83,17 @@ case GraphlawEx.start_link(wasm_path: "/nonexistent/graphlaw.wasm") do
 end
 ```
 
-    {:refused_load, "/nonexistent/graphlaw.wasm", :enoent}
+## Lease policy
+
+`:lease_policy` defaults to `:required` (`lib/graphlaw_ex/authority.ex:419`): a `law` request
+without a signed lease is refused host-side with `ceiling_unmet`. Under `Mix.install` the
+package's `config/test.exs` does not apply, so the next cells would be refused. This notebook
+is a local sandbox, so it loosens the policy for this node only; production keeps `:required`.
+
+```elixir
+Application.put_env(:graphlaw_ex, :lease_policy, :none_allowed)
+GraphlawEx.Authority.lease_policy()
+```
 
 ## An honest admit
 
@@ -105,12 +115,13 @@ case GraphlawEx.admit(Jason.encode!(honest)) do
     {:admitted, nquads_bytes: byte_size(response["nquads"]), states: length(response["states"]),
       receipts: length(response["receipts"])}
 
-  {:error, reason} ->
-    {:refused, reason}
+  {:ok, %{"ok" => false} = response} ->
+    {:refused_by_engine, response["error"]}
+
+  {:error, %GraphlawEx.Refusal{} = refusal} ->
+    {:refused_by_host, refusal}
 end
 ```
-
-    {:admitted, nquads_bytes: 18113, states: 2, receipts: 1}
 
 The entailment (`:a :edge :c` follows from the transitive closure) was computed inside the wasm
 module; BEAM only moved bytes.
@@ -118,23 +129,16 @@ module; BEAM only moved bytes.
 ## A tampered refuse
 
 An unknown op is refused *inside the module* — the kernel raises a typed refusal in the answer
-payload and the bridge surfaces it as `{:error, {:refused, error}}`:
+payload. At the transport layer that is still `{:ok, response}`; classify it by `response["ok"]`:
 
 ```elixir
 GraphlawEx.admit(Jason.encode!(%{"op" => "definitely-not-an-op"}))
 ```
 
-    {:error,
-     {:refused,
-      %{
-        "dialect" => nil,
-        "engine" => nil,
-        "kind" => "Unsupported",
-        "message" => "unknown op `definitely-not-an-op`"
-      }}}
-
-Nothing was guessed on the host side: the refusal `kind`, `message` and closed structure are the
-module's own answer, relayed verbatim.
+Expect `{:ok, %{"ok" => false, "error" => %{"kind" => "Unsupported", ...}}}`. Nothing was
+guessed on the host side: the refusal `kind`, `message` and closed structure are the module's
+own answer, relayed verbatim. Host-side refusals (framing, digest, limits, kill-switch,
+lease policy, saturation `:saturated`) arrive as `{:error, %GraphlawEx.Refusal{}}` instead.
 
 ## Telemetry
 
@@ -161,13 +165,6 @@ after
   1_000 -> :no_span_received
 end
 ```
-
-    :no_span_received
-
-Status note (as of this build): the `[:graphlaw_ex, :admit, :stop]` span is the event name the
-`lib/` telemetry surface defines; this build does not emit it yet, so the honest output of this
-cell on the current tree is `:no_span_received` — a loud absence, not a faked pass. When the
-span lands, the same cell returns `{:span, metadata}`.
 
 ## Where to go next
 

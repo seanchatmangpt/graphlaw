@@ -1,0 +1,16 @@
+{
+  "artifact_blake3": "04023a2443781f4a71ee4a59e1ddead6a4dc2ee67317c5af277b0893d0be2d6f",
+  "chain": {
+    "mode": "append-only-fold",
+    "script": "scripts/receipt_chain_sync.sh"
+  },
+  "schema": "v2030-step3",
+  "signature": {
+    "attestation": "/Users/sac/graphlaw/receipts/transition-2026-11-25T195647Z-Edit-04023a24.json.attest.json",
+    "status": "UNSIGNED-NO-KEY"
+  },
+  "target": "/Users/sac/graphlaw/.github/workflows/elixir.yml",
+  "timestamp_utc": "2026-11-25T195647Z",
+  "tool": "Edit",
+  "type": "transition-receipt"
+}

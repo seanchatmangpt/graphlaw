@@ -457,12 +457,13 @@ mod ring_courts {
             !gaps.is_empty(),
             "restart discontinuity must be persisted as gap markers, never silent renumbering"
         );
+        // Re-pinned: init now seeds seq_counter from the recovered ledger's
+        // covered_seq (init_inner fix), so session 2 CONTINUES the chain and
+        // verify is OK; the old pin (SequenceGap) encoded the poisoned-ledger
+        // defect where the first post-restart push wrote seq 1 onto N.
         assert!(
-            matches!(
-                graphlaw::evidence_ring::verify(&dir),
-                Err(RingError::SequenceGap { .. })
-            ),
-            "NDJSON chain must typed-refuse the renumbered continuation"
+            graphlaw::evidence_ring::verify(&dir).is_ok(),
+            "restart continues the sequence space; the NDJSON chain verifies"
         );
         std::fs::remove_dir_all(&dir).ok();
         std::fs::remove_dir_all(&ldir).ok();

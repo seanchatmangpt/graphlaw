@@ -115,7 +115,7 @@ pub trait RdfAstGraphReader {
             }
 
             if items.len() >= max_items {
-                return Err(AstError::RecursionLimitExceeded(max_items));
+                return Err(AstError::RecursionLimitObserved(items.len() + 1, max_items));
             }
 
             if !visited.insert(iri.clone()) {
@@ -290,7 +290,7 @@ pub trait RdfAstGraphReader {
         pos: ScopePos,
     ) -> Result<SqlExpr, AstError> {
         if depth > 32 {
-            return Err(AstError::RecursionLimitExceeded(32));
+            return Err(AstError::RecursionLimitObserved(depth, 32));
         }
 
         let sql_ns = "http://graphlaw.org/sql#";
@@ -1810,7 +1810,9 @@ fn frame_references_target(_frame: &FrameSpec, _target: &TableRef) -> bool {
 
 /// Validates an RDF AST dataset in Turtle syntax against the canonical SHACL rules in `ontologies/sql-ast.ttl`.
 pub fn validate_ast_shacl(turtle_dataset: &str, shapes_ttl: &str) -> Result<(), AstError> {
-    if let Err(over) = crate::shacl_guard::check_shape_limits(shapes_ttl) {
+    if let Err(over) = crate::shacl_guard::check_shape_limits(shapes_ttl)
+        .or_else(|e| if e.is_parse_failure() { Ok(()) } else { Err(e) })
+    {
         // Depth keeps the existing internal arm; the other physical caps
         // carry their typed limit name through the documented free-form
         // compat arm (LEGACY_MESSAGE) — `src/sql_ast/refusals.rs` (the arm
@@ -3369,7 +3371,7 @@ impl DatasetReader {
         depth: usize,
     ) -> Result<(), AstError> {
         if depth > 32 {
-            return Err(AstError::RecursionLimitExceeded(32));
+            return Err(AstError::RecursionLimitObserved(depth, 32));
         }
         match expr {
             SqlExpr::ColumnRef {
